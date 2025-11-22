@@ -53,7 +53,7 @@ function AppContent() {
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<Home />} />
-              <Route path="/:businessId" element={<BusinessProfile />} />
+              <Route path="/:businessSlug" element={<BusinessProfile />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/portal" element={<BusinessPortal />} />
               <Route path="/business-portal" element={<BusinessPortal />} />

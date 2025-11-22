@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import supabaseService from '../services/supabaseService';
+import { findBusinessBySlug } from '../utils/utils';
 import ServiceSelector from '../components/ServiceSelector';
 import Calendar from '../components/Calendar';
 import TimeSlotPicker from '../components/TimeSlotPicker';
@@ -20,7 +21,7 @@ L.Icon.Default.mergeOptions({
 });
 
 export default function BusinessProfile() {
-    const { businessId } = useParams();
+    const { businessSlug } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const [business, setBusiness] = useState(location.state?.business || null);
@@ -48,18 +49,21 @@ export default function BusinessProfile() {
         if (!business) {
             const fetchBusiness = async () => {
                 try {
-                    const data = await supabaseService.getBusinessById(businessId);
-                    console.log('📊 Business data loaded:', data);
-                    console.log('📋 Services:', data?.services);
-                    if (data?.services) {
-                        data.services.forEach(service => {
+                    // Fetch all businesses and find by slug
+                    const allBusinesses = await supabaseService.getBusinesses();
+                    const foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
+
+                    console.log('📊 Business data loaded:', foundBusiness);
+                    console.log('📋 Services:', foundBusiness?.services);
+                    if (foundBusiness?.services) {
+                        foundBusiness.services.forEach(service => {
                             console.log(`Service "${service.name}" specialists:`, service.service_specialists);
                         });
                     }
-                    if (data) {
-                        setBusiness(data);
+                    if (foundBusiness) {
+                        setBusiness(foundBusiness);
                     } else {
-                        console.error('Business not found');
+                        console.error('Business not found for slug:', businessSlug);
                     }
                 } catch (error) {
                     console.error('Error fetching business:', error);
@@ -68,23 +72,23 @@ export default function BusinessProfile() {
                 }
             };
 
-            if (businessId) {
+            if (businessSlug) {
                 fetchBusiness();
             }
         }
-    }, [businessId, business]);
+    }, [businessSlug, business]);
 
     // Fetch bookings when date is selected
     useEffect(() => {
         const fetchBookingsForDate = async () => {
-            if (businessId && selectedDate) {
+            if (business?.id && selectedDate) {
                 try {
                     // Format date to YYYY-MM-DD for query
                     const dateStr = selectedDate instanceof Date
                         ? selectedDate.toISOString().split('T')[0]
                         : selectedDate;
 
-                    const { bookings } = await supabaseService.getBookings(businessId, dateStr);
+                    const { bookings } = await supabaseService.getBookings(business.id, dateStr);
                     console.log('📅 Fetched bookings for date:', dateStr, bookings);
                     setExistingBookings(bookings || []);
                 } catch (error) {
@@ -96,7 +100,7 @@ export default function BusinessProfile() {
         };
 
         fetchBookingsForDate();
-    }, [businessId, selectedDate]);
+    }, [business?.id, selectedDate]);
 
     // Auto-select sport logic
     useEffect(() => {

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { categories } from '../data/mockData';
 import supabaseService from '../services/supabaseService';
 import Hero from '../components/Hero';
+import { generateSlug } from '../utils/utils';
 
 export default function Home() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -224,7 +225,7 @@ export default function Home() {
                             const business = businesses.find(b => b.id === promo.business_id);
                             return (
                                 <Link
-                                    to={`/${promo.business_id}`}
+                                    to={`/${generateSlug(business?.name || '')}`}
                                     state={{ business }}
                                     key={promo.id}
                                     style={{ textDecoration: 'none', flex: '0 0 85%', maxWidth: '300px', scrollSnapAlign: 'center' }}
@@ -293,7 +294,7 @@ export default function Home() {
                             {filteredBusinesses.map(business => (
                                 <div
                                     key={business.id}
-                                    onClick={() => navigate(`/${business.id}`, { state: { business } })}
+                                    onClick={() => navigate(`/${generateSlug(business.name)}`, { state: { business } })}
                                     style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                                 >
                                     <motion.div
