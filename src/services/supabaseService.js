@@ -203,7 +203,14 @@ class SupabaseService {
 
         const { data, error } = await query;
         if (error) throw error;
-        return { bookings: data }; // Keep structure similar to old service for easier migration
+
+        // Map court_id or service_id to resource_id for consistent availability checking
+        const bookingsWithResourceId = data?.map(booking => ({
+            ...booking,
+            resource_id: booking.court_id || booking.service_id
+        })) || [];
+
+        return { bookings: bookingsWithResourceId };
     }
 
     async createBooking(bookingData) {
