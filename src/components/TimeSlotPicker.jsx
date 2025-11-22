@@ -16,14 +16,6 @@ export default function TimeSlotPicker({
     const generateSlots = (resourceId, resourcePrice) => {
         const slots = [];
 
-        // Debug: Log existing bookings
-        console.log('🔍 TimeSlotPicker generateSlots:', {
-            resourceId,
-            existingBookingsCount: existingBookings?.length || 0,
-            existingBookings: existingBookings,
-            type
-        });
-
         // Normalize ranges: if timeRanges is provided, use it; otherwise create a single range from opening/closing
         // timeRanges should be an array of { open: 'HH:MM', close: 'HH:MM' }
         const ranges = (timeRanges && timeRanges.length > 0)
@@ -68,17 +60,6 @@ export default function TimeSlotPicker({
                 // Check if this slot is already booked
                 const isBooked = existingBookings?.some(booking => {
                     const bookingMatches = booking.resource_id === resourceId && booking.time === formattedTime;
-
-                    if (bookingMatches) {
-                        console.log('📅 Booking match found:', {
-                            bookingTime: booking.time,
-                            slotTime: formattedTime,
-                            bookingResourceId: booking.resource_id,
-                            slotResourceId: resourceId,
-                            bookingStatus: booking.status
-                        });
-                    }
-
                     return bookingMatches && booking.status !== 'cancelled';
                 }) || false;
 
@@ -109,7 +90,6 @@ export default function TimeSlotPicker({
 
 
     const getResources = () => {
-        console.log('🛠️ TimeSlotPicker: providedResources', providedResources);
         if (providedResources && providedResources.length > 0) {
             return providedResources.map(resource => ({
                 id: resource.id,
@@ -120,7 +100,6 @@ export default function TimeSlotPicker({
         }
 
         // Fallback for testing if no resources provided
-        console.warn('⚠️ TimeSlotPicker: No resources provided, using fallback');
         return [
             {
                 id: 'default',
@@ -132,7 +111,6 @@ export default function TimeSlotPicker({
     };
 
     const resources = getResources();
-    console.log('🛠️ TimeSlotPicker: processed resources', resources);
 
     return (
         <div style={{ maxWidth: '800px', margin: '40px auto 0', animation: 'slideUp 0.5s ease' }}>

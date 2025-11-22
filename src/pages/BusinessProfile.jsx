@@ -723,7 +723,8 @@ export default function BusinessProfile() {
                             date: selectedDate,
                             time: selectedTime.time || selectedTime,
                             price: selectedTime.price || (business.type === 'service' ? selectedItem.price : 0),
-                            courtName: business.type === 'sport' ? selectedTime.courtName : null
+                            courtName: business.type === 'sport' ? selectedTime.courtName : null,
+                            courtId: business.type === 'sport' ? selectedTime.courtId : null
                         }}
                         onClose={() => setShowModal(false)}
                         onConfirm={handleConfirmBooking}
