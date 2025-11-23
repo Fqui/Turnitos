@@ -73,6 +73,7 @@ export default function BusinessForm({ business, onSave, onCancel }) {
     const [newAmenity, setNewAmenity] = useState('');
     const [newCourt, setNewCourt] = useState({ name: '', price: '' });
     const [newService, setNewService] = useState({ name: '', description: '', price: '', duration: '' });
+    const [newSpecialist, setNewSpecialist] = useState({ name: '', role: '' });
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingBanner, setUploadingBanner] = useState(false);
 
@@ -233,6 +234,24 @@ export default function BusinessForm({ business, onSave, onCancel }) {
             });
             setNewService({ name: '', description: '', price: '', duration: '' });
         }
+    };
+
+    const removeService = (index) => {
+        setFormData({ ...formData, services: formData.services.filter((_, i) => i !== index) });
+    };
+
+    const addSpecialist = () => {
+        if (newSpecialist.name && newSpecialist.role) {
+            setFormData({
+                ...formData,
+                specialists: [...(formData.specialists || []), { id: Date.now().toString(), ...newSpecialist }]
+            });
+            setNewSpecialist({ name: '', role: '' });
+        }
+    };
+
+    const removeSpecialist = (index) => {
+        setFormData({ ...formData, specialists: formData.specialists.filter((_, i) => i !== index) });
     };
 
     const handleSubmit = async (e) => {
@@ -1004,6 +1023,102 @@ export default function BusinessForm({ business, onSave, onCancel }) {
                                         <span style={{ color: 'var(--primary-paddle)', fontWeight: '700' }}>${service.price}</span>
                                         <span style={{ color: 'var(--text-secondary)' }}>⏱ {service.duration}</span>
                                     </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )
+            }
+
+            {/* Specialists Section - Only for service-type businesses */}
+            {
+                formData.type === 'service' && (
+                    <section>
+                        <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                            Profesionales
+                        </h3>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                            <input
+                                type="text"
+                                value={newSpecialist.name || ''}
+                                onChange={(e) => setNewSpecialist({ ...newSpecialist, name: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px'
+                                }}
+                                placeholder="Nombre del profesional"
+                            />
+                            <input
+                                type="text"
+                                value={newSpecialist.role || ''}
+                                onChange={(e) => setNewSpecialist({ ...newSpecialist, role: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px'
+                                }}
+                                placeholder="Especialidad/Rol (ej: Peluquero, Masajista)"
+                            />
+
+                            <button
+                                type="button"
+                                onClick={addSpecialist}
+                                style={{
+                                    padding: '12px 24px',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    backgroundColor: 'var(--primary-paddle)',
+                                    color: '#fff',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                + Agregar Profesional
+                            </button>
+                        </div>
+
+                        {/* List of Specialists */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {formData.specialists && formData.specialists.map((specialist, index) => (
+                                <div
+                                    key={index}
+                                    style={{
+                                        padding: '16px',
+                                        borderRadius: '10px',
+                                        backgroundColor: 'var(--bg-main)',
+                                        border: '1px solid var(--border)',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <div>
+                                        <h4 style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>{specialist.name}</h4>
+                                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>{specialist.role}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeSpecialist(index)}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: '#FF4444',
+                                            cursor: 'pointer',
+                                            fontSize: '18px'
+                                        }}
+                                    >
+                                        🗑️
+                                    </button>
                                 </div>
                             ))}
                         </div>
