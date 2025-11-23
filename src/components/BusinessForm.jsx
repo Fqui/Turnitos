@@ -204,6 +204,13 @@ export default function BusinessForm({ business, onSave, onCancel }) {
         setFormData({ ...formData, amenities: formData.amenities.filter((_, i) => i !== index) });
     };
 
+    const addAmenity = () => {
+        if (newAmenity && !formData.amenities.includes(newAmenity)) {
+            setFormData({ ...formData, amenities: [...formData.amenities, newAmenity] });
+            setNewAmenity('');
+        }
+    };
+
     const addCourt = () => {
         if (newCourt.name && newCourt.price) {
             setFormData({
@@ -227,273 +234,300 @@ export default function BusinessForm({ business, onSave, onCancel }) {
             setNewService({ name: '', description: '', price: '', duration: '' });
         }
     };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const dataToSave = {
+            ...formData,
+            sportTypes: formData.sport_types || formData.sportTypes,
+            buttonColor: formData.button_color || formData.buttonColor
+        };
+
+        await onSave(dataToSave);
+    };
+
+    return (
+        <form
+            onSubmit={handleSubmit}
+            style={{
+                padding: '32px',
+                maxWidth: '1200px',
+                margin: '0 auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '24px'
+            }}
+        >
+            <section>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
                     Información Básica
-                </h3 >
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-            <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                    Nombre del Negocio *
-                </label>
-                <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: '1px solid var(--border)',
-                        backgroundColor: 'var(--bg-main)',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px'
-                    }}
-                    placeholder="Ej: Club Padel La Rioja"
-                />
-            </div>
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            Nombre del Negocio *
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px'
+                            }}
+                            placeholder="Ej: Club Padel La Rioja"
+                        />
+                    </div>
 
-            <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                    Ubicación *
-                </label>
-                <input
-                    type="text"
-                    required
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: '1px solid var(--border)',
-                        backgroundColor: 'var(--bg-main)',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px'
-                    }}
-                    placeholder="Ej: Centro, La Rioja"
-                />
-            </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            Ubicación *
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            value={formData.location}
+                            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px'
+                            }}
+                            placeholder="Ej: Centro, La Rioja"
+                        />
+                    </div>
 
-            <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                    Categoría *
-                </label>
-                <select
-                    required
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: '1px solid var(--border)',
-                        backgroundColor: 'var(--bg-main)',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px'
-                    }}
-                >
-                    <option value="padel">Padel</option>
-                    <option value="futbol">Fútbol</option>
-                    <option value="belleza">Belleza</option>
-                    <option value="salud">Salud</option>
-                </select>
-            </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            Categoría *
+                        </label>
+                        <select
+                            required
+                            value={formData.category}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px'
+                            }}
+                        >
+                            <option value="padel">Padel</option>
+                            <option value="futbol">Fútbol</option>
+                            <option value="belleza">Belleza</option>
+                            <option value="salud">Salud</option>
+                        </select>
+                    </div>
 
-            <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                    Tipo *
-                </label>
-                <select
-                    required
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: '1px solid var(--border)',
-                        backgroundColor: 'var(--bg-main)',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px'
-                    }}
-                >
-                    <option value="sport">Deporte</option>
-                    <option value="service">Servicio</option>
-                </select>
-            </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            Tipo *
+                        </label>
+                        <select
+                            required
+                            value={formData.type}
+                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px'
+                            }}
+                        >
+                            <option value="sport">Deporte</option>
+                            <option value="service">Servicio</option>
+                        </select>
+                    </div>
 
-            <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                    Rating
-                </label>
-                <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="5"
-                    value={formData.rating}
-                    onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) })}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: '1px solid var(--border)',
-                        backgroundColor: 'var(--bg-main)',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px'
-                    }}
-                />
-            </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            Rating
+                        </label>
+                        <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="5"
+                            value={formData.rating}
+                            onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) })}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px'
+                            }}
+                        />
+                    </div>
 
-        </div>
-
-    {/* Images Section */ }
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginTop: '16px' }}>
-        {/* Logo */}
-        <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                Logo del Negocio *
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    disabled={uploadingLogo}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: '1px solid var(--border)',
-                        backgroundColor: 'var(--bg-main)',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px'
-                    }}
-                />
-                {uploadingLogo && <span style={{ fontSize: '12px', color: 'var(--primary-paddle)' }}>⏳ Subiendo imagen...</span>}
-            </div>
-
-            {formData.logo && (
-                <div style={{
-                    marginTop: '8px',
-                    width: '100%',
-                    height: '120px',
-                    borderRadius: '12px',
-                    border: '2px dashed var(--border)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    backgroundColor: 'var(--bg-main)',
-                    position: 'relative'
-                }}>
-                    <img
-                        src={formData.logo}
-                        alt="Logo preview"
-                        style={{
-                            maxWidth: '100%',
-                            maxHeight: '100%',
-                            objectFit: 'contain'
-                        }}
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, logo: '', image: '' })}
-                        style={{
-                            position: 'absolute',
-                            top: '4px',
-                            right: '4px',
-                            background: 'rgba(0,0,0,0.5)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '24px',
-                            height: '24px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        ×
-                    </button>
                 </div>
-            )}
-        </div>
 
-        {/* Banner/Facade */}
-        <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                Imagen de Fachada/Banner *
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleBannerUpload}
-                    disabled={uploadingBanner}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: '1px solid var(--border)',
-                        backgroundColor: 'var(--bg-main)',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px'
-                    }}
-                />
-                {uploadingBanner && <span style={{ fontSize: '12px', color: 'var(--primary-paddle)' }}>⏳ Subiendo imagen...</span>}
-            </div>
+                {/* Images Section */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                    {/* Logo */}
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            Logo del Negocio *
+                        </label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleLogoUpload}
+                                disabled={uploadingLogo}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px'
+                                }}
+                            />
+                            {uploadingLogo && <span style={{ fontSize: '12px', color: 'var(--primary-paddle)' }}>⏳ Subiendo imagen...</span>}
+                        </div>
 
-            {formData.banner_image && (
-                <div style={{
-                    marginTop: '8px',
-                    width: '100%',
-                    height: '120px',
-                    borderRadius: '12px',
-                    border: '2px dashed var(--border)',
-                    overflow: 'hidden',
-                    backgroundColor: 'var(--bg-main)',
-                    position: 'relative'
-                }}>
-                    <img
-                        src={formData.banner_image}
-                        alt="Banner preview"
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                        }}
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, banner_image: '' })}
-                        style={{
-                            position: 'absolute',
-                            top: '4px',
-                            right: '4px',
-                            background: 'rgba(0,0,0,0.5)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '24px',
-                            height: '24px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        ×
-                    </button>
+                        {formData.logo && (
+                            <div style={{
+                                marginTop: '8px',
+                                width: '100%',
+                                height: '120px',
+                                borderRadius: '12px',
+                                border: '2px dashed var(--border)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                                backgroundColor: 'var(--bg-main)',
+                                position: 'relative'
+                            }}>
+                                <img
+                                    src={formData.logo}
+                                    alt="Logo preview"
+                                    style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '100%',
+                                        objectFit: 'contain'
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, logo: '', image: '' })}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '4px',
+                                        right: '4px',
+                                        background: 'rgba(0,0,0,0.5)',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '50%',
+                                        width: '24px',
+                                        height: '24px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Banner/Facade */}
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            Imagen de Fachada/Banner *
+                        </label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleBannerUpload}
+                                disabled={uploadingBanner}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px'
+                                }}
+                            />
+                            {uploadingBanner && <span style={{ fontSize: '12px', color: 'var(--primary-paddle)' }}>⏳ Subiendo imagen...</span>}
+                        </div>
+
+                        {formData.banner_image && (
+                            <div style={{
+                                marginTop: '8px',
+                                width: '100%',
+                                height: '120px',
+                                borderRadius: '12px',
+                                border: '2px dashed var(--border)',
+                                overflow: 'hidden',
+                                backgroundColor: 'var(--bg-main)',
+                                position: 'relative'
+                            }}>
+                                <img
+                                    src={formData.banner_image}
+                                    alt="Banner preview"
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover'
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, banner_image: '' })}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '4px',
+                                        right: '4px',
+                                        background: 'rgba(0,0,0,0.5)',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '50%',
+                                        width: '24px',
+                                        height: '24px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            )}
-        </div>
-    </div>
-            </section >
+            </section>
 
-        {/* Map Section */ }
-        < section >
+            {/* Map Section */}
+            <section>
                 <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
                     Ubicación en el Mapa
                 </h3>
@@ -513,10 +547,10 @@ export default function BusinessForm({ business, onSave, onCancel }) {
                         <LocationMarker />
                     </MapContainer>
                 </div>
-            </section >
+            </section>
 
-        {/* Business Hours */ }
-        < section >
+            {/* Business Hours */}
+            <section>
                 <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
                     Horarios de Atención
                 </h3>
@@ -684,10 +718,10 @@ export default function BusinessForm({ business, onSave, onCancel }) {
                         );
                     })}
                 </div>
-            </section >
+            </section>
 
-        {/* Amenities */ }
-        < section >
+            {/* Amenities */}
+            <section>
                 <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
                     Amenidades
                 </h3>
@@ -759,261 +793,335 @@ export default function BusinessForm({ business, onSave, onCancel }) {
                         </span>
                     ))}
                 </div>
-            </section >
+            </section>
 
-        {/* Courts (for sport type) */ }
-    {
-        formData.type === 'sport' && (
-            <section>
-                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                    Canchas
-                </h3>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                    <input
-                        type="text"
-                        value={newCourt.name}
-                        onChange={(e) => setNewCourt({ ...newCourt, name: e.target.value })}
-                        style={{
-                            flex: 2,
-                            padding: '12px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)',
-                            backgroundColor: 'var(--bg-main)',
-                            color: 'var(--text-primary)',
-                            fontSize: '14px'
-                        }}
-                        placeholder="Nombre de la cancha"
-                    />
-                    <input
-                        type="number"
-                        value={newCourt.price}
-                        onChange={(e) => setNewCourt({ ...newCourt, price: e.target.value })}
-                        style={{
-                            flex: 1,
-                            padding: '12px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)',
-                            backgroundColor: 'var(--bg-main)',
-                            color: 'var(--text-primary)',
-                            fontSize: '14px'
-                        }}
-                        placeholder="Precio"
-                    />
-                    <button
-                        type="button"
-                        onClick={addCourt}
-                        style={{
-                            padding: '12px 24px',
-                            borderRadius: '10px',
-                            border: 'none',
-                            backgroundColor: 'var(--primary-paddle)',
-                            color: '#fff',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        + Agregar
-                    </button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {formData.courts.map((court, index) => (
-                        <div
-                            key={index}
-                            style={{
-                                padding: '12px 16px',
-                                borderRadius: '10px',
-                                backgroundColor: 'var(--bg-main)',
-                                border: '1px solid var(--border)',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
-                            }}
-                        >
-                            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{court.name}</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <span style={{ color: 'var(--primary-paddle)', fontWeight: '700' }}>${court.price}</span>
-                                <button
-                                    type="button"
-                                    onClick={() => removeCourt(index)}
+            {/* Courts (for sport type) */}
+            {
+                formData.type === 'sport' && (
+                    <section>
+                        <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                            Canchas
+                        </h3>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                            <input
+                                type="text"
+                                value={newCourt.name}
+                                onChange={(e) => setNewCourt({ ...newCourt, name: e.target.value })}
+                                style={{
+                                    flex: 2,
+                                    padding: '12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px'
+                                }}
+                                placeholder="Nombre de la cancha"
+                            />
+                            <input
+                                type="number"
+                                value={newCourt.price}
+                                onChange={(e) => setNewCourt({ ...newCourt, price: e.target.value })}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px'
+                                }}
+                                placeholder="Precio"
+                            />
+                            <button
+                                type="button"
+                                onClick={addCourt}
+                                style={{
+                                    padding: '12px 24px',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    backgroundColor: 'var(--primary-paddle)',
+                                    color: '#fff',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                + Agregar
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {formData.courts.map((court, index) => (
+                                <div
+                                    key={index}
                                     style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#FF4444',
-                                        cursor: 'pointer',
-                                        fontSize: '18px'
+                                        padding: '12px 16px',
+                                        borderRadius: '10px',
+                                        backgroundColor: 'var(--bg-main)',
+                                        border: '1px solid var(--border)',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
                                     }}
                                 >
-                                    🗑️
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-        )
-    }
-
-    {/* Services (for service type) */ }
-    {
-        formData.type === 'service' && (
-            <section>
-                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                    Servicios
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '8px', marginBottom: '12px' }}>
-                    <input
-                        type="text"
-                        value={newService.name}
-                        onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                        style={{
-                            padding: '12px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)',
-                            backgroundColor: 'var(--bg-main)',
-                            color: 'var(--text-primary)',
-                            fontSize: '14px'
-                        }}
-                        placeholder="Nombre del servicio"
-                    />
-                    <input
-                        type="number"
-                        value={newService.price}
-                        onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                        style={{
-                            padding: '12px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)',
-                            backgroundColor: 'var(--bg-main)',
-                            color: 'var(--text-primary)',
-                            fontSize: '14px'
-                        }}
-                        placeholder="Precio"
-                    />
-                    <input
-                        type="text"
-                        value={newService.duration}
-                        onChange={(e) => setNewService({ ...newService, duration: e.target.value })}
-                        style={{
-                            padding: '12px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)',
-                            backgroundColor: 'var(--bg-main)',
-                            color: 'var(--text-primary)',
-                            fontSize: '14px'
-                        }}
-                        placeholder="Duración"
-                    />
-                    <button
-                        type="button"
-                        onClick={addService}
-                        style={{
-                            padding: '12px 24px',
-                            borderRadius: '10px',
-                            border: 'none',
-                            backgroundColor: 'var(--primary-paddle)',
-                            color: '#fff',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap'
-                        }}
-                    >
-                        + Agregar
-                    </button>
-                </div>
-                <input
-                    type="text"
-                    value={newService.description}
-                    onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: '1px solid var(--border)',
-                        backgroundColor: 'var(--bg-main)',
-                        color: 'var(--text-primary)',
-                        fontSize: '14px',
-                        marginBottom: '12px'
-                    }}
-                    placeholder="Descripción del servicio"
-                />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {formData.services.map((service, index) => (
-                        <div
-                            key={index}
-                            style={{
-                                padding: '16px',
-                                borderRadius: '10px',
-                                backgroundColor: 'var(--bg-main)',
-                                border: '1px solid var(--border)'
-                            }}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                                <div style={{ flex: 1 }}>
-                                    <h4 style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>{service.name}</h4>
-                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>{service.description}</p>
+                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{court.name}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ color: 'var(--primary-paddle)', fontWeight: '700' }}>${court.price}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeCourt(index)}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#FF4444',
+                                                cursor: 'pointer',
+                                                fontSize: '18px'
+                                            }}
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => removeService(index)}
+                            ))}
+                        </div>
+                    </section>
+                )
+            }
+
+            {/* Services (for service type) */}
+            {
+                formData.type === 'service' && (
+                    <section>
+                        <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                            Servicios
+                        </h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '8px', marginBottom: '12px' }}>
+                            <input
+                                type="text"
+                                value={newService.name}
+                                onChange={(e) => setNewService({ ...newService, name: e.target.value })}
+                                style={{
+                                    padding: '12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px'
+                                }}
+                                placeholder="Nombre del servicio"
+                            />
+                            <input
+                                type="number"
+                                value={newService.price}
+                                onChange={(e) => setNewService({ ...newService, price: e.target.value })}
+                                style={{
+                                    padding: '12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px'
+                                }}
+                                placeholder="Precio"
+                            />
+                            <input
+                                type="text"
+                                value={newService.duration}
+                                onChange={(e) => setNewService({ ...newService, duration: e.target.value })}
+                                style={{
+                                    padding: '12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    backgroundColor: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px'
+                                }}
+                                placeholder="Duración"
+                            />
+                            <button
+                                type="button"
+                                onClick={addService}
+                                style={{
+                                    padding: '12px 24px',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    backgroundColor: 'var(--primary-paddle)',
+                                    color: '#fff',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                + Agregar
+                            </button>
+                        </div>
+                        <input
+                            type="text"
+                            value={newService.description}
+                            onChange={(e) => setNewService({ ...newService, description: e.target.value })}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px',
+                                marginBottom: '12px'
+                            }}
+                            placeholder="Descripción del servicio"
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {formData.services.map((service, index) => (
+                                <div
+                                    key={index}
                                     style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#FF4444',
-                                        cursor: 'pointer',
-                                        fontSize: '18px'
+                                        padding: '16px',
+                                        borderRadius: '10px',
+                                        backgroundColor: 'var(--bg-main)',
+                                        border: '1px solid var(--border)'
                                     }}
                                 >
-                                    🗑️
-                                </button>
-                            </div>
-                            <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
-                                <span style={{ color: 'var(--primary-paddle)', fontWeight: '700' }}>${service.price}</span>
-                                <span style={{ color: 'var(--text-secondary)' }}>⏱ {service.duration}</span>
-                            </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <h4 style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>{service.name}</h4>
+                                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>{service.description}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeService(index)}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#FF4444',
+                                                cursor: 'pointer',
+                                                fontSize: '18px'
+                                            }}
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
+                                        <span style={{ color: 'var(--primary-paddle)', fontWeight: '700' }}>${service.price}</span>
+                                        <span style={{ color: 'var(--text-secondary)' }}>⏱ {service.duration}</span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
+                    </section>
+                )
+            }
+
+            {/* Redes Sociales */}
+            <section>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                    Redes Sociales
+                </h3>
+                <div style={{ display: 'grid', gap: '16px' }}>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            Instagram (URL completa)
+                        </label>
+                        <input
+                            type="url"
+                            value={formData.instagram || ''}
+                            onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px'
+                            }}
+                            placeholder="https://instagram.com/tu_negocio"
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            Facebook (URL completa)
+                        </label>
+                        <input
+                            type="url"
+                            value={formData.facebook || ''}
+                            onChange={(e) => setFormData({ ...formData, facebook: e.target.value })}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px'
+                            }}
+                            placeholder="https://facebook.com/tu_negocio"
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            WhatsApp (número con código de país, sin +)
+                        </label>
+                        <input
+                            type="tel"
+                            value={formData.whatsapp || ''}
+                            onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px'
+                            }}
+                            placeholder="5493804123456"
+                        />
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                            Ejemplo: 5493804123456 (54 = Argentina, 9 = celular, 3804 = código de área, 123456 = número)
+                        </p>
+                    </div>
                 </div>
             </section>
-        )
-    }
 
-    {/* Action Buttons */ }
-    <div style={{ display: 'flex', gap: '12px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
-        <button
-            type="button"
-            onClick={onCancel}
-            style={{
-                flex: 1,
-                padding: '16px',
-                borderRadius: '12px',
-                border: '1px solid var(--border)',
-                backgroundColor: 'transparent',
-                color: 'var(--text-secondary)',
-                fontWeight: '600',
-                fontSize: '16px',
-                cursor: 'pointer'
-            }}
-        >
-            Cancelar
-        </button>
-        <button
-            type="submit"
-            style={{
-                flex: 2,
-                padding: '16px',
-                borderRadius: '12px',
-                border: 'none',
-                backgroundColor: 'var(--primary-paddle)',
-                color: '#fff',
-                fontWeight: '700',
-                fontSize: '16px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,230,118,0.3)'
-            }}
-        >
-            {business ? '💾 Guardar Cambios' : '✨ Crear Negocio'}
-        </button>
-    </div>
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '12px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    style={{
+                        flex: 1,
+                        padding: '16px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border)',
+                        backgroundColor: 'transparent',
+                        color: 'var(--text-secondary)',
+                        fontWeight: '600',
+                        fontSize: '16px',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="submit"
+                    style={{
+                        flex: 2,
+                        padding: '16px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        backgroundColor: 'var(--primary-paddle)',
+                        color: '#fff',
+                        fontWeight: '700',
+                        fontSize: '16px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(0,230,118,0.3)'
+                    }}
+                >
+                    {business ? '💾 Guardar Cambios' : '✨ Crear Negocio'}
+                </button>
+            </div>
         </form >
     );
 }
