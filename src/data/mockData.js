@@ -1,16 +1,16 @@
 export const categories = [
-    { id: 'paddle', name: 'Padel', icon: '🎾', color: '#00E676' },
-    { id: 'football', name: 'Fútbol', icon: '⚽', color: '#2979FF' },
-    { id: 'beauty', name: 'Belleza', icon: '💇‍♀️', color: '#FF4081' },
-    { id: 'health', name: 'Salud', icon: '🩺', color: '#00B0FF' },
-    { id: 'other', name: 'Otros', icon: '📅', color: '#FFC107' }
+    { id: 'padel', name: 'Padel', icon: '🎾', color: '#00E676' },
+    { id: 'futbol', name: 'Fútbol', icon: '⚽', color: '#2979FF' },
+    { id: 'belleza', name: 'Belleza', icon: '💇‍♀️', color: '#FF4081' },
+    { id: 'salud', name: 'Salud', icon: '🩺', color: '#00B0FF' },
+    { id: 'otros', name: 'Otros', icon: '📅', color: '#FFC107' }
 ];
 
 export const businesses = [
     {
         id: 'club-padel-central',
         name: 'Club Padel Central',
-        category: 'paddle', // Updated category
+        category: 'padel', // Updated category
         type: 'sport',
         image: 'https://images.unsplash.com/photo-1626248596308-25297c2338c3?auto=format&fit=crop&q=80&w=1000',
         location: 'Av. Principal 123, La Rioja',
@@ -28,7 +28,7 @@ export const businesses = [
     {
         id: 'estetica-glow',
         name: 'Glow Estética Integral',
-        category: 'beauty',
+        category: 'belleza',
         type: 'service', // Triggers ServiceSelector flow
         banner: 'https://images.unsplash.com/photo-1600948836101-f9ffda59d250?auto=format&fit=crop&q=80&w=1000', // Spa interior
         logo: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&q=80&w=200', // Abstract beauty logo
@@ -68,7 +68,7 @@ export const businesses = [
     {
         id: 'barberia-vikingos',
         name: 'Vikingos Barber Shop',
-        category: 'beauty',
+        category: 'belleza',
         type: 'service',
         banner: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=1000', // Barber shop interior
         logo: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&q=80&w=200', // Barber logo
@@ -108,7 +108,7 @@ export const businesses = [
     {
         id: 'clinica-san-lucas',
         name: 'Consultorios San Lucas',
-        category: 'health',
+        category: 'salud',
         type: 'service',
         image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=1000',
         location: 'Buenos Aires 200, La Rioja',
@@ -125,7 +125,7 @@ export const businesses = [
     {
         id: 'complejo-golazo',
         name: 'Complejo El Golazo',
-        category: 'football',
+        category: 'futbol',
         type: 'sport',
         image: 'https://images.unsplash.com/photo-1579952363873-27f3bde9be2d?auto=format&fit=crop&q=80&w=1000',
         location: 'Av. Facundo Quiroga 1500, La Rioja',
@@ -143,7 +143,7 @@ export const businesses = [
     {
         id: 'club-tenis-larioja',
         name: 'Club de Tenis La Rioja',
-        category: 'other',
+        category: 'otros',
         type: 'sport',
         image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?auto=format&fit=crop&q=80&w=1000',
         location: 'Av. San Francisco 3200, La Rioja',
@@ -161,7 +161,7 @@ export const businesses = [
     {
         id: 'yoga-bienestar',
         name: 'Yoga & Bienestar',
-        category: 'health',
+        category: 'salud',
         type: 'service',
         image: 'https://images.unsplash.com/photo-1599447421405-0c325d36d75e?auto=format&fit=crop&q=80&w=1000',
         location: 'Catamarca 150, La Rioja',
@@ -178,7 +178,7 @@ export const businesses = [
     {
         id: 'lavaauto-express',
         name: 'LavaAuto Express',
-        category: 'other',
+        category: 'otros',
         type: 'service',
         image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?auto=format&fit=crop&q=80&w=1000',
         location: 'Av. Perón y Facundo Quiroga',
@@ -217,3 +217,5 @@ export const promotions = [
         image: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&q=80&w=800' // Spa/Massage
     }
 ];
+
+

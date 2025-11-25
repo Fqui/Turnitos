@@ -161,7 +161,21 @@ export default function Admin() {
                     setCategoryList([...categoryList, item]);
                 }
             } else if (activeTab === 'promotions') {
-                await supabaseService.createPromotion(item);
+                if (item.id && editingItem) {
+                    // Ensure we don't send empty image string - keep original if no new image uploaded
+                    const updateData = { ...item };
+                    if (!updateData.image || updateData.image === '') {
+                        updateData.image = editingItem.image;
+                    }
+
+                    // Remove joined properties that aren't columns in the promotions table
+                    // Only keep the actual columns: title, business_id, discount, image, description, valid_until
+                    const { businesses, business, created_at, ...cleanData } = updateData;
+
+                    await supabaseService.updatePromotion(item.id, cleanData);
+                } else {
+                    await supabaseService.createPromotion(item);
+                }
             }
 
             fetchData(); // Refresh all data
@@ -169,7 +183,8 @@ export default function Admin() {
             setEditingItem(null);
         } catch (error) {
             console.error("Error saving item:", error);
-            alert("Error al guardar los cambios.");
+            console.error("Error details:", error.message, error);
+            alert("Error al guardar los cambios: " + (error.message || "Error desconocido"));
         }
     };
 

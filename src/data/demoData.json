@@ -1,0 +1,541 @@
+{
+    "businesses": [
+        {
+            "id": "demo-padel-club-1",
+            "name": "Elite Padel Club",
+            "category": "Pádel",
+            "type": "court",
+            "image": "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800",
+            "logo": "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=200",
+            "banner_image": "https://images.unsplash.com/photo-1622547748225-3fc4abd2cca0?w=1200",
+            "location": "Av. del Libertador 5250, Buenos Aires",
+            "latitude": -34.5531,
+            "longitude": -58.4514,
+            "rating": 4.8,
+            "theme": "dark",
+            "amenities": [
+                "Vestuarios",
+                "Estacionamiento",
+                "WiFi",
+                "Cafetería",
+                "Aire Acondicionado"
+            ],
+            "hours": {
+                "monday": {
+                    "open": "08:00",
+                    "close": "23:00"
+                },
+                "tuesday": {
+                    "open": "08:00",
+                    "close": "23:00"
+                },
+                "wednesday": {
+                    "open": "08:00",
+                    "close": "23:00"
+                },
+                "thursday": {
+                    "open": "08:00",
+                    "close": "23:00"
+                },
+                "friday": {
+                    "open": "08:00",
+                    "close": "23:00"
+                },
+                "saturday": {
+                    "open": "09:00",
+                    "close": "22:00"
+                },
+                "sunday": {
+                    "open": "09:00",
+                    "close": "22:00"
+                }
+            },
+            "sport_types": [
+                "Pádel"
+            ],
+            "button_color": "#FF6B35",
+            "instagram": "https://instagram.com/elitepadelclub",
+            "facebook": "https://facebook.com/elitepadelclub",
+            "whatsapp": "+5491112345678",
+            "courts": [
+                {
+                    "id": "court-1",
+                    "name": "Cancha 1 - Panorámica",
+                    "sport": "Pádel",
+                    "price": 8000
+                },
+                {
+                    "id": "court-2",
+                    "name": "Cancha 2 - Indoor",
+                    "sport": "Pádel",
+                    "price": 7500
+                },
+                {
+                    "id": "court-3",
+                    "name": "Cancha 3 - Premium",
+                    "sport": "Pádel",
+                    "price": 9000
+                }
+            ]
+        },
+        {
+            "id": "demo-spa-wellness-1",
+            "name": "Serenity Spa & Wellness",
+            "category": "Spa",
+            "type": "service",
+            "image": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800",
+            "logo": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200",
+            "banner_image": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=1200",
+            "location": "Av. Santa Fe 2845, Buenos Aires",
+            "latitude": -34.5955,
+            "longitude": -58.3974,
+            "rating": 4.9,
+            "theme": "light",
+            "amenities": [
+                "Sauna",
+                "Jacuzzi",
+                "Sala de Relajación",
+                "Vestuarios",
+                "WiFi"
+            ],
+            "hours": {
+                "monday": {
+                    "open": "10:00",
+                    "close": "20:00"
+                },
+                "tuesday": {
+                    "open": "10:00",
+                    "close": "20:00"
+                },
+                "wednesday": {
+                    "open": "10:00",
+                    "close": "20:00"
+                },
+                "thursday": {
+                    "open": "10:00",
+                    "close": "20:00"
+                },
+                "friday": {
+                    "open": "10:00",
+                    "close": "21:00"
+                },
+                "saturday": {
+                    "open": "10:00",
+                    "close": "21:00"
+                },
+                "sunday": {
+                    "open": "11:00",
+                    "close": "19:00"
+                }
+            },
+            "sport_types": [],
+            "button_color": "#8B7355",
+            "instagram": "https://instagram.com/serenityspa",
+            "facebook": "https://facebook.com/serenityspa",
+            "whatsapp": "+5491187654321",
+            "specialists": [
+                {
+                    "id": "specialist-1",
+                    "name": "María González",
+                    "role": "Masajista Profesional",
+                    "avatar_url": "https://i.pravatar.cc/150?img=5"
+                },
+                {
+                    "id": "specialist-2",
+                    "name": "Laura Fernández",
+                    "role": "Esteticista",
+                    "avatar_url": "https://i.pravatar.cc/150?img=9"
+                },
+                {
+                    "id": "specialist-3",
+                    "name": "Ana Martínez",
+                    "role": "Terapeuta",
+                    "avatar_url": "https://i.pravatar.cc/150?img=10"
+                }
+            ],
+            "services": [
+                {
+                    "id": "service-1",
+                    "name": "Masaje Relajante",
+                    "duration": 60,
+                    "price": 12000,
+                    "image_url": "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=400",
+                    "description": "Masaje corporal completo para aliviar tensiones",
+                    "specialist_id": "specialist-1"
+                },
+                {
+                    "id": "service-2",
+                    "name": "Tratamiento Facial",
+                    "duration": 90,
+                    "price": 15000,
+                    "image_url": "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=400",
+                    "description": "Limpieza profunda e hidratación facial",
+                    "specialist_id": "specialist-2"
+                },
+                {
+                    "id": "service-3",
+                    "name": "Aromaterapia",
+                    "duration": 45,
+                    "price": 9000,
+                    "image_url": "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=400",
+                    "description": "Terapia con aceites esenciales",
+                    "specialist_id": "specialist-3"
+                }
+            ]
+        },
+        {
+            "id": "demo-tennis-center-1",
+            "name": "Tenis Pro Academy",
+            "category": "Tenis",
+            "type": "court",
+            "image": "https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67?w=800",
+            "logo": "https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67?w=200",
+            "banner_image": "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=1200",
+            "location": "Av. Figueroa Alcorta 7597, Buenos Aires",
+            "latitude": -34.5450,
+            "longitude": -58.4283,
+            "rating": 4.7,
+            "theme": "light",
+            "amenities": [
+                "Vestuarios",
+                "Estacionamiento",
+                "Pro Shop",
+                "Cafetería",
+                "Clases"
+            ],
+            "hours": {
+                "monday": {
+                    "open": "07:00",
+                    "close": "22:00"
+                },
+                "tuesday": {
+                    "open": "07:00",
+                    "close": "22:00"
+                },
+                "wednesday": {
+                    "open": "07:00",
+                    "close": "22:00"
+                },
+                "thursday": {
+                    "open": "07:00",
+                    "close": "22:00"
+                },
+                "friday": {
+                    "open": "07:00",
+                    "close": "22:00"
+                },
+                "saturday": {
+                    "open": "08:00",
+                    "close": "21:00"
+                },
+                "sunday": {
+                    "open": "08:00",
+                    "close": "21:00"
+                }
+            },
+            "sport_types": [
+                "Tenis"
+            ],
+            "button_color": "#2E7D32",
+            "instagram": "https://instagram.com/tenisproacademy",
+            "facebook": "https://facebook.com/tenisproacademy",
+            "whatsapp": "+5491145678901",
+            "courts": [
+                {
+                    "id": "court-t1",
+                    "name": "Cancha Central - Polvo de Ladrillo",
+                    "sport": "Tenis",
+                    "price": 6000
+                },
+                {
+                    "id": "court-t2",
+                    "name": "Cancha 2 - Césped Sintético",
+                    "sport": "Tenis",
+                    "price": 7000
+                },
+                {
+                    "id": "court-t3",
+                    "name": "Cancha 3 - Hard Court",
+                    "sport": "Tenis",
+                    "price": 6500
+                }
+            ]
+        },
+        {
+            "id": "demo-barbershop-1",
+            "name": "The Classic Barber",
+            "category": "Barbería",
+            "type": "service",
+            "image": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800",
+            "logo": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200",
+            "banner_image": "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1200",
+            "location": "Av. Cabildo 2458, Buenos Aires",
+            "latitude": -34.5631,
+            "longitude": -58.4541,
+            "rating": 4.6,
+            "theme": "dark",
+            "amenities": [
+                "WiFi",
+                "Bebidas",
+                "Música",
+                "Estacionamiento"
+            ],
+            "hours": {
+                "monday": {
+                    "open": "09:00",
+                    "close": "20:00"
+                },
+                "tuesday": {
+                    "open": "09:00",
+                    "close": "20:00"
+                },
+                "wednesday": {
+                    "open": "09:00",
+                    "close": "20:00"
+                },
+                "thursday": {
+                    "open": "09:00",
+                    "close": "20:00"
+                },
+                "friday": {
+                    "open": "09:00",
+                    "close": "21:00"
+                },
+                "saturday": {
+                    "open": "09:00",
+                    "close": "21:00"
+                },
+                "sunday": {
+                    "open": "10:00",
+                    "close": "18:00"
+                }
+            },
+            "sport_types": [],
+            "button_color": "#B8860B",
+            "instagram": "https://instagram.com/classicbarber",
+            "facebook": "https://facebook.com/classicbarber",
+            "whatsapp": "+5491123456789",
+            "specialists": [
+                {
+                    "id": "barber-1",
+                    "name": "Carlos Rodríguez",
+                    "role": "Barbero Master",
+                    "avatar_url": "https://i.pravatar.cc/150?img=12"
+                },
+                {
+                    "id": "barber-2",
+                    "name": "Diego López",
+                    "role": "Barbero Senior",
+                    "avatar_url": "https://i.pravatar.cc/150?img=13"
+                }
+            ],
+            "services": [
+                {
+                    "id": "barber-service-1",
+                    "name": "Corte + Barba",
+                    "duration": 45,
+                    "price": 8000,
+                    "image_url": "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400",
+                    "description": "Corte de cabello y perfilado de barba",
+                    "specialist_id": "barber-1"
+                },
+                {
+                    "id": "barber-service-2",
+                    "name": "Corte Clásico",
+                    "duration": 30,
+                    "price": 5000,
+                    "image_url": "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400",
+                    "description": "Corte de cabello tradicional",
+                    "specialist_id": "barber-2"
+                },
+                {
+                    "id": "barber-service-3",
+                    "name": "Afeitado Tradicional",
+                    "duration": 30,
+                    "price": 6000,
+                    "image_url": "https://images.unsplash.com/photo-1620331311523-9dcb0e0c4e42?w=400",
+                    "description": "Afeitado con navaja y toalla caliente",
+                    "specialist_id": "barber-1"
+                }
+            ]
+        },
+        {
+            "id": "demo-futbol-5",
+            "name": "Fútbol 5 La Cancha",
+            "category": "Fútbol",
+            "type": "court",
+            "image": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800",
+            "logo": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=200",
+            "banner_image": "https://images.unsplash.com/photo-1589487391730-58f20eb2c308?w=1200",
+            "location": "Av. Warnes 2563, Buenos Aires",
+            "latitude": -34.5985,
+            "longitude": -58.4382,
+            "rating": 4.5,
+            "theme": "light",
+            "amenities": [
+                "Vestuarios",
+                "Estacionamiento",
+                "Parrilla",
+                "Bar",
+                "Iluminación LED"
+            ],
+            "hours": {
+                "monday": {
+                    "open": "08:00",
+                    "close": "23:00"
+                },
+                "tuesday": {
+                    "open": "08:00",
+                    "close": "23:00"
+                },
+                "wednesday": {
+                    "open": "08:00",
+                    "close": "23:00"
+                },
+                "thursday": {
+                    "open": "08:00",
+                    "close": "23:00"
+                },
+                "friday": {
+                    "open": "08:00",
+                    "close": "01:00"
+                },
+                "saturday": {
+                    "open": "08:00",
+                    "close": "01:00"
+                },
+                "sunday": {
+                    "open": "08:00",
+                    "close": "23:00"
+                }
+            },
+            "sport_types": [
+                "Fútbol 5",
+                "Fútbol 7"
+            ],
+            "button_color": "#1976D2",
+            "instagram": "https://instagram.com/futbol5lacancha",
+            "facebook": "https://facebook.com/futbol5lacancha",
+            "whatsapp": "+5491134567890",
+            "courts": [
+                {
+                    "id": "futbol-court-1",
+                    "name": "Cancha 1 - Césped Sintético Premium",
+                    "sport": "Fútbol 5",
+                    "price": 10000
+                },
+                {
+                    "id": "futbol-court-2",
+                    "name": "Cancha 2 - Césped Sintético",
+                    "sport": "Fútbol 5",
+                    "price": 9000
+                },
+                {
+                    "id": "futbol-court-3",
+                    "name": "Cancha 3 - Fútbol 7",
+                    "sport": "Fútbol 7",
+                    "price": 15000
+                }
+            ]
+        },
+        {
+            "id": "demo-yoga-studio-1",
+            "name": "Harmony Yoga Studio",
+            "category": "Yoga",
+            "type": "service",
+            "image": "https://images.unsplash.com/photo-1588286840104-8957b019727f?w=800",
+            "logo": "https://images.unsplash.com/photo-1588286840104-8957b019727f?w=200",
+            "banner_image": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1200",
+            "location": "Av. Córdoba 4567, Buenos Aires",
+            "latitude": -34.5991,
+            "longitude": -58.4203,
+            "rating": 4.9,
+            "theme": "light",
+            "amenities": [
+                "Vestuarios",
+                "Colchonetas",
+                "WiFi",
+                "Sala de Meditación",
+                "Té Orgánico"
+            ],
+            "hours": {
+                "monday": {
+                    "open": "07:00",
+                    "close": "21:00"
+                },
+                "tuesday": {
+                    "open": "07:00",
+                    "close": "21:00"
+                },
+                "wednesday": {
+                    "open": "07:00",
+                    "close": "21:00"
+                },
+                "thursday": {
+                    "open": "07:00",
+                    "close": "21:00"
+                },
+                "friday": {
+                    "open": "07:00",
+                    "close": "20:00"
+                },
+                "saturday": {
+                    "open": "08:00",
+                    "close": "19:00"
+                },
+                "sunday": {
+                    "open": "09:00",
+                    "close": "18:00"
+                }
+            },
+            "sport_types": [],
+            "button_color": "#7B68EE",
+            "instagram": "https://instagram.com/harmonyyoga",
+            "facebook": "https://facebook.com/harmonyyoga",
+            "whatsapp": "+5491198765432",
+            "specialists": [
+                {
+                    "id": "yoga-instructor-1",
+                    "name": "Sofía Ramírez",
+                    "role": "Instructora de Hatha Yoga",
+                    "avatar_url": "https://i.pravatar.cc/150?img=20"
+                },
+                {
+                    "id": "yoga-instructor-2",
+                    "name": "Lucía Torres",
+                    "role": "Instructora de Vinyasa",
+                    "avatar_url": "https://i.pravatar.cc/150?img=25"
+                }
+            ],
+            "services": [
+                {
+                    "id": "yoga-service-1",
+                    "name": "Clase de Hatha Yoga",
+                    "duration": 60,
+                    "price": 4500,
+                    "image_url": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400",
+                    "description": "Yoga tradicional enfocado en posturas y respiración",
+                    "specialist_id": "yoga-instructor-1"
+                },
+                {
+                    "id": "yoga-service-2",
+                    "name": "Clase de Vinyasa Flow",
+                    "duration": 75,
+                    "price": 5500,
+                    "image_url": "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400",
+                    "description": "Yoga dinámico con secuencias fluidas",
+                    "specialist_id": "yoga-instructor-2"
+                },
+                {
+                    "id": "yoga-service-3",
+                    "name": "Meditación Guiada",
+                    "duration": 45,
+                    "price": 3500,
+                    "image_url": "https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=400",
+                    "description": "Sesión de meditación y mindfulness",
+                    "specialist_id": "yoga-instructor-1"
+                }
+            ]
+        }
+    ]
+}

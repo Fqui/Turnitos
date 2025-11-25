@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { categories } from '../data/mockData';
-import supabaseService from '../services/supabaseService';
+import serviceAdapter from '../services/serviceAdapter';
 import Hero from '../components/Hero';
 import { generateSlug } from '../utils/utils';
 
@@ -20,8 +20,8 @@ export default function Home() {
         const loadData = async () => {
             try {
                 const [businessesData, promotionsData] = await Promise.all([
-                    supabaseService.getBusinesses(),
-                    supabaseService.getPromotions()
+                    serviceAdapter.getBusinesses(),
+                    serviceAdapter.getPromotions()
                 ]);
                 setBusinesses(businessesData || []);
                 setPromotions(promotionsData || []);
@@ -126,7 +126,70 @@ export default function Home() {
                     </div>
                 </section>
 
-                {/* 2. Categories */}
+
+                {/* 2. Promotions */}
+                <section style={{ marginBottom: '40px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>Promociones 🔥</h2>
+                    </div>
+
+                    <div style={{
+                        display: 'flex',
+                        gap: '16px',
+                        overflowX: 'auto',
+                        paddingBottom: '20px',
+                        scrollSnapType: 'x mandatory',
+                        WebkitOverflowScrolling: 'touch',
+                        margin: '0 -20px',
+                        padding: '0 20px 20px 20px'
+                    }}>
+                        {promotions.map(promo => {
+                            const business = businesses.find(b => b.id === promo.business_id);
+                            return (
+                                <Link
+                                    to={`/${generateSlug(business?.name || '')}`}
+                                    state={{ business }}
+                                    key={promo.id}
+                                    style={{ textDecoration: 'none', flex: '0 0 85%', maxWidth: '300px', scrollSnapAlign: 'center' }}
+                                >
+                                    <div style={{
+                                        position: 'relative',
+                                        borderRadius: '20px',
+                                        overflow: 'hidden',
+                                        height: '160px',
+                                        boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
+                                        transition: 'transform 0.3s'
+                                    }}>
+                                        <img src={promo.image} alt={promo.title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <div style={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            background: `linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.9) 100%)`,
+                                            padding: '16px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'flex-end',
+                                            color: '#fff'
+                                        }}>
+                                            <span style={{
+                                                background: '#FF4081', color: 'white', fontSize: '10px', fontWeight: 'bold',
+                                                padding: '4px 8px', borderRadius: '4px', alignSelf: 'flex-start', marginBottom: '6px'
+                                            }}>
+                                                {promo.discount}
+                                            </span>
+                                            <h3 style={{ fontSize: '16px', fontWeight: 'bold', lineHeight: 1.2, marginBottom: '2px' }}>{promo.title}</h3>
+                                            <p style={{ fontSize: '12px', opacity: 0.9, margin: 0 }}>
+                                                {promo.businesses?.name || 'Negocio'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </section>
+
+                {/* 3. Categories */}
                 <section style={{ marginBottom: '40px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>Categorías</h2>
@@ -202,68 +265,6 @@ export default function Home() {
                                 <span>{cat.name}</span>
                             </button>
                         ))}
-                    </div>
-                </section>
-
-                {/* 3. Promotions */}
-                <section style={{ marginBottom: '40px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>Promociones 🔥</h2>
-                    </div>
-
-                    <div style={{
-                        display: 'flex',
-                        gap: '16px',
-                        overflowX: 'auto',
-                        paddingBottom: '20px',
-                        scrollSnapType: 'x mandatory',
-                        WebkitOverflowScrolling: 'touch',
-                        margin: '0 -20px',
-                        padding: '0 20px 20px 20px'
-                    }}>
-                        {promotions.map(promo => {
-                            const business = businesses.find(b => b.id === promo.business_id);
-                            return (
-                                <Link
-                                    to={`/${generateSlug(business?.name || '')}`}
-                                    state={{ business }}
-                                    key={promo.id}
-                                    style={{ textDecoration: 'none', flex: '0 0 85%', maxWidth: '300px', scrollSnapAlign: 'center' }}
-                                >
-                                    <div style={{
-                                        position: 'relative',
-                                        borderRadius: '20px',
-                                        overflow: 'hidden',
-                                        height: '160px',
-                                        boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
-                                        transition: 'transform 0.3s'
-                                    }}>
-                                        <img src={promo.image} alt={promo.title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        <div style={{
-                                            position: 'absolute',
-                                            inset: 0,
-                                            background: `linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.9) 100%)`,
-                                            padding: '16px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'flex-end',
-                                            color: '#fff'
-                                        }}>
-                                            <span style={{
-                                                background: '#FF4081', color: 'white', fontSize: '10px', fontWeight: 'bold',
-                                                padding: '4px 8px', borderRadius: '4px', alignSelf: 'flex-start', marginBottom: '6px'
-                                            }}>
-                                                {promo.discount}
-                                            </span>
-                                            <h3 style={{ fontSize: '16px', fontWeight: 'bold', lineHeight: 1.2, marginBottom: '2px' }}>{promo.title}</h3>
-                                            <p style={{ fontSize: '12px', opacity: 0.9, margin: 0 }}>
-                                                {promo.businesses?.name || 'Negocio'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </Link>
-                            );
-                        })}
                     </div>
                 </section>
 

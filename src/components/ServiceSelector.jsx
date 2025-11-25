@@ -64,9 +64,9 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                             marginBottom: '16px',
                             backgroundColor: '#f0f0f0'
                         }}>
-                            {service.image ? (
+                            {service.image || service.image_url ? (
                                 <img
-                                    src={service.image}
+                                    src={service.image || service.image_url}
                                     alt={service.name}
                                     style={{
                                         width: '100%',

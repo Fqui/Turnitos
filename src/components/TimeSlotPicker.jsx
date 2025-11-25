@@ -10,7 +10,8 @@ export default function TimeSlotPicker({
     closingTime = '22:00',
     interval = 60,
     existingBookings = [],
-    timeRanges = []
+    timeRanges = [],
+    selectedDate = null  // 🆕 Added selectedDate parameter
 }) {
     // Helper to generate slots
     const generateSlots = (resourceId, resourcePrice) => {
@@ -57,10 +58,26 @@ export default function TimeSlotPicker({
                     }
                 }
 
-                // Check if this slot is already booked
+                // Check if this slot is already booked FOR THE SELECTED DATE
+                // Convert selectedDate to YYYY-MM-DD format (local time, not UTC)
+                const selectedDateStr = selectedDate
+                    ? (selectedDate instanceof Date
+                        ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+                        : selectedDate)
+                    : null;
+
                 const isBooked = existingBookings?.some(booking => {
-                    const bookingMatches = booking.resource_id === resourceId && booking.time === formattedTime;
-                    return bookingMatches && booking.status !== 'cancelled';
+                    // Must match: resource_id, time, AND date
+                    const bookingDateStr = booking.date instanceof Date
+                        ? `${booking.date.getFullYear()}-${String(booking.date.getMonth() + 1).padStart(2, '0')}-${String(booking.date.getDate()).padStart(2, '0')}`
+                        : booking.date;
+
+                    const bookingMatches = booking.resource_id === resourceId
+                        && booking.time === formattedTime
+                        && bookingDateStr === selectedDateStr
+                        && booking.status !== 'cancelled';
+
+                    return bookingMatches;
                 }) || false;
 
                 slots.push({
