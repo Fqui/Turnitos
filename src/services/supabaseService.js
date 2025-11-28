@@ -516,7 +516,9 @@ class SupabaseService {
                 customer_name: bookingData.customerName,
                 customer_phone: bookingData.customerPhone,
                 status: bookingData.status || 'confirmed',
-                price: bookingData.price
+                price: bookingData.price,
+                duration: bookingData.duration,
+                metadata: bookingData.metadata
             }])
             .select()
             .single();

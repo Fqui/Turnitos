@@ -35,6 +35,10 @@ export default function BusinessProfile() {
     const [showModal, setShowModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Venue specific state
+    const [selectedDuration, setSelectedDuration] = useState(null);
+    const [selectedAdditionalServices, setSelectedAdditionalServices] = useState([]);
+
     // Refs for auto-scrolling
     const calendarRef = useRef(null);
     const timeRef = useRef(null);
@@ -280,7 +284,10 @@ export default function BusinessProfile() {
                 customerName: finalDetails.customerName,
                 customerPhone: finalDetails.customerPhone,
                 price: finalDetails.price,
-                status: 'confirmed'
+                status: 'confirmed',
+                // Venue specific fields
+                duration: business.type === 'venue' ? (selectedDuration * 60) : (business.type === 'service' ? selectedItem.duration : 60),
+                metadata: business.type === 'venue' ? { additionalServices: selectedAdditionalServices } : null
             };
 
             await serviceAdapter.createBooking(bookingData);
@@ -486,6 +493,28 @@ export default function BusinessProfile() {
 
                 </div>
 
+                {/* Venue Gallery */}
+                {business.type === 'venue' && business.gallery_images && business.gallery_images.length > 0 && (
+                    <div style={{ marginBottom: '30px', overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: '10px' }}>
+                        {business.gallery_images.map((img, index) => (
+                            <img
+                                key={index}
+                                src={img}
+                                alt={`Gallery ${index}`}
+                                style={{
+                                    width: '280px',
+                                    height: '180px',
+                                    objectFit: 'cover',
+                                    borderRadius: '12px',
+                                    marginRight: '12px',
+                                    display: 'inline-block',
+                                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
+
                 {/* 3. Booking Flow Steps */}
 
                 {/* Step 1: Select Service (Only for Service businesses) */}
@@ -510,7 +539,7 @@ export default function BusinessProfile() {
                 )}
 
                 {/* Step 2: Select Date */}
-                {selectedItem && (
+                {(selectedItem || business.type === 'venue') && (
                     <section ref={calendarRef} style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
                             {business.type === 'service' ? '2. Selecciona una fecha' : '1. Selecciona una fecha'}
@@ -536,8 +565,8 @@ export default function BusinessProfile() {
 
 
 
-                {/* Step 3: Select Time */}
-                {selectedDate && (
+                {/* Step 3: Select Time (For Sport/Service) */}
+                {selectedDate && business.type !== 'venue' && (
                     <section ref={timeRef} style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
                             {business.type === 'service' ? '3. Horarios disponibles' : '2. Horarios disponibles'}
@@ -673,6 +702,121 @@ export default function BusinessProfile() {
                     </section>
                 )}
 
+                {/* Venue Booking Section */}
+                {selectedDate && business.type === 'venue' && (
+                    <>
+                        {/* Step 2: Time & Duration */}
+                        <section style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
+                            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                                2. Horario y Duración
+                            </h3>
+                            <div style={{ backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--text-secondary)' }}>Hora de Inicio</label>
+                                    <select
+                                        value={selectedTime?.time || ''}
+                                        onChange={(e) => {
+                                            const time = e.target.value;
+                                            const price = (business.price_per_hour || 0) * (selectedDuration || 0);
+                                            setSelectedTime({ time, price });
+                                        }}
+                                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)' }}
+                                    >
+                                        <option value="">Seleccionar hora...</option>
+                                        {Array.from({ length: 14 }, (_, i) => i + 8).map(hour => (
+                                            <option key={hour} value={`${hour}:00`}>{`${hour}:00`}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {business.rental_duration_options && (
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--text-secondary)' }}>Duración</label>
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            {business.rental_duration_options.map(hours => (
+                                                <button
+                                                    key={hours}
+                                                    onClick={() => {
+                                                        setSelectedDuration(hours);
+                                                        if (selectedTime?.time) {
+                                                            const price = (business.price_per_hour || 0) * hours;
+                                                            setSelectedTime({ ...selectedTime, price });
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        padding: '10px 20px',
+                                                        borderRadius: '12px',
+                                                        border: selectedDuration === hours ? `2px solid ${primaryColor}` : '1px solid var(--border)',
+                                                        backgroundColor: selectedDuration === hours ? `${primaryColor}20` : 'transparent',
+                                                        color: selectedDuration === hours ? primaryColor : 'var(--text-primary)',
+                                                        cursor: 'pointer',
+                                                        fontWeight: '600'
+                                                    }}
+                                                >
+                                                    {hours} hs
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+
+                        {/* Step 3: Additional Services */}
+                        {business.additional_services && business.additional_services.length > 0 && (
+                            <section style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
+                                <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                                    3. Servicios Adicionales (Opcional)
+                                </h3>
+                                <div style={{ display: 'grid', gap: '12px' }}>
+                                    {business.additional_services.map((service, index) => (
+                                        <div
+                                            key={index}
+                                            onClick={() => {
+                                                const isSelected = selectedAdditionalServices.some(s => s.name === service.name);
+                                                if (isSelected) {
+                                                    setSelectedAdditionalServices(selectedAdditionalServices.filter(s => s.name !== service.name));
+                                                } else {
+                                                    setSelectedAdditionalServices([...selectedAdditionalServices, service]);
+                                                }
+                                            }}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '16px',
+                                                borderRadius: '12px',
+                                                border: selectedAdditionalServices.some(s => s.name === service.name) ? `2px solid ${primaryColor}` : '1px solid var(--border)',
+                                                backgroundColor: selectedAdditionalServices.some(s => s.name === service.name) ? `${primaryColor}10` : 'var(--bg-card)',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <span style={{ fontSize: '24px' }}>{service.icon || '✨'}</span>
+                                                <div>
+                                                    <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{service.name}</div>
+                                                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>+ ${service.price}</div>
+                                                </div>
+                                            </div>
+                                            <div style={{
+                                                width: '24px',
+                                                height: '24px',
+                                                borderRadius: '50%',
+                                                border: `2px solid ${selectedAdditionalServices.some(s => s.name === service.name) ? primaryColor : 'var(--border)'}`,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                                {selectedAdditionalServices.some(s => s.name === service.name) && <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: primaryColor }} />}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+                    </>
+                )}
+
                 {/* Confirmation Button - Sticky on Mobile */}
                 {selectedTime && (
                     <div ref={confirmRef} style={{
@@ -789,12 +933,13 @@ export default function BusinessProfile() {
                     <BookingSummary
                         bookingDetails={{
                             businessName: business.name,
-                            serviceName: business.type === 'service' ? selectedItem.name : selectedItem,
+                            serviceName: business.type === 'venue' ? `Alquiler ${selectedDuration}hs` : (business.type === 'service' ? selectedItem.name : selectedItem),
                             date: selectedDate,
                             time: selectedTime.time || selectedTime,
                             price: selectedTime.price || (business.type === 'service' ? selectedItem.price : 0),
                             courtName: business.type === 'sport' ? selectedTime.courtName : null,
-                            courtId: business.type === 'sport' ? selectedTime.courtId : null
+                            courtId: business.type === 'sport' ? selectedTime.courtId : null,
+                            extras: business.type === 'venue' ? selectedAdditionalServices : []
                         }}
                         onClose={() => setShowModal(false)}
                         onConfirm={handleConfirmBooking}
