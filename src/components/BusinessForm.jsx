@@ -316,17 +316,66 @@ export default function BusinessForm({ business, onSave, onCancel }) {
     };
 
     const addService = () => {
-        if (newService.name && newService.price) {
-            setFormData({
-                ...formData,
-                services: [...formData.services, { id: Date.now().toString(), ...newService, price: parseInt(newService.price) }]
-            });
-            setNewService({ name: '', description: '', price: '', duration: '' });
+        if (newService.name && newService.price && newService.category) {
+            if (editingServiceIndex !== null) {
+                // Update existing service
+                const updatedServices = [...formData.services];
+                updatedServices[editingServiceIndex] = {
+                    ...updatedServices[editingServiceIndex],
+                    ...newService,
+                    price: parseInt(newService.price)
+                };
+                setFormData({ ...formData, services: updatedServices });
+                setEditingServiceIndex(null);
+            } else {
+                // Add new service
+                setFormData({
+                    ...formData,
+                    services: [...formData.services, { id: Date.now().toString(), ...newService, price: parseInt(newService.price) }]
+                });
+            }
+            setNewService({ name: '', description: '', price: '', duration: '', image_url: '', category: '' });
+        } else if (!newService.category) {
+            alert('Debes seleccionar una categoría para el servicio');
         }
     };
 
     const removeService = (index) => {
-        setFormData({ ...formData, services: formData.services.filter((_, i) => i !== index) });
+        // If we are editing the service we are deleting, cancel edit
+        if (editingServiceIndex === index) {
+            setEditingServiceIndex(null);
+            setNewService({ name: '', description: '', price: '', duration: '', image_url: '', category: '' });
+        } else if (editingServiceIndex !== null && index < editingServiceIndex) {
+            // If we delete a service before the one being edited, adjust the index
+            setEditingServiceIndex(editingServiceIndex - 1);
+        }
+
+        setFormData(prev => {
+            const newServices = [...prev.services];
+            newServices.splice(index, 1);
+            return {
+                ...prev,
+                services: newServices
+            };
+        });
+    };
+
+    const editService = (index) => {
+        const service = formData.services[index];
+        setNewService({
+            name: service.name,
+            description: service.description || '',
+            price: service.price,
+            duration: service.duration,
+            image_url: service.image_url || '',
+            category: service.category || ''
+        });
+        setEditingServiceIndex(index);
+    };
+
+    const cancelEditService = () => {
+        setNewService({ name: '', description: '', price: '', duration: '', image_url: '', category: '' });
+        setEditingServiceIndex(null);
     };
 
     const addSpecialist = () => {

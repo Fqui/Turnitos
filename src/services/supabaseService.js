@@ -91,7 +91,10 @@ class SupabaseService {
                 button_color: businessData.buttonColor || businessData.button_color,
                 instagram: businessData.instagram,
                 facebook: businessData.facebook,
-                whatsapp: businessData.whatsapp
+                whatsapp: businessData.whatsapp,
+                primary_color: businessData.primaryColor || businessData.button_color,
+                service_categories: businessData.service_categories || [],
+                time_ranges: businessData.time_ranges || []
             }])
             .select()
             .single();
@@ -108,8 +111,9 @@ class SupabaseService {
                 name: s.name,
                 duration: s.duration,
                 price: s.price,
-                image_url: s.image,
-                description: s.description
+                image_url: s.image || s.image_url,
+                description: s.description,
+                category: s.category
             }));
 
             const { data: insertedServices, error: servicesError } = await supabase
@@ -213,7 +217,10 @@ class SupabaseService {
                 button_color: businessData.buttonColor || businessData.button_color,
                 instagram: businessData.instagram,
                 facebook: businessData.facebook,
-                whatsapp: businessData.whatsapp
+                whatsapp: businessData.whatsapp,
+                primary_color: businessData.primaryColor || businessData.button_color,
+                service_categories: businessData.service_categories || [],
+                time_ranges: businessData.time_ranges || []
             })
             .eq('id', businessId)
             .select()
@@ -264,7 +271,8 @@ class SupabaseService {
                     duration: parseInt(s.duration) || 60,
                     price: parseFloat(s.price) || 0,
                     image_url: s.image || s.image_url,
-                    description: s.description
+                    description: s.description,
+                    category: s.category
                 };
 
                 if (isNew) {
