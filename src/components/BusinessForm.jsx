@@ -406,7 +406,9 @@ export default function BusinessForm({ business, onSave, onCancel }) {
             sportTypes: formData.sport_types || formData.sportTypes,
             buttonColor: formData.primaryColor || formData.button_color || formData.buttonColor, // Backward compat
             primaryColor: formData.primaryColor || '#00E676', // Ensure primaryColor is always set
-            theme: formData.theme || 'dark' // Ensure theme is always set
+            theme: formData.theme || 'dark', // Ensure theme is always set
+            service_categories: serviceCategories,
+            time_ranges: timeRanges
         };
 
         await onSave(dataToSave);
