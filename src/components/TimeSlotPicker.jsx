@@ -156,66 +156,178 @@ export default function TimeSlotPicker({
                         )}
 
 
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                            gap: '12px'
-                        }}>
-                            {resource.slots.map((slot, index) => {
-                                const slotId = `${resource.id}-${slot.time}`;
-                                const isSelected = selectedTime?.id === slotId;
+                        {type === 'service' ? (
+                            // For services, split slots into morning and afternoon
+                            (() => {
+                                const morningSlots = resource.slots.filter(s => parseInt(s.time.split(':')[0]) < 13);
+                                const afternoonSlots = resource.slots.filter(s => parseInt(s.time.split(':')[0]) >= 13);
+
+                                const renderSlotButton = (slot, index) => {
+                                    const slotId = `${resource.id}-${slot.time}`;
+                                    const isSelected = selectedTime?.id === slotId;
+
+                                    return (
+                                        <button
+                                            key={`${index}-${slot.time}`}
+                                            disabled={!slot.available}
+                                            onClick={() => onTimeSelect({
+                                                id: slotId,
+                                                time: slot.time,
+                                                price: slot.price > 0 ? slot.price : undefined,
+                                                courtName: resource.name,
+                                                courtId: resource.id
+                                            })}
+                                            style={{
+                                                padding: '16px 12px',
+                                                borderRadius: '12px',
+                                                backgroundColor: isSelected ? sportColor : (slot.available ? 'var(--bg-card)' : 'rgba(0,0,0,0.02)'),
+                                                border: isSelected ? `2px solid ${sportColor}` : '1px solid var(--border)',
+                                                color: isSelected ? '#fff' : (slot.available ? 'var(--text-primary)' : 'var(--text-secondary)'),
+                                                cursor: slot.available ? 'pointer' : 'not-allowed',
+                                                opacity: slot.available ? 1 : 0.5,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                transition: 'all 0.2s',
+                                                boxShadow: isSelected ? `0 4px 12px ${sportColor}40` : 'none'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (slot.available && !isSelected) {
+                                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!isSelected) {
+                                                    e.currentTarget.style.transform = 'translateY(0)';
+                                                    e.currentTarget.style.boxShadow = 'none';
+                                                }
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '18px', fontWeight: 'bold', textDecoration: slot.available ? 'none' : 'line-through' }}>
+                                                {slot.time}
+                                            </span>
+                                            {slot.price > 0 && (
+                                                <span style={{ fontSize: '12px', opacity: 0.8 }}>
+                                                    ${slot.price.toLocaleString()}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                };
 
                                 return (
-                                    <button
-                                        key={index}
-                                        disabled={!slot.available}
-                                        onClick={() => onTimeSelect({
-                                            id: slotId,
-                                            time: slot.time,
-                                            price: slot.price > 0 ? slot.price : undefined,
-                                            courtName: resource.name,
-                                            courtId: resource.id // Pass the real court ID
-                                        })}
-                                        style={{
-                                            padding: '16px 12px',
-                                            borderRadius: '12px',
-                                            backgroundColor: isSelected ? sportColor : (slot.available ? 'var(--bg-card)' : 'rgba(0,0,0,0.02)'),
-                                            border: isSelected ? `2px solid ${sportColor}` : '1px solid var(--border)',
-                                            color: isSelected ? '#fff' : (slot.available ? 'var(--text-primary)' : 'var(--text-secondary)'),
-                                            cursor: slot.available ? 'pointer' : 'not-allowed',
-                                            opacity: slot.available ? 1 : 0.5,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                            transition: 'all 0.2s',
-                                            boxShadow: isSelected ? `0 4px 12px ${sportColor}40` : 'none'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (slot.available && !isSelected) {
-                                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                                            }
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isSelected) {
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                                e.currentTarget.style.boxShadow = 'none';
-                                            }
-                                        }}
-                                    >
-                                        <span style={{ fontSize: '18px', fontWeight: 'bold', textDecoration: slot.available ? 'none' : 'line-through' }}>
-                                            {slot.time}
-                                        </span>
-                                        {slot.price > 0 && (
-                                            <span style={{ fontSize: '12px', opacity: 0.8 }}>
-                                                ${slot.price.toLocaleString()}
-                                            </span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                        {morningSlots.length > 0 && (
+                                            <div>
+                                                <h5 style={{
+                                                    fontSize: '14px',
+                                                    fontWeight: '600',
+                                                    color: 'var(--text-secondary)',
+                                                    marginBottom: '12px',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '1px'
+                                                }}>
+                                                    🌅 Mañana
+                                                </h5>
+                                                <div style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                                                    gap: '12px'
+                                                }}>
+                                                    {morningSlots.map(renderSlotButton)}
+                                                </div>
+                                            </div>
                                         )}
-                                    </button>
+
+                                        {afternoonSlots.length > 0 && (
+                                            <div>
+                                                <h5 style={{
+                                                    fontSize: '14px',
+                                                    fontWeight: '600',
+                                                    color: 'var(--text-secondary)',
+                                                    marginBottom: '12px',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '1px'
+                                                }}>
+                                                    🌇 Tarde
+                                                </h5>
+                                                <div style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                                                    gap: '12px'
+                                                }}>
+                                                    {afternoonSlots.map(renderSlotButton)}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 );
-                            })}
-                        </div>
+                            })()
+                        ) : (
+                            // For sports, show all slots together
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                                gap: '12px'
+                            }}>
+                                {resource.slots.map((slot, index) => {
+                                    const slotId = `${resource.id}-${slot.time}`;
+                                    const isSelected = selectedTime?.id === slotId;
+
+                                    return (
+                                        <button
+                                            key={index}
+                                            disabled={!slot.available}
+                                            onClick={() => onTimeSelect({
+                                                id: slotId,
+                                                time: slot.time,
+                                                price: slot.price > 0 ? slot.price : undefined,
+                                                courtName: resource.name,
+                                                courtId: resource.id
+                                            })}
+                                            style={{
+                                                padding: '16px 12px',
+                                                borderRadius: '12px',
+                                                backgroundColor: isSelected ? sportColor : (slot.available ? 'var(--bg-card)' : 'rgba(0,0,0,0.02)'),
+                                                border: isSelected ? `2px solid ${sportColor}` : '1px solid var(--border)',
+                                                color: isSelected ? '#fff' : (slot.available ? 'var(--text-primary)' : 'var(--text-secondary)'),
+                                                cursor: slot.available ? 'pointer' : 'not-allowed',
+                                                opacity: slot.available ? 1 : 0.5,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                transition: 'all 0.2s',
+                                                boxShadow: isSelected ? `0 4px 12px ${sportColor}40` : 'none'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (slot.available && !isSelected) {
+                                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!isSelected) {
+                                                    e.currentTarget.style.transform = 'translateY(0)';
+                                                    e.currentTarget.style.boxShadow = 'none';
+                                                }
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '18px', fontWeight: 'bold', textDecoration: slot.available ? 'none' : 'line-through' }}>
+                                                {slot.time}
+                                            </span>
+                                            {slot.price > 0 && (
+                                                <span style={{ fontSize: '12px', opacity: 0.8 }}>
+                                                    ${slot.price.toLocaleString()}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
