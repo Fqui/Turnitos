@@ -564,7 +564,9 @@ export default function BusinessProfile() {
                                         hoursObj = {};
                                     }
                                 }
-                                const interval = hoursObj?.duration || 60;
+                                const interval = (business.type === 'service' && selectedItem?.duration)
+                                    ? selectedItem.duration
+                                    : (hoursObj?.interval || hoursObj?.duration || 60);
 
                                 // Check if business is closed (open and close are both 00:00)
                                 const isClosed = open === '00:00' && close === '00:00';
