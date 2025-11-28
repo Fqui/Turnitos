@@ -86,6 +86,95 @@ export default function BusinessForm({ business, onSave, onCancel }) {
         price: ''
     });
 
+
+    // Handle specialist image upload
+    const handleSpecialistImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor selecciona una imagen válida');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('La imagen debe ser menor a 5MB');
+            return;
+        }
+
+        setUploadingSpecialistImage(true);
+        try {
+            const { supabase } = await import('../services/supabaseClient');
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-specialist.${fileExt}`;
+            const filePath = `specialists/${fileName}`;
+
+            const { data, error } = await supabase.storage
+                .from('business-images')
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (error) throw error;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('business-images')
+                .getPublicUrl(filePath);
+
+            setNewSpecialist(prev => ({ ...prev, image_url: publicUrl }));
+        } catch (error) {
+            console.error('Error uploading specialist image:', error);
+            alert('Error al subir la imagen: ' + error.message);
+        } finally {
+            setUploadingSpecialistImage(false);
+        }
+    };
+
+    // Handle service image upload
+    const handleServiceImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor selecciona una imagen válida');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('La imagen debe ser menor a 5MB');
+            return;
+        }
+
+        setUploadingServiceImage(true);
+        try {
+            const { supabase } = await import('../services/supabaseClient');
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-service.${fileExt}`;
+            const filePath = `services/${fileName}`;
+
+            const { data, error } = await supabase.storage
+                .from('business-images')
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (error) throw error;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('business-images')
+                .getPublicUrl(filePath);
+
+            setNewService(prev => ({ ...prev, image_url: publicUrl }));
+        } catch (error) {
+            console.error('Error uploading service image:', error);
+            alert('Error al subir la imagen: ' + error.message);
+        } finally {
+            setUploadingServiceImage(false);
+        }
+    };
+
     // Handle logo file upload
     const handleLogoUpload = async (e) => {
         const file = e.target.files[0];
