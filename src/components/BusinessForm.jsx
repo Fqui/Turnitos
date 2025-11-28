@@ -67,7 +67,12 @@ export default function BusinessForm({ business, onSave, onCancel }) {
             hours = defaultHours;
         }
 
-        return { ...business, hours };
+        return {
+            ...business,
+            hours,
+            primaryColor: business.primary_color || business.button_color || business.primaryColor || '#00E676',
+            theme: business.theme || 'dark'
+        };
     });
 
     const [newAmenity, setNewAmenity] = useState('');
