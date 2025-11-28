@@ -72,10 +72,16 @@ export default function BusinessForm({ business, onSave, onCancel }) {
 
     const [newAmenity, setNewAmenity] = useState('');
     const [newCourt, setNewCourt] = useState({ name: '', price: '' });
-    const [newService, setNewService] = useState({ name: '', description: '', price: '', duration: '' });
+    const [newService, setNewService] = useState({ name: '', description: '', price: '', duration: '', image_url: '', category: '' });
     const [newSpecialist, setNewSpecialist] = useState({ name: '', role: '' });
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingBanner, setUploadingBanner] = useState(false);
+    const [uploadingSpecialistImage, setUploadingSpecialistImage] = useState(false);
+    const [uploadingServiceImage, setUploadingServiceImage] = useState(false);
+    const [serviceCategories, setServiceCategories] = useState(business?.service_categories || []);
+    const [newCategory, setNewCategory] = useState('');
+    const [showHours, setShowHours] = useState(false);
+    const [editingServiceIndex, setEditingServiceIndex] = useState(null);
 
     // Time ranges state for dynamic pricing
     const [timeRanges, setTimeRanges] = useState(business?.time_ranges || []);
