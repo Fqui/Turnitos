@@ -75,7 +75,7 @@ export default function BusinessForm({ business, onSave, onCancel }) {
         };
     });
 
-    const [newAmenity, setNewAmenity] = useState('');
+
     const [newCourt, setNewCourt] = useState({ name: '', price: '' });
     const [newService, setNewService] = useState({ name: '', description: '', price: '', duration: '', image_url: '', category: '' });
     const [newSpecialist, setNewSpecialist] = useState({ name: '', role: '' });
@@ -90,6 +90,15 @@ export default function BusinessForm({ business, onSave, onCancel }) {
 
     // Time ranges state for dynamic pricing
     const [timeRanges, setTimeRanges] = useState(business?.time_ranges || []);
+
+    // Venue-specific states
+    const [venueGalleryImages, setVenueGalleryImages] = useState(business?.gallery_images || []);
+    const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false);
+    const [additionalServices, setAdditionalServices] = useState(business?.additional_services || []);
+    const [newAdditionalService, setNewAdditionalService] = useState({ name: '', price: '', icon: '🎯' });
+    const [includedAmenities, setIncludedAmenities] = useState(business?.included_amenities || []);
+    const [newAmenity, setNewAmenity] = useState('');
+    const [rentalDurationOptions, setRentalDurationOptions] = useState(business?.rental_duration_options || [4, 6, 8, 12]);
     const [newTimeRange, setNewTimeRange] = useState({
         name: '',
         start: '16:00',
@@ -413,7 +422,12 @@ export default function BusinessForm({ business, onSave, onCancel }) {
             primaryColor: formData.primaryColor || '#00E676', // Ensure primaryColor is always set
             theme: formData.theme || 'dark', // Ensure theme is always set
             service_categories: serviceCategories,
-            time_ranges: timeRanges
+            time_ranges: timeRanges,
+            // Venue-specific fields
+            gallery_images: venueGalleryImages,
+            additional_services: additionalServices,
+            included_amenities: includedAmenities,
+            rental_duration_options: rentalDurationOptions
         };
 
         await onSave(dataToSave);
@@ -525,6 +539,7 @@ export default function BusinessForm({ business, onSave, onCancel }) {
                         >
                             <option value="sport">Deporte</option>
                             <option value="service">Servicio</option>
+                            <option value="venue">Alquiler de Espacios</option>
                         </select>
                     </div>
 
