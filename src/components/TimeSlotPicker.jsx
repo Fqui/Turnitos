@@ -131,16 +131,20 @@ export default function TimeSlotPicker({
 
     return (
         <div style={{ maxWidth: '800px', margin: '40px auto 0', animation: 'slideUp 0.5s ease' }}>
-            <h3 style={{ fontSize: '20px', marginBottom: '20px', textAlign: 'center' }}>
-                {type === 'sport' ? 'Disponibilidad por Cancha' : 'Profesionales Disponibles'}
-            </h3>
+            {type === 'sport' && (
+                <h3 style={{ fontSize: '20px', marginBottom: '20px', textAlign: 'center' }}>
+                    Disponibilidad por Cancha
+                </h3>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {resources.map(resource => (
                     <div key={resource.id} className="card" style={{ padding: '20px', textAlign: 'left' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                             <div>
-                                <h4 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{resource.name}</h4>
+                                {resource.name !== 'Sin profesional asignado' && (
+                                    <h4 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{resource.name}</h4>
+                                )}
                                 <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                                     {resource.features.map((feat, i) => (
                                         <span key={i} style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px' }}>
