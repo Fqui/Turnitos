@@ -94,7 +94,13 @@ class SupabaseService {
                 whatsapp: businessData.whatsapp,
                 primary_color: businessData.primaryColor || businessData.button_color,
                 service_categories: businessData.service_categories || [],
-                time_ranges: businessData.time_ranges || []
+                time_ranges: businessData.time_ranges || [],
+                // Venue-specific fields
+                price_per_hour: businessData.price_per_hour,
+                rental_duration_options: businessData.rental_duration_options || [],
+                additional_services: businessData.additional_services || [],
+                included_amenities: businessData.included_amenities || [],
+                gallery_images: businessData.gallery_images || []
             }])
             .select()
             .single();
@@ -220,7 +226,13 @@ class SupabaseService {
                 whatsapp: businessData.whatsapp,
                 primary_color: businessData.primaryColor || businessData.button_color,
                 service_categories: businessData.service_categories || [],
-                time_ranges: businessData.time_ranges || []
+                time_ranges: businessData.time_ranges || [],
+                // Venue-specific fields
+                price_per_hour: businessData.price_per_hour,
+                rental_duration_options: businessData.rental_duration_options || [],
+                additional_services: businessData.additional_services || [],
+                included_amenities: businessData.included_amenities || [],
+                gallery_images: businessData.gallery_images || []
             })
             .eq('id', businessId)
             .select()
