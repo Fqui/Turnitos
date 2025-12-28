@@ -147,7 +147,7 @@ export default function Home() {
                             const business = businesses.find(b => b.id === promo.business_id);
                             return (
                                 <Link
-                                    to={`/${generateSlug(business?.name || '')}`}
+                                    to={`/${generateSlug(business?.name || '')}/turnos`}
                                     state={{ business }}
                                     key={promo.id}
                                     style={{ textDecoration: 'none', flex: '0 0 85%', maxWidth: '300px', scrollSnapAlign: 'center' }}
@@ -295,7 +295,7 @@ export default function Home() {
                             {filteredBusinesses.map(business => (
                                 <div
                                     key={business.id}
-                                    onClick={() => navigate(`/${generateSlug(business.name)}`, { state: { business } })}
+                                    onClick={() => navigate(`/${generateSlug(business.name)}/turnos`, { state: { business } })}
                                     style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                                 >
                                     <motion.div

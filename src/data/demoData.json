@@ -56,6 +56,7 @@
             "button_color": "#FF6B35",
             "instagram": "https://instagram.com/elitepadelclub",
             "facebook": "https://facebook.com/elitepadelclub",
+            "tiktok": "https://tiktok.com/@elitepadelclub",
             "whatsapp": "+5491112345678",
             "courts": [
                 {
@@ -282,260 +283,102 @@
             ],
             "hours": {
                 "monday": {
-                    "open": "09:00",
+                    "open": "10:00",
                     "close": "20:00"
                 },
                 "tuesday": {
-                    "open": "09:00",
+                    "open": "10:00",
                     "close": "20:00"
                 },
                 "wednesday": {
-                    "open": "09:00",
+                    "open": "10:00",
                     "close": "20:00"
                 },
                 "thursday": {
-                    "open": "09:00",
+                    "open": "10:00",
                     "close": "20:00"
                 },
                 "friday": {
-                    "open": "09:00",
+                    "open": "10:00",
                     "close": "21:00"
                 },
                 "saturday": {
                     "open": "09:00",
-                    "close": "21:00"
-                },
-                "sunday": {
-                    "open": "10:00",
                     "close": "18:00"
-                }
+                },
+                "sunday": null
             },
             "sport_types": [],
-            "button_color": "#B8860B",
+            "button_color": "#333333",
             "instagram": "https://instagram.com/classicbarber",
             "facebook": "https://facebook.com/classicbarber",
             "whatsapp": "+5491123456789",
             "specialists": [
                 {
                     "id": "barber-1",
-                    "name": "Carlos Rodríguez",
-                    "role": "Barbero Master",
-                    "avatar_url": "https://i.pravatar.cc/150?img=12"
+                    "name": "Carlos Ruiz",
+                    "role": "Master Barber",
+                    "avatar_url": "https://i.pravatar.cc/150?img=11"
                 },
                 {
                     "id": "barber-2",
-                    "name": "Diego López",
-                    "role": "Barbero Senior",
-                    "avatar_url": "https://i.pravatar.cc/150?img=13"
+                    "name": "Juan Pérez",
+                    "role": "Barbero",
+                    "avatar_url": "https://i.pravatar.cc/150?img=12"
                 }
             ],
             "services": [
                 {
-                    "id": "barber-service-1",
-                    "name": "Corte + Barba",
+                    "id": "service-b1",
+                    "name": "Corte Clásico",
                     "duration": 45,
-                    "price": 8000,
-                    "image_url": "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400",
-                    "description": "Corte de cabello y perfilado de barba",
+                    "price": 3500,
+                    "image_url": "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400",
+                    "description": "Corte de cabello con tijera y máquina",
                     "specialist_id": "barber-1"
                 },
                 {
-                    "id": "barber-service-2",
-                    "name": "Corte Clásico",
+                    "id": "service-b2",
+                    "name": "Barba y Afeitado",
                     "duration": 30,
-                    "price": 5000,
-                    "image_url": "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400",
-                    "description": "Corte de cabello tradicional",
+                    "price": 2500,
+                    "image_url": "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400",
+                    "description": "Perfilado de barba y afeitado tradicional",
                     "specialist_id": "barber-2"
                 },
                 {
-                    "id": "barber-service-3",
-                    "name": "Afeitado Tradicional",
-                    "duration": 30,
-                    "price": 6000,
-                    "image_url": "https://images.unsplash.com/photo-1620331311523-9dcb0e0c4e42?w=400",
-                    "description": "Afeitado con navaja y toalla caliente",
+                    "id": "service-b3",
+                    "name": "Corte + Barba",
+                    "duration": 60,
+                    "price": 5500,
+                    "image_url": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400",
+                    "description": "Servicio completo de corte y barba",
                     "specialist_id": "barber-1"
                 }
             ]
+        }
+    ],
+    "promotions": [
+        {
+            "id": "promo-1",
+            "title": "20% OFF en Canchas",
+            "discount": "20% OFF",
+            "image": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800",
+            "business_id": "demo-padel-club-1"
         },
         {
-            "id": "demo-futbol-5",
-            "name": "Fútbol 5 La Cancha",
-            "category": "Fútbol",
-            "type": "court",
-            "image": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800",
-            "logo": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=200",
-            "banner_image": "https://images.unsplash.com/photo-1589487391730-58f20eb2c308?w=1200",
-            "location": "Av. Warnes 2563, Buenos Aires",
-            "latitude": -34.5985,
-            "longitude": -58.4382,
-            "rating": 4.5,
-            "theme": "light",
-            "amenities": [
-                "Vestuarios",
-                "Estacionamiento",
-                "Parrilla",
-                "Bar",
-                "Iluminación LED"
-            ],
-            "hours": {
-                "monday": {
-                    "open": "08:00",
-                    "close": "23:00"
-                },
-                "tuesday": {
-                    "open": "08:00",
-                    "close": "23:00"
-                },
-                "wednesday": {
-                    "open": "08:00",
-                    "close": "23:00"
-                },
-                "thursday": {
-                    "open": "08:00",
-                    "close": "23:00"
-                },
-                "friday": {
-                    "open": "08:00",
-                    "close": "01:00"
-                },
-                "saturday": {
-                    "open": "08:00",
-                    "close": "01:00"
-                },
-                "sunday": {
-                    "open": "08:00",
-                    "close": "23:00"
-                }
-            },
-            "sport_types": [
-                "Fútbol 5",
-                "Fútbol 7"
-            ],
-            "button_color": "#1976D2",
-            "instagram": "https://instagram.com/futbol5lacancha",
-            "facebook": "https://facebook.com/futbol5lacancha",
-            "whatsapp": "+5491134567890",
-            "courts": [
-                {
-                    "id": "futbol-court-1",
-                    "name": "Cancha 1 - Césped Sintético Premium",
-                    "sport": "Fútbol 5",
-                    "price": 10000
-                },
-                {
-                    "id": "futbol-court-2",
-                    "name": "Cancha 2 - Césped Sintético",
-                    "sport": "Fútbol 5",
-                    "price": 9000
-                },
-                {
-                    "id": "futbol-court-3",
-                    "name": "Cancha 3 - Fútbol 7",
-                    "sport": "Fútbol 7",
-                    "price": 15000
-                }
-            ]
+            "id": "promo-2",
+            "title": "Día de Spa 2x1",
+            "discount": "2x1",
+            "image": "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800",
+            "business_id": "demo-spa-wellness-1"
         },
         {
-            "id": "demo-yoga-studio-1",
-            "name": "Harmony Yoga Studio",
-            "category": "Yoga",
-            "type": "service",
-            "image": "https://images.unsplash.com/photo-1588286840104-8957b019727f?w=800",
-            "logo": "https://images.unsplash.com/photo-1588286840104-8957b019727f?w=200",
-            "banner_image": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1200",
-            "location": "Av. Córdoba 4567, Buenos Aires",
-            "latitude": -34.5991,
-            "longitude": -58.4203,
-            "rating": 4.9,
-            "theme": "light",
-            "amenities": [
-                "Vestuarios",
-                "Colchonetas",
-                "WiFi",
-                "Sala de Meditación",
-                "Té Orgánico"
-            ],
-            "hours": {
-                "monday": {
-                    "open": "07:00",
-                    "close": "21:00"
-                },
-                "tuesday": {
-                    "open": "07:00",
-                    "close": "21:00"
-                },
-                "wednesday": {
-                    "open": "07:00",
-                    "close": "21:00"
-                },
-                "thursday": {
-                    "open": "07:00",
-                    "close": "21:00"
-                },
-                "friday": {
-                    "open": "07:00",
-                    "close": "20:00"
-                },
-                "saturday": {
-                    "open": "08:00",
-                    "close": "19:00"
-                },
-                "sunday": {
-                    "open": "09:00",
-                    "close": "18:00"
-                }
-            },
-            "sport_types": [],
-            "button_color": "#7B68EE",
-            "instagram": "https://instagram.com/harmonyyoga",
-            "facebook": "https://facebook.com/harmonyyoga",
-            "whatsapp": "+5491198765432",
-            "specialists": [
-                {
-                    "id": "yoga-instructor-1",
-                    "name": "Sofía Ramírez",
-                    "role": "Instructora de Hatha Yoga",
-                    "avatar_url": "https://i.pravatar.cc/150?img=20"
-                },
-                {
-                    "id": "yoga-instructor-2",
-                    "name": "Lucía Torres",
-                    "role": "Instructora de Vinyasa",
-                    "avatar_url": "https://i.pravatar.cc/150?img=25"
-                }
-            ],
-            "services": [
-                {
-                    "id": "yoga-service-1",
-                    "name": "Clase de Hatha Yoga",
-                    "duration": 60,
-                    "price": 4500,
-                    "image_url": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400",
-                    "description": "Yoga tradicional enfocado en posturas y respiración",
-                    "specialist_id": "yoga-instructor-1"
-                },
-                {
-                    "id": "yoga-service-2",
-                    "name": "Clase de Vinyasa Flow",
-                    "duration": 75,
-                    "price": 5500,
-                    "image_url": "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400",
-                    "description": "Yoga dinámico con secuencias fluidas",
-                    "specialist_id": "yoga-instructor-2"
-                },
-                {
-                    "id": "yoga-service-3",
-                    "name": "Meditación Guiada",
-                    "duration": 45,
-                    "price": 3500,
-                    "image_url": "https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?w=400",
-                    "description": "Sesión de meditación y mindfulness",
-                    "specialist_id": "yoga-instructor-1"
-                }
-            ]
+            "id": "promo-3",
+            "title": "Clase de Tenis Gratis",
+            "discount": "GRATIS",
+            "image": "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=800",
+            "business_id": "demo-tennis-center-1"
         }
     ]
 }

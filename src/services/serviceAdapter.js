@@ -20,11 +20,13 @@ class ServiceAdapter {
     _checkDemoMode() {
         // Demo mode is enabled if:
         // 1. We're on GitHub Pages (domain contains github.io)
-        // 2. Or explicitly set via environment variable
+        // 2. We're on localhost (development)
+        // 3. Or explicitly set via environment variable
         const isGitHubPages = typeof window !== 'undefined' && window.location.hostname.includes('github.io');
+        const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
         const isDemoEnv = import.meta.env.VITE_DEMO_MODE === 'true';
 
-        return isGitHubPages || isDemoEnv;
+        return isGitHubPages || isLocalhost || isDemoEnv;
     }
 
     // --- Proxy all methods to the active service ---

@@ -212,7 +212,15 @@ Actualizado para mostrar:
 5. `feat: Add venue booking UI in BusinessProfile`
 6. `feat: Update supabaseService to save venue fields in create and update`
 
+### 6. Mejoras de UX (Última actualización)
+- **Visualización Previa**: Se muestra el precio por hora, amenidades incluidas y servicios adicionales disponibles *antes* de seleccionar la fecha.
+- **Resumen de Reserva Detallado**: El modal de confirmación ahora muestra un desglose claro:
+  - Precio base del alquiler
+  - Lista de servicios adicionales seleccionados con sus precios
+  - Precio total correcto (Base + Extras)
+- **Calendario Mensual**: Implementado componente `MonthCalendar` para mejor visualización de disponibilidad.
+
 ---
 
-**Estado**: ✅ Implementación completa y lista para testing
+**Estado**: ✅ Implementación completa, refinada y lista para producción.
 **Fecha**: 2025-11-28

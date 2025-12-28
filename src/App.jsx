@@ -7,6 +7,7 @@ import Footer from './components/Footer';
 // Lazy load pages for code splitting
 const Home = lazy(() => import('./pages/Home'));
 const BusinessProfile = lazy(() => import('./pages/BusinessProfile'));
+const LinkBio = lazy(() => import('./pages/LinkBio'));
 const Admin = lazy(() => import('./pages/Admin'));
 const BusinessPortal = lazy(() => import('./pages/BusinessPortal'));
 
@@ -43,17 +44,19 @@ function AppContent() {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const isAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/portal');
+  const isLinkBio = !isAdmin && !isHome && !location.pathname.endsWith('/turnos');
 
   return (
     <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {!isAdmin && <Header showSearch={isHome} />}
+      {!isAdmin && !isLinkBio && <Header showSearch={isHome} />}
 
       <main style={{ flex: 1 }}>
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<Home />} />
-              <Route path="/:businessSlug" element={<BusinessProfile />} />
+              <Route path="/:businessSlug" element={<LinkBio />} />
+              <Route path="/:businessSlug/turnos" element={<BusinessProfile />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/portal" element={<BusinessPortal />} />
               <Route path="/business-portal" element={<BusinessPortal />} />
@@ -62,7 +65,7 @@ function AppContent() {
         </Suspense>
       </main>
 
-      {!isAdmin && <Footer />}
+      {!isAdmin && !isLinkBio && <Footer />}
     </div>
   );
 }

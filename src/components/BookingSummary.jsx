@@ -157,13 +157,38 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                 backgroundColor: `${sportColor}10`,
                                 border: `1px solid ${sportColor}30`,
                                 display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
+                                flexDirection: 'column',
+                                gap: '8px'
                             }}>
-                                <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Total a pagar</span>
-                                <span style={{ fontSize: '18px', fontWeight: '900', color: sportColor }}>
-                                    ${price.toLocaleString()}
-                                </span>
+                                {/* Base Price & Extras Breakdown */}
+                                {bookingDetails.extras && bookingDetails.extras.length > 0 && (
+                                    <div style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '4px',
+                                        marginBottom: '8px',
+                                        paddingBottom: '8px',
+                                        borderBottom: `1px dashed ${sportColor}30`
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                            <span>Alquiler base</span>
+                                            <span>${(price - bookingDetails.extras.reduce((sum, e) => sum + e.price, 0)).toLocaleString()}</span>
+                                        </div>
+                                        {bookingDetails.extras.map((extra, idx) => (
+                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                <span>+ {extra.name}</span>
+                                                <span>${extra.price.toLocaleString()}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Total a pagar</span>
+                                    <span style={{ fontSize: '18px', fontWeight: '900', color: sportColor }}>
+                                        ${price.toLocaleString()}
+                                    </span>
+                                </div>
                             </div>
                         )}
                     </div>
