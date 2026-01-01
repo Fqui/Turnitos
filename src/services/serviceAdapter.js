@@ -39,6 +39,10 @@ class ServiceAdapter {
         return this.service.getBusinessById(id);
     }
 
+    async login(businessId, password) {
+        return this.service.login(businessId, password);
+    }
+
     async getBusinessBySlug(slug) {
         // MockService has this method, SupabaseService doesn't
         if (this.isDemoMode) {
@@ -73,12 +77,16 @@ class ServiceAdapter {
         return this.service.createBooking(bookingData);
     }
 
-    async updateBookingStatus(id, status) {
-        return this.service.updateBookingStatus(id, status);
+    async updateBookingStatus(id, status, metadata = {}) {
+        return this.service.updateBookingStatus(id, status, metadata);
     }
 
-    async cancelBooking(id) {
-        return this.service.cancelBooking(id);
+    async cancelBooking(id, reason = '') {
+        return this.service.cancelBooking(id, reason);
+    }
+
+    async deleteBooking(id) {
+        return this.service.deleteBooking(id);
     }
 
     async getPromotions() {

@@ -36,6 +36,15 @@ class MockService {
         return business;
     }
 
+    async login(businessId, password) {
+        await this.delay(500);
+        const business = this.businesses.find(b => b.id === businessId);
+        if (business && business.password === password) {
+            return business;
+        }
+        throw new Error('Credenciales inválidas');
+    }
+
     // --- Bookings ---
     // Note: In demo mode, bookings are stored in memory only
     // They will reset when the page is refreshed
@@ -70,7 +79,14 @@ class MockService {
             resource_id: booking.court_id || booking.service_id
         }));
 
-        return { bookings: bookingsWithResourceId };
+        // Sort by most recently created first
+        const sortedBookings = bookingsWithResourceId.sort((a, b) => {
+            const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+            const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
+            return dateB - dateA;
+        });
+
+        return { bookings: sortedBookings };
     }
 
     async createBooking(bookingData) {
@@ -96,8 +112,17 @@ class MockService {
             time: bookingData.time,
             customer_name: bookingData.customerName,
             customer_phone: bookingData.customerPhone,
-            status: bookingData.status || 'confirmed',
-            price: bookingData.price
+            status: bookingData.status || 'pending',
+            price: bookingData.price,
+            created_at: new Date().toISOString(),
+            history: [
+                {
+                    action: 'creation',
+                    label: 'Turno Creado',
+                    timestamp: new Date().toISOString(),
+                    status: bookingData.status || 'pending'
+                }
+            ]
         };
 
         this.bookings.push(newBooking);
@@ -108,7 +133,7 @@ class MockService {
         return newBooking;
     }
 
-    async updateBookingStatus(id, status) {
+    async updateBookingStatus(id, status, metadata = {}) {
         await this.delay(200);
 
         const booking = this.bookings.find(b => b.id === id);
@@ -117,11 +142,45 @@ class MockService {
         }
 
         booking.status = status;
+        booking.updated_at = new Date().toISOString();
+
+        if (status === 'confirmed') booking.confirmed_at = new Date().toISOString();
+        if (status === 'cancelled') {
+            booking.cancelled_at = new Date().toISOString();
+            booking.cancellation_reason = metadata.reason || 'Cancelado por el administrador';
+        }
+        if (status === 'deposit_paid') booking.deposit_paid_at = new Date().toISOString();
+        if (status === 'completed') booking.completed_at = new Date().toISOString();
+
+        // Update history
+        if (!booking.history) booking.history = [];
+
+        let actionLabel = 'Estado Actualizado';
+        if (status === 'confirmed') actionLabel = 'Turno Confirmado';
+        if (status === 'cancelled') actionLabel = 'Turno Cancelado';
+        if (status === 'deposit_paid') actionLabel = 'Seña Confirmada';
+        if (status === 'completed') actionLabel = 'Servicio Finalizado';
+        if (metadata.action === 'attendance_confirmed') actionLabel = 'Asistencia Confirmada';
+
+        booking.history.push({
+            action: metadata.action || 'status_update',
+            label: actionLabel,
+            timestamp: new Date().toISOString(),
+            status: status,
+            reason: metadata.reason
+        });
+
         return booking;
     }
 
-    async cancelBooking(id) {
-        return this.updateBookingStatus(id, 'cancelled');
+    async cancelBooking(id, reason = '') {
+        return this.updateBookingStatus(id, 'cancelled', { reason });
+    }
+
+    async deleteBooking(id) {
+        await this.delay(200);
+        this.bookings = this.bookings.filter(b => b.id !== id);
+        return true;
     }
 
     // --- Promotions ---

@@ -1,0 +1,455 @@
+﻿import React, { useState, useEffect } from 'react';
+import supabaseService from '../services/supabaseService';
+import analyticsService from '../services/analyticsService';
+import DashboardStats from '../components/DashboardStats';
+import DashboardCalendar from '../components/DashboardCalendar';
+import MetricsCard from '../components/analytics/MetricsCard';
+import RevenueChart from '../components/analytics/RevenueChart';
+import PeakHoursHeatmap from '../components/analytics/PeakHoursHeatmap';
+import DateRangePicker from '../components/analytics/DateRangePicker';
+
+export default function BusinessPortal() {
+    const [businesses, setBusinesses] = useState([]);
+    const [selectedBusinessId, setSelectedBusinessId] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [bookings, setBookings] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [viewMode, setViewMode] = useState('calendar'); // 'calendar', 'list', or 'analytics'
+
+    // Analytics state
+    const [metrics, setMetrics] = useState(null);
+    const [trends, setTrends] = useState([]);
+    const [peakHours, setPeakHours] = useState(null);
+    const [customerInsights, setCustomerInsights] = useState(null);
+    const [dateRange, setDateRange] = useState(null);
+
+    useEffect(() => {
+        const loadBusinesses = async () => {
+            try {
+                const data = await supabaseService.getBusinesses();
+                setBusinesses(data);
+            } catch (error) {
+                console.error('Error loading businesses:', error);
+            }
+        };
+        loadBusinesses();
+    }, []);
+
+    const handleLogin = (e) => {
+        e.preventDefault();
+        if (selectedBusinessId && password === 'admin123') { // Mock password
+            setIsLoggedIn(true);
+            fetchBookings();
+        } else {
+            alert('Credenciales incorrectas (Prueba con: admin123)');
+        }
+    };
+
+    const fetchBookings = async () => {
+        setLoading(true);
+        try {
+            const response = await supabaseService.getBookings(selectedBusinessId);
+            if (response.bookings) {
+                setBookings(response.bookings);
+            }
+        } catch (error) {
+            console.error('Error fetching bookings:', error);
+            alert('Error al cargar reservas. Revisa la consola.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchAnalytics = async () => {
+        try {
+            const [metricsData, trendsData, peakHoursData, insightsData] = await Promise.all([
+                analyticsService.getBusinessMetrics(selectedBusinessId, dateRange),
+                analyticsService.getBookingTrends(selectedBusinessId, 'daily', 30),
+                analyticsService.getPeakHours(selectedBusinessId),
+                analyticsService.getCustomerInsights(selectedBusinessId)
+            ]);
+
+            setMetrics(metricsData);
+            setTrends(trendsData);
+            setPeakHours(peakHoursData);
+            setCustomerInsights(insightsData);
+        } catch (error) {
+            console.error('Error fetching analytics:', error);
+        }
+    };
+
+    useEffect(() => {
+        if (isLoggedIn && viewMode === 'analytics') {
+            fetchAnalytics();
+        }
+    }, [viewMode, dateRange, isLoggedIn]);
+
+    const handleStatusChange = async (booking, newStatus) => {
+        if (!confirm(`┬┐Est├ís seguro de cambiar el estado a ${newStatus}?`)) return;
+
+        try {
+            await supabaseService.updateBookingStatus(booking.id, newStatus);
+            // Refresh
+            fetchBookings();
+        } catch (error) {
+            console.error('Error updating status:', error);
+            alert('Error al actualizar estado');
+        }
+    };
+
+    const handleBlockSlot = async (date, time) => {
+        // If date/time passed from calendar click
+        let dateStr, timeStr;
+
+        if (date && time) {
+            // Format to YYYY-MM-DD
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            dateStr = `${year}-${month}-${day}`;
+
+            timeStr = time;
+            if (!confirm(`┬┐Bloquear horario ${dateStr} ${timeStr}?`)) return;
+        } else {
+            // Manual input fallback
+            timeStr = prompt('Ingrese la hora a bloquear (ej: 14:00)');
+            if (!timeStr) return;
+            const now = new Date();
+            dateStr = now.toISOString().split('T')[0];
+        }
+
+        const bookingData = {
+            businessId: selectedBusinessId,
+            serviceId: null,
+            courtId: null, // Could be specific court if needed
+            date: dateStr,
+            time: timeStr,
+            customerName: 'BLOQUEADO POR ADMIN',
+            customerEmail: '-',
+            customerPhone: '-',
+            status: 'blocked',
+            price: 0
+        };
+
+        try {
+            await supabaseService.createBooking(bookingData);
+            fetchBookings();
+        } catch (error) {
+            console.error('Error blocking slot:', error);
+            alert('Error al bloquear horario');
+        }
+    };
+
+    if (!isLoggedIn) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'var(--bg-main)'
+            }}>
+                <div style={{
+                    background: 'var(--bg-card)',
+                    padding: '40px',
+                    borderRadius: '24px',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+                    width: '100%',
+                    maxWidth: '400px',
+                    border: '1px solid var(--border)'
+                }}>
+                    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                        <div style={{ fontSize: '40px', marginBottom: '16px' }}>­ƒÅó</div>
+                        <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>Portal Socios</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Gestiona tu negocio en tiempo real</p>
+                    </div>
+
+                    <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <select
+                            value={selectedBusinessId}
+                            onChange={(e) => setSelectedBusinessId(e.target.value)}
+                            required
+                            style={{ padding: '14px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)' }}
+                        >
+                            <option value="">Selecciona tu negocio</option>
+                            {businesses.map(b => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                        <input
+                            type="password"
+                            placeholder="Contrase├▒a"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            style={{ padding: '14px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)' }}
+                        />
+                        <button
+                            type="submit"
+                            style={{
+                                padding: '14px',
+                                background: 'var(--primary)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                marginTop: '8px'
+                            }}
+                        >
+                            Ingresar al Panel
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
+    const currentBusiness = businesses.find(b => b.id === selectedBusinessId);
+
+    return (
+        <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto', minHeight: '100vh' }}>
+            {/* Top Bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <div>
+                    <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)', margin: 0 }}>
+                        {currentBusiness?.name}
+                    </h1>
+                    <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '14px' }}>Panel de Control</p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                        onClick={fetchBookings}
+                        style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                        <span>Ôå╗</span> Actualizar
+                    </button>
+                    <button
+                        onClick={() => setIsLoggedIn(false)}
+                        style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ff4444', background: 'rgba(255,68,68,0.1)', color: '#ff4444', cursor: 'pointer' }}
+                    >
+                        Cerrar Sesi├│n
+                    </button>
+                </div>
+            </div>
+
+            {/* Stats Row */}
+            <DashboardStats bookings={bookings} />
+
+            {/* Main Content */}
+            <div style={{ display: 'flex', gap: '20px', flexDirection: 'column' }}>
+
+                {/* Toolbar */}
+                <div style={{ display: 'flex', gap: '10px', padding: '4px', background: 'var(--bg-card)', width: 'fit-content', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <button
+                        onClick={() => setViewMode('calendar')}
+                        style={{
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: viewMode === 'calendar' ? 'var(--primary)' : 'transparent',
+                            color: viewMode === 'calendar' ? '#fff' : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                        }}
+                    >
+                        ­ƒôà Calendario
+                    </button>
+                    <button
+                        onClick={() => setViewMode('list')}
+                        style={{
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: viewMode === 'list' ? 'var(--primary)' : 'transparent',
+                            color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                        }}
+                    >
+                        ­ƒôï Lista
+                    </button>
+                    <button
+                        onClick={() => setViewMode('analytics')}
+                        style={{
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: viewMode === 'analytics' ? 'var(--primary)' : 'transparent',
+                            color: viewMode === 'analytics' ? '#fff' : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                        }}
+                    >
+                        ­ƒôè Analytics
+                    </button>
+                </div>
+
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '60px' }}>
+                        <div style={{ fontSize: '24px', marginBottom: '16px' }}>ÔÅ│</div>
+                        <p>Cargando datos...</p>
+                    </div>
+                ) : (
+                    <>
+                        {viewMode === 'analytics' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                {/* Date Range Picker */}
+                                <div>
+                                    <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-primary)' }}>Per├¡odo</h3>
+                                    <DateRangePicker onRangeChange={setDateRange} />
+                                </div>
+
+                                {/* Metrics Cards */}
+                                {metrics && (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+                                        <MetricsCard
+                                            icon="­ƒÆ░"
+                                            title="Ingresos Totales"
+                                            value={metrics.totalRevenue}
+                                            trend={metrics.growth.revenue}
+                                            format="currency"
+                                            color="#10b981"
+                                        />
+                                        <MetricsCard
+                                            icon="­ƒôà"
+                                            title="Total Reservas"
+                                            value={metrics.totalBookings}
+                                            trend={metrics.growth.bookings}
+                                            format="number"
+                                            color="#6366f1"
+                                        />
+                                        <MetricsCard
+                                            icon="­ƒÆÁ"
+                                            title="Valor Promedio"
+                                            value={metrics.avgBookingValue}
+                                            format="currency"
+                                            color="#f59e0b"
+                                        />
+                                        <MetricsCard
+                                            icon="Ô£à"
+                                            title="Tasa de Completitud"
+                                            value={metrics.completionRate}
+                                            format="percentage"
+                                            color="#8b5cf6"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Charts */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+                                    {trends.length > 0 && (
+                                        <>
+                                            <RevenueChart data={trends} type="revenue" />
+                                            <RevenueChart data={trends} type="bookings" />
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Peak Hours Heatmap */}
+                                {peakHours && (
+                                    <PeakHoursHeatmap data={peakHours.data} labels={peakHours.labels} />
+                                )}
+
+                                {/* Customer Insights */}
+                                {customerInsights && (
+                                    <div style={{
+                                        backgroundColor: 'var(--bg-card)',
+                                        borderRadius: '16px',
+                                        padding: '24px',
+                                        border: '1px solid var(--border)',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                                    }}>
+                                        <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: 'var(--text-primary)' }}>Insights de Clientes</h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                                            <div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Total Clientes</div>
+                                                <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>{customerInsights.totalCustomers}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Clientes Nuevos</div>
+                                                <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>{customerInsights.newCustomers}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Clientes Recurrentes</div>
+                                                <div style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>{customerInsights.returningCustomers}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Tasa de Retenci├│n</div>
+                                                <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>{customerInsights.retentionRate.toFixed(1)}%</div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-secondary)' }}>Servicios M├ís Populares</h4>
+                                            {customerInsights.topServices.map((service, i) => (
+                                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < customerInsights.topServices.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                                                    <span style={{ color: 'var(--text-primary)' }}>{service.name}</span>
+                                                    <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>{service.count} reservas</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : viewMode === 'calendar' ? (
+                            <DashboardCalendar
+                                bookings={bookings}
+                                business={currentBusiness}
+                                onBlockSlot={handleBlockSlot}
+                            />
+                        ) : (
+                            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead style={{ background: 'rgba(0,0,0,0.02)' }}>
+                                        <tr>
+                                            <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Fecha</th>
+                                            <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Hora</th>
+                                            <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Cliente</th>
+                                            <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Servicio</th>
+                                            <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Estado</th>
+                                            <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)' }}>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {bookings.map((booking, index) => (
+                                            <tr key={index} style={{ borderTop: '1px solid var(--border)' }}>
+                                                <td style={{ padding: '16px' }}>{booking.date}</td>
+                                                <td style={{ padding: '16px', fontWeight: 'bold' }}>{booking.time}</td>
+                                                <td style={{ padding: '16px' }}>{booking.customerName}</td>
+                                                <td style={{ padding: '16px' }}>
+                                                    {booking.services?.name || booking.courts?.name || booking.service || '-'}
+                                                </td>
+                                                <td style={{ padding: '16px' }}>
+                                                    <span style={{
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        background: booking.status === 'confirmed' ? 'rgba(0,230,118,0.1)' : (booking.status === 'cancelled' ? 'rgba(255,68,68,0.1)' : 'rgba(0,0,0,0.05)'),
+                                                        color: booking.status === 'confirmed' ? '#00E676' : (booking.status === 'cancelled' ? '#ff4444' : 'var(--text-secondary)')
+                                                    }}>
+                                                        {booking.status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '16px', textAlign: 'right' }}>
+                                                    {booking.status !== 'cancelled' && (
+                                                        <button
+                                                            onClick={() => handleStatusChange(booking, 'cancelled')}
+                                                            style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #ff4444', color: '#ff4444', background: 'transparent', cursor: 'pointer', fontSize: '12px' }}
+                                                        >
+                                                            Cancelar
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}

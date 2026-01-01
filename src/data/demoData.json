@@ -58,6 +58,7 @@
             "facebook": "https://facebook.com/elitepadelclub",
             "tiktok": "https://tiktok.com/@elitepadelclub",
             "whatsapp": "+5491112345678",
+            "password": "1234",
             "courts": [
                 {
                     "id": "court-1",

@@ -68,6 +68,23 @@ class SupabaseService {
         return data;
     }
 
+    async login(businessId, password) {
+        // NOTE: This assumes a 'password' column exists in the 'businesses' table.
+        // In a real production app, you should use Supabase Auth (GoTrue) or at least hash passwords.
+        const { data, error } = await supabase
+            .from('businesses')
+            .select('*')
+            .eq('id', businessId)
+            .eq('password', password) // Simple text match for now as per demo requirements
+            .single();
+
+        if (error || !data) {
+            throw new Error('Credenciales inválidas');
+        }
+
+        return data;
+    }
+
     async createBusiness(businessData) {
         // 1. Upsert business (Insert or Update)
         const { data: business, error: businessError } = await supabase
@@ -483,7 +500,7 @@ class SupabaseService {
                 courts (name),
                 businesses (name)
             `)
-            .order('date', { ascending: true });
+            .order('created_at', { ascending: false });
 
         if (businessId) {
             query = query.eq('business_id', businessId);
@@ -539,10 +556,28 @@ class SupabaseService {
         return data;
     }
 
-    async updateBookingStatus(id, status) {
+    async updateBookingStatus(id, status, metadata = {}) {
+        const updateData = {
+            status,
+            updated_at: new Date().toISOString()
+        };
+
+        if (status === 'confirmed') updateData.confirmed_at = new Date().toISOString();
+        if (status === 'cancelled') {
+            updateData.cancelled_at = new Date().toISOString();
+            updateData.cancellation_reason = metadata.reason;
+        }
+        if (status === 'deposit_paid') updateData.deposit_paid_at = new Date().toISOString();
+        if (status === 'completed') updateData.completed_at = new Date().toISOString();
+
+        // Handle history if provided in metadata
+        if (metadata.history) {
+            updateData.history = metadata.history;
+        }
+
         const { data, error } = await supabase
             .from('bookings')
-            .update({ status })
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();
@@ -551,8 +586,18 @@ class SupabaseService {
         return data;
     }
 
-    async cancelBooking(id) {
-        return this.updateBookingStatus(id, 'cancelled');
+    async cancelBooking(id, reason = '') {
+        return this.updateBookingStatus(id, 'cancelled', { reason });
+    }
+
+    async deleteBooking(id) {
+        const { error } = await supabase
+            .from('bookings')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
     }
 
     // --- Promotions ---

@@ -285,10 +285,18 @@ export default function BusinessProfile() {
                 customerName: finalDetails.customerName,
                 customerPhone: finalDetails.customerPhone,
                 price: finalDetails.price,
-                status: 'confirmed',
+                status: 'pending',
                 // Venue specific fields
                 duration: business.type === 'venue' ? (selectedDuration * 60) : (business.type === 'service' ? selectedItem.duration : 60),
-                metadata: business.type === 'venue' ? { additionalServices: selectedAdditionalServices } : null
+                metadata: business.type === 'venue' ? { additionalServices: selectedAdditionalServices } : null,
+                history: [
+                    {
+                        action: 'creation',
+                        label: 'Turno Creado (Público)',
+                        timestamp: new Date().toISOString(),
+                        status: 'pending'
+                    }
+                ]
             };
 
             await serviceAdapter.createBooking(bookingData);
