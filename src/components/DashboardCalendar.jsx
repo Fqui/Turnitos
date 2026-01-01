@@ -10,24 +10,32 @@ export default function DashboardCalendar({
     setViewMode,
     currentDate,
     setCurrentDate,
-    isMobile: isMobileProp = false
+    isMobile: isMobileProp = false,
+    onMoveBooking,
+    isRescheduling = false,
+    reschedulingBooking = null,
+    onStartReschedule
 }) {
     const isMobile = isMobileProp;
     const [showSlotMenu, setShowSlotMenu] = useState(null); // { date, time, x, y }
+    const [showBookingMenu, setShowBookingMenu] = useState(null); // { booking, x, y }
 
-    // Close menu when clicking outside
+    // Close menus when clicking outside
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (showSlotMenu && !e.target.closest('.slot-menu')) {
                 setShowSlotMenu(null);
             }
+            if (showBookingMenu && !e.target.closest('.booking-menu')) {
+                setShowBookingMenu(null);
+            }
         };
 
-        if (showSlotMenu) {
+        if (showSlotMenu || showBookingMenu) {
             document.addEventListener('click', handleClickOutside);
             return () => document.removeEventListener('click', handleClickOutside);
         }
-    }, [showSlotMenu]);
+    }, [showSlotMenu, showBookingMenu]);
 
     // Helper to format date as YYYY-MM-DD
     const formatDateKey = (date) => {
@@ -61,9 +69,14 @@ export default function DashboardCalendar({
         if (viewMode === 'day') {
             days.push(new Date(start));
         } else if (viewMode === 'week') {
+            // Rolling 7 days centered on currentDate
+            // Start 3 days before currentDate
+            const startDay = new Date(start);
+            startDay.setDate(start.getDate() - 3);
+
             for (let i = 0; i < 7; i++) {
-                const d = new Date(start);
-                d.setDate(start.getDate() + i);
+                const d = new Date(startDay);
+                d.setDate(startDay.getDate() + i);
                 days.push(d);
             }
         } else if (viewMode === 'month') {
@@ -203,14 +216,46 @@ export default function DashboardCalendar({
         if (viewMode === 'day') {
             return currentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         } else if (viewMode === 'week') {
+            const startDate = new Date(currentDate);
+            startDate.setDate(startDate.getDate() - 3);
             const endDate = new Date(currentDate);
-            endDate.setDate(endDate.getDate() + 6);
-            return `${currentDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${endDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+            endDate.setDate(endDate.getDate() + 3);
+
+            // If same month
+            if (startDate.getMonth() === endDate.getMonth()) {
+                return `${startDate.getDate()} - ${endDate.getDate()} ${endDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`;
+            }
+            // If diverse month
+            return `${startDate.getDate()} ${startDate.toLocaleDateString('es-ES', { month: 'short' })} - ${endDate.getDate()} ${endDate.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })}`;
         } else {
             return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
         }
     };
 
+    const calendarContainerRef = React.useRef(null);
+
+    // Auto-scroll to center current day on mobile week view
+    useEffect(() => {
+        if (viewMode === 'week' && calendarContainerRef.current) {
+            // Scroll to center (approximate, since we have 7 columns)
+            // Container width is small, content width is huge.
+            // Current day is always the 4th column (index 3).
+            // Grid columns: 70px (time) + 7 * X.
+            // But min-width is set to 900px total for content.
+            // Let's just scroll to a reasonable offset.
+            // 4th day starts at approx 70px + (3 * (900-70)/7)
+            const timeColWidth = 70;
+            const contentWidth = calendarContainerRef.current.scrollWidth;
+            const dayWidth = (contentWidth - timeColWidth) / 7;
+            const currentDayOffset = timeColWidth + (3 * dayWidth);
+
+            // Center it: currentDayOffset - (containerWidth / 2) + (dayWidth / 2)
+            const containerWidth = calendarContainerRef.current.clientWidth;
+            const scrollPos = currentDayOffset - (containerWidth / 2) + (dayWidth / 2);
+
+            calendarContainerRef.current.scrollTo({ left: scrollPos, behavior: 'smooth' });
+        }
+    }, [viewMode, currentDate]);
 
 
     return (
@@ -226,37 +271,39 @@ export default function DashboardCalendar({
         }}>
             {/* Header */}
             <div style={{
-                padding: isMobile ? '12px' : '20px 24px',
+                padding: isMobile ? '16px' : '20px 24px',
                 borderBottom: '1px solid var(--border)',
                 display: 'flex',
                 flexDirection: isMobile ? 'column' : 'row',
                 justifyContent: 'space-between',
-                alignItems: isMobile ? 'stretch' : 'center',
+                alignItems: 'center',
                 background: 'var(--bg-card)',
-                gap: isMobile ? '12px' : '0'
+                gap: isMobile ? '16px' : '0'
             }}>
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: isMobile ? '8px' : '16px',
-                    flexWrap: 'wrap'
+                    justifyContent: isMobile ? 'center' : 'flex-start',
+                    gap: isMobile ? '12px' : '16px',
+                    flexWrap: 'wrap',
+                    width: isMobile ? '100%' : 'auto'
                 }}>
-                    <h3 style={{ margin: 0, fontSize: isMobile ? '16px' : '20px', fontWeight: '700', color: 'var(--text-primary)' }}>Calendario</h3>
+                    {!isMobile && <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>Calendario</h3>}
 
                     {/* View Mode Selector */}
-                    <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-main)', padding: '2px', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '10px' }}>
                         <button
                             onClick={() => setViewMode('day')}
                             style={{
                                 border: 'none',
                                 background: viewMode === 'day' ? 'white' : 'transparent',
-                                padding: isMobile ? '4px 8px' : '6px 12px',
+                                padding: isMobile ? '6px 16px' : '8px 20px',
                                 cursor: 'pointer',
-                                borderRadius: '6px',
-                                fontWeight: viewMode === 'day' ? '600' : '500',
-                                fontSize: '11px',
-                                color: viewMode === 'day' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                boxShadow: viewMode === 'day' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                                borderRadius: '8px',
+                                fontWeight: viewMode === 'day' ? '700' : '500',
+                                fontSize: '13px',
+                                color: viewMode === 'day' ? '#000' : 'var(--text-secondary)',
+                                boxShadow: viewMode === 'day' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                                 transition: 'all 0.2s'
                             }}
                         >
@@ -267,13 +314,13 @@ export default function DashboardCalendar({
                             style={{
                                 border: 'none',
                                 background: viewMode === 'week' ? 'white' : 'transparent',
-                                padding: isMobile ? '4px 8px' : '6px 12px',
+                                padding: isMobile ? '6px 16px' : '8px 20px',
                                 cursor: 'pointer',
-                                borderRadius: '6px',
-                                fontWeight: viewMode === 'week' ? '600' : '500',
-                                fontSize: '11px',
-                                color: viewMode === 'week' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                boxShadow: viewMode === 'week' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                                borderRadius: '8px',
+                                fontWeight: viewMode === 'week' ? '700' : '500',
+                                fontSize: '13px',
+                                color: viewMode === 'week' ? '#000' : 'var(--text-secondary)',
+                                boxShadow: viewMode === 'week' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                                 transition: 'all 0.2s'
                             }}
                         >
@@ -284,13 +331,13 @@ export default function DashboardCalendar({
                             style={{
                                 border: 'none',
                                 background: viewMode === 'month' ? 'white' : 'transparent',
-                                padding: isMobile ? '4px 8px' : '6px 12px',
+                                padding: isMobile ? '6px 16px' : '8px 20px',
                                 cursor: 'pointer',
-                                borderRadius: '6px',
-                                fontWeight: viewMode === 'month' ? '600' : '500',
-                                fontSize: '11px',
-                                color: viewMode === 'month' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                boxShadow: viewMode === 'month' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                                borderRadius: '8px',
+                                fontWeight: viewMode === 'month' ? '700' : '500',
+                                fontSize: '13px',
+                                color: viewMode === 'month' ? '#000' : 'var(--text-secondary)',
+                                boxShadow: viewMode === 'month' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                                 transition: 'all 0.2s'
                             }}
                         >
@@ -299,19 +346,19 @@ export default function DashboardCalendar({
                     </div>
 
                     {/* Navigation Controls */}
-                    <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-main)', padding: '2px', borderRadius: '8px' }}>
-                        <button onClick={handlePrevious} style={{ border: 'none', background: 'transparent', padding: '4px 6px', cursor: 'pointer', borderRadius: '4px', color: 'var(--text-secondary)', fontSize: '10px' }}>◀</button>
-                        <button onClick={handleToday} style={{ border: 'none', background: 'white', padding: '4px 8px', cursor: 'pointer', borderRadius: '4px', fontWeight: '600', fontSize: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>Hoy</button>
-                        <button onClick={handleNext} style={{ border: 'none', background: 'transparent', padding: '4px 6px', cursor: 'pointer', borderRadius: '4px', color: 'var(--text-secondary)', fontSize: '10px' }}>▶</button>
+                    <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '4px', borderRadius: '10px' }}>
+                        <button onClick={handlePrevious} style={{ border: 'none', background: 'transparent', padding: isMobile ? '6px 12px' : '6px 12px', cursor: 'pointer', borderRadius: '6px', color: 'var(--text-secondary)', fontSize: '14px' }}>◀</button>
+                        <button onClick={handleToday} style={{ border: 'none', background: 'white', padding: isMobile ? '6px 16px' : '6px 16px', cursor: 'pointer', borderRadius: '6px', fontWeight: '700', fontSize: '13px', color: '#000', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>Hoy</button>
+                        <button onClick={handleNext} style={{ border: 'none', background: 'transparent', padding: isMobile ? '6px 12px' : '6px 12px', cursor: 'pointer', borderRadius: '6px', color: 'var(--text-secondary)', fontSize: '14px' }}>▶</button>
                     </div>
                 </div>
-                <span style={{ fontSize: isMobile ? '13px' : '16px', fontWeight: '600', color: 'var(--text-primary)', textAlign: isMobile ? 'center' : 'right' }}>
+                <span style={{ fontSize: isMobile ? '18px' : '16px', fontWeight: '700', color: 'var(--text-primary)', textAlign: 'center', display: 'block' }}>
                     {getDateRangeText()}
                 </span>
             </div>
 
             {/* Calendar Grid */}
-            <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+            <div ref={calendarContainerRef} style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
                 {viewMode !== 'month' ? (
                     <div style={{
                         display: 'grid',
@@ -321,31 +368,31 @@ export default function DashboardCalendar({
                     }}>
 
                         {/* Header Row */}
-                        <div style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}></div>
+                        <div style={{
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 20,
+                            background: 'var(--bg-card)',
+                            borderBottom: viewMode === 'day' ? 'none' : '1px solid var(--border)',
+                            borderRight: viewMode === 'day' ? 'none' : '1px solid var(--border)',
+                            height: viewMode === 'day' ? 0 : 'auto'
+                        }}></div>
                         {displayDays.map((day, i) => {
                             const isToday = formatDateKey(day) === formatDateKey(new Date());
                             return (
                                 <div key={i} style={{
-                                    padding: viewMode === 'day' ? '20px 16px' : '16px 8px',
+                                    padding: viewMode === 'day' ? '0' : '16px 8px',
+                                    height: viewMode === 'day' ? '0' : 'auto',
+                                    overflow: 'hidden',
                                     textAlign: 'center',
-                                    borderBottom: '1px solid var(--border)',
+                                    borderBottom: viewMode === 'day' ? 'none' : '1px solid var(--border)',
                                     borderRight: i < displayDays.length - 1 ? '1px solid var(--border)' : 'none',
                                     position: 'sticky',
                                     top: 0,
                                     zIndex: 20,
-                                    background: 'var(--bg-card)',
+                                    background: viewMode !== 'day' && isToday ? 'rgba(0, 0, 0, 0.04)' : 'var(--bg-card)',
                                 }}>
-                                    {viewMode === 'day' ? (
-                                        // Vista de día: mostrar nombre completo del día
-                                        <div style={{
-                                            fontSize: '18px',
-                                            fontWeight: '700',
-                                            color: 'var(--text-primary)',
-                                            textTransform: 'capitalize'
-                                        }}>
-                                            {day.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                        </div>
-                                    ) : (
+                                    {viewMode === 'day' ? null : (
                                         // Vista de semana: diseño original
                                         <>
                                             <div style={{
@@ -407,59 +454,86 @@ export default function DashboardCalendar({
                                     return (
                                         <div
                                             key={`${day}-${time}`}
+                                            data-slot={`${formatDateKey(day)}|${time}|default`}
                                             style={{
                                                 borderBottom: '1px solid var(--border)',
                                                 borderRight: j < displayDays.length - 1 ? '1px solid var(--border)' : 'none',
                                                 height: '80px',
                                                 padding: '4px',
                                                 position: 'relative',
-                                                background: isToday ? 'rgba(0,0,0,0.01)' : 'transparent',
-                                                transition: 'background 0.2s'
+                                                background: isRescheduling
+                                                    ? 'rgba(37, 99, 235, 0.05)'
+                                                    : (isToday ? 'rgba(0, 0, 0, 0.04)' : 'transparent'), // darker gray for today
+                                                transition: 'background 0.2s',
+                                                border: isRescheduling
+                                                    ? '2px dashed var(--primary-paddle)'
+                                                    : 'none',
+                                                boxSizing: 'border-box'
                                             }}
                                             className="calendar-slot"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (booking) {
-                                                    onBookingClick && onBookingClick(booking);
+                                                    if (isRescheduling) return; // Can't drop on another booking
+
+                                                    // If it's pending or deposit_paid, show menu
+                                                    if (booking.status === 'pending' || booking.status === 'deposit_paid') {
+                                                        const rect = e.currentTarget.getBoundingClientRect();
+                                                        setShowBookingMenu({
+                                                            booking,
+                                                            x: rect.left + rect.width / 2,
+                                                            y: rect.top
+                                                        });
+                                                    } else {
+                                                        onBookingClick && onBookingClick(booking);
+                                                    }
                                                 } else {
-                                                    handleSlotClick(e, day, time);
+                                                    if (isRescheduling) {
+                                                        onMoveBooking && onMoveBooking(
+                                                            reschedulingBooking.id,
+                                                            formatDateKey(day),
+                                                            time,
+                                                            reschedulingBooking.court_id || reschedulingBooking.service_id
+                                                        );
+                                                    } else {
+                                                        handleSlotClick(e, day, time);
+                                                    }
                                                 }
                                             }}
                                         >
                                             {booking ? (
-                                                <div style={{
-                                                    background: getStatusColor(booking),
-                                                    color: '#fff',
-                                                    height: '100%',
-                                                    borderRadius: '8px',
-                                                    padding: '6px 10px',
-                                                    fontSize: '12px',
-                                                    overflow: 'hidden',
-                                                    cursor: 'pointer',
-                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                                    borderLeft: '4px solid rgba(0,0,0,0.2)',
-                                                    opacity: booking.status === 'cancelled' ? 0.7 : 1,
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    justifyContent: 'center',
-                                                    gap: '2px'
-                                                }}
+                                                <div
+                                                    style={{
+                                                        background: getStatusColor(booking),
+                                                        color: '#fff',
+                                                        height: '100%',
+                                                        borderRadius: '8px',
+                                                        padding: '6px 10px',
+                                                        fontSize: '12px',
+                                                        overflow: 'hidden',
+                                                        cursor: 'pointer',
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                                        borderLeft: '4px solid rgba(0,0,0,0.2)',
+                                                        opacity: (booking.status === 'cancelled' || (isRescheduling && reschedulingBooking?.id !== booking.id)) ? 0.7 : 1,
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        justifyContent: 'center',
+                                                        gap: '2px',
+                                                        border: reschedulingBooking?.id === booking.id ? '2px solid white' : 'none',
+                                                        position: 'relative',
+                                                        zIndex: reschedulingBooking?.id === booking.id ? 5 : 1
+                                                    }}
                                                     title={`${booking.customer_name || booking.customerName} - ${getBookingLabel(booking)}`}
                                                 >
-                                                    <div style={{ fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: (booking.status === 'cancelled' || booking.status === 'blocked') ? 'center' : 'left' }}>
+                                                    <div style={{ fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: (booking.status === 'cancelled' || booking.status === 'blocked') ? 'center' : 'left', lineHeight: '1.2' }}>
                                                         {booking.status === 'blocked' ? '🚫 BLOQUEADO' :
                                                             booking.status === 'cancelled' ? '❌ CANCELADO' :
                                                                 booking.customer_name || booking.customerName}
                                                     </div>
                                                     {booking.status !== 'cancelled' && booking.status !== 'blocked' && (
-                                                        <>
-                                                            <div style={{ fontSize: '10px', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                                {booking.customer_phone || booking.customerPhone || ''}
-                                                            </div>
-                                                            <div style={{ fontSize: '11px', opacity: 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                                {getBookingLabel(booking)}
-                                                            </div>
-                                                        </>
+                                                        <div style={{ fontSize: '13px', opacity: 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '500' }}>
+                                                            {getBookingLabel(booking)}
+                                                        </div>
                                                     )}
                                                 </div>
                                             ) : (
@@ -598,6 +672,121 @@ export default function DashboardCalendar({
                 )}
             </div>
 
+            {/* Booking Action Menu */}
+            {showBookingMenu && (
+                <>
+                    <div
+                        className="booking-menu-overlay"
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 999,
+                            background: 'transparent'
+                        }}
+                        onClick={() => setShowBookingMenu(null)}
+                    />
+                    <div
+                        className="booking-menu"
+                        style={{
+                            position: 'fixed',
+                            left: showBookingMenu.x - 75,
+                            top: showBookingMenu.y - 120, // Move up to show above
+                            width: '200px',
+                            background: 'var(--bg-card)',
+                            borderRadius: '16px',
+                            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                            border: '1px solid var(--border)',
+                            zIndex: 1000,
+                            overflow: 'hidden',
+                            animation: 'slideDown 0.2s ease-out'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{
+                            padding: '12px 16px',
+                            borderBottom: '1px solid var(--border)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            background: 'rgba(0,0,0,0.02)'
+                        }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Opciones</span>
+                            <button
+                                onClick={() => setShowBookingMenu(null)}
+                                style={{
+                                    border: 'none',
+                                    background: 'none',
+                                    padding: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '18px',
+                                    color: 'var(--text-secondary)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderRadius: '50%'
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => {
+                                onStartReschedule && onStartReschedule(showBookingMenu.booking);
+                                setShowBookingMenu(null);
+                            }}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                width: '100%',
+                                padding: '12px 16px',
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                color: 'var(--primary-paddle)',
+                                borderBottom: '1px solid var(--border)',
+                                transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
+                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                        >
+                            <span style={{ fontSize: '18px' }}>🔄</span>
+                            Reprogramar
+                        </button>
+                        <button
+                            onClick={() => {
+                                onBookingClick && onBookingClick(showBookingMenu.booking);
+                                setShowBookingMenu(null);
+                            }}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                width: '100%',
+                                padding: '12px 16px',
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                color: 'var(--text-primary)',
+                                transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
+                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                        >
+                            <span style={{ fontSize: '18px' }}>ℹ️</span>
+                            Información
+                        </button>
+                    </div>
+                </>
+            )}
+
             {/* Slot Action Menu */}
             {showSlotMenu && (
                 <>
@@ -720,7 +909,8 @@ export default function DashboardCalendar({
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 20px;
+                    font-size: 28px;
+                    font-weight: 900;
                     color: var(--primary-paddle);
                     opacity: 0;
                     transition: opacity 0.2s;

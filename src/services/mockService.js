@@ -8,6 +8,26 @@ class MockService {
     constructor() {
         this.businesses = demoData.businesses || [];
         this.bookings = []; // Simulated bookings (in-memory for demo)
+        this.customers = [
+            { id: 'c1', business_id: 'b1', name: 'Juan Perez', phone: '1122334455', notes: 'Prefiere cancha 1', tags: ['vip'], created_at: new Date().toISOString() },
+            { id: 'c2', business_id: 'b1', name: 'Maria Garcia', phone: '1166778899', notes: '', tags: [], created_at: new Date().toISOString() }
+        ];
+    }
+
+    async uploadImage(file) {
+        // Mock image upload
+        await this.delay(500);
+        return {
+            path: 'mock/image.jpg',
+            fullPath: 'https://via.placeholder.com/800x400'
+        };
+    }
+
+    subscribeToBookings(businessId, callback) {
+        // No-op for mock service
+        return {
+            unsubscribe: () => { }
+        };
     }
 
     // --- Businesses ---
@@ -36,13 +56,27 @@ class MockService {
         return business;
     }
 
-    async login(businessId, password) {
+    async login(email, password) {
         await this.delay(500);
-        const business = this.businesses.find(b => b.id === businessId);
-        if (business && business.password === password) {
+        const business = this.businesses.find(b => b.email === email && b.password === password);
+        if (business) {
             return business;
         }
         throw new Error('Credenciales inválidas');
+    }
+
+    async updateBusiness(businessId, businessData) {
+        await this.delay(500);
+        const index = this.businesses.findIndex(b => b.id === businessId);
+        if (index === -1) throw new Error('Business not found');
+
+        this.businesses[index] = {
+            ...this.businesses[index],
+            ...businessData,
+            updated_at: new Date().toISOString()
+        };
+        console.info('📝 Demo Mode: Business updated (will reset on page refresh):', this.businesses[index]);
+        return this.businesses[index];
     }
 
     // --- Bookings ---
@@ -110,7 +144,7 @@ class MockService {
             court_id: bookingData.courtId,
             date: formatDateLocal(bookingData.date),
             time: bookingData.time,
-            customer_name: bookingData.customerName,
+            customer_name: bookingData.customerName ? bookingData.customerName.toUpperCase() : bookingData.customerName,
             customer_phone: bookingData.customerPhone,
             status: bookingData.status || 'pending',
             price: bookingData.price,
@@ -126,6 +160,23 @@ class MockService {
         };
 
         this.bookings.push(newBooking);
+
+        // CRM Sync (Mock)
+        const customerExists = this.customers.find(c => c.phone === bookingData.customerPhone && c.business_id === bookingData.businessId);
+        if (customerExists) {
+            customerExists.name = bookingData.customerName;
+            customerExists.updated_at = new Date().toISOString();
+        } else {
+            this.customers.push({
+                id: `c-${Date.now()}`,
+                business_id: bookingData.businessId,
+                name: bookingData.customerName,
+                phone: bookingData.customerPhone,
+                notes: '',
+                tags: [],
+                created_at: new Date().toISOString()
+            });
+        }
 
         // Show a notification that this is demo mode
         console.info('📝 Demo Mode: Booking created (will reset on page refresh):', newBooking);
@@ -173,6 +224,26 @@ class MockService {
         return booking;
     }
 
+    async moveBooking(id, newDate, newTime, newItemId) {
+        await this.delay(300);
+        const booking = this.bookings.find(b => b.id === id);
+        if (!booking) throw new Error('Booking not found');
+
+        booking.date = newDate;
+        booking.time = newTime;
+
+        if (booking.court_id) {
+            booking.court_id = newItemId;
+            booking.resource_id = newItemId;
+        } else if (booking.service_id) {
+            booking.service_id = newItemId;
+            booking.resource_id = newItemId;
+        }
+
+        booking.updated_at = new Date().toISOString();
+        return booking;
+    }
+
     async cancelBooking(id, reason = '') {
         return this.updateBookingStatus(id, 'cancelled', { reason });
     }
@@ -202,6 +273,38 @@ class MockService {
         // In demo mode, we can't upload images
         console.warn('⚠️ Demo Mode: Image upload not available');
         throw new Error('Image upload not available in demo mode');
+    }
+
+    // --- Customers (CRM) ---
+
+    async getCustomers(businessId) {
+        await this.delay(300);
+        return this.customers.filter(c => c.business_id === businessId);
+    }
+
+    async updateCustomer(customerId, customerData) {
+        await this.delay(300);
+        const index = this.customers.findIndex(c => c.id === customerId);
+        if (index === -1) throw new Error('Customer not found');
+
+        this.customers[index] = {
+            ...this.customers[index],
+            ...customerData,
+            name: customerData.name ? customerData.name.toUpperCase() : (customerData.name || this.customers[index].name),
+            updated_at: new Date().toISOString()
+        };
+        return this.customers[index];
+    }
+
+    async getCustomerBookings(businessId, customerPhone) {
+        await this.delay(300);
+        return this.bookings
+            .filter(b => b.business_id === businessId && b.customer_phone === customerPhone)
+            .sort((a, b) => {
+                const dateA = new Date(`${a.date}T${a.time}`);
+                const dateB = new Date(`${b.date}T${b.time}`);
+                return dateB - dateA;
+            });
     }
 
     // --- Utility ---

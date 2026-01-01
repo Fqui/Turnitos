@@ -33,11 +33,16 @@ body {
   background-size: 24px 24px;
 }
 
-/* Dark Mode Override for Background */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* We handle theme switching via JS, but this is a fallback */
-  }
+/* Dark Mode */
+[data-theme="dark"] {
+  --bg-main: #121212;
+  --bg-card: #1E1E1E;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B0B0B0;
+  --border: #333333;
+  
+  /* Dark Mode Dot Grid */
+  background-image: radial-gradient(#333333 1.5px, transparent 1.5px);
 }
 
 /* Reset & Base Styles */

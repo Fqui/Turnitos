@@ -58,7 +58,8 @@
             "facebook": "https://facebook.com/elitepadelclub",
             "tiktok": "https://tiktok.com/@elitepadelclub",
             "whatsapp": "+5491112345678",
-            "password": "1234",
+            "email": "elitepadelclub@turnitosLR.com",
+            "password": "admin123",
             "courts": [
                 {
                     "id": "court-1",
@@ -135,6 +136,8 @@
             "instagram": "https://instagram.com/serenityspa",
             "facebook": "https://facebook.com/serenityspa",
             "whatsapp": "+5491187654321",
+            "email": "serenityspa&wellness@turnitosLR.com",
+            "password": "admin123",
             "specialists": [
                 {
                     "id": "specialist-1",
@@ -242,6 +245,8 @@
             "instagram": "https://instagram.com/tenisproacademy",
             "facebook": "https://facebook.com/tenisproacademy",
             "whatsapp": "+5491145678901",
+            "email": "tenisproacademy@turnitosLR.com",
+            "password": "admin123",
             "courts": [
                 {
                     "id": "court-t1",
@@ -314,6 +319,8 @@
             "instagram": "https://instagram.com/classicbarber",
             "facebook": "https://facebook.com/classicbarber",
             "whatsapp": "+5491123456789",
+            "email": "theclassicbarber@turnitosLR.com",
+            "password": "admin123",
             "specialists": [
                 {
                     "id": "barber-1",

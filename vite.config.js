@@ -9,13 +9,25 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.ico', 'logo.svg', 'logo.png'],
       manifest: {
-        name: 'TurnitosLR',
+        name: 'Turnitos LR - Gestión',
         short_name: 'TurnitosLR',
-        description: 'Reserva tu cancha al instante',
-        theme_color: '#ffffff',
+        description: 'Gestión de reservas en tiempo real',
+        theme_color: '#059669',
+        background_color: '#ffffff',
+        display: 'standalone',
         icons: [
+          {
+            src: 'logo.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'logo.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
           {
             src: 'logo.svg',
             sizes: 'any',

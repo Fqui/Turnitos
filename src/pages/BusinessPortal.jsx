@@ -9,14 +9,43 @@ import RevenueChart from '../components/analytics/RevenueChart';
 import PeakHoursHeatmap from '../components/analytics/PeakHoursHeatmap';
 import DateRangePicker from '../components/analytics/DateRangePicker';
 import { motion, AnimatePresence } from 'framer-motion';
+import { pushService } from '../services/pushService';
+import ClientManagement from '../components/ClientManagement';
+import BusinessSettings from '../components/BusinessSettings';
 
 export default function BusinessPortal() {
     const [businesses, setBusinesses] = useState([]);
     const [selectedBusinessId, setSelectedBusinessId] = useState('');
+    const [loginEmail, setLoginEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
+
+    useEffect(() => {
+        const checkAutoLogin = async () => {
+            const storedEmail = localStorage.getItem('turnitos_business_email');
+            if (storedEmail) {
+                setLoginEmail(storedEmail);
+                setRememberMe(true);
+                try {
+                    const businessesData = await serviceAdapter.getBusinesses();
+                    const biz = businessesData.find(b => b.email === storedEmail);
+                    if (biz) {
+                        setSelectedBusinessId(biz.id);
+                        setBusinesses(businessesData);
+                        setIsLoggedIn(true);
+                    }
+                } catch (err) {
+                    console.log("Auto-login failed", err);
+                }
+            }
+        };
+        checkAutoLogin();
+    }, []);
+
     const [viewMode, setViewMode] = useState('calendar'); // 'calendar', 'list', 'analytics', 'settings'
 
     // Analytics state
@@ -39,8 +68,10 @@ export default function BusinessPortal() {
         price: 0
     });
 
+    const [reschedulingBooking, setReschedulingBooking] = useState(null);
+
     // Calendar state (lifted for stats synchronization)
-    const [calendarViewMode, setCalendarViewMode] = useState('week');
+    const [calendarViewMode, setCalendarViewMode] = useState('day');
     const [calendarDate, setCalendarDate] = useState(() => {
         const d = new Date();
         d.setHours(0, 0, 0, 0);
@@ -80,20 +111,51 @@ export default function BusinessPortal() {
         loadBusinesses();
     }, []);
 
+    // Theme Management
+    const [theme, setTheme] = useState(() => {
+        return localStorage.getItem('theme') || 'light';
+    });
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    };
+
     const handleLogin = async (e) => {
         e.preventDefault();
-        if (!selectedBusinessId || !password) {
+        if (!loginEmail || !password) {
             alert('Por favor complete todos los campos');
             return;
         }
 
         setLoading(true);
         try {
-            const business = await serviceAdapter.login(selectedBusinessId, password);
+            const business = await serviceAdapter.login(loginEmail, password);
             if (business) {
                 const fullBusiness = await serviceAdapter.getBusinessById(business.id);
                 setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
+                setSelectedBusinessId(business.id);
                 setIsLoggedIn(true);
+
+                if (rememberMe) {
+                    localStorage.setItem('turnitos_business_email', loginEmail);
+                } else {
+                    localStorage.removeItem('turnitos_business_email');
+                }
+
+                // --- Solicitar permiso y token de notificaciones (Desactivado para desarrollo local sin HTTPS) ---
+                /*
+                try {
+                    console.log('Solicitando permisos de notificación para:', business.id);
+                    await pushService.requestPermissionAndGetToken(business.id);
+                } catch (pushError) {
+                    console.warn('No se pudieron activar las notificaciones push:', pushError);
+                }
+                */
             }
         } catch (error) {
             console.error('Login error:', error);
@@ -122,10 +184,29 @@ export default function BusinessPortal() {
     };
 
     useEffect(() => {
-        if (isLoggedIn) {
+        if (isLoggedIn && selectedBusinessId) {
             fetchBookings();
+
+            // Sincronización en tiempo real
+            const subscription = serviceAdapter.subscribeToBookings(selectedBusinessId, (payload) => {
+                console.log('Real-time update:', payload);
+
+                if (payload.eventType === 'INSERT') {
+                    setBookings(prev => [...prev, payload.new]);
+                } else if (payload.eventType === 'UPDATE') {
+                    setBookings(prev => prev.map(b => b.id === payload.new.id ? payload.new : b));
+                } else if (payload.eventType === 'DELETE') {
+                    setBookings(prev => prev.filter(b => b.id !== payload.old.id));
+                }
+            });
+
+            return () => {
+                if (subscription && typeof subscription.unsubscribe === 'function') {
+                    subscription.unsubscribe();
+                }
+            };
         }
-    }, [isLoggedIn]);
+    }, [isLoggedIn, selectedBusinessId]);
 
     const fetchAnalytics = async () => {
         try {
@@ -151,6 +232,10 @@ export default function BusinessPortal() {
         }
     }, [viewMode, dateRange, isLoggedIn]);
 
+    useEffect(() => {
+        pushService.initMessageListener();
+    }, []);
+
     const getStatusLabel = (status) => {
         const labels = {
             'confirmed': 'Confirmado',
@@ -162,6 +247,20 @@ export default function BusinessPortal() {
             'completed': 'Finalizado'
         };
         return labels[status] || status;
+    };
+
+    const handleMoveBooking = async (bookingId, newDate, newTime, newItemId) => {
+        try {
+            setLoading(true);
+            await serviceAdapter.moveBooking(bookingId, newDate, newTime, newItemId);
+            await fetchBookings();
+            setReschedulingBooking(null);
+        } catch (error) {
+            console.error('Error moving booking:', error);
+            alert('No se pudo mover la reserva. Revisa la disponibilidad.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleStatusChange = async (booking, newStatus) => {
@@ -410,63 +509,203 @@ export default function BusinessPortal() {
             <div style={{
                 minHeight: '100vh',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'var(--bg-main)'
+                background: '#1a1a1a', // Sober dark background
             }}>
-                <div style={{
-                    background: 'var(--bg-card)',
-                    padding: '40px',
-                    borderRadius: '24px',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
-                    width: '100%',
-                    maxWidth: '400px',
-                    border: '1px solid var(--border)'
-                }}>
-                    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                        <div style={{ fontSize: '40px', marginBottom: '16px' }}>🏢</div>
-                        <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>Portal Socios</h2>
-                        <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>Gestiona tu negocio en tiempo real</p>
-                    </div>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
+                        width: '100%',
+                        height: '100vh', // Occupy 100% of the window
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white'
+                    }}
+                >
+                    <div style={{ width: '100%', maxWidth: '440px', padding: '20px' }}> {/* Container for form content */}
+                        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                            <div style={{
+                                position: 'relative',
+                                width: '120px', // Adjusted size for the image
+                                height: 'auto',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 20px'
+                            }}>
+                                <img
+                                    src="/logo-turnitos.png"
+                                    alt="Logo TurnitosLR"
+                                    style={{
+                                        width: '100%',
+                                        height: 'auto',
+                                        objectFit: 'contain',
+                                        filter: 'drop-shadow(0 0 15px rgba(0, 230, 118, 0.3))' // Keep the neon glow effect
+                                    }}
+                                />
+                            </div>
+                            <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: 'white' }}>Bienvenidos a Turnitos<span style={{ color: 'var(--primary-paddle)' }}>LR</span></h1>
+                            <p style={{ opacity: 0.7, marginTop: '8px', fontSize: '15px', fontWeight: '500' }}>Panel de Administración de Negocios</p>
+                        </div>
 
-                    <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <select
-                            value={selectedBusinessId}
-                            onChange={(e) => setSelectedBusinessId(e.target.value)}
-                            required
-                            style={{ padding: '14px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)' }}
-                        >
-                            <option value="">Selecciona tu negocio</option>
-                            {businesses.map(b => (
-                                <option key={b.id} value={b.id}>{b.name}</option>
-                            ))}
-                        </select>
-                        <input
-                            type="password"
-                            placeholder="Contraseña"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{ padding: '14px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)' }}
-                        />
-                        <button
-                            type="submit"
-                            style={{
-                                padding: '14px',
-                                background: 'var(--primary-paddle)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '12px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                fontSize: '16px',
-                                marginTop: '8px'
-                            }}
-                        >
-                            Ingresar al Panel
-                        </button>
-                    </form>
-                </div>
-            </div>
+                        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div style={{ position: 'relative' }}>
+                                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.6 }}>📧</span>
+                                <input
+                                    type="email"
+                                    placeholder="Email del administrador"
+                                    value={loginEmail}
+                                    onChange={(e) => setLoginEmail(e.target.value)}
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '16px 16px 16px 48px',
+                                        borderRadius: '16px',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        fontSize: '15px',
+                                        outline: 'none',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onFocus={(e) => {
+                                        e.target.style.background = 'rgba(255,255,255,0.1)';
+                                        e.target.style.borderColor = 'var(--primary-paddle)';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.background = 'rgba(255,255,255,0.05)';
+                                        e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ position: 'relative' }}>
+                                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.6 }}>🔒</span>
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Contraseña segura"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '16px 48px',
+                                        borderRadius: '16px',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        fontSize: '15px',
+                                        outline: 'none',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onFocus={(e) => {
+                                        e.target.style.background = 'rgba(255,255,255,0.1)';
+                                        e.target.style.borderColor = 'var(--primary-paddle)';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.background = 'rgba(255,255,255,0.05)';
+                                        e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '16px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        opacity: 0.6,
+                                        fontSize: '18px'
+                                    }}
+                                >
+                                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={rememberMe}
+                                        onChange={(e) => setRememberMe(e.target.checked)}
+                                        style={{ accentColor: 'var(--primary-paddle)', width: '16px', height: '16px' }}
+                                    />
+                                    Recordar usuario
+                                </label>
+
+                                <button
+                                    type="button"
+                                    onClick={() => alert('Próximamente: Restablecimiento de contraseña por email.')}
+                                    style={{ background: 'none', border: 'none', color: 'white', fontSize: '13px', opacity: 0.6, cursor: 'pointer', fontWeight: '500' }}
+                                >
+                                    ¿Olvidaste tu contraseña?
+                                </button>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                style={{
+                                    padding: '16px',
+                                    background: 'var(--primary-paddle)',
+                                    color: '#000',
+                                    border: 'none',
+                                    borderRadius: '16px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    fontSize: '16px',
+                                    boxShadow: '0 10px 20px rgba(0, 230, 118, 0.2)',
+                                    transition: 'all 0.2s',
+                                    marginTop: '10px'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 12px 24px rgba(0, 230, 118, 0.3)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 10px 20px rgba(0, 230, 118, 0.2)';
+                                }}
+                            >
+                                {loading ? 'Verificando...' : 'Iniciar Sesión'}
+                            </button>
+                        </form>
+
+                        <div style={{ marginTop: '32px', textAlign: 'center' }}>
+                            <p style={{ fontSize: '14px', opacity: 0.6, marginBottom: '12px' }}>¿Sos nuevo?</p>
+                            <button
+                                onClick={() => window.open('https://wa.me/3804353811?text=Hola!%20Quiero%20sumar%20mi%20negocio%20a%20TurnitosLR', '_blank')}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    color: 'white',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: '16px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                            >
+                                Quiero sumarme a TurnitosLR
+                            </button>
+                        </div>
+
+                    </div>
+                </motion.div >
+            </div >
         );
     }
 
@@ -493,9 +732,18 @@ export default function BusinessPortal() {
                     top: 0,
                     zIndex: 100
                 }}>
-                    <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
-                        {currentBusiness?.name || 'Portal Socios'}
-                    </h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {(currentBusiness?.logo || currentBusiness?.image) && (
+                            <img
+                                src={currentBusiness.logo || currentBusiness.image}
+                                alt="Logo"
+                                style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                            />
+                        )}
+                        <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                            {currentBusiness?.name || 'Portal Socios'}
+                        </h1>
+                    </div>
                     <button
                         onClick={() => setShowSidebar(!showSidebar)}
                         style={{
@@ -528,11 +776,24 @@ export default function BusinessPortal() {
                 zIndex: 99,
                 overflowY: 'auto'
             }}>
-                <div style={{ marginBottom: '40px', display: isMobile ? 'none' : 'block' }}>
-                    <h1 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.5px' }}>
-                        {currentBusiness?.name || 'Portal Socios'}
-                    </h1>
-                    <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '13px', fontWeight: '500' }}>Panel de Control</p>
+                <div style={{ marginBottom: '40px', display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: '12px' }}>
+                    {currentBusiness?.logo || currentBusiness?.image ? (
+                        <img
+                            src={currentBusiness.logo || currentBusiness.image}
+                            alt="Logo"
+                            style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }}
+                        />
+                    ) : (
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--primary-paddle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#fff', fontWeight: 'bold' }}>
+                            {currentBusiness?.name ? currentBusiness.name.charAt(0).toUpperCase() : 'P'}
+                        </div>
+                    )}
+                    <div>
+                        <h1 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.5px', lineHeight: '1.2' }}>
+                            {currentBusiness?.name || 'Portal Socios'}
+                        </h1>
+                        <p style={{ color: 'var(--text-secondary)', margin: '2px 0 0 0', fontSize: '12px', fontWeight: '500' }}>Panel de Control</p>
+                    </div>
                 </div>
 
                 <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
@@ -594,6 +855,25 @@ export default function BusinessPortal() {
                         <span style={{ fontSize: '18px' }}>📊</span> <span style={{ color: viewMode === 'analytics' ? '#000' : 'inherit' }}>Analytics</span>
                     </button>
                     <button
+                        onClick={() => { setViewMode('customers'); isMobile && setShowSidebar(false); }}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px 16px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            background: viewMode === 'customers' ? 'var(--primary-paddle)' : 'transparent',
+                            color: viewMode === 'customers' ? '#000' : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            transition: 'all 0.2s',
+                            textAlign: 'left'
+                        }}
+                    >
+                        <span style={{ fontSize: '18px' }}>👥</span> <span style={{ color: viewMode === 'customers' ? '#000' : 'inherit' }}>Clientes</span>
+                    </button>
+                    <button
                         onClick={() => { setViewMode('settings'); isMobile && setShowSidebar(false); }}
                         style={{
                             display: 'flex',
@@ -616,11 +896,11 @@ export default function BusinessPortal() {
 
                 <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: isMobile ? '40px' : 0 }}>
                     <button
-                        onClick={() => { fetchBookings(); isMobile && setShowSidebar(false); }}
+                        onClick={toggleTheme}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '10px',
+                            justifyContent: 'space-between',
                             padding: '10px 16px',
                             borderRadius: '10px',
                             border: '1px solid var(--border)',
@@ -631,7 +911,30 @@ export default function BusinessPortal() {
                             fontWeight: '600'
                         }}
                     >
-                        <span>↻</span> Actualizar Datos
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>{theme === 'dark' ? '🌙' : '☀️'}</span>
+                            <span>{theme === 'dark' ? 'Modo Oscuro' : 'Modo Claro'}</span>
+                        </div>
+                        <div style={{
+                            width: '32px',
+                            height: '18px',
+                            background: theme === 'dark' ? 'var(--primary-paddle)' : 'rgba(0,0,0,0.1)',
+                            borderRadius: '10px',
+                            position: 'relative',
+                            transition: 'all 0.3s'
+                        }}>
+                            <div style={{
+                                width: '14px',
+                                height: '14px',
+                                background: '#fff',
+                                borderRadius: '50%',
+                                position: 'absolute',
+                                top: '2px',
+                                left: theme === 'dark' ? '16px' : '2px',
+                                transition: 'all 0.3s',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                            }} />
+                        </div>
                     </button>
                     <button
                         onClick={() => setIsLoggedIn(false)}
@@ -761,6 +1064,11 @@ export default function BusinessPortal() {
                                     </div>
                                 )}
                             </div>
+                        ) : viewMode === 'customers' ? (
+                            <ClientManagement
+                                businessId={selectedBusinessId}
+                                isMobile={isMobile}
+                            />
                         ) : viewMode === 'calendar' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                                 {/* Stats Row - Only in Calendar View */}
@@ -770,6 +1078,8 @@ export default function BusinessPortal() {
                                         viewMode={calendarViewMode}
                                         currentDate={calendarDate}
                                         isMobile={isMobile}
+                                        theme={theme}
+                                        toggleTheme={toggleTheme}
                                     />
                                 </div>
 
@@ -791,6 +1101,10 @@ export default function BusinessPortal() {
                                         <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#9CA3AF' }}></div>
                                         <span style={{ color: 'var(--text-secondary)' }}>Pendiente</span>
                                     </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#F59E0B' }}></div>
+                                        <span style={{ color: 'var(--text-secondary)' }}>Señado</span>
+                                    </div>
                                     {(currentBusiness?.type === 'sport' || currentBusiness?.type === 'venue') ? (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#059669' }}></div>
@@ -802,10 +1116,6 @@ export default function BusinessPortal() {
                                             <span style={{ color: 'var(--text-secondary)' }}>Confirmado</span>
                                         </div>
                                     )}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#F59E0B' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Señado</span>
-                                    </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#10B981' }}></div>
                                         <span style={{ color: 'var(--text-secondary)' }}>Finalizado</span>
@@ -819,6 +1129,44 @@ export default function BusinessPortal() {
                                         <span style={{ color: 'var(--text-secondary)' }}>Bloqueado</span>
                                     </div>
                                 </div>
+                                {reschedulingBooking && (
+                                    <div style={{
+                                        background: 'var(--primary-paddle)',
+                                        padding: '12px 20px',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        borderRadius: '12px',
+                                        marginBottom: '16px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                        animation: 'slideDown 0.3s ease-out'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <span style={{ fontSize: '20px' }}>🔄</span>
+                                            <div>
+                                                <strong style={{ display: 'block', color: '#000' }}>Reprogramando turno</strong>
+                                                <span style={{ fontSize: '13px', color: '#000', opacity: 0.8 }}>
+                                                    {reschedulingBooking.customer_name || reschedulingBooking.customerName} - Elige el nuevo horario en el calendario
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setReschedulingBooking(null)}
+                                            style={{
+                                                background: 'rgba(0,0,0,0.1)',
+                                                border: 'none',
+                                                padding: '6px 12px',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                fontWeight: '700',
+                                                fontSize: '12px',
+                                                color: '#000'
+                                            }}
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                )}
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                                     <DashboardCalendar
                                         bookings={bookings}
@@ -827,13 +1175,26 @@ export default function BusinessPortal() {
                                         onBlockSlot={handleBlockSlot}
                                         onCreateBooking={handleCreateBooking}
                                         onBookingClick={handleBookingClick}
+                                        onMoveBooking={handleMoveBooking}
                                         viewMode={calendarViewMode}
                                         setViewMode={setCalendarViewMode}
                                         currentDate={calendarDate}
                                         setCurrentDate={setCalendarDate}
+                                        isRescheduling={!!reschedulingBooking}
+                                        reschedulingBooking={reschedulingBooking}
+                                        onStartReschedule={(booking) => setReschedulingBooking(booking)}
                                     />
                                 </div>
                             </div>
+                        ) : viewMode === 'settings' ? (
+                            <BusinessSettings
+                                business={currentBusiness}
+                                isMobile={isMobile}
+                                onUpdate={(updated) => {
+                                    // Update in the list of businesses too
+                                    setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
+                                }}
+                            />
                         ) : (
                             <div style={{
                                 background: 'var(--bg-card)',
@@ -1269,6 +1630,7 @@ export default function BusinessPortal() {
                                             {(selectedBooking.status === 'pending' || selectedBooking.status === 'deposit_paid') && (
                                                 <button
                                                     onClick={() => handleBookingAction('confirm_booking')}
+                                                    disabled={selectedBooking.status === 'pending'}
                                                     style={{
                                                         padding: '12px',
                                                         borderRadius: '12px',
@@ -1276,7 +1638,8 @@ export default function BusinessPortal() {
                                                         background: 'var(--primary-paddle)',
                                                         color: 'white',
                                                         fontWeight: '700',
-                                                        cursor: 'pointer'
+                                                        cursor: selectedBooking.status === 'pending' ? 'default' : 'pointer',
+                                                        opacity: selectedBooking.status === 'pending' ? 0.5 : 1
                                                     }}
                                                 >
                                                     Confirmar Turno

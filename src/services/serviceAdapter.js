@@ -18,17 +18,14 @@ class ServiceAdapter {
     }
 
     _checkDemoMode() {
-        // Demo mode is enabled if:
-        // 1. We're on GitHub Pages (domain contains github.io)
-        // 2. We're on localhost (development)
-        // 3. Or explicitly set via environment variable
+        if (import.meta.env.VITE_DEMO_MODE === 'false') return false;
+        if (import.meta.env.VITE_DEMO_MODE === 'true') return true;
+
         const isGitHubPages = typeof window !== 'undefined' && window.location.hostname.includes('github.io');
         const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-        const isDemoEnv = import.meta.env.VITE_DEMO_MODE === 'true';
 
-        return isGitHubPages || isLocalhost || isDemoEnv;
+        return isGitHubPages || isLocalhost;
     }
-
     // --- Proxy all methods to the active service ---
 
     async getBusinesses() {
@@ -39,8 +36,8 @@ class ServiceAdapter {
         return this.service.getBusinessById(id);
     }
 
-    async login(businessId, password) {
-        return this.service.login(businessId, password);
+    async login(email, password) {
+        return this.service.login(email, password);
     }
 
     async getBusinessBySlug(slug) {
@@ -63,9 +60,6 @@ class ServiceAdapter {
     }
 
     async updateBusiness(businessId, businessData) {
-        if (this.isDemoMode) {
-            throw new Error('Updating businesses is not available in demo mode');
-        }
         return this.service.updateBusiness(businessId, businessData);
     }
 
@@ -79,6 +73,10 @@ class ServiceAdapter {
 
     async updateBookingStatus(id, status, metadata = {}) {
         return this.service.updateBookingStatus(id, status, metadata);
+    }
+
+    async moveBooking(id, newDate, newTime, newItemId) {
+        return this.service.moveBooking(id, newDate, newTime, newItemId);
     }
 
     async cancelBooking(id, reason = '') {
@@ -107,6 +105,18 @@ class ServiceAdapter {
         return this.service.deletePromotion(promotionId);
     }
 
+    async getCustomers(businessId) {
+        return this.service.getCustomers(businessId);
+    }
+
+    async updateCustomer(customerId, customerData) {
+        return this.service.updateCustomer(customerId, customerData);
+    }
+
+    async getCustomerBookings(businessId, customerPhone) {
+        return this.service.getCustomerBookings(businessId, customerPhone);
+    }
+
     getPublicUrl(path) {
         return this.service.getPublicUrl(path);
     }
@@ -116,6 +126,10 @@ class ServiceAdapter {
             throw new Error('Image upload is not available in demo mode');
         }
         return this.service.uploadImage(file);
+    }
+
+    subscribeToBookings(businessId, callback) {
+        return this.service.subscribeToBookings(businessId, callback);
     }
 
     // Utility method to check if in demo mode

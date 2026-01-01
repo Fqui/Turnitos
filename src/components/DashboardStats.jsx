@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function DashboardStats({ bookings, viewMode = 'month', currentDate = new Date(), isMobile }) {
+export default function DashboardStats({ bookings, viewMode = 'month', currentDate = new Date(), isMobile, theme, toggleTheme }) {
     const [isExpanded, setIsExpanded] = useState(!isMobile);
 
     // Helper to format date as YYYY-MM-DD for comparison
@@ -27,9 +27,10 @@ export default function DashboardStats({ bookings, viewMode = 'month', currentDa
                 return formatDateKey(bDate) === formatDateKey(currentDate);
             } else if (viewMode === 'week') {
                 const weekStart = new Date(currentDate);
+                weekStart.setDate(weekStart.getDate() - 3);
                 weekStart.setHours(0, 0, 0, 0);
                 const weekEnd = new Date(currentDate);
-                weekEnd.setDate(weekEnd.getDate() + 6);
+                weekEnd.setDate(weekEnd.getDate() + 3);
                 weekEnd.setHours(23, 59, 59, 999);
                 return bDate >= weekStart && bDate <= weekEnd;
             } else {
@@ -55,9 +56,16 @@ export default function DashboardStats({ bookings, viewMode = 'month', currentDa
             const isToday = formatDateKey(currentDate) === formatDateKey(today);
             return isToday ? 'Hoy' : currentDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
         } else if (viewMode === 'week') {
+            const weekStart = new Date(currentDate);
+            weekStart.setDate(weekStart.getDate() - 3);
             const weekEnd = new Date(currentDate);
-            weekEnd.setDate(weekEnd.getDate() + 6);
-            return `Semana (${currentDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })})`;
+            weekEnd.setDate(weekEnd.getDate() + 3);
+
+            // If same month
+            if (weekStart.getMonth() === weekEnd.getMonth()) {
+                return `Semana (${weekStart.getDate()} - ${weekEnd.getDate()} ${weekEnd.toLocaleDateString('es-ES', { month: 'short' })})`;
+            }
+            return `Semana (${weekStart.getDate()} ${weekStart.toLocaleDateString('es-ES', { month: 'short' })} - ${weekEnd.getDate()} ${weekEnd.toLocaleDateString('es-ES', { month: 'short' })})`;
         } else {
             return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
         }

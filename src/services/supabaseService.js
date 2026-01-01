@@ -68,14 +68,13 @@ class SupabaseService {
         return data;
     }
 
-    async login(businessId, password) {
-        // NOTE: This assumes a 'password' column exists in the 'businesses' table.
-        // In a real production app, you should use Supabase Auth (GoTrue) or at least hash passwords.
+    async login(email, password) {
+        // NOTE: This assumes a 'password' and 'email' column exists in the 'businesses' table.
         const { data, error } = await supabase
             .from('businesses')
             .select('*')
-            .eq('id', businessId)
-            .eq('password', password) // Simple text match for now as per demo requirements
+            .eq('email', email)
+            .eq('password', password)
             .single();
 
         if (error || !data) {
@@ -542,7 +541,7 @@ class SupabaseService {
                 court_id: bookingData.courtId,
                 date: formatDateLocal(bookingData.date),
                 time: bookingData.time,
-                customer_name: bookingData.customerName,
+                customer_name: bookingData.customerName ? bookingData.customerName.toUpperCase() : bookingData.customerName,
                 customer_phone: bookingData.customerPhone,
                 status: bookingData.status || 'confirmed',
                 price: bookingData.price,
@@ -586,6 +585,50 @@ class SupabaseService {
         return data;
     }
 
+    async moveBooking(id, newDate, newTime, newItemId) {
+        // We need to know if the business is service or venue/sport
+        // to update correctly court_id or service_id.
+        // For simplicity, we check the current booking or just try to 
+        // update based on the ID format or provided type.
+        // Usually, we can just update both and Supabase will handle the schema.
+
+        const updateData = {
+            date: newDate,
+            time: newTime,
+            updated_at: new Date().toISOString()
+        };
+
+        // Heuristic: if newItemId looks like it might be a court or service
+        // In this app, many IDs are UUIDs. 
+        // We'll try to find if it's a service or court first or just pass both 
+        // if we are not sure, but better to be precise.
+
+        // Let's get the booking first to see its type
+        const { data: currentBooking } = await supabase
+            .from('bookings')
+            .select('court_id, service_id')
+            .eq('id', id)
+            .single();
+
+        if (currentBooking) {
+            if (currentBooking.court_id) {
+                updateData.court_id = newItemId;
+            } else if (currentBooking.service_id) {
+                updateData.service_id = newItemId;
+            }
+        }
+
+        const { data, error } = await supabase
+            .from('bookings')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
     async cancelBooking(id, reason = '') {
         return this.updateBookingStatus(id, 'cancelled', { reason });
     }
@@ -598,6 +641,26 @@ class SupabaseService {
 
         if (error) throw error;
         return true;
+    }
+
+    // --- Realtime Subscriptions ---
+
+    subscribeToBookings(businessId, callback) {
+        return supabase
+            .channel(`bookings-${businessId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'bookings',
+                    filter: `business_id=eq.${businessId}`
+                },
+                (payload) => {
+                    callback(payload);
+                }
+            )
+            .subscribe();
     }
 
     // --- Promotions ---
@@ -633,6 +696,52 @@ class SupabaseService {
 
         if (error) throw error;
         return true;
+    }
+
+    // --- Customers (CRM) ---
+
+    async getCustomers(businessId) {
+        const { data, error } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('business_id', businessId)
+            .order('name', { ascending: true });
+
+        if (error) throw error;
+        return data;
+    }
+
+    async updateCustomer(customerId, customerData) {
+        const { data, error } = await supabase
+            .from('customers')
+            .update({
+                ...customerData,
+                name: customerData.name ? customerData.name.toUpperCase() : customerData.name,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', customerId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    async getCustomerBookings(businessId, customerPhone) {
+        const { data, error } = await supabase
+            .from('bookings')
+            .select(`
+                *,
+                services (name),
+                courts (name)
+            `)
+            .eq('business_id', businessId)
+            .eq('customer_phone', customerPhone)
+            .order('date', { ascending: false })
+            .order('time', { ascending: false });
+
+        if (error) throw error;
+        return data;
     }
 
     // --- Storage ---
