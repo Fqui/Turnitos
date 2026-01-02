@@ -2,6 +2,24 @@
 import { supabase } from './supabaseClient';
 
 class SupabaseService {
+    // --- Helpers ---
+    _processBusinessData(data) {
+        if (!data) return data;
+        if (Array.isArray(data)) {
+            return data.map(item => this._processBusinessData(item));
+        }
+
+        const business = { ...data };
+        // Ensure hours is an object if it comes as a stringified JSON
+        if (typeof business.hours === 'string' && business.hours.trim().startsWith('{')) {
+            try {
+                business.hours = JSON.parse(business.hours);
+            } catch (e) {
+                console.error('Error parsing business hours JSON:', e);
+            }
+        }
+        return business;
+    }
 
     // --- Businesses ---
 
@@ -16,7 +34,7 @@ class SupabaseService {
             `);
 
         if (error) throw error;
-        return data;
+        return this._processBusinessData(data);
     }
 
     async getBusinessById(id) {
@@ -65,7 +83,7 @@ class SupabaseService {
         // Add specialists to the business data
         data.specialists = specialists || [];
 
-        return data;
+        return this._processBusinessData(data);
     }
 
     async login(email, password) {
@@ -81,7 +99,7 @@ class SupabaseService {
             throw new Error('Credenciales inválidas');
         }
 
-        return data;
+        return this._processBusinessData(data);
     }
 
     async createBusiness(businessData) {
@@ -490,6 +508,29 @@ class SupabaseService {
 
         return business;
     }
+
+    async patchBusiness(businessId, updates) {
+        // Only update specific fields provided in 'updates'
+        // Filter out non-DB fields to be safe (arrays, relations)
+        const safeUpdates = { ...updates };
+        const blockedFields = ['id', 'created_at', 'services', 'courts', 'bookings', 'customers', 'specialists'];
+        blockedFields.forEach(field => delete safeUpdates[field]);
+
+        // Stringify complex objects for TEXT columns if necessary
+        if (safeUpdates.hours && typeof safeUpdates.hours === 'object') {
+            safeUpdates.hours = JSON.stringify(safeUpdates.hours);
+        }
+
+        const { error } = await supabase
+            .from('businesses')
+            .update(safeUpdates)
+            .eq('id', businessId);
+
+        if (error) throw error;
+        // Return null data to avoid heavy read timeouts (e.g. if logo is base64)
+        return null;
+    }
+
     async getBookings(businessId, date = null) {
         let query = supabase
             .from('bookings')
@@ -552,7 +593,7 @@ class SupabaseService {
             .single();
 
         if (error) throw error;
-        return data;
+        return this._processBusinessData(data);
     }
 
     async updateBookingStatus(id, status, metadata = {}) {
@@ -582,7 +623,7 @@ class SupabaseService {
             .single();
 
         if (error) throw error;
-        return data;
+        return this._processBusinessData(data);
     }
 
     async moveBooking(id, newDate, newTime, newItemId) {
@@ -626,7 +667,7 @@ class SupabaseService {
             .single();
 
         if (error) throw error;
-        return data;
+        return this._processBusinessData(data);
     }
 
     async cancelBooking(id, reason = '') {
@@ -675,7 +716,7 @@ class SupabaseService {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return data;
+        return this._processBusinessData(data);
     }
 
     async createPromotion(promotionData) {
@@ -708,7 +749,7 @@ class SupabaseService {
             .order('name', { ascending: true });
 
         if (error) throw error;
-        return data;
+        return this._processBusinessData(data);
     }
 
     async updateCustomer(customerId, customerData) {
@@ -724,7 +765,7 @@ class SupabaseService {
             .single();
 
         if (error) throw error;
-        return data;
+        return this._processBusinessData(data);
     }
 
     async getCustomerBookings(businessId, customerPhone) {
@@ -741,7 +782,7 @@ class SupabaseService {
             .order('time', { ascending: false });
 
         if (error) throw error;
-        return data;
+        return this._processBusinessData(data);
     }
 
     // --- Storage ---

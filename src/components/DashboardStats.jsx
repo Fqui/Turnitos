@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatDisplayDate } from '../utils/dateUtils';
 
 export default function DashboardStats({ bookings, viewMode = 'month', currentDate = new Date(), isMobile, theme, toggleTheme }) {
     const [isExpanded, setIsExpanded] = useState(!isMobile);
@@ -54,7 +55,7 @@ export default function DashboardStats({ bookings, viewMode = 'month', currentDa
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const isToday = formatDateKey(currentDate) === formatDateKey(today);
-            return isToday ? 'Hoy' : currentDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+            return isToday ? 'Hoy' : formatDisplayDate(currentDate);
         } else if (viewMode === 'week') {
             const weekStart = new Date(currentDate);
             weekStart.setDate(weekStart.getDate() - 3);
@@ -67,7 +68,7 @@ export default function DashboardStats({ bookings, viewMode = 'month', currentDa
             }
             return `Semana (${weekStart.getDate()} ${weekStart.toLocaleDateString('es-ES', { month: 'short' })} - ${weekEnd.getDate()} ${weekEnd.toLocaleDateString('es-ES', { month: 'short' })})`;
         } else {
-            return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            return formatDisplayDate(currentDate);
         }
     };
 

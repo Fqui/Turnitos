@@ -52,15 +52,24 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         }
     };
 
-    const handleSave = async () => {
+    const handleSave = async (specificUpdates = null) => {
         try {
             setSaving(true);
-            const updated = await serviceAdapter.updateBusiness(business.id, formData);
+            const dataToSave = specificUpdates || formData;
+            console.log('Saving data:', dataToSave);
+
+            // patchBusiness now returns null to avoid read timeouts
+            await serviceAdapter.patchBusiness(business.id, dataToSave);
+
+            // Manually construct the updated object for local state sync
+            const updated = { ...business, ...dataToSave };
+            console.log('Update response (manual):', updated);
+
             onUpdate(updated);
             alert('Configuración guardada correctamente');
         } catch (error) {
             console.error('Error saving settings:', error);
-            alert('Error al guardar la configuración');
+            alert(`Error al guardar: ${error.message || 'Desconocido'}. Código: ${error.code || 'N/A'}`);
         } finally {
             setSaving(false);
         }
@@ -70,9 +79,22 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         { id: 'general', label: 'General', icon: '🏢' },
         { id: 'images', label: 'Imágenes', icon: '🖼️' },
         { id: 'rules', label: 'Reglas de Reservas', icon: '📅' },
+        { id: 'schedule', label: 'Horarios', icon: '⏰' },
         { id: 'payments', label: 'Pagos y Señas', icon: '💰' },
         { id: 'contact', label: 'Contacto', icon: '📱' }
     ];
+
+    const daysTranslation = {
+        monday: 'Lunes',
+        tuesday: 'Martes',
+        wednesday: 'Miércoles',
+        thursday: 'Jueves',
+        friday: 'Viernes',
+        saturday: 'Sábado',
+        sunday: 'Domingo'
+    };
+
+    const orderedDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -106,6 +128,17 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 onChange={(e) => handleInputChange('location', e.target.value)}
                             />
                         </div>
+                        <button
+                            onClick={() => handleSave({
+                                name: formData.name,
+                                description: formData.description,
+                                location: formData.location
+                            })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Información General'}
+                        </button>
                     </div>
                 );
             case 'images':
@@ -176,6 +209,148 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 </label>
                             </div>
                         </div>
+                        <button
+                            onClick={() => handleSave({
+                                logo: formData.logo,
+                                banner_image: formData.banner_image
+                            })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Imágenes'}
+                        </button>
+                    </div>
+                );
+            case 'schedule':
+                return (
+                    <div style={{ display: 'grid', gap: '20px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '10px' }}>Días y Horarios de Atención</h3>
+                        <div style={{ background: 'var(--bg-main)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                            {orderedDays.map((day, index) => {
+                                const dayConfig = formData.hours?.[day] || {};
+                                const isOpen = dayConfig.isOpen !== false; // Default to open if undefined
+
+                                return (
+                                    <div key={day} style={{
+                                        borderBottom: index < orderedDays.length - 1 ? '1px solid var(--border)' : 'none',
+                                        background: isOpen ? 'transparent' : 'rgba(0,0,0,0.02)',
+                                        padding: '16px 20px'
+                                    }}>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            marginBottom: dayConfig.isSplit ? '12px' : '0'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    id={`toggle-${day}`}
+                                                    checked={isOpen}
+                                                    onChange={(e) => {
+                                                        const newHours = { ...formData.hours };
+                                                        if (!newHours[day]) newHours[day] = { open: '08:00', close: '23:00' };
+                                                        newHours[day] = { ...newHours[day], isOpen: e.target.checked };
+                                                        handleInputChange('hours', newHours);
+                                                    }}
+                                                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary-paddle)' }}
+                                                />
+                                                <label htmlFor={`toggle-${day}`} style={{ fontWeight: '600', color: isOpen ? 'var(--text-primary)' : 'var(--text-secondary)', cursor: 'pointer' }}>
+                                                    {daysTranslation[day]}
+                                                </label>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: isOpen ? 1 : 0.4, pointerEvents: isOpen ? 'auto' : 'none' }}>
+                                                <input
+                                                    type="time"
+                                                    value={dayConfig.open || '08:00'}
+                                                    onChange={(e) => {
+                                                        const newHours = { ...formData.hours };
+                                                        if (!newHours[day]) newHours[day] = { open: '08:00', close: '23:00', isOpen: true };
+                                                        newHours[day] = { ...newHours[day], open: e.target.value };
+                                                        handleInputChange('hours', newHours);
+                                                    }}
+                                                    style={{ ...inputStyle, width: 'auto', padding: '6px 10px', fontSize: '13px' }}
+                                                />
+                                                <span style={{ color: 'var(--text-secondary)' }}>-</span>
+                                                <input
+                                                    type="time"
+                                                    value={dayConfig.close || '23:00'}
+                                                    onChange={(e) => {
+                                                        const newHours = { ...formData.hours };
+                                                        if (!newHours[day]) newHours[day] = { open: '08:00', close: '23:00', isOpen: true };
+                                                        newHours[day] = { ...newHours[day], close: e.target.value };
+                                                        handleInputChange('hours', newHours);
+                                                    }}
+                                                    style={{ ...inputStyle, width: 'auto', padding: '6px 10px', fontSize: '13px' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Split Shift Option */}
+                                        {isOpen && (
+                                            <div style={{ paddingLeft: '30px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: dayConfig.isSplit ? '8px' : '0' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        id={`split-${day}`}
+                                                        checked={!!dayConfig.isSplit}
+                                                        onChange={(e) => {
+                                                            const newHours = { ...formData.hours };
+                                                            const isSplit = e.target.checked;
+                                                            newHours[day] = {
+                                                                ...newHours[day],
+                                                                isSplit,
+                                                                breakStart: isSplit ? '13:00' : null,
+                                                                breakEnd: isSplit ? '16:00' : null
+                                                            };
+                                                            handleInputChange('hours', newHours);
+                                                        }}
+                                                        style={{ width: '14px', height: '14px', cursor: 'pointer', accentColor: 'var(--primary-paddle)' }}
+                                                    />
+                                                    <label htmlFor={`split-${day}`} style={{ fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                                                        Horario cortado (descanso)
+                                                    </label>
+                                                </div>
+
+                                                {dayConfig.isSplit && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', animation: 'fadeIn 0.2s' }}>
+                                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Cerrado de:</span>
+                                                        <input
+                                                            type="time"
+                                                            value={dayConfig.breakStart || '13:00'}
+                                                            onChange={(e) => {
+                                                                const newHours = { ...formData.hours };
+                                                                newHours[day] = { ...newHours[day], breakStart: e.target.value };
+                                                                handleInputChange('hours', newHours);
+                                                            }}
+                                                            style={{ ...inputStyle, width: 'auto', padding: '4px 8px', fontSize: '12px', background: 'rgba(0,0,0,0.02)' }}
+                                                        />
+                                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>a</span>
+                                                        <input
+                                                            type="time"
+                                                            value={dayConfig.breakEnd || '16:00'}
+                                                            onChange={(e) => {
+                                                                const newHours = { ...formData.hours };
+                                                                newHours[day] = { ...newHours[day], breakEnd: e.target.value };
+                                                                handleInputChange('hours', newHours);
+                                                            }}
+                                                            style={{ ...inputStyle, width: 'auto', padding: '4px 8px', fontSize: '12px', background: 'rgba(0,0,0,0.02)' }}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <button
+                            onClick={() => handleSave({ hours: formData.hours })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Horarios'}
+                        </button>
                     </div>
                 );
             case 'rules':
@@ -225,6 +400,17 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             />
                             <p style={hintStyle}>Tiempo límite para que el cliente cancele por su cuenta.</p>
                         </div>
+                        <button
+                            onClick={() => handleSave({
+                                min_advance_days: formData.min_advance_days,
+                                max_advance_days: formData.max_advance_days,
+                                cancellation_limit_hours: formData.cancellation_limit_hours
+                            })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Reglas'}
+                        </button>
                     </div>
                 );
             case 'payments':
@@ -256,6 +442,16 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             />
                             <p style={hintStyle}>Este texto se incluirá en el mensaje automático de WhatsApp al reservar.</p>
                         </div>
+                        <button
+                            onClick={() => handleSave({
+                                deposit_percentage: formData.deposit_percentage,
+                                payment_instructions: formData.payment_instructions
+                            })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Pagos'}
+                        </button>
                     </div>
                 );
             case 'contact':
@@ -292,6 +488,17 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 onChange={(e) => handleInputChange('facebook', e.target.value)}
                             />
                         </div>
+                        <button
+                            onClick={() => handleSave({
+                                whatsapp: formData.whatsapp,
+                                instagram: formData.instagram,
+                                facebook: formData.facebook
+                            })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Contacto'}
+                        </button>
                     </div>
                 );
             default:
@@ -315,27 +522,6 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '800' }}>Configuración</h2>
                     <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>Personaliza tu portal y reglas de negocio</p>
                 </div>
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    style={{
-                        padding: '12px 24px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        background: 'var(--primary-paddle)',
-                        color: '#000',
-                        fontWeight: '700',
-                        fontSize: '15px',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 12px rgba(0,230,118,0.2)',
-                        transition: 'transform 0.2s',
-                        opacity: saving ? 0.7 : 1
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                >
-                    {saving ? 'Guardando...' : 'Guardar Cambios'}
-                </button>
             </div>
 
             {/* Content Body */}
@@ -415,6 +601,21 @@ const hintStyle = {
     fontSize: '11px',
     color: 'var(--text-secondary)',
     margin: '6px 0 0 4px'
+};
+
+const saveButtonStyle = {
+    marginTop: '20px',
+    padding: '12px 24px',
+    borderRadius: '12px',
+    border: 'none',
+    background: 'var(--primary-paddle)',
+    color: '#000',
+    fontWeight: '700',
+    fontSize: '15px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(0,230,118,0.2)',
+    width: '100%',
+    textAlign: 'center'
 };
 
 const buttonSecondaryStyle = {

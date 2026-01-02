@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import serviceAdapter from '../services/serviceAdapter';
+import { formatDisplayDate } from '../utils/dateUtils';
 
 export default function ClientManagement({ businessId, isMobile }) {
     const [customers, setCustomers] = useState([]);
@@ -167,7 +168,7 @@ export default function ClientManagement({ businessId, isMobile }) {
                                 >
                                     <td style={{ padding: '16px 20px' }}>
                                         <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{customer.name}</div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Desde: {new Date(customer.created_at).toLocaleDateString()}</div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Desde: {formatDisplayDate(customer.created_at)}</div>
                                     </td>
                                     <td style={{ padding: '16px 20px', color: 'var(--text-primary)' }}>{customer.phone}</td>
                                     <td style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -329,7 +330,7 @@ export default function ClientManagement({ businessId, isMobile }) {
                                                         {booking.services?.name || booking.courts?.name || 'Reserva'}
                                                     </div>
                                                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                        {new Date(booking.date).toLocaleDateString()} a las {booking.time}
+                                                        {formatDisplayDate(booking.date)} a las {booking.time}
                                                     </div>
                                                 </div>
                                                 <div style={{

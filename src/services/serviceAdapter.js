@@ -22,9 +22,8 @@ class ServiceAdapter {
         if (import.meta.env.VITE_DEMO_MODE === 'true') return true;
 
         const isGitHubPages = typeof window !== 'undefined' && window.location.hostname.includes('github.io');
-        const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-        return isGitHubPages || isLocalhost;
+        // Only default to demo mode on GitHub Pages. Localhost should use Supabase if configured.
+        return isGitHubPages;
     }
     // --- Proxy all methods to the active service ---
 
@@ -57,6 +56,17 @@ class ServiceAdapter {
             throw new Error('Creating businesses is not available in demo mode');
         }
         return this.service.createBusiness(businessData);
+    }
+
+    async patchBusiness(id, updates) {
+        if (this.isDemoMode) {
+            // Mock implementation for demo mode if needed, or throw error
+            console.warn('patchBusiness not fully implemented in mock service, falling back to updateBusiness mock');
+            // In mock service, updateBusiness typically handles full replacement, but we can try merging
+            const current = await this.service.getBusinessById(id);
+            return this.service.updateBusiness(id, { ...current, ...updates });
+        }
+        return this.service.patchBusiness(id, updates);
     }
 
     async updateBusiness(businessId, businessData) {

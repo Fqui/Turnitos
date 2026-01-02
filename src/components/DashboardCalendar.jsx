@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { formatLongDate } from '../utils/dateUtils';
 
 export default function DashboardCalendar({
     bookings,
@@ -49,7 +50,35 @@ export default function DashboardCalendar({
     const getBusinessHours = () => {
         if (!business?.hours) return { start: 8, end: 23 };
 
-        // Assuming hours format like "08:00-23:00" or similar
+        // Handle new JSON object format
+        if (typeof business.hours === 'object') {
+            let minStart = 24;
+            let maxEnd = 0;
+            let hasValidHours = false;
+
+            Object.values(business.hours).forEach(dayConfig => {
+                if (dayConfig.open && dayConfig.close) {
+                    const startHour = parseInt(dayConfig.open.split(':')[0]);
+                    const endHour = parseInt(dayConfig.close.split(':')[0]);
+
+                    // Consider minutes? For calendar range, simpler to use hour floor/ceil
+                    if (!isNaN(startHour) && startHour < minStart) minStart = startHour;
+                    if (!isNaN(endHour) && endHour > maxEnd) maxEnd = endHour; // Close time is usually exclusive or last hour slot
+                    hasValidHours = true;
+                }
+            });
+
+            if (hasValidHours) {
+                // Add some buffer if needed, but user requested exact start
+                // Ensure end covers the last slot. e.g. close 23:00 means we need 22:00-23:00 slot, so loop until < 23.
+                // Actually the current loop is <= end. 
+                // If close is 23:00, we probably want the last slot to be 22:00 or 22:30.
+                // Let's stick to standard logic: range includes start and end hour.
+                return { start: minStart, end: maxEnd };
+            }
+        }
+
+        // Handle legacy string format "08:00-23:00"
         const hoursStr = business.hours;
         if (typeof hoursStr === 'string' && hoursStr.includes('-')) {
             const [start, end] = hoursStr.split('-').map(h => parseInt(h.split(':')[0]));
@@ -214,7 +243,7 @@ export default function DashboardCalendar({
 
     const getDateRangeText = () => {
         if (viewMode === 'day') {
-            return currentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            return formatLongDate(currentDate);
         } else if (viewMode === 'week') {
             const startDate = new Date(currentDate);
             startDate.setDate(startDate.getDate() - 3);
@@ -451,6 +480,26 @@ export default function DashboardCalendar({
                                     const booking = getBookingForSlot(day, time);
                                     const isToday = formatDateKey(day) === formatDateKey(new Date());
 
+                                    // Check if business is open on this day
+                                    const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                                    const dayKey = daysMap[day.getDay()];
+                                    const dayConfig = business?.hours?.[dayKey];
+
+                                    // Check explicit closure
+                                    let isOpen = dayConfig?.isOpen !== false;
+
+                                    // Check split shift (break)
+                                    if (isOpen && dayConfig?.isSplit && dayConfig?.breakStart && dayConfig?.breakEnd) {
+                                        const slotTime = time;
+                                        const breakStart = dayConfig.breakStart;
+                                        const breakEnd = dayConfig.breakEnd;
+
+                                        // Simple string comparison works for HH:MM format
+                                        if (slotTime >= breakStart && slotTime < breakEnd) {
+                                            isOpen = false;
+                                        }
+                                    }
+
                                     return (
                                         <div
                                             key={`${day}-${time}`}
@@ -461,22 +510,28 @@ export default function DashboardCalendar({
                                                 height: '80px',
                                                 padding: '4px',
                                                 position: 'relative',
-                                                background: isRescheduling
-                                                    ? 'rgba(37, 99, 235, 0.05)'
-                                                    : (isToday ? 'rgba(0, 0, 0, 0.04)' : 'transparent'), // darker gray for today
+                                                background: !isOpen
+                                                    ? 'repeating-linear-gradient(45deg, var(--bg-main), var(--bg-main) 10px, var(--border) 10px, var(--border) 11px)' // Diagonal stripes for closed
+                                                    : isRescheduling
+                                                        ? 'rgba(37, 99, 235, 0.05)'
+                                                        : (isToday ? 'rgba(0, 0, 0, 0.02)' : 'transparent'),
                                                 transition: 'background 0.2s',
-                                                border: isRescheduling
+                                                outline: isRescheduling
                                                     ? '2px dashed var(--primary-paddle)'
                                                     : 'none',
-                                                boxSizing: 'border-box'
+                                                outlineOffset: '-2px',
+                                                boxSizing: 'border-box',
+                                                opacity: !isOpen ? 0.6 : 1,
+                                                cursor: !isOpen ? 'not-allowed' : 'pointer'
                                             }}
                                             className="calendar-slot"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (booking) {
-                                                    if (isRescheduling) return; // Can't drop on another booking
 
-                                                    // If it's pending or deposit_paid, show menu
+                                                if (booking) {
+                                                    // Allow clicking existing bookings even if closed (to view details)
+                                                    if (isRescheduling) return;
+
                                                     if (booking.status === 'pending' || booking.status === 'deposit_paid') {
                                                         const rect = e.currentTarget.getBoundingClientRect();
                                                         setShowBookingMenu({
@@ -488,6 +543,9 @@ export default function DashboardCalendar({
                                                         onBookingClick && onBookingClick(booking);
                                                     }
                                                 } else {
+                                                    // Prevent new bookings/reschedules on closed days
+                                                    if (!isOpen) return;
+
                                                     if (isRescheduling) {
                                                         onMoveBooking && onMoveBooking(
                                                             reschedulingBooking.id,

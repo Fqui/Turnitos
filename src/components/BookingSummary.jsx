@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDisplayDate } from '../utils/dateUtils';
 
 export default function BookingSummary({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting }) {
     const [customerName, setCustomerName] = React.useState('');
@@ -132,7 +133,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                             }}>
                                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Fecha</div>
                                 <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                    {date.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                    {formatDisplayDate(date)}
                                 </div>
                             </div>
                             <div style={{

@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pushService } from '../services/pushService';
 import ClientManagement from '../components/ClientManagement';
 import BusinessSettings from '../components/BusinessSettings';
+import { formatDisplayDate } from '../utils/dateUtils';
 
 export default function BusinessPortal() {
     const [businesses, setBusinesses] = useState([]);
@@ -191,10 +192,29 @@ export default function BusinessPortal() {
             const subscription = serviceAdapter.subscribeToBookings(selectedBusinessId, (payload) => {
                 console.log('Real-time update:', payload);
 
+                // Enriquecer el payload con datos de la empresa actual (nombres de servicios/canchas)
+                // Esto es necesario porque el payload de Realtime solo trae IDs planos.
+                const enrichBooking = (b) => {
+                    if (!b) return null;
+                    const businessData = businesses.find(bus => bus.id === selectedBusinessId);
+                    if (businessData) {
+                        const court = businessData.courts?.find(c => c.id === b.court_id);
+                        const service = businessData.services?.find(s => s.id === b.service_id);
+                        return {
+                            ...b,
+                            courts: court ? { name: court.name } : null,
+                            services: service ? { name: service.name } : null
+                        };
+                    }
+                    return b;
+                };
+
+                const enrichedNew = enrichBooking(payload.new);
+
                 if (payload.eventType === 'INSERT') {
-                    setBookings(prev => [...prev, payload.new]);
+                    setBookings(prev => [...prev, enrichedNew]);
                 } else if (payload.eventType === 'UPDATE') {
-                    setBookings(prev => prev.map(b => b.id === payload.new.id ? payload.new : b));
+                    setBookings(prev => prev.map(b => b.id === enrichedNew.id ? enrichedNew : b));
                 } else if (payload.eventType === 'DELETE') {
                     setBookings(prev => prev.filter(b => b.id !== payload.old.id));
                 }
@@ -1332,7 +1352,7 @@ export default function BusinessPortal() {
                                                     {booking.services?.name || booking.courts?.name || booking.service || '-'}
                                                 </div>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                                    <span>{booking.date}</span>
+                                                    <span>{formatDisplayDate(booking.date)}</span>
                                                     <span style={{ color: 'var(--primary-paddle)', fontWeight: '600' }}>Ver detalles →</span>
                                                 </div>
                                             </div>
@@ -1359,7 +1379,7 @@ export default function BusinessPortal() {
                                                 return matchesSearch && matchesStatus && matchesDate;
                                             }).map((booking, index) => (
                                                 <tr key={index} style={{ borderTop: '1px solid var(--border)' }}>
-                                                    <td style={{ padding: '16px' }}>{booking.date}</td>
+                                                    <td style={{ padding: '16px' }}>{formatDisplayDate(booking.date)}</td>
                                                     <td style={{ padding: '16px', fontWeight: 'bold' }}>{booking.time}</td>
                                                     <td style={{ padding: '16px' }}>
                                                         <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{booking.customer_name || booking.customerName || '-'}</div>
@@ -1452,7 +1472,7 @@ export default function BusinessPortal() {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                     <div>
                                         <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Fecha</label>
-                                        <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{selectedBooking.date}</div>
+                                        <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{formatDisplayDate(selectedBooking.date)}</div>
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Hora</label>
@@ -1472,9 +1492,10 @@ export default function BusinessPortal() {
                                                 if (selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending') return;
                                                 const name = selectedBooking.customer_name || selectedBooking.customerName;
                                                 const phone = selectedBooking.customer_phone || selectedBooking.customerPhone;
-                                                const date = selectedBooking.date;
+                                                const date = formatDisplayDate(selectedBooking.date);
                                                 const time = selectedBooking.time;
-                                                const businessName = currentBusiness?.name || 'nuestro local';
+                                                const biz = businesses.find(b => b.id === selectedBusinessId);
+                                                const businessName = biz?.name || 'nuestro local';
                                                 const message = `Hola ${name}, te recordamos tu turno para el día ${date} a las ${time} hs en ${businessName}. ¿Confirmas tu asistencia?`;
                                                 window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
                                             }}

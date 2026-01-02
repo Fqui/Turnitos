@@ -12,6 +12,7 @@ import Calendar from '../components/Calendar';
 import MonthCalendar from '../components/MonthCalendar';
 import TimeSlotPicker from '../components/TimeSlotPicker';
 import BookingSummary from '../components/BookingSummary';
+import { formatDisplayDate } from '../utils/dateUtils';
 
 // Fix for default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -772,7 +773,7 @@ export default function BusinessProfile() {
                                                 Cerrado
                                             </h4>
                                             <p style={{ fontSize: '14px' }}>
-                                                Este negocio no abre los días {selectedDate.toLocaleDateString('es-ES', { weekday: 'long' })}.
+                                                Este negocio no abre el día {formatDisplayDate(selectedDate)}.
                                             </p>
                                             <p style={{ fontSize: '14px', marginTop: '8px' }}>
                                                 Por favor, selecciona otro día.
