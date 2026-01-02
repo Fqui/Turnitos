@@ -182,7 +182,8 @@ export default function ClientManagement({ businessId, isMobile }) {
                                             borderRadius: '8px',
                                             fontSize: '13px',
                                             fontWeight: '600',
-                                            cursor: 'pointer'
+                                            cursor: 'pointer',
+                                            color: 'var(--text-primary)'
                                         }}>Ver Detalle</button>
                                     </td>
                                 </tr>

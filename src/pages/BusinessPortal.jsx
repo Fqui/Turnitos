@@ -13,6 +13,10 @@ import { pushService } from '../services/pushService';
 import ClientManagement from '../components/ClientManagement';
 import BusinessSettings from '../components/BusinessSettings';
 import { formatDisplayDate } from '../utils/dateUtils';
+import BusinessLogin from '../components/business/BusinessLogin';
+import BusinessPortalSidebar from '../components/business/BusinessPortalSidebar';
+import BookingDetailsModal from '../components/business/BookingDetailsModal';
+import NewBookingModal from '../components/business/NewBookingModal';
 
 export default function BusinessPortal() {
     const [businesses, setBusinesses] = useState([]);
@@ -79,12 +83,20 @@ export default function BusinessPortal() {
         return d;
     });
 
-    // List view filters
     const [listFilters, setListFilters] = useState({
         search: '',
         status: 'all',
         date: ''
     });
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(15);
+
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [listFilters, selectedBusinessId]);
 
     // Responsive state
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
@@ -126,24 +138,25 @@ export default function BusinessPortal() {
         setTheme(prev => prev === 'light' ? 'dark' : 'light');
     };
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        if (!loginEmail || !password) {
+    const handleLogin = async (email, inputPassword, remember) => {
+        if (!email || !inputPassword) {
             alert('Por favor complete todos los campos');
             return;
         }
 
+        setLoginEmail(email);
+        setRememberMe(remember);
         setLoading(true);
         try {
-            const business = await serviceAdapter.login(loginEmail, password);
+            const business = await serviceAdapter.login(email, inputPassword);
             if (business) {
                 const fullBusiness = await serviceAdapter.getBusinessById(business.id);
                 setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
                 setSelectedBusinessId(business.id);
                 setIsLoggedIn(true);
 
-                if (rememberMe) {
-                    localStorage.setItem('turnitos_business_email', loginEmail);
+                if (remember) {
+                    localStorage.setItem('turnitos_business_email', email);
                 } else {
                     localStorage.removeItem('turnitos_business_email');
                 }
@@ -526,206 +539,10 @@ export default function BusinessPortal() {
 
     if (!isLoggedIn) {
         return (
-            <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                background: '#1a1a1a', // Sober dark background
-            }}>
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        backdropFilter: 'blur(20px)',
-                        WebkitBackdropFilter: 'blur(20px)',
-                        width: '100%',
-                        height: '100vh', // Occupy 100% of the window
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white'
-                    }}
-                >
-                    <div style={{ width: '100%', maxWidth: '440px', padding: '20px' }}> {/* Container for form content */}
-                        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                            <div style={{
-                                position: 'relative',
-                                width: '120px', // Adjusted size for the image
-                                height: 'auto',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                margin: '0 auto 20px'
-                            }}>
-                                <img
-                                    src="/logo-turnitos.png"
-                                    alt="Logo TurnitosLR"
-                                    style={{
-                                        width: '100%',
-                                        height: 'auto',
-                                        objectFit: 'contain',
-                                        filter: 'drop-shadow(0 0 15px rgba(0, 230, 118, 0.3))' // Keep the neon glow effect
-                                    }}
-                                />
-                            </div>
-                            <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: 'white' }}>Bienvenidos a Turnitos<span style={{ color: 'var(--primary-paddle)' }}>LR</span></h1>
-                            <p style={{ opacity: 0.7, marginTop: '8px', fontSize: '15px', fontWeight: '500' }}>Panel de Administración de Negocios</p>
-                        </div>
-
-                        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div style={{ position: 'relative' }}>
-                                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.6 }}>📧</span>
-                                <input
-                                    type="email"
-                                    placeholder="Email del administrador"
-                                    value={loginEmail}
-                                    onChange={(e) => setLoginEmail(e.target.value)}
-                                    required
-                                    style={{
-                                        width: '100%',
-                                        padding: '16px 16px 16px 48px',
-                                        borderRadius: '16px',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        color: 'white',
-                                        fontSize: '15px',
-                                        outline: 'none',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.background = 'rgba(255,255,255,0.1)';
-                                        e.target.style.borderColor = 'var(--primary-paddle)';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.background = 'rgba(255,255,255,0.05)';
-                                        e.target.style.borderColor = 'rgba(255,255,255,0.1)';
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{ position: 'relative' }}>
-                                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.6 }}>🔒</span>
-                                <input
-                                    type={showPassword ? "text" : "password"}
-                                    placeholder="Contraseña segura"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    style={{
-                                        width: '100%',
-                                        padding: '16px 48px',
-                                        borderRadius: '16px',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        color: 'white',
-                                        fontSize: '15px',
-                                        outline: 'none',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.background = 'rgba(255,255,255,0.1)';
-                                        e.target.style.borderColor = 'var(--primary-paddle)';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.background = 'rgba(255,255,255,0.05)';
-                                        e.target.style.borderColor = 'rgba(255,255,255,0.1)';
-                                    }}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    style={{
-                                        position: 'absolute',
-                                        right: '16px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        opacity: 0.6,
-                                        fontSize: '18px'
-                                    }}
-                                >
-                                    {showPassword ? '👁️' : '👁️‍🗨️'}
-                                </button>
-                            </div>
-
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={rememberMe}
-                                        onChange={(e) => setRememberMe(e.target.checked)}
-                                        style={{ accentColor: 'var(--primary-paddle)', width: '16px', height: '16px' }}
-                                    />
-                                    Recordar usuario
-                                </label>
-
-                                <button
-                                    type="button"
-                                    onClick={() => alert('Próximamente: Restablecimiento de contraseña por email.')}
-                                    style={{ background: 'none', border: 'none', color: 'white', fontSize: '13px', opacity: 0.6, cursor: 'pointer', fontWeight: '500' }}
-                                >
-                                    ¿Olvidaste tu contraseña?
-                                </button>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                style={{
-                                    padding: '16px',
-                                    background: 'var(--primary-paddle)',
-                                    color: '#000',
-                                    border: 'none',
-                                    borderRadius: '16px',
-                                    fontWeight: '800',
-                                    cursor: 'pointer',
-                                    fontSize: '16px',
-                                    boxShadow: '0 10px 20px rgba(0, 230, 118, 0.2)',
-                                    transition: 'all 0.2s',
-                                    marginTop: '10px'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = '0 12px 24px rgba(0, 230, 118, 0.3)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 10px 20px rgba(0, 230, 118, 0.2)';
-                                }}
-                            >
-                                {loading ? 'Verificando...' : 'Iniciar Sesión'}
-                            </button>
-                        </form>
-
-                        <div style={{ marginTop: '32px', textAlign: 'center' }}>
-                            <p style={{ fontSize: '14px', opacity: 0.6, marginBottom: '12px' }}>¿Sos nuevo?</p>
-                            <button
-                                onClick={() => window.open('https://wa.me/3804353811?text=Hola!%20Quiero%20sumar%20mi%20negocio%20a%20TurnitosLR', '_blank')}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    color: 'white',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '16px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                            >
-                                Quiero sumarme a TurnitosLR
-                            </button>
-                        </div>
-
-                    </div>
-                </motion.div >
-            </div >
+            <BusinessLogin
+                onLogin={handleLogin}
+                loading={loading}
+            />
         );
     }
 
@@ -779,200 +596,17 @@ export default function BusinessPortal() {
                 </div>
             )}
 
-            {/* Sidebar */}
-            <div style={{
-                width: isMobile ? '100%' : '280px',
-                background: 'var(--bg-card)',
-                borderRight: isMobile ? 'none' : '1px solid var(--border)',
-                display: showSidebar ? 'flex' : 'none',
-                flexDirection: 'column',
-                padding: '30px 20px',
-                position: isMobile ? 'fixed' : 'sticky',
-                top: isMobile ? '60px' : 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: isMobile ? 'calc(100vh - 60px)' : '100vh',
-                zIndex: 99,
-                overflowY: 'auto'
-            }}>
-                <div style={{ marginBottom: '40px', display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: '12px' }}>
-                    {currentBusiness?.logo || currentBusiness?.image ? (
-                        <img
-                            src={currentBusiness.logo || currentBusiness.image}
-                            alt="Logo"
-                            style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }}
-                        />
-                    ) : (
-                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--primary-paddle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#fff', fontWeight: 'bold' }}>
-                            {currentBusiness?.name ? currentBusiness.name.charAt(0).toUpperCase() : 'P'}
-                        </div>
-                    )}
-                    <div>
-                        <h1 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.5px', lineHeight: '1.2' }}>
-                            {currentBusiness?.name || 'Portal Socios'}
-                        </h1>
-                        <p style={{ color: 'var(--text-secondary)', margin: '2px 0 0 0', fontSize: '12px', fontWeight: '500' }}>Panel de Control</p>
-                    </div>
-                </div>
-
-                <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                    <button
-                        onClick={() => { setViewMode('calendar'); isMobile && setShowSidebar(false); }}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: viewMode === 'calendar' ? 'var(--primary-paddle)' : 'transparent',
-                            color: viewMode === 'calendar' ? '#000' : 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            transition: 'all 0.2s',
-                            textAlign: 'left'
-                        }}
-                    >
-                        <span style={{ fontSize: '18px' }}>📅</span> <span style={{ color: viewMode === 'calendar' ? '#000' : 'inherit' }}>Calendario</span>
-                    </button>
-                    <button
-                        onClick={() => { setViewMode('list'); isMobile && setShowSidebar(false); }}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: viewMode === 'list' ? 'var(--primary-paddle)' : 'transparent',
-                            color: viewMode === 'list' ? '#000' : 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            transition: 'all 0.2s',
-                            textAlign: 'left'
-                        }}
-                    >
-                        <span style={{ fontSize: '18px' }}>📋</span> <span style={{ color: viewMode === 'list' ? '#000' : 'inherit' }}>Lista de Reservas</span>
-                    </button>
-                    <button
-                        onClick={() => { setViewMode('analytics'); isMobile && setShowSidebar(false); }}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: viewMode === 'analytics' ? 'var(--primary-paddle)' : 'transparent',
-                            color: viewMode === 'analytics' ? '#000' : 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            transition: 'all 0.2s',
-                            textAlign: 'left'
-                        }}
-                    >
-                        <span style={{ fontSize: '18px' }}>📊</span> <span style={{ color: viewMode === 'analytics' ? '#000' : 'inherit' }}>Analytics</span>
-                    </button>
-                    <button
-                        onClick={() => { setViewMode('customers'); isMobile && setShowSidebar(false); }}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: viewMode === 'customers' ? 'var(--primary-paddle)' : 'transparent',
-                            color: viewMode === 'customers' ? '#000' : 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            transition: 'all 0.2s',
-                            textAlign: 'left'
-                        }}
-                    >
-                        <span style={{ fontSize: '18px' }}>👥</span> <span style={{ color: viewMode === 'customers' ? '#000' : 'inherit' }}>Clientes</span>
-                    </button>
-                    <button
-                        onClick={() => { setViewMode('settings'); isMobile && setShowSidebar(false); }}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: viewMode === 'settings' ? 'var(--primary-paddle)' : 'transparent',
-                            color: viewMode === 'settings' ? '#000' : 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            transition: 'all 0.2s',
-                            textAlign: 'left'
-                        }}
-                    >
-                        <span style={{ fontSize: '18px' }}>⚙️</span> <span style={{ color: viewMode === 'settings' ? '#000' : 'inherit' }}>Configuración</span>
-                    </button>
-                </nav>
-
-                <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: isMobile ? '40px' : 0 }}>
-                    <button
-                        onClick={toggleTheme}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '10px 16px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)',
-                            background: 'var(--bg-main)',
-                            color: 'var(--text-primary)',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '600'
-                        }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>{theme === 'dark' ? '🌙' : '☀️'}</span>
-                            <span>{theme === 'dark' ? 'Modo Oscuro' : 'Modo Claro'}</span>
-                        </div>
-                        <div style={{
-                            width: '32px',
-                            height: '18px',
-                            background: theme === 'dark' ? 'var(--primary-paddle)' : 'rgba(0,0,0,0.1)',
-                            borderRadius: '10px',
-                            position: 'relative',
-                            transition: 'all 0.3s'
-                        }}>
-                            <div style={{
-                                width: '14px',
-                                height: '14px',
-                                background: '#fff',
-                                borderRadius: '50%',
-                                position: 'absolute',
-                                top: '2px',
-                                left: theme === 'dark' ? '16px' : '2px',
-                                transition: 'all 0.3s',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                            }} />
-                        </div>
-                    </button>
-                    <button
-                        onClick={() => setIsLoggedIn(false)}
-                        style={{
-                            padding: '10px 16px',
-                            borderRadius: '10px',
-                            border: '1px solid rgba(255,68,68,0.2)',
-                            background: 'rgba(255,68,68,0.05)',
-                            color: '#ff4444',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '600'
-                        }}
-                    >
-                        Cerrar Sesión
-                    </button>
-                </div>
-            </div>
+            <BusinessPortalSidebar
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                isMobile={isMobile}
+                isVisible={showSidebar}
+                onToggleSidebar={setShowSidebar}
+                toggleTheme={toggleTheme}
+                theme={theme}
+                currentBusiness={currentBusiness}
+                onLogout={() => setIsLoggedIn(false)}
+            />
 
             {/* Main Content Area */}
             <div style={{
@@ -1221,708 +855,342 @@ export default function BusinessPortal() {
                                 borderRadius: '16px',
                                 border: isMobile ? 'none' : '1px solid var(--border)',
                                 flex: 1,
-                                overflowY: 'auto',
-                                paddingRight: isMobile ? 0 : '10px'
+                                display: 'flex',
+                                flexDirection: 'column',
+                                minHeight: 0
                             }}>
-                                {/* Filters Section */}
-                                <div style={{
-                                    padding: '20px',
-                                    borderBottom: '1px solid var(--border)',
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    gap: '16px',
-                                    alignItems: 'center',
-                                    backgroundColor: 'rgba(0,0,0,0.01)'
-                                }}>
-                                    <div style={{ flex: '1', minWidth: '200px', position: 'relative' }}>
-                                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
-                                        <input
-                                            type="text"
-                                            placeholder="Buscar por cliente o servicio..."
-                                            value={listFilters.search}
-                                            onChange={(e) => setListFilters(prev => ({ ...prev, search: e.target.value }))}
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px 10px 10px 38px',
-                                                borderRadius: '8px',
-                                                border: '1px solid var(--border)',
-                                                background: 'var(--bg-main)',
-                                                fontSize: '14px',
-                                                color: 'var(--text-primary)'
-                                            }}
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                        <select
-                                            value={listFilters.status}
-                                            onChange={(e) => setListFilters(prev => ({ ...prev, status: e.target.value }))}
-                                            style={{
-                                                padding: '10px 12px',
-                                                borderRadius: '8px',
-                                                border: '1px solid var(--border)',
-                                                background: 'var(--bg-main)',
-                                                fontSize: '14px',
-                                                color: 'var(--text-primary)',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            <option value="all">Todos los estados</option>
-                                            <option value="pending">Pendientes</option>
-                                            <option value="confirmed">Confirmados</option>
-                                            <option value="deposit_paid">Señados</option>
-                                            <option value="completed">Finalizados</option>
-                                            <option value="cancelled">Cancelados</option>
-                                            <option value="blocked">Bloqueados</option>
-                                        </select>
-                                        <input
-                                            type="date"
-                                            value={listFilters.date}
-                                            onChange={(e) => setListFilters(prev => ({ ...prev, date: e.target.value }))}
-                                            style={{
-                                                padding: '10px 12px',
-                                                borderRadius: '8px',
-                                                border: '1px solid var(--border)',
-                                                background: 'var(--bg-main)',
-                                                fontSize: '14px',
-                                                color: 'var(--text-primary)',
-                                                cursor: 'pointer'
-                                            }}
-                                        />
-                                        {(listFilters.search || listFilters.status !== 'all' || listFilters.date) && (
-                                            <button
-                                                onClick={() => setListFilters({ search: '', status: 'all', date: '' })}
+                                <div style={{ flex: 1, overflowY: 'auto', paddingRight: isMobile ? 0 : '10px' }}>
+                                    {/* Filters Section */}
+                                    <div style={{
+                                        padding: '20px',
+                                        borderBottom: '1px solid var(--border)',
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: '16px',
+                                        alignItems: 'center',
+                                        backgroundColor: 'rgba(0,0,0,0.01)'
+                                    }}>
+                                        <div style={{ flex: '1', minWidth: '200px', position: 'relative' }}>
+                                            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
+                                            <input
+                                                type="text"
+                                                placeholder="Buscar por cliente o servicio..."
+                                                value={listFilters.search}
+                                                onChange={(e) => {
+                                                    setListFilters(prev => ({ ...prev, search: e.target.value }));
+                                                    setCurrentPage(1);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '10px 10px 10px 38px',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid var(--border)',
+                                                    background: 'var(--bg-main)',
+                                                    fontSize: '14px',
+                                                    color: 'var(--text-primary)'
+                                                }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            <select
+                                                value={listFilters.status}
+                                                onChange={(e) => {
+                                                    setListFilters(prev => ({ ...prev, status: e.target.value }));
+                                                    setCurrentPage(1);
+                                                }}
                                                 style={{
                                                     padding: '10px 12px',
                                                     borderRadius: '8px',
-                                                    border: 'none',
-                                                    background: 'rgba(255, 68, 68, 0.1)',
-                                                    color: '#ff4444',
-                                                    fontSize: '13px',
-                                                    fontWeight: '600',
+                                                    border: '1px solid var(--border)',
+                                                    background: 'var(--bg-main)',
+                                                    fontSize: '14px',
+                                                    color: 'var(--text-primary)',
                                                     cursor: 'pointer'
                                                 }}
                                             >
-                                                Limpiar
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {isMobile ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
-                                        {bookings.filter(booking => {
-                                            const matchesSearch = (booking.customer_name || booking.customerName || '').toLowerCase().includes(listFilters.search.toLowerCase()) ||
-                                                (booking.services?.name || booking.courts?.name || booking.service || '').toLowerCase().includes(listFilters.search.toLowerCase());
-                                            const matchesStatus = listFilters.status === 'all' || booking.status === listFilters.status;
-                                            const matchesDate = !listFilters.date || booking.date === listFilters.date;
-                                            return matchesSearch && matchesStatus && matchesDate;
-                                        }).map((booking, index) => (
-                                            <div
-                                                key={index}
-                                                onClick={() => handleBookingClick(booking)}
-                                                style={{
-                                                    background: 'var(--bg-card)',
-                                                    padding: '16px',
-                                                    borderRadius: '16px',
-                                                    border: '1px solid var(--border)',
-                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                                <option value="all">Todos los estados</option>
+                                                <option value="pending">Pendientes</option>
+                                                <option value="confirmed">Confirmados</option>
+                                                <option value="deposit_paid">Señados</option>
+                                                <option value="completed">Finalizados</option>
+                                                <option value="cancelled">Cancelados</option>
+                                                <option value="blocked">Bloqueados</option>
+                                            </select>
+                                            <input
+                                                type="date"
+                                                value={listFilters.date}
+                                                onChange={(e) => {
+                                                    setListFilters(prev => ({ ...prev, date: e.target.value }));
+                                                    setCurrentPage(1);
                                                 }}
-                                            >
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                                    <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{booking.time} hs</span>
-                                                    <span style={{
-                                                        padding: '4px 8px',
-                                                        borderRadius: '6px',
-                                                        fontSize: '11px',
-                                                        fontWeight: '700',
-                                                        background: booking.status === 'confirmed' ? 'rgba(0,230,118,0.1)' :
-                                                            (booking.status === 'cancelled' ? 'rgba(255,68,68,0.1)' :
-                                                                (booking.status === 'deposit_paid' ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.05)')),
-                                                        color: booking.status === 'confirmed' ? '#00E676' :
-                                                            (booking.status === 'cancelled' ? '#ff4444' :
-                                                                (booking.status === 'deposit_paid' ? '#F59E0B' : 'var(--text-secondary)'))
-                                                    }}>
-                                                        {getStatusLabel(booking.status).toUpperCase()}
-                                                    </span>
-                                                </div>
-                                                <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                                                    {booking.customer_name || booking.customerName || '-'}
-                                                </div>
-                                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                                    {booking.services?.name || booking.courts?.name || booking.service || '-'}
-                                                </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                                    <span>{formatDisplayDate(booking.date)}</span>
-                                                    <span style={{ color: 'var(--primary-paddle)', fontWeight: '600' }}>Ver detalles →</span>
-                                                </div>
-                                            </div>
-                                        ))}
+                                                style={{
+                                                    padding: '10px 12px',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid var(--border)',
+                                                    background: 'var(--bg-main)',
+                                                    fontSize: '14px',
+                                                    color: 'var(--text-primary)',
+                                                    cursor: 'pointer'
+                                                }}
+                                            />
+                                            {(listFilters.search || listFilters.status !== 'all' || listFilters.date) && (
+                                                <button
+                                                    onClick={() => {
+                                                        setListFilters({ search: '', status: 'all', date: '' });
+                                                        setCurrentPage(1);
+                                                    }}
+                                                    style={{
+                                                        padding: '10px 12px',
+                                                        borderRadius: '8px',
+                                                        border: 'none',
+                                                        background: 'rgba(255, 68, 68, 0.1)',
+                                                        color: '#ff4444',
+                                                        fontSize: '13px',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    Limpiar
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                ) : (
-                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                        <thead style={{ background: 'rgba(0,0,0,0.02)' }}>
-                                            <tr>
-                                                <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Fecha</th>
-                                                <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Hora</th>
-                                                <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Cliente</th>
-                                                <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Servicio</th>
-                                                <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Estado</th>
-                                                <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)' }}>Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {bookings.filter(booking => {
+                                    <div style={{ width: '100%' }}>
+
+                                        {isMobile ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0' }}>
+                                                {(() => {
+                                                    const filtered = bookings.filter(booking => {
+                                                        const matchesSearch = (booking.customer_name || booking.customerName || '').toLowerCase().includes(listFilters.search.toLowerCase()) ||
+                                                            (booking.services?.name || booking.courts?.name || booking.service || '').toLowerCase().includes(listFilters.search.toLowerCase());
+                                                        const matchesStatus = listFilters.status === 'all' || booking.status === listFilters.status;
+                                                        const matchesDate = !listFilters.date || booking.date === listFilters.date;
+                                                        return matchesSearch && matchesStatus && matchesDate;
+                                                    });
+                                                    const startIndex = (currentPage - 1) * itemsPerPage;
+                                                    const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
+
+                                                    return paginated.map((booking, index) => (
+                                                        <div
+                                                            key={index}
+                                                            onClick={() => handleBookingClick(booking)}
+                                                            style={{
+                                                                background: 'var(--bg-card)',
+                                                                padding: '16px',
+                                                                borderRadius: '16px',
+                                                                border: '1px solid var(--border)',
+                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                                                <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{booking.time} hs</span>
+                                                                <span style={{
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '11px',
+                                                                    fontWeight: '700',
+                                                                    background: booking.status === 'confirmed' ? 'rgba(0,230,118,0.1)' :
+                                                                        (booking.status === 'cancelled' ? 'rgba(255,68,68,0.1)' :
+                                                                            (booking.status === 'deposit_paid' ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.05)')),
+                                                                    color: booking.status === 'confirmed' ? '#00E676' :
+                                                                        (booking.status === 'cancelled' ? '#ff4444' :
+                                                                            (booking.status === 'deposit_paid' ? '#F59E0B' : 'var(--text-secondary)'))
+                                                                }}>
+                                                                    {getStatusLabel(booking.status).toUpperCase()}
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                                                {booking.customer_name || booking.customerName || '-'}
+                                                            </div>
+                                                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                                                {booking.services?.name || booking.courts?.name || booking.service || '-'}
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                                                <span>{formatDisplayDate(booking.date)}</span>
+                                                                <span style={{ color: 'var(--primary-paddle)', fontWeight: '600' }}>Ver detalles →</span>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                })()}
+                                            </div>
+                                        ) : (
+                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                <thead style={{ background: 'rgba(0,0,0,0.02)' }}>
+                                                    <tr>
+                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Fecha</th>
+                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Hora</th>
+                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Cliente</th>
+                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Servicio</th>
+                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Estado</th>
+                                                        <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)' }}>Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(() => {
+                                                        const filtered = bookings.filter(booking => {
+                                                            const matchesSearch = (booking.customer_name || booking.customerName || '').toLowerCase().includes(listFilters.search.toLowerCase()) ||
+                                                                (booking.services?.name || booking.courts?.name || booking.service || '').toLowerCase().includes(listFilters.search.toLowerCase());
+                                                            const matchesStatus = listFilters.status === 'all' || booking.status === listFilters.status;
+                                                            const matchesDate = !listFilters.date || booking.date === listFilters.date;
+                                                            return matchesSearch && matchesStatus && matchesDate;
+                                                        });
+
+                                                        const totalPages = Math.ceil(filtered.length / itemsPerPage);
+                                                        const startIndex = (currentPage - 1) * itemsPerPage;
+                                                        const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
+
+                                                        return paginated.map((booking, index) => (
+                                                            <tr key={index} style={{ borderTop: '1px solid var(--border)' }}>
+                                                                <td style={{ padding: '16px' }}>{formatDisplayDate(booking.date)}</td>
+                                                                <td style={{ padding: '16px', fontWeight: 'bold' }}>{booking.time}</td>
+                                                                <td style={{ padding: '16px' }}>
+                                                                    <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{booking.customer_name || booking.customerName || '-'}</div>
+                                                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{booking.customer_phone || booking.customerPhone || '-'}</div>
+                                                                </td>
+                                                                <td style={{ padding: '16px' }}>
+                                                                    {booking.services?.name || booking.courts?.name || booking.service || '-'}
+                                                                </td>
+                                                                <td style={{ padding: '16px' }}>
+                                                                    <span style={{
+                                                                        padding: '4px 8px',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '12px',
+                                                                        background: booking.status === 'confirmed' ? 'rgba(0,230,118,0.1)' :
+                                                                            (booking.status === 'cancelled' ? 'rgba(255,68,68,0.1)' :
+                                                                                (booking.status === 'deposit_paid' ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.05)')),
+                                                                        color: booking.status === 'confirmed' ? '#00E676' :
+                                                                            (booking.status === 'cancelled' ? '#ff4444' :
+                                                                                (booking.status === 'deposit_paid' ? '#F59E0B' : 'var(--text-secondary)'))
+                                                                    }}>
+                                                                        {getStatusLabel(booking.status).toUpperCase()}
+                                                                    </span>
+                                                                </td>
+                                                                <td style={{ padding: '16px', textAlign: 'right', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                                    <button
+                                                                        onClick={() => handleBookingClick(booking)}
+                                                                        style={{
+                                                                            padding: '6px 10px',
+                                                                            borderRadius: '8px',
+                                                                            border: '1px solid var(--border)',
+                                                                            background: 'var(--bg-main)',
+                                                                            color: 'var(--text-primary)',
+                                                                            cursor: 'pointer',
+                                                                            fontSize: '16px',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            transition: 'all 0.2s'
+                                                                        }}
+                                                                        title="Ver detalles"
+                                                                    >
+                                                                        👁️
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ));
+                                                    })()}
+                                                </tbody>
+                                            </table>
+                                        )}
+
+                                        {/* Pagination Controls */}
+                                        {(() => {
+                                            const filtered = bookings.filter(booking => {
                                                 const matchesSearch = (booking.customer_name || booking.customerName || '').toLowerCase().includes(listFilters.search.toLowerCase()) ||
                                                     (booking.services?.name || booking.courts?.name || booking.service || '').toLowerCase().includes(listFilters.search.toLowerCase());
                                                 const matchesStatus = listFilters.status === 'all' || booking.status === listFilters.status;
                                                 const matchesDate = !listFilters.date || booking.date === listFilters.date;
                                                 return matchesSearch && matchesStatus && matchesDate;
-                                            }).map((booking, index) => (
-                                                <tr key={index} style={{ borderTop: '1px solid var(--border)' }}>
-                                                    <td style={{ padding: '16px' }}>{formatDisplayDate(booking.date)}</td>
-                                                    <td style={{ padding: '16px', fontWeight: 'bold' }}>{booking.time}</td>
-                                                    <td style={{ padding: '16px' }}>
-                                                        <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{booking.customer_name || booking.customerName || '-'}</div>
-                                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{booking.customer_phone || booking.customerPhone || '-'}</div>
-                                                    </td>
-                                                    <td style={{ padding: '16px' }}>
-                                                        {booking.services?.name || booking.courts?.name || booking.service || '-'}
-                                                    </td>
-                                                    <td style={{ padding: '16px' }}>
-                                                        <span style={{
-                                                            padding: '4px 8px',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            background: booking.status === 'confirmed' ? 'rgba(0,230,118,0.1)' :
-                                                                (booking.status === 'cancelled' ? 'rgba(255,68,68,0.1)' :
-                                                                    (booking.status === 'deposit_paid' ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.05)')),
-                                                            color: booking.status === 'confirmed' ? '#00E676' :
-                                                                (booking.status === 'cancelled' ? '#ff4444' :
-                                                                    (booking.status === 'deposit_paid' ? '#F59E0B' : 'var(--text-secondary)'))
-                                                        }}>
-                                                            {getStatusLabel(booking.status).toUpperCase()}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '16px', textAlign: 'right', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                            });
+                                            const totalPages = Math.ceil(filtered.length / itemsPerPage);
+                                            if (totalPages <= 1) return null;
+
+                                            return (
+                                                <div style={{
+                                                    padding: '16px 20px',
+                                                    borderTop: '1px solid var(--border)',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    background: 'var(--bg-main)',
+                                                    borderBottomLeftRadius: '16px',
+                                                    borderBottomRightRadius: '16px'
+                                                }}>
+                                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                        Página <strong>{currentPage}</strong> de <strong>{totalPages}</strong> ({filtered.length} reservas)
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
                                                         <button
-                                                            onClick={() => handleBookingClick(booking)}
+                                                            disabled={currentPage === 1}
+                                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                                             style={{
-                                                                padding: '6px 10px',
-                                                                borderRadius: '8px',
+                                                                padding: '6px 12px',
+                                                                borderRadius: '6px',
                                                                 border: '1px solid var(--border)',
-                                                                background: 'var(--bg-main)',
-                                                                color: 'var(--text-primary)',
-                                                                cursor: 'pointer',
-                                                                fontSize: '16px',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                transition: 'all 0.2s'
+                                                                background: currentPage === 1 ? 'var(--bg-main)' : 'var(--bg-card)',
+                                                                color: currentPage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+                                                                cursor: currentPage === 1 ? 'default' : 'pointer',
+                                                                fontSize: '13px',
+                                                                fontWeight: '600',
+                                                                opacity: currentPage === 1 ? 0.5 : 1
                                                             }}
-                                                            title="Ver detalles"
                                                         >
-                                                            👁️
+                                                            Anterior
                                                         </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
+                                                        <button
+                                                            disabled={currentPage === totalPages}
+                                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                                            style={{
+                                                                padding: '6px 12px',
+                                                                borderRadius: '6px',
+                                                                border: '1px solid var(--border)',
+                                                                background: currentPage === totalPages ? 'var(--bg-main)' : 'var(--bg-card)',
+                                                                color: currentPage === totalPages ? 'var(--text-muted)' : 'var(--text-primary)',
+                                                                cursor: currentPage === totalPages ? 'default' : 'pointer',
+                                                                fontSize: '13px',
+                                                                fontWeight: '600',
+                                                                opacity: currentPage === totalPages ? 0.5 : 1
+                                                            }}
+                                                        >
+                                                            Siguiente
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
                             </div>
-                        )}
+                        )
+                        }
                     </div>
                 )}
             </div>
-
-            {/* Booking Details Modal */}
             {
-                showBookingModal && selectedBooking && (
-                    <div style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0,0,0,0.5)',
-                        display: 'flex',
-                        alignItems: isMobile ? 'flex-end' : 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000,
-                        backdropFilter: 'blur(4px)',
-                        padding: isMobile ? '0' : '20px'
-                    }} onClick={() => setShowBookingModal(false)}>
-                        <div style={{
-                            background: 'var(--bg-card)',
-                            padding: isMobile ? '24px 20px 40px 20px' : '32px',
-                            borderRadius: isMobile ? '24px 24px 0 0' : '24px',
-                            width: '100%',
-                            maxWidth: isMobile ? '100%' : '500px',
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-                            border: '1px solid var(--border)',
-                            maxHeight: isMobile ? '90vh' : '95vh',
-                            overflowY: 'auto'
-                        }} onClick={e => e.stopPropagation()}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>Detalles de la Reserva</h3>
-                                <button onClick={() => setShowBookingModal(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', color: 'var(--text-secondary)' }}>&times;</button>
-                            </div>
-
-                            <div style={{ display: 'grid', gap: '20px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Fecha</label>
-                                        <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{formatDisplayDate(selectedBooking.date)}</div>
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Hora</label>
-                                        <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{selectedBooking.time} hs</div>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Cliente</label>
-                                        <div style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '18px' }}>{selectedBooking.customer_name || selectedBooking.customerName || '-'}</div>
-                                        <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{selectedBooking.customer_phone || selectedBooking.customerPhone || '-'}</div>
-                                    </div>
-                                    {selectedBooking.status !== 'blocked' && selectedBooking.status !== 'completed' && selectedBooking.status !== 'cancelled' && (
-                                        <button
-                                            onClick={() => {
-                                                if (selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending') return;
-                                                const name = selectedBooking.customer_name || selectedBooking.customerName;
-                                                const phone = selectedBooking.customer_phone || selectedBooking.customerPhone;
-                                                const date = formatDisplayDate(selectedBooking.date);
-                                                const time = selectedBooking.time;
-                                                const biz = businesses.find(b => b.id === selectedBusinessId);
-                                                const businessName = biz?.name || 'nuestro local';
-                                                const message = `Hola ${name}, te recordamos tu turno para el día ${date} a las ${time} hs en ${businessName}. ¿Confirmas tu asistencia?`;
-                                                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-                                            }}
-                                            disabled={selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending'}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                padding: '8px 12px',
-                                                borderRadius: '10px',
-                                                border: (selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending') ? '1px solid var(--border)' : '1px solid #25D366',
-                                                background: (selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending') ? 'transparent' : 'rgba(37, 211, 102, 0.1)',
-                                                color: (selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending') ? 'var(--text-secondary)' : '#25D366',
-                                                fontSize: '13px',
-                                                fontWeight: '700',
-                                                cursor: (selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending') ? 'default' : 'pointer',
-                                                transition: 'all 0.2s',
-                                                opacity: (selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending') ? 0.5 : 1
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (selectedBooking.status !== 'confirmed' && selectedBooking.status !== 'pending') {
-                                                    e.currentTarget.style.background = 'rgba(37, 211, 102, 0.2)';
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (selectedBooking.status !== 'confirmed' && selectedBooking.status !== 'pending') {
-                                                    e.currentTarget.style.background = 'rgba(37, 211, 102, 0.1)';
-                                                }
-                                            }}
-                                        >
-                                            <span>📲</span> {selectedBooking.status === 'confirmed' ? 'Asistencia Confirmada' : (selectedBooking.status === 'pending' ? 'Recordar (Pendiente)' : 'Recordar')}
-                                        </button>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Servicio / Recurso</label>
-                                    <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-                                        {selectedBooking.services?.name || selectedBooking.courts?.name || selectedBooking.service || '-'}
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'var(--bg-main)', borderRadius: '12px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Estado</label>
-                                        <div style={{
-                                            fontWeight: '700',
-                                            color: selectedBooking.status === 'confirmed' ? '#00E676' :
-                                                (selectedBooking.status === 'cancelled' ? '#ff4444' :
-                                                    (selectedBooking.status === 'deposit_paid' ? '#F59E0B' : 'var(--text-primary)')),
-                                            textTransform: 'uppercase',
-                                            fontSize: '14px'
-                                        }}>
-                                            {getStatusLabel(selectedBooking.status)}
-                                        </div>
-                                    </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Precio</label>
-                                        <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '18px' }}>${selectedBooking.price}</div>
-                                    </div>
-                                </div>
-
-                                <div style={{ padding: '16px', background: 'rgba(0,0,0,0.02)', borderRadius: '12px', fontSize: '12px' }}>
-                                    <div style={{ fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontSize: '10px', letterSpacing: '0.5px' }}>Historial del Turno</div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        <div style={{ borderLeft: '2px solid var(--primary-paddle)', paddingLeft: '12px', marginBottom: '8px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                                <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>Turno Creado</span>
-                                                <span style={{ color: 'var(--text-secondary)', fontSize: '10px' }}>
-                                                    {selectedBooking.created_at ? new Date(selectedBooking.created_at).toLocaleString('es-AR') :
-                                                        (selectedBooking.history?.find(h => h.action === 'creation')?.timestamp ?
-                                                            new Date(selectedBooking.history.find(h => h.action === 'creation').timestamp).toLocaleString('es-AR') : '-')}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {selectedBooking.history && selectedBooking.history.filter(h => h.action !== 'creation').map((log, idx) => (
-                                            <div key={idx} style={{ borderLeft: '2px solid var(--border)', paddingLeft: '12px', marginBottom: '4px' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                                    <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{log.label}</span>
-                                                    <span style={{ color: 'var(--text-secondary)', fontSize: '10px' }}>
-                                                        {new Date(log.timestamp).toLocaleString('es-AR')}
-                                                    </span>
-                                                </div>
-                                                {log.reason && (
-                                                    <div style={{ color: '#ff4444', fontStyle: 'italic', fontSize: '11px' }}>
-                                                        Motivo: {log.reason}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-
-                                        {(!selectedBooking.history || selectedBooking.history.length === 0) && (
-                                            <>
-                                                {selectedBooking.confirmed_at && (
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                        <span style={{ color: 'var(--text-secondary)' }}>Confirmado:</span>
-                                                        <span style={{ color: '#00E676', fontWeight: '500' }}>
-                                                            {new Date(selectedBooking.confirmed_at).toLocaleString('es-AR')}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                {selectedBooking.cancelled_at && (
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                        <span style={{ color: 'var(--text-secondary)' }}>Cancelado:</span>
-                                                        <span style={{ color: '#ff4444', fontWeight: '500' }}>
-                                                            {new Date(selectedBooking.cancelled_at).toLocaleString('es-AR')}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                                    {selectedBooking.status === 'blocked' ? (
-                                        <button
-                                            onClick={() => handleBookingAction('unblock')}
-                                            style={{
-                                                gridColumn: 'span 2',
-                                                padding: '12px',
-                                                borderRadius: '12px',
-                                                border: 'none',
-                                                background: 'var(--primary-paddle)',
-                                                color: 'white',
-                                                fontWeight: '700',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Desbloquear Horario
-                                        </button>
-                                    ) : (
-                                        <>
-                                            {(selectedBooking.status === 'pending' || selectedBooking.status === 'deposit_paid') && (
-                                                <button
-                                                    onClick={() => selectedBooking.status === 'pending' && handleBookingAction('confirm_deposit')}
-                                                    disabled={selectedBooking.status === 'deposit_paid'}
-                                                    style={{
-                                                        padding: '12px',
-                                                        borderRadius: '12px',
-                                                        border: 'none',
-                                                        background: '#F59E0B',
-                                                        color: 'white',
-                                                        fontWeight: '700',
-                                                        cursor: selectedBooking.status === 'deposit_paid' ? 'default' : 'pointer',
-                                                        opacity: selectedBooking.status === 'deposit_paid' ? 0.5 : 1
-                                                    }}
-                                                >
-                                                    {selectedBooking.status === 'deposit_paid' ? 'Seña Confirmada' : 'Confirmar Seña'}
-                                                </button>
-                                            )}
-                                            {(selectedBooking.status === 'pending' || selectedBooking.status === 'deposit_paid') && (
-                                                <button
-                                                    onClick={() => handleBookingAction('confirm_booking')}
-                                                    disabled={selectedBooking.status === 'pending'}
-                                                    style={{
-                                                        padding: '12px',
-                                                        borderRadius: '12px',
-                                                        border: 'none',
-                                                        background: 'var(--primary-paddle)',
-                                                        color: 'white',
-                                                        fontWeight: '700',
-                                                        cursor: selectedBooking.status === 'pending' ? 'default' : 'pointer',
-                                                        opacity: selectedBooking.status === 'pending' ? 0.5 : 1
-                                                    }}
-                                                >
-                                                    Confirmar Turno
-                                                </button>
-                                            )}
-                                            {(selectedBooking.status === 'confirmed' || selectedBooking.status === 'attended') && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        handleBookingAction('complete_booking');
-                                                    }}
-                                                    style={{
-                                                        gridColumn: 'span 2',
-                                                        padding: '12px',
-                                                        borderRadius: '12px',
-                                                        border: 'none',
-                                                        background: '#000',
-                                                        color: 'white',
-                                                        fontWeight: '700',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    Finalizar
-                                                </button>
-                                            )}
-                                            {selectedBooking.status !== 'cancelled' && selectedBooking.status !== 'completed' && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        handleBookingAction('cancel');
-                                                    }}
-                                                    style={{
-                                                        gridColumn: 'span 2',
-                                                        padding: '12px',
-                                                        borderRadius: '12px',
-                                                        border: 'none',
-                                                        background: '#ff4444',
-                                                        color: 'white',
-                                                        fontWeight: '700',
-                                                        cursor: 'pointer',
-                                                        marginTop: '8px'
-                                                    }}
-                                                >
-                                                    Cancelar Reserva
-                                                </button>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )
+                <BookingDetailsModal
+                    isOpen={showBookingModal}
+                    onClose={() => setShowBookingModal(false)}
+                    booking={selectedBooking}
+                    businesses={businesses}
+                    selectedBusinessId={selectedBusinessId}
+                    onAction={handleBookingAction}
+                    isMobile={isMobile}
+                    formatDisplayDate={formatDisplayDate}
+                    getStatusLabel={getStatusLabel}
+                />
             }
 
             {/* New Booking Modal */}
-            {
-                showNewBookingModal && (
-                    <div style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0,0,0,0.5)',
-                        display: 'flex',
-                        alignItems: isMobile ? 'flex-end' : 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000,
-                        backdropFilter: 'blur(4px)',
-                        padding: isMobile ? '0' : '20px'
-                    }} onClick={() => setShowNewBookingModal(false)}>
-                        <div style={{
-                            background: 'var(--bg-card)',
-                            padding: isMobile ? '24px 20px 40px 20px' : '32px',
-                            borderRadius: isMobile ? '24px 24px 0 0' : '24px',
-                            width: '100%',
-                            maxWidth: isMobile ? '100%' : '500px',
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-                            border: '1px solid var(--border)',
-                            maxHeight: isMobile ? '90vh' : '95vh',
-                            overflowY: 'auto',
-                            animation: isMobile ? 'slideUpMobile 0.3s ease-out' : 'slideUp 0.3s ease-out'
-                        }} onClick={e => e.stopPropagation()}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>Crear Nueva Reserva</h3>
-                                <button onClick={() => setShowNewBookingModal(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', color: 'var(--text-secondary)' }}>&times;</button>
-                            </div>
-
-                            <form onSubmit={handleSubmitNewBooking} style={{ display: 'grid', gap: '16px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>Fecha</label>
-                                        <input
-                                            type="text"
-                                            value={newBookingData.date}
-                                            disabled
-                                            style={{
-                                                width: '100%',
-                                                padding: '12px',
-                                                borderRadius: '10px',
-                                                border: '1px solid var(--border)',
-                                                background: 'var(--bg-main)',
-                                                color: 'var(--text-primary)',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>Hora</label>
-                                        <input
-                                            type="text"
-                                            value={newBookingData.time}
-                                            disabled
-                                            style={{
-                                                width: '100%',
-                                                padding: '12px',
-                                                borderRadius: '10px',
-                                                border: '1px solid var(--border)',
-                                                background: 'var(--bg-main)',
-                                                color: 'var(--text-primary)',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>Nombre del Cliente *</label>
-                                    <input
-                                        type="text"
-                                        value={newBookingData.customerName}
-                                        onChange={(e) => setNewBookingData({ ...newBookingData, customerName: e.target.value })}
-                                        required
-                                        placeholder="Ej: Juan Pérez"
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px',
-                                            borderRadius: '10px',
-                                            border: '1px solid var(--border)',
-                                            background: 'var(--bg-main)',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '14px',
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>Teléfono *</label>
-                                    <input
-                                        type="tel"
-                                        value={newBookingData.customerPhone}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/\D/g, '');
-                                            setNewBookingData({ ...newBookingData, customerPhone: val });
-                                        }}
-                                        required
-                                        placeholder="3804123456"
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px',
-                                            borderRadius: '10px',
-                                            border: '1px solid var(--border)',
-                                            background: 'var(--bg-main)',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '14px',
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>Servicio / Recurso</label>
-                                    <select
-                                        value={newBookingData.serviceId}
-                                        onChange={(e) => {
-                                            const allResources = [
-                                                ...(currentBusiness?.services || []),
-                                                ...(currentBusiness?.courts || [])
-                                            ];
-                                            const selectedResource = allResources.find(r => r.id === e.target.value);
-                                            setNewBookingData({
-                                                ...newBookingData,
-                                                serviceId: e.target.value,
-                                                price: selectedResource?.price || 0
-                                            });
-                                        }}
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px',
-                                            borderRadius: '10px',
-                                            border: '1px solid var(--border)',
-                                            background: 'var(--bg-main)',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '14px',
-                                            outline: 'none',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        {currentBusiness?.services?.map(service => (
-                                            <option key={service.id} value={service.id}>
-                                                {service.name} - ${service.price}
-                                            </option>
-                                        ))}
-                                        {currentBusiness?.courts?.map(court => (
-                                            <option key={court.id} value={court.id}>
-                                                {court.name} - ${court.price}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>Precio</label>
-                                    <input
-                                        type="number"
-                                        value={newBookingData.price}
-                                        onChange={(e) => setNewBookingData({ ...newBookingData, price: e.target.value })}
-                                        placeholder="0"
-                                        min="0"
-                                        step="0.01"
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px',
-                                            borderRadius: '10px',
-                                            border: '1px solid var(--border)',
-                                            background: 'var(--bg-main)',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '14px',
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    style={{
-                                        width: '100%',
-                                        padding: '14px',
-                                        borderRadius: '12px',
-                                        border: 'none',
-                                        background: 'var(--primary-paddle)',
-                                        color: 'white',
-                                        fontWeight: '700',
-                                        fontSize: '16px',
-                                        cursor: 'pointer',
-                                        marginTop: '12px',
-                                        boxShadow: '0 4px 12px rgba(0, 230, 118, 0.2)'
-                                    }}
-                                >
-                                    Crear Reserva
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                )
-            }
-        </div >
+            <NewBookingModal
+                showNewBookingModal={showNewBookingModal}
+                setShowNewBookingModal={setShowNewBookingModal}
+                newBookingData={newBookingData}
+                setNewBookingData={setNewBookingData}
+                handleSubmitNewBooking={handleSubmitNewBooking}
+                currentBusiness={currentBusiness}
+                isMobile={isMobile}
+            />
+        </div>
     );
 }
 
