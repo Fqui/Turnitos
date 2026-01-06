@@ -138,6 +138,32 @@ class ServiceAdapter {
         return this.service.uploadImage(file);
     }
 
+    async getSubscription(businessId) {
+        if (this.isDemoMode) {
+            // Return mock subscription for demo mode
+            return {
+                plan_name: 'basic',
+                spaces_included: 2,
+                spaces_used: 0,
+                monthly_price: 5000,
+                status: 'active'
+            };
+        }
+        return this.service.getSubscription(businessId);
+    }
+
+    async getSubscriptionPlans(businessType) {
+        if (this.isDemoMode) {
+            // Return mock plans for demo mode
+            return [
+                { id: 'basic', name: 'Básico', spaces: 2, monthly_price: 5000 },
+                { id: 'pro', name: 'Profesional', spaces: 5, monthly_price: 12000 },
+                { id: 'premium', name: 'Premium', spaces: 10, monthly_price: 20000 }
+            ];
+        }
+        return this.service.getSubscriptionPlans(businessType);
+    }
+
     subscribeToBookings(businessId, callback) {
         return this.service.subscribeToBookings(businessId, callback);
     }

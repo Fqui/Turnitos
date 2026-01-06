@@ -274,7 +274,7 @@ export default function BusinessPortal() {
             'confirmed': 'Confirmado',
             'cancelled': 'Cancelado',
             'pending': 'Pendiente',
-            'blocked': 'Bloqueado',
+            'blocked': 'BLOQUEADO',
             'deposit_paid': 'Señado',
             'attended': 'Presente',
             'completed': 'Finalizado'
@@ -308,19 +308,85 @@ export default function BusinessPortal() {
         }
     };
 
-    const handleCreateBooking = async (date, time) => {
+    const handleCreateBooking = async (arg1, arg2, arg3) => {
+        let date, time;
+
+        // Determine if called with Event (Calendar: e, date, time) or Direct (date, time) or Button (e)
+        if (arg1 && (arg1.stopPropagation || arg1.preventDefault)) {
+            if (arg2 instanceof Date) {
+                // Called from Calendar: (e, date, time)
+                date = arg2;
+                time = arg3;
+            } else {
+                // Called from Generic Button: (e) -> Use current filter date or today
+                const dateStr = listFilters.date || new Date().toISOString().split('T')[0];
+                const [y, m, d] = dateStr.split('-');
+                date = new Date(y, m - 1, d);
+
+                // Default time to next hour or 09:00
+                const now = new Date();
+                const nextHour = now.getHours() + 1;
+                time = `${String(nextHour).padStart(2, '0')}:00`;
+            }
+        } else {
+            // Direct call: (date, time)
+            date = arg1;
+            time = arg2;
+        }
+
+        if (!date || isNaN(date.getTime())) {
+            date = new Date();
+        }
+
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         const dateStr = `${year}-${month}-${day}`;
+
+        // Auto-select first available resource
+        let suggestedResourceId = '';
+        let suggestedPrice = 0;
+
+        if (currentBusiness) {
+            // Get all resources
+            const allResources = [
+                ...(currentBusiness.courts || []),
+                ...(currentBusiness.services || [])
+            ];
+
+            if (allResources.length > 0) {
+                // Find bookings for this slot
+                const slotBookings = bookings.filter(b => {
+                    if (b.time !== time) return false;
+                    // Normalize booking date
+                    let bDateKey = b.date;
+                    if (b.date.includes('/')) {
+                        const [bd, bm, by] = b.date.split('/');
+                        bDateKey = `${by}-${bm.padStart(2, '0')}-${bd.padStart(2, '0')}`;
+                    }
+                    return bDateKey === dateStr && b.status !== 'cancelled';
+                });
+
+                // Find resources used in this slot
+                const usedResourceIds = slotBookings.map(b => b.court_id || b.service_id).filter(Boolean);
+
+                // Find first free resource
+                const freeResource = allResources.find(r => !usedResourceIds.includes(r.id));
+
+                if (freeResource) {
+                    suggestedResourceId = freeResource.id;
+                    suggestedPrice = freeResource.price || 0;
+                }
+            }
+        }
 
         setNewBookingData({
             date: dateStr,
             time: time,
             customerName: '',
             customerPhone: '',
-            serviceId: '',
-            price: 0
+            serviceId: suggestedResourceId,
+            price: suggestedPrice
         });
         setShowNewBookingModal(true);
     };
@@ -435,6 +501,21 @@ export default function BusinessPortal() {
         }
     };
 
+    const handleUnblockSlot = async (booking) => {
+        if (!window.confirm('¿Estás seguro de que deseas desbloquear este horario?')) {
+            return;
+        }
+
+        try {
+            await serviceAdapter.deleteBooking(booking.id);
+            // Refresh bookings
+            fetchBookings();
+        } catch (error) {
+            console.error('Error unblocking slot:', error);
+            alert('Error al desbloquear horario. Por favor intenta nuevamente.');
+        }
+    };
+
     const handleBookingClick = (booking) => {
         setSelectedBooking(booking);
         setShowBookingModal(true);
@@ -525,6 +606,16 @@ export default function BusinessPortal() {
                 await fetchBookings();
                 setShowBookingModal(false);
             } else if (action === 'unblock') {
+                if (selectedBooking.isVirtual) {
+                    if (confirm('Este horario corresponde a un descanso programado. ¿Desea crear una reserva manual aquí?')) {
+                        setShowBookingModal(false);
+                        const [y, m, d] = selectedBooking.date.split('-');
+                        const dateObj = new Date(y, m - 1, d);
+                        handleCreateBooking(null, dateObj, selectedBooking.time);
+                    }
+                    return;
+                }
+
                 if (confirm('¿Estás seguro de desbloquear este horario?')) {
                     await serviceAdapter.deleteBooking(selectedBooking.id);
                     fetchBookings();
@@ -596,6 +687,8 @@ export default function BusinessPortal() {
                 </div>
             )}
 
+
+
             <BusinessPortalSidebar
                 viewMode={viewMode}
                 setViewMode={setViewMode}
@@ -630,50 +723,212 @@ export default function BusinessPortal() {
                     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
                         {viewMode === 'analytics' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
-                                {/* Date Range Picker */}
-                                <div>
-                                    <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-primary)' }}>Período</h3>
+                                {/* Header */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                                    <div>
+                                        <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>📊 Analytics</h2>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                                            Métricas y estadísticas de tu negocio
+                                        </p>
+                                    </div>
                                     <DateRangePicker onRangeChange={setDateRange} />
                                 </div>
 
-                                {/* Metrics Cards */}
+                                {/* Hero Metrics Cards */}
                                 {metrics && (
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-                                        <MetricsCard
-                                            icon="💰"
-                                            title="Ingresos Totales"
-                                            value={metrics.totalRevenue}
-                                            trend={metrics.growth.revenue}
-                                            format="currency"
-                                            color="#10b981"
-                                        />
-                                        <MetricsCard
-                                            icon="📅"
-                                            title="Total Reservas"
-                                            value={metrics.totalBookings}
-                                            trend={metrics.growth.bookings}
-                                            format="number"
-                                            color="#6366f1"
-                                        />
-                                        <MetricsCard
-                                            icon="💵"
-                                            title="Valor Promedio"
-                                            value={metrics.avgBookingValue}
-                                            format="currency"
-                                            color="#f59e0b"
-                                        />
-                                        <MetricsCard
-                                            icon="✅"
-                                            title="Tasa de Completitud"
-                                            value={metrics.completionRate}
-                                            format="percentage"
-                                            color="#8b5cf6"
-                                        />
+                                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                                        <div style={{
+                                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                            borderRadius: '20px',
+                                            padding: '24px',
+                                            color: 'white',
+                                            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '80px', opacity: 0.15 }}>💰</div>
+                                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                                <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9, marginBottom: '8px' }}>Ingresos Totales</div>
+                                                <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '4px' }}>
+                                                    ${metrics.totalRevenue?.toLocaleString('es-AR') || '0'}
+                                                </div>
+                                                {metrics.growth?.revenue !== undefined && (
+                                                    <div style={{ fontSize: '12px', opacity: 0.9 }}>
+                                                        {metrics.growth.revenue >= 0 ? '↗' : '↘'} {Math.abs(metrics.growth.revenue).toFixed(1)}% vs período anterior
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                                            borderRadius: '20px',
+                                            padding: '24px',
+                                            color: 'white',
+                                            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.25)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '80px', opacity: 0.15 }}>📅</div>
+                                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                                <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9, marginBottom: '8px' }}>Total Reservas</div>
+                                                <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '4px' }}>
+                                                    {metrics.totalBookings || 0}
+                                                </div>
+                                                {metrics.growth?.bookings !== undefined && (
+                                                    <div style={{ fontSize: '12px', opacity: 0.9 }}>
+                                                        {metrics.growth.bookings >= 0 ? '↗' : '↘'} {Math.abs(metrics.growth.bookings).toFixed(1)}% vs período anterior
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                                            borderRadius: '20px',
+                                            padding: '24px',
+                                            color: 'white',
+                                            boxShadow: '0 8px 24px rgba(245, 158, 11, 0.25)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '80px', opacity: 0.15 }}>💵</div>
+                                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                                <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9, marginBottom: '8px' }}>Valor Promedio</div>
+                                                <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '4px' }}>
+                                                    ${metrics.avgBookingValue?.toLocaleString('es-AR') || '0'}
+                                                </div>
+                                                <div style={{ fontSize: '12px', opacity: 0.9 }}>
+                                                    Por reserva
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{
+                                            background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                                            borderRadius: '20px',
+                                            padding: '24px',
+                                            color: 'white',
+                                            boxShadow: '0 8px 24px rgba(139, 92, 246, 0.25)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '80px', opacity: 0.15 }}>✅</div>
+                                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                                <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9, marginBottom: '8px' }}>Tasa de Completitud</div>
+                                                <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '4px' }}>
+                                                    {metrics.completionRate?.toFixed(1) || '0'}%
+                                                </div>
+                                                <div style={{ fontSize: '12px', opacity: 0.9 }}>
+                                                    Reservas completadas
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
 
+                                {/* Booking Status Distribution & Top Performers */}
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '20px' }}>
+                                    {/* Booking Status Distribution */}
+                                    {(() => {
+                                        const statusCounts = bookings.reduce((acc, b) => {
+                                            acc[b.status] = (acc[b.status] || 0) + 1;
+                                            return acc;
+                                        }, {});
+                                        const total = bookings.length;
+
+                                        const statusData = [
+                                            { status: 'confirmed', label: 'Confirmadas', color: '#10B981', count: statusCounts.confirmed || 0 },
+                                            { status: 'pending', label: 'Pendientes', color: '#F59E0B', count: statusCounts.pending || 0 },
+                                            { status: 'completed', label: 'Completadas', color: '#10B981', count: statusCounts.completed || 0 },
+                                            { status: 'cancelled', label: 'Canceladas', color: '#EF4444', count: statusCounts.cancelled || 0 },
+                                            { status: 'deposit_paid', label: 'Seña Pagada', color: '#3B82F6', count: statusCounts.deposit_paid || 0 }
+                                        ].filter(s => s.count > 0);
+
+                                        return (
+                                            <div style={{
+                                                background: 'var(--bg-card)',
+                                                borderRadius: '20px',
+                                                padding: '24px',
+                                                border: '1px solid var(--border)',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                            }}>
+                                                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: 'var(--text-primary)' }}>
+                                                    Estado de Reservas
+                                                </h3>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                    {statusData.map(({ status, label, color, count }) => {
+                                                        const percentage = total > 0 ? (count / total * 100) : 0;
+                                                        return (
+                                                            <div key={status}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                                                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{label}</span>
+                                                                    <span style={{ fontSize: '13px', fontWeight: '700', color }}>{count} ({percentage.toFixed(0)}%)</span>
+                                                                </div>
+                                                                <div style={{ width: '100%', height: '8px', background: 'var(--bg-main)', borderRadius: '4px', overflow: 'hidden' }}>
+                                                                    <div style={{ width: `${percentage}%`, height: '100%', background: color, transition: 'width 0.3s ease' }}></div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Top Services/Courts */}
+                                    {(() => {
+                                        const itemCounts = bookings.reduce((acc, b) => {
+                                            const name = b.services?.name || b.courts?.name || 'Sin especificar';
+                                            acc[name] = (acc[name] || 0) + 1;
+                                            return acc;
+                                        }, {});
+
+                                        const topItems = Object.entries(itemCounts)
+                                            .sort((a, b) => b[1] - a[1])
+                                            .slice(0, 5);
+
+                                        const maxCount = topItems[0]?.[1] || 1;
+
+                                        return (
+                                            <div style={{
+                                                background: 'var(--bg-card)',
+                                                borderRadius: '20px',
+                                                padding: '24px',
+                                                border: '1px solid var(--border)',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                            }}>
+                                                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: 'var(--text-primary)' }}>
+                                                    Más Reservados
+                                                </h3>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                    {topItems.length > 0 ? topItems.map(([name, count], index) => {
+                                                        const percentage = (count / maxCount * 100);
+                                                        const colors = ['#10B981', '#6366F1', '#F59E0B', '#8B5CF6', '#EC4899'];
+                                                        return (
+                                                            <div key={name}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                                                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{name}</span>
+                                                                    <span style={{ fontSize: '13px', fontWeight: '700', color: colors[index] }}>{count} reservas</span>
+                                                                </div>
+                                                                <div style={{ width: '100%', height: '8px', background: 'var(--bg-main)', borderRadius: '4px', overflow: 'hidden' }}>
+                                                                    <div style={{ width: `${percentage}%`, height: '100%', background: colors[index], transition: 'width 0.3s ease' }}></div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }) : (
+                                                        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                                            No hay datos disponibles
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
                                 {/* Charts */}
-                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? '300px' : '400px'}, 1fr))`, gap: '20px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '20px' }}>
                                     {trends.length > 0 && (
                                         <>
                                             <RevenueChart data={trends} type="revenue" />
@@ -687,32 +942,54 @@ export default function BusinessPortal() {
                                     <PeakHoursHeatmap data={peakHours.data} labels={peakHours.labels} />
                                 )}
 
-                                {/* Customer Insights */}
+                                {/* Enhanced Customer Insights */}
                                 {customerInsights && (
                                     <div style={{
-                                        backgroundColor: 'var(--bg-card)',
-                                        borderRadius: '16px',
+                                        background: 'var(--bg-card)',
+                                        borderRadius: '20px',
                                         padding: '24px',
                                         border: '1px solid var(--border)',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                                     }}>
-                                        <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: 'var(--text-primary)' }}>Insights de Clientes</h3>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-                                            <div>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Total Clientes</div>
-                                                <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>{customerInsights.totalCustomers}</div>
+                                        <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: 'var(--text-primary)' }}>
+                                            📈 Insights de Clientes
+                                        </h3>
+                                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '20px' }}>
+                                            <div style={{
+                                                padding: '20px',
+                                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%)',
+                                                borderRadius: '16px',
+                                                border: '1px solid rgba(16, 185, 129, 0.2)'
+                                            }}>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: '600' }}>Total Clientes</div>
+                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#10B981' }}>{customerInsights.totalCustomers}</div>
                                             </div>
-                                            <div>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Clientes Nuevos</div>
-                                                <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>{customerInsights.newCustomers}</div>
+                                            <div style={{
+                                                padding: '20px',
+                                                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(79, 70, 229, 0.05) 100%)',
+                                                borderRadius: '16px',
+                                                border: '1px solid rgba(99, 102, 241, 0.2)'
+                                            }}>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: '600' }}>Nuevos</div>
+                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#6366F1' }}>{customerInsights.newCustomers}</div>
                                             </div>
-                                            <div>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Clientes Recurrentes</div>
-                                                <div style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>{customerInsights.returningCustomers}</div>
+                                            <div style={{
+                                                padding: '20px',
+                                                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)',
+                                                borderRadius: '16px',
+                                                border: '1px solid rgba(245, 158, 11, 0.2)'
+                                            }}>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: '600' }}>Recurrentes</div>
+                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#F59E0B' }}>{customerInsights.returningCustomers}</div>
                                             </div>
-                                            <div>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Tasa de Retención</div>
-                                                <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>{customerInsights.retentionRate.toFixed(1)}%</div>
+                                            <div style={{
+                                                padding: '20px',
+                                                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%)',
+                                                borderRadius: '16px',
+                                                border: '1px solid rgba(139, 92, 246, 0.2)'
+                                            }}>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: '600' }}>Tasa Retención</div>
+                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#8B5CF6' }}>{customerInsights.retentionRate.toFixed(1)}%</div>
                                             </div>
                                         </div>
                                     </div>
@@ -827,6 +1104,7 @@ export default function BusinessPortal() {
                                         business={currentBusiness}
                                         isMobile={isMobile}
                                         onBlockSlot={handleBlockSlot}
+                                        onUnblockSlot={handleUnblockSlot}
                                         onCreateBooking={handleCreateBooking}
                                         onBookingClick={handleBookingClick}
                                         onMoveBooking={handleMoveBooking}
@@ -916,23 +1194,35 @@ export default function BusinessPortal() {
                                                 <option value="cancelled">Cancelados</option>
                                                 <option value="blocked">Bloqueados</option>
                                             </select>
-                                            <input
-                                                type="date"
-                                                value={listFilters.date}
-                                                onChange={(e) => {
-                                                    setListFilters(prev => ({ ...prev, date: e.target.value }));
-                                                    setCurrentPage(1);
-                                                }}
-                                                style={{
-                                                    padding: '10px 12px',
-                                                    borderRadius: '8px',
-                                                    border: '1px solid var(--border)',
-                                                    background: 'var(--bg-main)',
-                                                    fontSize: '14px',
-                                                    color: 'var(--text-primary)',
-                                                    cursor: 'pointer'
-                                                }}
-                                            />
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                padding: '0 12px',
+                                                borderRadius: '8px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-main)'
+                                            }}>
+                                                <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '500' }}>Fecha:</span>
+                                                <input
+                                                    type="date"
+                                                    value={listFilters.date}
+                                                    onChange={(e) => {
+                                                        setListFilters(prev => ({ ...prev, date: e.target.value }));
+                                                        setCurrentPage(1);
+                                                    }}
+                                                    style={{
+                                                        padding: '10px 0',
+                                                        borderRadius: '0',
+                                                        border: 'none',
+                                                        background: 'transparent',
+                                                        fontSize: '14px',
+                                                        color: 'var(--text-primary)',
+                                                        cursor: 'pointer',
+                                                        outline: 'none'
+                                                    }}
+                                                />
+                                            </div>
                                             {(listFilters.search || listFilters.status !== 'all' || listFilters.date) && (
                                                 <button
                                                     onClick={() => {
@@ -1163,11 +1453,11 @@ export default function BusinessPortal() {
                             </div>
                         )
                         }
-                    </div>
+                    </div >
                 )}
-            </div>
+            </div >
             {
-                <BookingDetailsModal
+                < BookingDetailsModal
                     isOpen={showBookingModal}
                     onClose={() => setShowBookingModal(false)}
                     booking={selectedBooking}
@@ -1182,15 +1472,15 @@ export default function BusinessPortal() {
 
             {/* New Booking Modal */}
             <NewBookingModal
-                showNewBookingModal={showNewBookingModal}
-                setShowNewBookingModal={setShowNewBookingModal}
+                isOpen={showNewBookingModal}
+                onClose={() => setShowNewBookingModal(false)}
                 newBookingData={newBookingData}
                 setNewBookingData={setNewBookingData}
-                handleSubmitNewBooking={handleSubmitNewBooking}
+                onSubmit={handleSubmitNewBooking}
                 currentBusiness={currentBusiness}
                 isMobile={isMobile}
             />
-        </div>
+        </div >
     );
 }
 

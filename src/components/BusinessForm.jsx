@@ -41,7 +41,8 @@ export default function BusinessForm({ business, onSave, onCancel }) {
                 services: [],
                 hours: defaultHours,
                 theme: 'dark', // Dark theme for sport businesses
-                primaryColor: '#00E676'
+                primaryColor: '#00E676',
+                max_capacity: 1 // Default capacity
             };
         }
 
@@ -67,11 +68,19 @@ export default function BusinessForm({ business, onSave, onCancel }) {
             hours = defaultHours;
         }
 
+        console.log('🔍 BusinessForm loaded hours:', {
+            raw: business.hours,
+            parsed: hours,
+            fridaySchedule: hours?.friday,
+            fridayRanges: hours?.friday?.ranges
+        });
+
         return {
             ...business,
             hours,
             primaryColor: business.primary_color || business.button_color || business.primaryColor || '#00E676',
-            theme: business.theme || 'dark'
+            theme: business.theme || 'dark',
+            max_capacity: business.max_capacity || 1
         };
     });
 
@@ -321,8 +330,27 @@ export default function BusinessForm({ business, onSave, onCancel }) {
         }
     };
 
-    const addCourt = () => {
+    const addCourt = async () => {
         if (newCourt.name && newCourt.price) {
+            // Validate subscription limit for sport/venue businesses
+            if (business?.id && (formData.type === 'sport' || formData.type === 'venue')) {
+                try {
+                    const supabaseService = (await import('../services/supabaseService')).default;
+                    const subscription = await supabaseService.getSubscription(business.id);
+
+                    if (subscription) {
+                        const currentCourts = formData.courts.length;
+                        if (currentCourts >= subscription.spaces_included) {
+                            alert(`Límite de plan alcanzado.\n\nTu plan incluye ${subscription.spaces_included} espacio${subscription.spaces_included > 1 ? 's' : ''}.\nActualmente tienes ${currentCourts} cancha${currentCourts > 1 ? 's' : ''}.\n\nActualiza tu plan en la sección "Suscripción" para agregar más canchas.`);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking subscription:', error);
+                    // Continue anyway if subscription check fails
+                }
+            }
+
             setFormData({
                 ...formData,
                 courts: [...formData.courts, { id: Date.now().toString(), ...newCourt, price: parseInt(newCourt.price) }]
@@ -398,8 +426,27 @@ export default function BusinessForm({ business, onSave, onCancel }) {
         setEditingServiceIndex(null);
     };
 
-    const addSpecialist = () => {
+    const addSpecialist = async () => {
         if (newSpecialist.name && newSpecialist.role) {
+            // Validate subscription limit for service businesses
+            if (business?.id && formData.type === 'service') {
+                try {
+                    const supabaseService = (await import('../services/supabaseService')).default;
+                    const subscription = await supabaseService.getSubscription(business.id);
+
+                    if (subscription) {
+                        const currentSpecialists = (formData.specialists || []).length;
+                        if (currentSpecialists >= subscription.spaces_included) {
+                            alert(`Límite de plan alcanzado.\n\nTu plan incluye ${subscription.spaces_included} espacio${subscription.spaces_included > 1 ? 's' : ''} (especialistas).\nActualmente tienes ${currentSpecialists} especialista${currentSpecialists > 1 ? 's' : ''}.\n\nActualiza tu plan en la sección "Suscripción" para agregar más especialistas.`);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking subscription:', error);
+                    // Continue anyway if subscription check fails
+                }
+            }
+
             setFormData({
                 ...formData,
                 specialists: [...(formData.specialists || []), { id: Date.now().toString(), ...newSpecialist }]
@@ -615,6 +662,29 @@ export default function BusinessForm({ business, onSave, onCancel }) {
                             <option value="service">Servicio</option>
                             <option value="venue">Alquiler de Espacios</option>
                         </select>
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            Capacidad Máxima / Cupos por Turno *
+                        </label>
+                        <input
+                            type="number"
+                            min="1"
+                            required
+                            value={formData.max_capacity}
+                            onChange={(e) => setFormData({ ...formData, max_capacity: parseInt(e.target.value) || 1 })}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px'
+                            }}
+                            placeholder="Ej: 1"
+                        />
                     </div>
 
                     <div>

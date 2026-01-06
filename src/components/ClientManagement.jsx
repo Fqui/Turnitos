@@ -9,9 +9,11 @@ export default function ClientManagement({ businessId, isMobile }) {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [editingNotes, setEditingNotes] = useState('');
+    const [editingBirthday, setEditingBirthday] = useState('');
     const [saving, setSaving] = useState(false);
     const [bookingHistory, setBookingHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
+    const [allCustomerBookings, setAllCustomerBookings] = useState({});
 
     useEffect(() => {
         loadCustomers();
@@ -22,6 +24,22 @@ export default function ClientManagement({ businessId, isMobile }) {
             setLoading(true);
             const data = await serviceAdapter.getCustomers(businessId);
             setCustomers(data);
+
+            // Load booking history for all customers to calculate last visit
+            const bookingsMap = {};
+            for (const customer of data) {
+                try {
+                    const history = await serviceAdapter.getCustomerBookings(businessId, customer.phone);
+                    if (history && history.length > 0) {
+                        // Sort by date descending and get the most recent
+                        const sortedHistory = history.sort((a, b) => new Date(b.date) - new Date(a.date));
+                        bookingsMap[customer.phone] = sortedHistory[0].date;
+                    }
+                } catch (err) {
+                    console.error(`Error loading history for ${customer.phone}:`, err);
+                }
+            }
+            setAllCustomerBookings(bookingsMap);
         } catch (error) {
             console.error('Error loading customers:', error);
         } finally {
@@ -44,6 +62,7 @@ export default function ClientManagement({ businessId, isMobile }) {
     const handleCustomerClick = (customer) => {
         setSelectedCustomer(customer);
         setEditingNotes(customer.notes || '');
+        setEditingBirthday(customer.birthday || '');
         setBookingHistory([]);
         setShowModal(true);
         loadCustomerHistory(customer.phone);
@@ -66,6 +85,39 @@ export default function ClientManagement({ businessId, isMobile }) {
         }
     };
 
+    const handleSaveBirthday = async () => {
+        try {
+            setSaving(true);
+            const updated = await serviceAdapter.updateCustomer(selectedCustomer.id, {
+                birthday: editingBirthday
+            });
+            setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
+            setSelectedCustomer(updated);
+            alert('Cumpleaños guardado correctamente');
+        } catch (error) {
+            console.error('Error saving birthday:', error);
+            alert('Error al guardar cumpleaños');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const openWhatsApp = (phone, name) => {
+        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        const message = encodeURIComponent(`Hola ${name}!`);
+        window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+    };
+
+    const calculateStats = (history) => {
+        const completed = history.filter(b => b.status === 'confirmed' || b.status === 'completed').length;
+        const total = history.length;
+        const totalSpent = history.reduce((sum, booking) => {
+            const price = booking.price || booking.total_price || 0;
+            return sum + parseFloat(price);
+        }, 0);
+        return { completed, total, totalSpent };
+    };
+
     const filteredCustomers = customers.filter(c =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.phone.includes(searchTerm)
@@ -73,18 +125,24 @@ export default function ClientManagement({ businessId, isMobile }) {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'confirmed': return '#25D366';
-            case 'pending': return '#FFB800';
-            case 'cancelled': return '#FF4B4B';
-            default: return 'var(--text-secondary)';
+            case 'confirmed': return '#10B981'; // Green
+            case 'pending': return '#F59E0B'; // Amber
+            case 'cancelled': return '#EF4444'; // Red
+            case 'completed': return '#10B981'; // Green
+            case 'deposit_paid': return '#3B82F6'; // Blue
+            case 'blocked': return '#6B7280'; // Gray
+            default: return '#6B7280';
         }
     };
 
     const getStatusLabel = (status) => {
         switch (status) {
-            case 'confirmed': return 'Confirmado';
+            case 'confirmed': return 'Confirmada';
             case 'pending': return 'Pendiente';
-            case 'cancelled': return 'Cancelado';
+            case 'cancelled': return 'Cancelada';
+            case 'completed': return 'Completada';
+            case 'deposit_paid': return 'Seña Pagada';
+            case 'blocked': return 'Bloqueada';
             default: return status;
         }
     };
@@ -148,8 +206,7 @@ export default function ClientManagement({ businessId, isMobile }) {
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.02)' }}>
                                 <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Cliente</th>
-                                <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Teléfono</th>
-                                <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Notas</th>
+                                <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Última Visita</th>
                                 <th style={{ padding: '16px 20px', textAlign: 'right' }}></th>
                             </tr>
                         </thead>
@@ -167,24 +224,33 @@ export default function ClientManagement({ businessId, isMobile }) {
                                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                 >
                                     <td style={{ padding: '16px 20px' }}>
-                                        <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{customer.name}</div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Desde: {formatDisplayDate(customer.created_at)}</div>
+                                        <div style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '15px' }}>{customer.name}</div>
                                     </td>
-                                    <td style={{ padding: '16px 20px', color: 'var(--text-primary)' }}>{customer.phone}</td>
-                                    <td style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontSize: '13px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {customer.notes || '-'}
+                                    <td style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                        {allCustomerBookings[customer.phone] ? formatDisplayDate(allCustomerBookings[customer.phone]) : 'Sin visitas'}
                                     </td>
                                     <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                                        <button style={{
-                                            background: 'var(--bg-main)',
-                                            border: '1px solid var(--border)',
-                                            padding: '8px 12px',
-                                            borderRadius: '8px',
-                                            fontSize: '13px',
-                                            fontWeight: '600',
-                                            cursor: 'pointer',
-                                            color: 'var(--text-primary)'
-                                        }}>Ver Detalle</button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleCustomerClick(customer);
+                                            }}
+                                            style={{
+                                                background: 'var(--primary-paddle)',
+                                                border: 'none',
+                                                padding: '8px 16px',
+                                                borderRadius: '8px',
+                                                fontSize: '13px',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                color: '#000',
+                                                transition: 'all 0.2s'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                        >
+                                            Ver Detalle
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -249,6 +315,124 @@ export default function ClientManagement({ businessId, isMobile }) {
                                 </div>
                             </div>
 
+                            {/* WhatsApp Button */}
+                            <button
+                                onClick={() => openWhatsApp(selectedCustomer.phone, selectedCustomer.name)}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '12px',
+                                    border: 'none',
+                                    background: '#25D366',
+                                    color: 'white',
+                                    fontWeight: '700',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                                <span style={{ fontSize: '18px' }}>💬</span>
+                                Abrir WhatsApp
+                            </button>
+
+                            {/* Activity Stats */}
+                            {(() => {
+                                const stats = calculateStats(bookingHistory);
+                                return (
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(3, 1fr)',
+                                        gap: '12px',
+                                        padding: '16px',
+                                        background: 'var(--bg-main)',
+                                        borderRadius: '12px',
+                                        border: '1px solid var(--border)'
+                                    }}>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#10B981' }}>
+                                                {stats.total}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                                Total Reservas
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#10B981' }}>
+                                                {stats.completed}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                                Completadas
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#10B981' }}>
+                                                ${stats.totalSpent.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                                Total Gastado
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Birthday Field */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                                    🎂 Cumpleaños
+                                </label>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input
+                                        type="text"
+                                        value={editingBirthday}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            // Allow only numbers and slash, max 5 characters (DD/MM)
+                                            if (value.length <= 5 && /^[0-9/]*$/.test(value)) {
+                                                setEditingBirthday(value);
+                                            }
+                                        }}
+                                        placeholder="DD/MM (ej: 15/03)"
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--bg-main)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '14px'
+                                        }}
+                                    />
+                                    <button
+                                        onClick={handleSaveBirthday}
+                                        disabled={saving}
+                                        style={{
+                                            padding: '12px 20px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: 'var(--primary-paddle)',
+                                            color: '#000',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            fontSize: '13px'
+                                        }}
+                                    >
+                                        {saving ? '...' : 'Guardar'}
+                                    </button>
+                                </div>
+                                {editingBirthday && (
+                                    <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)', padding: '8px', background: 'rgba(255, 193, 7, 0.1)', borderRadius: '8px' }}>
+                                        💡 Tip: Puedes enviar un saludo y ofrecer un descuento especial en su cumpleaños
+                                    </div>
+                                )}
+                            </div>
+
                             <div>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>
                                     Notas Internas
@@ -271,39 +455,24 @@ export default function ClientManagement({ businessId, isMobile }) {
                                 />
                             </div>
 
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <button
-                                    onClick={handleSaveNotes}
-                                    disabled={saving}
-                                    style={{
-                                        flex: 1,
-                                        padding: '12px',
-                                        borderRadius: '12px',
-                                        border: 'none',
-                                        background: 'var(--primary-paddle)',
-                                        color: '#000',
-                                        fontWeight: '700',
-                                        cursor: 'pointer',
-                                        opacity: saving ? 0.7 : 1
-                                    }}
-                                >
-                                    {saving ? 'Guardando...' : 'Guardar Notas'}
-                                </button>
-                                <button
-                                    onClick={() => window.open(`https://wa.me/${selectedCustomer.phone}`, '_blank')}
-                                    style={{
-                                        padding: '12px 20px',
-                                        borderRadius: '12px',
-                                        border: '1px solid #25D366',
-                                        background: 'rgba(37, 211, 102, 0.1)',
-                                        color: '#25D366',
-                                        fontWeight: '700',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    WhatsApp
-                                </button>
-                            </div>
+                            <button
+                                onClick={handleSaveNotes}
+                                disabled={saving}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    borderRadius: '12px',
+                                    border: 'none',
+                                    background: 'var(--primary-paddle)',
+                                    color: '#000',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    opacity: saving ? 0.7 : 1
+                                }}
+                            >
+                                {saving ? 'Guardando...' : 'Guardar Notas'}
+                            </button>
+
 
                             <div style={{ marginTop: '10px' }}>
                                 <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px' }}>

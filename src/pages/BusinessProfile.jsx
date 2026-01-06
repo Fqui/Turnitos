@@ -39,7 +39,8 @@ export default function BusinessProfile() {
 
     // Venue specific state
     const [selectedDuration, setSelectedDuration] = useState(null);
-    const [selectedAdditionalServices, setSelectedAdditionalServices] = useState([]);
+    // Gallery state
+    const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
 
     // Refs for auto-scrolling
     const calendarRef = useRef(null);
@@ -71,15 +72,53 @@ export default function BusinessProfile() {
             if (!date) return { open: '08:00', close: '22:00' };
 
             const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            // Ensure date is a Date object
-            const dateObj = date instanceof Date ? date : new Date(date);
-            // Use getUTCDay() to avoid timezone shifts when parsing YYYY-MM-DD strings
-            const dayIndex = date instanceof Date ? date.getDay() : new Date(date + 'T00:00:00').getDay();
+            // Ensure date is a Date object, handling timezone issues for string inputs
+            // Adding 'T00:00:00' forces browser to parse as local time instead of UTC for ISO dates
+            const dateObj = date instanceof Date
+                ? date
+                : new Date(date.includes('T') ? date : date + 'T00:00:00');
+
+            const dayIndex = dateObj.getDay();
             const dayName = days[dayIndex];
             const schedule = hours[dayName];
 
+            console.log('📅 getBusinessHours for', dayName, ':', {
+                schedule,
+                hasRanges: schedule?.ranges,
+                rangesLength: schedule?.ranges?.length
+            });
+
             if (schedule && schedule.isOpen) {
-                return { open: schedule.open, close: schedule.close, ranges: schedule.ranges };
+                // Check if split schedule is enabled in the new format (from BusinessSettings)
+                if (schedule.isSplit) {
+                    // Check split shift (break) - Enforce split even if times are missing (default to 13-16)
+                    // This prevents falling back to continuous day if user clears the inputs
+                    const breakStart = schedule.breakStart || '13:00';
+                    const breakEnd = schedule.breakEnd || '16:00';
+
+                    // Create ranges from the split schedule
+                    // Range 1: Open time to Break Start
+                    // Range 2: Break End to Close time
+                    const derivedRanges = [
+                        { open: schedule.open, close: breakStart },
+                        { open: breakEnd, close: schedule.close }
+                    ];
+
+                    console.log(`🕒 Generated split ranges for ${dayName}:`, derivedRanges);
+
+                    return {
+                        open: schedule.open,
+                        close: schedule.close,
+                        ranges: derivedRanges
+                    };
+                }
+
+                // Fallback to explicit ranges if they exist (old logic)
+                return {
+                    open: schedule.open,
+                    close: schedule.close,
+                    ranges: (schedule.ranges && schedule.ranges.length > 0) ? schedule.ranges : undefined
+                };
             }
             return { open: '00:00', close: '00:00' }; // Closed
         }
@@ -114,8 +153,18 @@ export default function BusinessProfile() {
 
     // Scroll to top when component mounts
     useEffect(() => {
+        if (location.hash) {
+            const id = location.hash.replace('#', '');
+            const element = document.getElementById(id);
+            if (element) {
+                setTimeout(() => {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 500); // Wait for potential content loading
+                return;
+            }
+        }
         window.scrollTo(0, 0);
-    }, []);
+    }, [location.hash, loading]);
 
     // Fetch business data if not provided in state
     useEffect(() => {
@@ -416,7 +465,6 @@ export default function BusinessProfile() {
                     <h1 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '8px', color: 'var(--text-primary)' }}>{business.name}</h1>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
                         <span>📍 {business.location}</span>
-                        <span>⭐ {business.rating} (120 reseñas)</span>
                     </div>
 
                     {/* Social Media Buttons */}
@@ -498,30 +546,63 @@ export default function BusinessProfile() {
                                 </svg>
                             </a>
                         )}
+
+                        {/* TikTok */}
+                        {business.tiktok && (
+                            <a
+                                href={business.tiktok}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#000000',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
+                                </svg>
+                            </a>
+                        )}
                     </div>
 
 
                 </div>
 
-                {/* Venue Gallery */}
-                {business.type === 'venue' && business.gallery_images && business.gallery_images.length > 0 && (
-                    <div style={{ marginBottom: '30px', overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: '10px' }}>
-                        {business.gallery_images.map((img, index) => (
-                            <img
-                                key={index}
-                                src={img}
-                                alt={`Gallery ${index}`}
-                                style={{
-                                    width: '280px',
-                                    height: '180px',
-                                    objectFit: 'cover',
-                                    borderRadius: '12px',
-                                    marginRight: '12px',
-                                    display: 'inline-block',
-                                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-                                }}
-                            />
-                        ))}
+                {/* Work Gallery */}
+                {business.gallery_images && business.gallery_images.length > 0 && (
+                    <div id="galeria" style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                            📸 Nuestra Galería
+                        </h3>
+                        <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: '10px', display: 'flex', gap: '12px' }}>
+                            {business.gallery_images.map((img, index) => (
+                                <img
+                                    key={index}
+                                    src={img}
+                                    alt={`Gallery ${index}`}
+                                    onClick={() => setSelectedPhotoIndex(index)}
+                                    style={{
+                                        width: '280px',
+                                        height: '180px',
+                                        objectFit: 'cover',
+                                        borderRadius: '12px',
+                                        flexShrink: 0,
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                                        border: '1px solid var(--border)',
+                                        cursor: 'pointer'
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -657,7 +738,7 @@ export default function BusinessProfile() {
 
                 {/* Step 1: Select Service (Only for Service businesses) */}
                 {business.type === 'service' && (
-                    <section style={{ marginBottom: '30px' }}>
+                    <section id="servicios" style={{ marginBottom: '30px' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
                             1. Elige un servicio
                         </h3>
@@ -678,7 +759,11 @@ export default function BusinessProfile() {
 
                 {/* Step 2: Select Date */}
                 {(selectedItem || business.type === 'venue') && (
-                    <section ref={calendarRef} style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
+                    <section
+                        id={business.type === 'service' ? 'calendario' : 'servicios'}
+                        ref={calendarRef}
+                        style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}
+                    >
                         <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
                             {business.type === 'service' ? '2. Selecciona una fecha' : '1. Selecciona una fecha'}
                         </h3>
@@ -742,9 +827,27 @@ export default function BusinessProfile() {
                                         hoursObj = {};
                                     }
                                 }
-                                const interval = (business.type === 'service' && selectedItem?.duration)
-                                    ? selectedItem.duration
-                                    : (hoursObj?.interval || hoursObj?.duration || 60);
+
+                                // Determine default interval based on rules
+                                let defaultInterval = 60; // Default (Football, Venue, etc.)
+
+                                if (business.type === 'service') {
+                                    defaultInterval = 30; // Services: every 30 mins
+                                } else if (business.type === 'sport') {
+                                    // Check selected sport or category
+                                    const sportName = typeof selectedItem === 'string'
+                                        ? selectedItem.toLowerCase()
+                                        : (business.category || '').toLowerCase();
+
+                                    if (sportName.includes('padel') || sportName.includes('paddle')) {
+                                        defaultInterval = 90; // Padel: 1.5 hours
+                                    }
+                                }
+
+                                // Use configured interval from DB if valid, otherwise use type-based default
+                                const interval = (hoursObj?.interval && hoursObj.interval > 0)
+                                    ? hoursObj.interval
+                                    : defaultInterval;
 
                                 // Check if business is closed (open and close are both 00:00)
                                 const isClosed = open === '00:00' && close === '00:00';
@@ -824,17 +927,27 @@ export default function BusinessProfile() {
                                             sport: null
                                         }]
                                         : [{
-                                            id: 'no-specialist',
+                                            id: selectedItem?.id || 'no-specialist',
                                             name: 'Sin profesional asignado',
                                             features: ['Servicio'],
                                             price: selectedItem?.price || 0,
                                             sport: null
                                         }]);
 
+                                console.log('Business Hours Debug:', { open, close, ranges, date: selectedDate });
+
                                 return (
                                     <TimeSlotPicker
                                         selectedTime={selectedTime}
-                                        onTimeSelect={setSelectedTime}
+                                        onTimeSelect={(slot) => {
+                                            if (slot.status === 'blocked') {
+                                                // If strictly blocked/break, we warn the user but allow proceeding (Administrator override)
+                                                // Ideally detailed modal, but for now native confirm is effective to prove interactivity
+                                                const confirmUnlock = window.confirm("Este horario está fuera del rango de atención habitual (Horario Cortado). ¿Deseas seleccionarlo de todas formas para crear una excepción?");
+                                                if (!confirmUnlock) return;
+                                            }
+                                            setSelectedTime(slot);
+                                        }}
                                         sportColor={primaryColor}
                                         type={business.type}
                                         resources={resources}
@@ -844,6 +957,7 @@ export default function BusinessProfile() {
                                         existingBookings={existingBookings}
                                         timeRanges={ranges}
                                         selectedDate={selectedDate}
+                                        maxCapacity={business.max_capacity || 1}
                                     />
                                 );
                             })()}
@@ -872,9 +986,53 @@ export default function BusinessProfile() {
                                         style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)' }}
                                     >
                                         <option value="">Seleccionar hora...</option>
-                                        {Array.from({ length: 14 }, (_, i) => i + 8).map(hour => (
-                                            <option key={hour} value={`${hour}:00`}>{`${hour}:00`}</option>
-                                        ))}
+                                        {(() => {
+                                            const { open, close, ranges } = getBusinessHours(selectedDate);
+                                            const slots = [];
+
+                                            // Helper to add slots for a given range
+                                            const addSlots = (startStr, endStr) => {
+                                                const start = parseInt(startStr.split(':')[0]);
+                                                const end = endStr === '00:00' ? 24 : parseInt(endStr.split(':')[0]);
+
+                                                for (let i = start; i < end; i++) {
+                                                    const timeStr = `${String(i).padStart(2, '0')}:00`;
+                                                    // Check if slot is booked
+                                                    const isBooked = existingBookings?.some(booking => {
+                                                        const bookingStatus = booking.status?.toLowerCase() || '';
+                                                        const blockedStatuses = ['confirmed', 'blocked', 'deposit', 'pending', 'completed'];
+                                                        // Ensure DB time matches our formatting (handle HH:MM:SS vs HH:MM)
+                                                        const bookingTime = booking.time.substring(0, 5);
+                                                        return bookingTime === timeStr && (blockedStatuses.includes(bookingStatus) || bookingStatus !== 'cancelled');
+                                                    });
+
+                                                    if (!isBooked) {
+                                                        slots.push(i);
+                                                    }
+                                                }
+                                            };
+
+                                            if (ranges && ranges.length > 0) {
+                                                // Handle split shifts / multiple ranges
+                                                ranges.forEach(range => {
+                                                    addSlots(range.open, range.close);
+                                                });
+                                            } else {
+                                                // Use standard open/close
+                                                addSlots(open, close);
+                                            }
+
+                                            if (slots.length === 0) {
+                                                return <option value="" disabled>No hay horarios disponibles</option>;
+                                            }
+
+                                            // Remove duplicates and sort just in case
+                                            const uniqueSlots = [...new Set(slots)].sort((a, b) => a - b);
+
+                                            return uniqueSlots.map(hour => (
+                                                <option key={hour} value={`${hour}:00`}>{`${hour}:00`}</option>
+                                            ));
+                                        })()}
                                     </select>
                                 </div>
 
@@ -1098,6 +1256,138 @@ export default function BusinessProfile() {
                     />
                 )}
             </div>
-        </motion.div >
+            {/* Image Lightbox with Navigation */}
+            <AnimatePresence>
+                {selectedPhotoIndex !== null && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            backgroundColor: 'rgba(0,0,0,0.92)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 2000,
+                            padding: '20px'
+                        }}
+                        onClick={() => setSelectedPhotoIndex(null)}
+                    >
+                        {/* Close Button */}
+                        <button
+                            style={{
+                                position: 'absolute',
+                                top: '24px',
+                                right: '24px',
+                                background: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '44px',
+                                height: '44px',
+                                cursor: 'pointer',
+                                fontSize: '24px',
+                                color: 'black',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                zIndex: 2001
+                            }}
+                        >
+                            ×
+                        </button>
+
+                        {/* Navigation Buttons */}
+                        {business.gallery_images.length > 1 && (
+                            <>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedPhotoIndex((prev) => (prev > 0 ? prev - 1 : business.gallery_images.length - 1));
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        left: '20px',
+                                        background: 'rgba(255,255,255,0.1)',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        borderRadius: '50%',
+                                        width: '50px',
+                                        height: '50px',
+                                        color: 'white',
+                                        fontSize: '24px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        backdropFilter: 'blur(5px)',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    ‹
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedPhotoIndex((prev) => (prev < business.gallery_images.length - 1 ? prev + 1 : 0));
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '20px',
+                                        background: 'rgba(255,255,255,0.1)',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        borderRadius: '50%',
+                                        width: '50px',
+                                        height: '50px',
+                                        color: 'white',
+                                        fontSize: '24px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        backdropFilter: 'blur(5px)',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    ›
+                                </button>
+                            </>
+                        )}
+
+                        <motion.img
+                            key={selectedPhotoIndex}
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            src={business.gallery_images[selectedPhotoIndex]}
+                            alt="Detailed view"
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '85vh',
+                                borderRadius: '16px',
+                                boxShadow: '0 0 50px rgba(0,0,0,0.5)',
+                                objectFit: 'contain'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        />
+
+                        {/* Image Counter */}
+                        <div style={{
+                            position: 'absolute',
+                            bottom: '30px',
+                            color: 'white',
+                            fontSize: '14px',
+                            background: 'rgba(0,0,0,0.5)',
+                            padding: '6px 16px',
+                            borderRadius: '20px',
+                            backdropFilter: 'blur(10px)'
+                        }}>
+                            {selectedPhotoIndex + 1} / {business.gallery_images.length}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 }

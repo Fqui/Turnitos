@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { formatLongDate } from '../utils/dateUtils';
+import BookingListModal from './business/BookingListModal';
 
 export default function DashboardCalendar({
     bookings,
@@ -15,11 +16,13 @@ export default function DashboardCalendar({
     onMoveBooking,
     isRescheduling = false,
     reschedulingBooking = null,
-    onStartReschedule
+    onStartReschedule,
+    onUnblockSlot
 }) {
     const isMobile = isMobileProp;
     const [showSlotMenu, setShowSlotMenu] = useState(null); // { date, time, x, y }
     const [showBookingMenu, setShowBookingMenu] = useState(null); // { booking, x, y }
+    const [slotSummaryData, setSlotSummaryData] = useState(null); // { bookings, title }
 
     // Close menus when clicking outside
     useEffect(() => {
@@ -90,6 +93,15 @@ export default function DashboardCalendar({
 
     const businessHours = getBusinessHours();
 
+    // Helper to get start of week (Monday)
+    const getStartOfWeek = (date) => {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        d.setDate(d.getDate() + diff);
+        return d;
+    };
+
     // Generate days based on view mode
     const displayDays = useMemo(() => {
         const days = [];
@@ -98,10 +110,8 @@ export default function DashboardCalendar({
         if (viewMode === 'day') {
             days.push(new Date(start));
         } else if (viewMode === 'week') {
-            // Rolling 7 days centered on currentDate
-            // Start 3 days before currentDate
-            const startDay = new Date(start);
-            startDay.setDate(start.getDate() - 3);
+            // Standard week: start on Monday
+            const startDay = getStartOfWeek(start);
 
             for (let i = 0; i < 7; i++) {
                 const d = new Date(startDay);
@@ -245,10 +255,9 @@ export default function DashboardCalendar({
         if (viewMode === 'day') {
             return formatLongDate(currentDate);
         } else if (viewMode === 'week') {
-            const startDate = new Date(currentDate);
-            startDate.setDate(startDate.getDate() - 3);
-            const endDate = new Date(currentDate);
-            endDate.setDate(endDate.getDate() + 3);
+            const startDate = getStartOfWeek(currentDate);
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
 
             // If same month
             if (startDate.getMonth() === endDate.getMonth()) {
@@ -452,7 +461,6 @@ export default function DashboardCalendar({
                             );
                         })}
 
-                        {/* Time Slots */}
                         {timeSlots.map((time, i) => (
                             <React.Fragment key={time}>
                                 {/* Time Column */}
@@ -477,7 +485,26 @@ export default function DashboardCalendar({
 
                                 {/* Day Columns */}
                                 {displayDays.map((day, j) => {
-                                    const booking = getBookingForSlot(day, time);
+                                    // Logic for multiple bookings
+                                    const dateKey = formatDateKey(day);
+                                    const slotBookings = bookings.filter(b => {
+                                        if (b.time !== time) return false;
+                                        let bDateKey = b.date;
+                                        if (b.date.includes('/')) {
+                                            const [d, m, y] = b.date.split('/');
+                                            bDateKey = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                                        }
+                                        return bDateKey === dateKey && b.status !== 'cancelled';
+                                    });
+
+                                    // Determine Capacity
+                                    let totalCapacity = 1;
+                                    if (business?.courts?.length > 0) {
+                                        totalCapacity = business.courts.length;
+                                    } else if (business?.specialists?.length > 0) {
+                                        totalCapacity = business.specialists.length;
+                                    }
+
                                     const isToday = formatDateKey(day) === formatDateKey(new Date());
 
                                     // Check if business is open on this day
@@ -487,18 +514,33 @@ export default function DashboardCalendar({
 
                                     // Check explicit closure
                                     let isOpen = dayConfig?.isOpen !== false;
+                                    let isBreakTime = false;
 
                                     // Check split shift (break)
-                                    if (isOpen && dayConfig?.isSplit && dayConfig?.breakStart && dayConfig?.breakEnd) {
+                                    if (isOpen && dayConfig?.isSplit) {
                                         const slotTime = time;
-                                        const breakStart = dayConfig.breakStart;
-                                        const breakEnd = dayConfig.breakEnd;
-
-                                        // Simple string comparison works for HH:MM format
+                                        // Default to 13:00 - 16:00 if configured as split but missing times
+                                        const breakStart = dayConfig.breakStart || '13:00';
+                                        const breakEnd = dayConfig.breakEnd || '16:00';
                                         if (slotTime >= breakStart && slotTime < breakEnd) {
-                                            isOpen = false;
+                                            isBreakTime = true;
+                                            // Inject a virtual "Blocked" booking to render visually as blocked
+                                            slotBookings.push({
+                                                id: `break-${dateKey}-${time}`,
+                                                status: 'blocked',
+                                                customer_name: 'DESCANSO',
+                                                service_id: 'break', // meaningful ID to prevent errors
+                                                isVirtual: true,
+                                                date: dateKey,
+                                                time: time
+                                            });
                                         }
                                     }
+
+                                    // Force full if it's a break time (so no + button appears)
+                                    const isFull = slotBookings.length >= totalCapacity || isBreakTime;
+                                    const visualBookingsCount = slotBookings.length > 3 ? 1 : slotBookings.length;
+                                    // If isBreakTime, we just show the blocked card, so count is valid.
 
                                     return (
                                         <div
@@ -507,7 +549,8 @@ export default function DashboardCalendar({
                                             style={{
                                                 borderBottom: '1px solid var(--border)',
                                                 borderRight: j < displayDays.length - 1 ? '1px solid var(--border)' : 'none',
-                                                height: '80px',
+                                                height: 'auto',
+                                                minHeight: '130px',
                                                 padding: '4px',
                                                 position: 'relative',
                                                 background: !isOpen
@@ -522,81 +565,141 @@ export default function DashboardCalendar({
                                                 outlineOffset: '-2px',
                                                 boxSizing: 'border-box',
                                                 opacity: !isOpen ? 0.6 : 1,
-                                                cursor: !isOpen ? 'not-allowed' : 'pointer'
+                                                cursor: !isOpen ? 'not-allowed' : 'default',
+                                                display: 'flex',
+                                                flexDirection: (viewMode === 'day' && !isMobile) ? 'row' : 'column', // Horizontal for Day (Desktop), Vertical otherwise
+                                                gap: '4px'
                                             }}
                                             className="calendar-slot"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-
-                                                if (booking) {
-                                                    // Allow clicking existing bookings even if closed (to view details)
-                                                    if (isRescheduling) return;
-
-                                                    if (booking.status === 'pending' || booking.status === 'deposit_paid') {
-                                                        const rect = e.currentTarget.getBoundingClientRect();
-                                                        setShowBookingMenu({
-                                                            booking,
-                                                            x: rect.left + rect.width / 2,
-                                                            y: rect.top
-                                                        });
-                                                    } else {
-                                                        onBookingClick && onBookingClick(booking);
-                                                    }
-                                                } else {
-                                                    // Prevent new bookings/reschedules on closed days
-                                                    if (!isOpen) return;
-
-                                                    if (isRescheduling) {
-                                                        onMoveBooking && onMoveBooking(
-                                                            reschedulingBooking.id,
-                                                            formatDateKey(day),
-                                                            time,
-                                                            reschedulingBooking.court_id || reschedulingBooking.service_id
-                                                        );
-                                                    } else {
-                                                        handleSlotClick(e, day, time);
-                                                    }
-                                                }
-                                            }}
                                         >
-                                            {booking ? (
+                                            {/* Logic for >3 bookings: Show Summary */}
+                                            {slotBookings.length > 3 ? (
                                                 <div
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSlotSummaryData({
+                                                            bookings: slotBookings,
+                                                            title: `${formatLongDate(day)} - ${time} (${slotBookings.length} Reservas)`
+                                                        });
+                                                    }}
                                                     style={{
-                                                        background: getStatusColor(booking),
-                                                        color: '#fff',
-                                                        height: '100%',
-                                                        borderRadius: '8px',
-                                                        padding: '6px 10px',
+                                                        background: 'var(--bg-main)',
+                                                        color: 'var(--text-primary)',
+                                                        borderRadius: '6px',
+                                                        padding: '8px',
                                                         fontSize: '12px',
-                                                        overflow: 'hidden',
+                                                        fontWeight: '600',
                                                         cursor: 'pointer',
+                                                        textAlign: 'center',
                                                         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                                        borderLeft: '4px solid rgba(0,0,0,0.2)',
-                                                        opacity: (booking.status === 'cancelled' || (isRescheduling && reschedulingBooking?.id !== booking.id)) ? 0.7 : 1,
+                                                        border: '1px solid var(--border)',
+                                                        flex: 1,
                                                         display: 'flex',
                                                         flexDirection: 'column',
+                                                        alignItems: 'center',
                                                         justifyContent: 'center',
-                                                        gap: '2px',
-                                                        border: reschedulingBooking?.id === booking.id ? '2px solid white' : 'none',
-                                                        position: 'relative',
-                                                        zIndex: reschedulingBooking?.id === booking.id ? 5 : 1
+                                                        gap: '4px'
                                                     }}
-                                                    title={`${booking.customer_name || booking.customerName} - ${getBookingLabel(booking)}`}
                                                 >
-                                                    <div style={{ fontSize: '15px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: (booking.status === 'cancelled' || booking.status === 'blocked') ? 'center' : 'left', lineHeight: '1.2' }}>
-                                                        {booking.status === 'blocked' ? '🚫 BLOQUEADO' :
-                                                            booking.status === 'cancelled' ? '❌ CANCELADO' :
-                                                                booking.customer_name || booking.customerName}
-                                                    </div>
-                                                    {booking.status !== 'cancelled' && booking.status !== 'blocked' && (
-                                                        <div style={{ fontSize: '13px', opacity: 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '500' }}>
-                                                            {getBookingLabel(booking)}
-                                                        </div>
-                                                    )}
+                                                    <span style={{ fontSize: '16px' }}>📑</span>
+                                                    <span>Ver {slotBookings.length} Reservas</span>
                                                 </div>
                                             ) : (
-                                                <div className="slot-add-btn">
-                                                    +
+                                                /* Render existing bookings normally */
+                                                slotBookings.map((booking, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            // if (booking.isVirtual) return; 
+                                                            if (isRescheduling) return;
+                                                            if (booking.status === 'pending' || booking.status === 'deposit_paid') {
+                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                setShowBookingMenu({
+                                                                    booking,
+                                                                    x: rect.left + rect.width / 2,
+                                                                    y: rect.top
+                                                                });
+                                                            } else {
+                                                                onBookingClick && onBookingClick(booking);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            flex: 1, // Allow 50/50 split if row
+                                                            background: getStatusColor(booking),
+                                                            color: '#fff',
+                                                            minHeight: '38px', // Slightly taller for 2 lines
+                                                            borderRadius: '6px',
+                                                            padding: '4px 8px',
+                                                            fontSize: '11px',
+                                                            overflow: 'hidden',
+                                                            cursor: 'pointer',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                                            borderLeft: '4px solid rgba(0,0,0,0.2)',
+                                                            opacity: (booking.status === 'cancelled' || (isRescheduling && reschedulingBooking?.id !== booking.id)) ? 0.7 : 1,
+                                                            display: 'flex',
+                                                            flexDirection: 'column', // Stack Content
+                                                            justifyContent: 'center',
+                                                            alignItems: 'center', // Center align
+                                                            gap: '1px',
+                                                            border: reschedulingBooking?.id === booking.id ? '2px solid white' : 'none',
+                                                            position: 'relative',
+                                                            zIndex: reschedulingBooking?.id === booking.id ? 5 : 1
+                                                        }}
+                                                        title={booking.status === 'blocked' ? 'BLOQUEADO' : `${booking.customer_name || booking.customerName} - ${getBookingLabel(booking)}`}
+                                                    >
+                                                        {booking.status === 'blocked' ? (
+                                                            <span style={{ fontWeight: '800', fontSize: '12px', width: '100%', textAlign: 'center' }}>
+                                                                BLOQUEADO
+                                                            </span>
+                                                        ) : (
+                                                            <>
+                                                                <span style={{ fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', lineHeight: '1.2', textAlign: 'center' }}>
+                                                                    {booking.customer_name || booking.customerName}
+                                                                </span>
+                                                                <span style={{ opacity: 0.95, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', fontSize: '11px', lineHeight: '1.1', textAlign: 'center' }}>
+                                                                    {getBookingLabel(booking)}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                ))
+                                            )}
+
+                                            {/* "Add Booking" Area (if capacity available) */}
+                                            {isOpen && !isFull && (
+                                                <div
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!isOpen) return;
+                                                        if (isRescheduling) {
+                                                            onMoveBooking && onMoveBooking(
+                                                                reschedulingBooking.id,
+                                                                formatDateKey(day),
+                                                                time,
+                                                                null // Let logic decide or prompt resource
+                                                            );
+                                                        } else {
+                                                            handleSlotClick(e, day, time);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        flex: 1,
+                                                        minHeight: slotBookings.length === 0 ? '100%' : '30px',
+                                                        borderRadius: '6px',
+                                                        border: '1px dashed var(--border)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                        color: 'var(--text-secondary)',
+                                                        fontSize: '18px',
+                                                        fontWeight: '300',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                    title={isBreakTime ? "Horario Cortado (Click para excepción)" : "Crear Reserva"}
+                                                >
+                                                    {isBreakTime ? "🔒" : "+"}
                                                 </div>
                                             )}
                                         </div>
@@ -731,231 +834,235 @@ export default function DashboardCalendar({
             </div>
 
             {/* Booking Action Menu */}
-            {showBookingMenu && (
-                <>
-                    <div
-                        className="booking-menu-overlay"
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 999,
-                            background: 'transparent'
-                        }}
-                        onClick={() => setShowBookingMenu(null)}
-                    />
-                    <div
-                        className="booking-menu"
-                        style={{
-                            position: 'fixed',
-                            left: showBookingMenu.x - 75,
-                            top: showBookingMenu.y - 120, // Move up to show above
-                            width: '200px',
-                            background: 'var(--bg-card)',
-                            borderRadius: '16px',
-                            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-                            border: '1px solid var(--border)',
-                            zIndex: 1000,
-                            overflow: 'hidden',
-                            animation: 'slideDown 0.2s ease-out'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div style={{
-                            padding: '12px 16px',
-                            borderBottom: '1px solid var(--border)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            background: 'rgba(0,0,0,0.02)'
-                        }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Opciones</span>
+            {
+                showBookingMenu && (
+                    <>
+                        <div
+                            className="booking-menu-overlay"
+                            style={{
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                zIndex: 999,
+                                background: 'transparent'
+                            }}
+                            onClick={() => setShowBookingMenu(null)}
+                        />
+                        <div
+                            className="booking-menu"
+                            style={{
+                                position: 'fixed',
+                                left: showBookingMenu.x - 75,
+                                top: showBookingMenu.y - 120, // Move up to show above
+                                width: '200px',
+                                background: 'var(--bg-card)',
+                                borderRadius: '16px',
+                                boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                                border: '1px solid var(--border)',
+                                zIndex: 1000,
+                                overflow: 'hidden',
+                                animation: 'slideDown 0.2s ease-out'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div style={{
+                                padding: '12px 16px',
+                                borderBottom: '1px solid var(--border)',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: 'rgba(0,0,0,0.02)'
+                            }}>
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Opciones</span>
+                                <button
+                                    onClick={() => setShowBookingMenu(null)}
+                                    style={{
+                                        border: 'none',
+                                        background: 'none',
+                                        padding: '4px',
+                                        cursor: 'pointer',
+                                        fontSize: '18px',
+                                        color: 'var(--text-secondary)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        borderRadius: '50%'
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
                             <button
-                                onClick={() => setShowBookingMenu(null)}
+                                onClick={() => {
+                                    onStartReschedule && onStartReschedule(showBookingMenu.booking);
+                                    setShowBookingMenu(null);
+                                }}
                                 style={{
-                                    border: 'none',
-                                    background: 'none',
-                                    padding: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '18px',
-                                    color: 'var(--text-secondary)',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center',
-                                    borderRadius: '50%'
+                                    gap: '12px',
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    color: 'var(--primary-paddle)',
+                                    borderBottom: '1px solid var(--border)',
+                                    transition: 'background 0.2s'
                                 }}
+                                onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
+                                onMouseLeave={(e) => e.target.style.background = 'transparent'}
                             >
-                                ✕
+                                <span style={{ fontSize: '18px' }}>🔄</span>
+                                Reprogramar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    onBookingClick && onBookingClick(showBookingMenu.booking);
+                                    setShowBookingMenu(null);
+                                }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    color: 'var(--text-primary)',
+                                    transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
+                                onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                            >
+                                <span style={{ fontSize: '18px' }}>ℹ️</span>
+                                Información
                             </button>
                         </div>
-                        <button
-                            onClick={() => {
-                                onStartReschedule && onStartReschedule(showBookingMenu.booking);
-                                setShowBookingMenu(null);
-                            }}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                width: '100%',
-                                padding: '12px 16px',
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                color: 'var(--primary-paddle)',
-                                borderBottom: '1px solid var(--border)',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >
-                            <span style={{ fontSize: '18px' }}>🔄</span>
-                            Reprogramar
-                        </button>
-                        <button
-                            onClick={() => {
-                                onBookingClick && onBookingClick(showBookingMenu.booking);
-                                setShowBookingMenu(null);
-                            }}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                width: '100%',
-                                padding: '12px 16px',
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                color: 'var(--text-primary)',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >
-                            <span style={{ fontSize: '18px' }}>ℹ️</span>
-                            Información
-                        </button>
-                    </div>
-                </>
-            )}
+                    </>
+                )
+            }
 
             {/* Slot Action Menu */}
-            {showSlotMenu && (
-                <>
-                    <div
-                        className="slot-menu-overlay"
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 999,
-                            background: 'transparent'
-                        }}
-                        onClick={() => setShowSlotMenu(null)}
-                    />
-                    <div
-                        className="slot-menu"
-                        style={{
-                            position: 'fixed',
-                            left: showSlotMenu.x - 75,
-                            top: showSlotMenu.y - 120, // Move up a bit to show above the slot
-                            width: '200px',
-                            background: 'var(--bg-card)',
-                            borderRadius: '16px',
-                            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-                            border: '1px solid var(--border)',
-                            zIndex: 1000,
-                            overflow: 'hidden',
-                            animation: 'slideDown 0.2s ease-out'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div style={{
-                            padding: '12px 16px',
-                            borderBottom: '1px solid var(--border)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            background: 'rgba(0,0,0,0.02)'
-                        }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{showSlotMenu.time} hs</span>
+            {
+                showSlotMenu && (
+                    <>
+                        <div
+                            className="slot-menu-overlay"
+                            style={{
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                zIndex: 999,
+                                background: 'transparent'
+                            }}
+                            onClick={() => setShowSlotMenu(null)}
+                        />
+                        <div
+                            className="slot-menu"
+                            style={{
+                                position: 'fixed',
+                                left: showSlotMenu.x - 75,
+                                top: showSlotMenu.y - 120, // Move up a bit to show above the slot
+                                width: '200px',
+                                background: 'var(--bg-card)',
+                                borderRadius: '16px',
+                                boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                                border: '1px solid var(--border)',
+                                zIndex: 1000,
+                                overflow: 'hidden',
+                                animation: 'slideDown 0.2s ease-out'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div style={{
+                                padding: '12px 16px',
+                                borderBottom: '1px solid var(--border)',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                background: 'rgba(0,0,0,0.02)'
+                            }}>
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{showSlotMenu.time} hs</span>
+                                <button
+                                    onClick={() => setShowSlotMenu(null)}
+                                    style={{
+                                        border: 'none',
+                                        background: 'none',
+                                        padding: '4px',
+                                        cursor: 'pointer',
+                                        fontSize: '18px',
+                                        color: 'var(--text-secondary)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        borderRadius: '50%',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                    ✕
+                                </button>
+                            </div>
                             <button
-                                onClick={() => setShowSlotMenu(null)}
+                                onClick={handleCreateBooking}
                                 style={{
-                                    border: 'none',
-                                    background: 'none',
-                                    padding: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '18px',
-                                    color: 'var(--text-secondary)',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center',
-                                    borderRadius: '50%',
-                                    transition: 'all 0.2s'
+                                    gap: '12px',
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    color: 'var(--text-primary)',
+                                    borderBottom: '1px solid var(--border)',
+                                    transition: 'background 0.2s'
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
+                                onMouseLeave={(e) => e.target.style.background = 'transparent'}
                             >
-                                ✕
+                                <span style={{ fontSize: '18px' }}>📝</span>
+                                Crear Reserva
+                            </button>
+                            <button
+                                onClick={handleBlockSlot}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    color: 'var(--text-primary)',
+                                    transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
+                                onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                            >
+                                <span style={{ fontSize: '18px' }}>🚫</span>
+                                Bloquear Horario
                             </button>
                         </div>
-                        <button
-                            onClick={handleCreateBooking}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                width: '100%',
-                                padding: '12px 16px',
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                color: 'var(--text-primary)',
-                                borderBottom: '1px solid var(--border)',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >
-                            <span style={{ fontSize: '18px' }}>📝</span>
-                            Crear Reserva
-                        </button>
-                        <button
-                            onClick={handleBlockSlot}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                width: '100%',
-                                padding: '12px 16px',
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                color: 'var(--text-primary)',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >
-                            <span style={{ fontSize: '18px' }}>🚫</span>
-                            Bloquear Horario
-                        </button>
-                    </div>
-                </>
-            )}
+                    </>
+                )
+            }
 
             <style>{`
                 .calendar-slot:hover {
@@ -990,6 +1097,21 @@ export default function DashboardCalendar({
                     }
                 }
             `}</style>
-        </div>
+            {/* Booking List Modal */}
+            <BookingListModal
+                isOpen={!!slotSummaryData}
+                onClose={() => setSlotSummaryData(null)}
+                bookings={slotSummaryData?.bookings || []}
+                title={slotSummaryData?.title}
+                onBookingClick={(booking) => {
+                    setSlotSummaryData(null);
+                    onBookingClick && onBookingClick(booking);
+                }}
+                onUnblock={(booking) => {
+                    setSlotSummaryData(null);
+                    onUnblockSlot && onUnblockSlot(booking);
+                }}
+            />
+        </div >
     );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function TimeSlotPicker({
     selectedTime,
@@ -11,95 +11,225 @@ export default function TimeSlotPicker({
     interval = 60,
     existingBookings = [],
     timeRanges = [],
-    selectedDate = null  // 🆕 Added selectedDate parameter
+    selectedDate = null,
+    maxCapacity = 1, // 🆕 Default to 1
+    useDatabaseAvailability = false, // 🆕 Use SQL function for availability
+    businessId = null // 🆕 Required for database availability
 }) {
-    // Helper to generate slots
-    const generateSlots = (resourceId, resourcePrice) => {
-        const slots = [];
+    const [availabilityCache, setAvailabilityCache] = useState({});
 
-        // Normalize ranges: if timeRanges is provided, use it; otherwise create a single range from opening/closing
-        // timeRanges should be an array of { open: 'HH:MM', close: 'HH:MM' }
-        const ranges = (timeRanges && timeRanges.length > 0)
-            ? timeRanges
-            : [{ open: openingTime, close: closingTime }];
+    // Preload availability from database when using database mode
+    useEffect(() => {
+        if (!useDatabaseAvailability || !businessId || !selectedDate || !providedResources) return;
 
-        ranges.forEach(range => {
-            const [startHour, startMinute] = range.open.split(':').map(Number);
-            const [endHour, endMinute] = range.close.split(':').map(Number);
+        const loadAvailability = async () => {
+            try {
+                const supabaseService = (await import('../services/supabaseService')).default;
+                const cache = {};
 
-            let currentHour = startHour;
-            let currentMinute = startMinute;
+                for (const resource of providedResources) {
+                    // Check availability for each hour slot
+                    const startHour = parseInt(openingTime.split(':')[0]);
+                    const endHour = parseInt(closingTime.split(':')[0]);
 
-            const startTotalMinutes = startHour * 60 + startMinute;
-            let endTotalMinutes = endHour * 60 + endMinute;
+                    for (let hour = startHour; hour < endHour; hour++) {
+                        const time = `${String(hour).padStart(2, '0')}:00`;
+                        const startTime = new Date(`${selectedDate.toISOString().split('T')[0]}T${time}:00`);
+                        const endTime = new Date(startTime.getTime() + interval * 60000);
 
-            // Handle overnight ranges (e.g., 22:00 to 02:00 becomes 22:00 to 26:00)
-            if (endTotalMinutes <= startTotalMinutes) {
-                endTotalMinutes += 24 * 60;
-            }
+                        const result = await supabaseService.checkResourceAvailability(
+                            resource.id,
+                            startTime.toISOString(),
+                            endTime.toISOString()
+                        );
 
-            let currentTotalMinutes = startTotalMinutes;
-
-            while (currentTotalMinutes < endTotalMinutes) {
-                // Format time for display
-                const displayHour = currentHour % 24;
-                const formattedTime = `${String(displayHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
-
-                // Find price from time_ranges if available, else use resource price
-                let slotPrice = resourcePrice;
-                if (timeRanges && timeRanges.length > 0) {
-                    const matchingRange = timeRanges.find(tr => {
-                        const rangeStart = tr.start || tr.open;
-                        const rangeEnd = tr.end || tr.close;
-                        return formattedTime >= rangeStart && formattedTime < rangeEnd;
-                    });
-                    if (matchingRange && matchingRange.price !== undefined) {
-                        slotPrice = matchingRange.price;
+                        cache[`${resource.id}-${time}`] = result.available;
                     }
                 }
 
-                // Check if this slot is already booked FOR THE SELECTED DATE
-                // Convert selectedDate to YYYY-MM-DD format (local time, not UTC)
-                const selectedDateStr = selectedDate
-                    ? (selectedDate instanceof Date
-                        ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
-                        : selectedDate)
-                    : null;
+                setAvailabilityCache(cache);
+            } catch (error) {
+                console.error('Error loading availability:', error);
+                // Fall back to existing bookings logic
+            }
+        };
 
-                const isBooked = existingBookings?.some(booking => {
-                    // Must match: resource_id, time, AND date
-                    const bookingDateStr = booking.date instanceof Date
-                        ? `${booking.date.getFullYear()}-${String(booking.date.getMonth() + 1).padStart(2, '0')}-${String(booking.date.getDate()).padStart(2, '0')}`
-                        : booking.date;
+        loadAvailability();
+    }, [useDatabaseAvailability, businessId, selectedDate, providedResources, openingTime, closingTime, interval]);
 
-                    const bookingMatches = booking.resource_id === resourceId
-                        && booking.time === formattedTime
-                        && bookingDateStr === selectedDateStr
-                        && booking.status !== 'cancelled';
+    // Helper to generate slots
+    const generateSlots = (resourceId, resourcePrice) => {
+        console.log('🔧 generateSlots called with:', {
+            resourceId,
+            resourcePrice,
+            timeRanges,
+            openingTime,
+            closingTime,
+            selectedDate: selectedDate?.toISOString().split('T')[0]
+        });
+        const slots = [];
 
-                    return bookingMatches;
-                }) || false;
+        // 1. Determine the Full Operating Window (Earliest Open to Latest Close)
+        // If timeRanges are provided (e.g. split shift), find the overall start and end.
+        // If not, use openingTime and closingTime.
+        let effectiveStartMinutes, effectiveEndMinutes;
 
-                slots.push({
-                    time: formattedTime,
-                    price: slotPrice,
-                    available: !isBooked,
-                    // Keep original hour for chronological sorting
-                    _originalHour: currentHour,
-                    _originalMinute: currentMinute,
-                    _sortKey: currentTotalMinutes
+        if (timeRanges && timeRanges.length > 0) {
+            // Find earliest start
+            const startTimes = timeRanges.map(r => {
+                const [h, m] = r.open.split(':').map(Number);
+                return h * 60 + m;
+            });
+            effectiveStartMinutes = Math.min(...startTimes);
+
+            // Find latest close
+            const endTimes = timeRanges.map(r => {
+                const [h, m] = r.close.split(':').map(Number);
+                // Handle late night closes (e.g. 02:00 is next day)
+                // We assume if close < open it's overnight, but here we just need max relative value
+                // For simplicity in this context, let's treat values < 5:00 as next day if we have late shifts
+                return (h < 5 ? h + 24 : h) * 60 + m;
+            });
+            effectiveEndMinutes = Math.max(...endTimes);
+        } else {
+            const [startHour, startMinute] = openingTime.split(':').map(Number);
+            const [endHour, endMinute] = closingTime.split(':').map(Number);
+            effectiveStartMinutes = startHour * 60 + startMinute;
+            effectiveEndMinutes = (endHour < startHour ? endHour + 24 : endHour) * 60 + endMinute;
+        }
+
+
+        // 2. Loop continuously from Start to End
+        let currentTotalMinutes = effectiveStartMinutes;
+
+        while (currentTotalMinutes < effectiveEndMinutes) {
+            const currentHour = Math.floor(currentTotalMinutes / 60);
+            const currentMinute = currentTotalMinutes % 60;
+            const displayHour = currentHour % 24;
+            const formattedTime = `${String(displayHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+
+            // 3. Check if this time falls within any ACTIVE range
+            // If timeRanges is null/empty, we assume continuous day (so it's valid).
+            // If timeRanges exists, we must check if formattedTime is inside one of them.
+            let isActiveTime = true;
+
+            if (timeRanges && timeRanges.length > 0) {
+                // Convert current formatted time to minutes for comparison relative to the day start
+                // We use currentTotalMinutes which is already absolute
+
+                isActiveTime = timeRanges.some(range => {
+                    const [rH, rM] = range.open.split(':').map(Number);
+                    const [cH, cM] = range.close.split(':').map(Number);
+
+                    const rStart = rH * 60 + rM;
+                    const cEnd = (cH < rH ? cH + 24 : cH) * 60 + cM;
+
+                    const isInRange = currentTotalMinutes >= rStart && currentTotalMinutes < cEnd;
+
+                    if (formattedTime === '13:00' || formattedTime === '14:00' || formattedTime === '15:00') {
+                        console.log(`⏰ Checking ${formattedTime} against range ${range.open}-${range.close}:`, {
+                            currentTotalMinutes,
+                            rStart,
+                            cEnd,
+                            isInRange
+                        });
+                    }
+
+                    return isInRange;
                 });
 
-                // Increment time
-                currentMinute += interval;
-                currentTotalMinutes += interval;
-
-                while (currentMinute >= 60) {
-                    currentHour += 1;
-                    currentMinute -= 60;
+                if (formattedTime === '13:00' || formattedTime === '14:00' || formattedTime === '15:00') {
+                    console.log(`✅ Final isActiveTime for ${formattedTime}:`, isActiveTime);
                 }
             }
-        });
+
+
+
+            // 4. Determine Availability
+            // If NOT active time (it's a break), it's "blocked" by default (unavailable).
+            // BUT we render it so admin/user sees it exists but is closed.
+
+            // Find price from time_ranges or default
+            let slotPrice = resourcePrice;
+            if (timeRanges && timeRanges.length > 0) {
+                const matchingRange = timeRanges.find(tr => {
+                    const [rH, rM] = tr.open.split(':').map(Number);
+                    const [cH, cM] = tr.close.split(':').map(Number);
+                    // Simple string comparison works for HH:MM in 24h format if not overnight
+                    // But using minutes is safer given our loop context
+                    // For simplicity here reusing string compare if consistent, but let's stick to logic above or simple find
+                    return formattedTime >= tr.open && formattedTime < tr.close;
+                });
+                if (matchingRange && matchingRange.price !== undefined) {
+                    slotPrice = matchingRange.price;
+                }
+            }
+
+            // Check existing bookings
+            // Filter bookings for this specific resource and time
+            const matchingBookings = existingBookings.filter(booking => {
+                // Date Check
+                const bookingDateStr = booking.date; // already YYYY-MM-DD
+                const selectedDateStr = selectedDate ? selectedDate.toISOString().split('T')[0] : '';
+                if (bookingDateStr !== selectedDateStr) return false;
+
+                // Time Check
+                // Handle HH:MM:SS vs HH:MM
+                const bookingTime = booking.time.substring(0, 5);
+                if (bookingTime !== formattedTime) return false;
+
+                // Resource Check
+                // If booking has a specific resource, it must match.
+                // If booking has NO resource (global block), it matches everything.
+                if (booking.resource_id && booking.resource_id !== resourceId) return false;
+
+                // Status Check
+                const bookingStatus = booking.status?.toLowerCase() || '';
+                return ['confirmed', 'blocked', 'deposit', 'pending', 'completed'].includes(bookingStatus);
+            });
+
+            // Calculate Availability based on Capacity
+            const currentBookingCount = matchingBookings.length;
+
+            // Check if ANY matching booking is a BLOCK status
+            const hasBlockedStatus = matchingBookings.some(b => (b.status?.toLowerCase() || '') === 'blocked');
+
+            // Determine if full
+            // Priority 1: Use database availability if available (most accurate)
+            let isFull;
+            const cacheKey = `${resourceId}-${formattedTime}`;
+
+            if (useDatabaseAvailability && availabilityCache.hasOwnProperty(cacheKey)) {
+                // Use database result
+                isFull = !availabilityCache[cacheKey] || !isActiveTime;
+            } else {
+                // Fallback to existing logic
+                // A slot is full if:
+                // 1. It is explicitly BLOCKED (admin block)
+                // 2. OR capacity is reached
+                // 3. OR it is a break time (isActiveTime === false)
+                isFull = hasBlockedStatus || (currentBookingCount >= maxCapacity) || !isActiveTime;
+            }
+
+            // Debug Log for specific cases (optional, can be removed)
+            if (!isActiveTime) {
+                // console.log(`Slot ${formattedTime} is inactive (break time).`);
+            }
+
+            slots.push({
+                time: formattedTime,
+                available: !isFull,
+                price: slotPrice,
+                status: !isActiveTime ? 'blocked' : (isFull ? 'Ocupado' : 'Disponible'),
+                isBreak: !isActiveTime, // Flag to identify break slots specifically
+                // Keep original hour for chronological sorting
+                _originalHour: currentHour,
+                _originalMinute: currentMinute,
+                _sortKey: currentTotalMinutes
+            });
+
+            currentTotalMinutes += interval;
+        }
 
         // Sort by chronological order using the sort key (preserves overnight slots)
         return slots.sort((a, b) => a._sortKey - b._sortKey);
@@ -155,182 +285,90 @@ export default function TimeSlotPicker({
                             </div>
                         )}
 
+                        {/* Unified Grid View for all types (Service & Sport) */}
+                        {(() => {
+                            // Filter strictly for AVAILABLE slots
+                            // This hides: Blocked, Break, and Occupied slots
+                            const visibleSlots = resource.slots.filter(s => s.available);
 
-                        {type === 'service' ? (
-                            // For services, split slots into morning and afternoon
-                            (() => {
-                                const morningSlots = resource.slots.filter(s => parseInt(s.time.split(':')[0]) < 13);
-                                const afternoonSlots = resource.slots.filter(s => parseInt(s.time.split(':')[0]) >= 13);
-
-                                const renderSlotButton = (slot, index) => {
-                                    const slotId = `${resource.id}-${slot.time}`;
-                                    const isSelected = selectedTime?.id === slotId;
-
-                                    return (
-                                        <button
-                                            key={`${index}-${slot.time}`}
-                                            disabled={!slot.available}
-                                            onClick={() => onTimeSelect({
-                                                id: slotId,
-                                                time: slot.time,
-                                                price: slot.price > 0 ? slot.price : undefined,
-                                                courtName: resource.name,
-                                                courtId: resource.id
-                                            })}
-                                            style={{
-                                                padding: '16px 12px',
-                                                borderRadius: '12px',
-                                                backgroundColor: isSelected ? sportColor : (slot.available ? 'var(--bg-card)' : 'rgba(0,0,0,0.02)'),
-                                                border: isSelected ? `2px solid ${sportColor}` : '1px solid var(--border)',
-                                                color: isSelected ? '#fff' : (slot.available ? 'var(--text-primary)' : 'var(--text-secondary)'),
-                                                cursor: slot.available ? 'pointer' : 'not-allowed',
-                                                opacity: slot.available ? 1 : 0.5,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '6px',
-                                                transition: 'all 0.2s',
-                                                boxShadow: isSelected ? `0 4px 12px ${sportColor}40` : 'none'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (slot.available && !isSelected) {
-                                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (!isSelected) {
-                                                    e.currentTarget.style.transform = 'translateY(0)';
-                                                    e.currentTarget.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                        >
-                                            <span style={{ fontSize: '18px', fontWeight: 'bold', textDecoration: slot.available ? 'none' : 'line-through' }}>
-                                                {slot.time}
-                                            </span>
-                                            {slot.price > 0 && (
-                                                <span style={{ fontSize: '12px', opacity: 0.8 }}>
-                                                    ${slot.price.toLocaleString()}
-                                                </span>
-                                            )}
-                                        </button>
-                                    );
-                                };
-
+                            if (visibleSlots.length === 0) {
                                 return (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                        {morningSlots.length > 0 && (
-                                            <div>
-                                                <h5 style={{
-                                                    fontSize: '14px',
-                                                    fontWeight: '600',
-                                                    color: 'var(--text-secondary)',
-                                                    marginBottom: '12px',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '1px'
-                                                }}>
-                                                    🌅 Mañana
-                                                </h5>
-                                                <div style={{
-                                                    display: 'grid',
-                                                    gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                                                    gap: '12px'
-                                                }}>
-                                                    {morningSlots.map(renderSlotButton)}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {afternoonSlots.length > 0 && (
-                                            <div>
-                                                <h5 style={{
-                                                    fontSize: '14px',
-                                                    fontWeight: '600',
-                                                    color: 'var(--text-secondary)',
-                                                    marginBottom: '12px',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '1px'
-                                                }}>
-                                                    🌇 Tarde
-                                                </h5>
-                                                <div style={{
-                                                    display: 'grid',
-                                                    gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                                                    gap: '12px'
-                                                }}>
-                                                    {afternoonSlots.map(renderSlotButton)}
-                                                </div>
-                                            </div>
-                                        )}
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                        No hay horarios disponibles para esta fecha
                                     </div>
                                 );
-                            })()
-                        ) : (
-                            // For sports, show all slots together
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                                gap: '12px'
-                            }}>
-                                {resource.slots.map((slot, index) => {
-                                    const slotId = `${resource.id}-${slot.time}`;
-                                    const isSelected = selectedTime?.id === slotId;
+                            }
 
-                                    return (
-                                        <button
-                                            key={index}
-                                            disabled={!slot.available}
-                                            onClick={() => onTimeSelect({
-                                                id: slotId,
-                                                time: slot.time,
-                                                price: slot.price > 0 ? slot.price : undefined,
-                                                courtName: resource.name,
-                                                courtId: resource.id
-                                            })}
-                                            style={{
-                                                padding: '16px 12px',
-                                                borderRadius: '12px',
-                                                backgroundColor: isSelected ? sportColor : (slot.available ? 'var(--bg-card)' : 'rgba(0,0,0,0.02)'),
-                                                border: isSelected ? `2px solid ${sportColor}` : '1px solid var(--border)',
-                                                color: isSelected ? '#fff' : (slot.available ? 'var(--text-primary)' : 'var(--text-secondary)'),
-                                                cursor: slot.available ? 'pointer' : 'not-allowed',
-                                                opacity: slot.available ? 1 : 0.5,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '6px',
-                                                transition: 'all 0.2s',
-                                                boxShadow: isSelected ? `0 4px 12px ${sportColor}40` : 'none'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (slot.available && !isSelected) {
-                                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (!isSelected) {
-                                                    e.currentTarget.style.transform = 'translateY(0)';
-                                                    e.currentTarget.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                        >
-                                            <span style={{ fontSize: '18px', fontWeight: 'bold', textDecoration: slot.available ? 'none' : 'line-through' }}>
+                            return (
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                                    gap: '12px'
+                                }}>
+                                    {visibleSlots.map((slot, index) => {
+                                        const slotId = `${resource.id}-${slot.time}`;
+                                        const isSelected = selectedTime?.id === slotId;
+
+                                        // Slots here are guaranteed available, so no need for blocked checks
+
+                                        return (
+                                            <button
+                                                key={`${index}-${slot.time}`}
+                                                onClick={() => onTimeSelect({
+                                                    id: slotId,
+                                                    time: slot.time,
+                                                    price: slot.price > 0 ? slot.price : undefined,
+                                                    courtName: resource.name,
+                                                    courtId: resource.id,
+                                                    status: slot.status
+                                                })}
+                                                style={{
+                                                    padding: '12px 20px',
+                                                    borderRadius: '12px',
+                                                    backgroundColor: isSelected
+                                                        ? sportColor
+                                                        : 'var(--bg-card)',
+                                                    border: isSelected
+                                                        ? `2px solid ${sportColor}`
+                                                        : '1px solid var(--border)',
+                                                    color: isSelected
+                                                        ? '#fff'
+                                                        : 'var(--text-primary)',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    transition: 'all 0.2s',
+                                                    boxShadow: isSelected ? `0 4px 12px ${sportColor}40` : 'none',
+                                                    fontSize: '16px',
+                                                    fontWeight: '600',
+                                                    opacity: 1
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!isSelected) {
+                                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!isSelected) {
+                                                        e.currentTarget.style.transform = 'translateY(0)';
+                                                        e.currentTarget.style.boxShadow = 'none';
+                                                    }
+                                                }}
+                                                title="Disponible"
+                                            >
                                                 {slot.time}
-                                            </span>
-                                            {slot.price > 0 && (
-                                                <span style={{ fontSize: '12px', opacity: 0.8 }}>
-                                                    ${slot.price.toLocaleString()}
-                                                </span>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
                     </div>
                 ))}
             </div>
         </div>
     );
 }
+

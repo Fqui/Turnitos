@@ -134,7 +134,8 @@ class SupabaseService {
                 rental_duration_options: businessData.rental_duration_options || [],
                 additional_services: businessData.additional_services || [],
                 included_amenities: businessData.included_amenities || [],
-                gallery_images: businessData.gallery_images || []
+                gallery_images: businessData.gallery_images || [],
+                max_capacity: businessData.max_capacity || 1
             }])
             .select()
             .single();
@@ -266,7 +267,8 @@ class SupabaseService {
                 rental_duration_options: businessData.rental_duration_options || [],
                 additional_services: businessData.additional_services || [],
                 included_amenities: businessData.included_amenities || [],
-                gallery_images: businessData.gallery_images || []
+                gallery_images: businessData.gallery_images || [],
+                max_capacity: businessData.max_capacity || 1
             })
             .eq('id', businessId)
             .select()
@@ -521,12 +523,76 @@ class SupabaseService {
             safeUpdates.hours = JSON.stringify(safeUpdates.hours);
         }
 
-        const { error } = await supabase
-            .from('businesses')
-            .update(safeUpdates)
-            .eq('id', businessId);
+        // 1. Update main business table if there are fields left
+        if (Object.keys(safeUpdates).length > 0) {
+            const { error } = await supabase
+                .from('businesses')
+                .update(safeUpdates)
+                .eq('id', businessId);
 
-        if (error) throw error;
+            if (error) throw error;
+        }
+
+        // 2. Handle Courts update
+        if (updates.courts) {
+            // Delete existing courts
+            await supabase.from('courts').delete().eq('business_id', businessId);
+
+            if (updates.courts.length > 0) {
+                const courtsToInsert = updates.courts.map(c => ({
+                    id: c.id,
+                    business_id: businessId,
+                    name: c.name,
+                    sport: c.sport,
+                    price: c.price
+                }));
+
+                const { error: courtsError } = await supabase
+                    .from('courts')
+                    .insert(courtsToInsert);
+
+                if (courtsError) console.error('Error updating courts in patch:', courtsError);
+            }
+        }
+
+        // 3. Handle Specialists update
+        if (updates.specialists) {
+            // A. Get current specialists to identify deletions
+            const { data: currentSpecialists } = await supabase
+                .from('specialists')
+                .select('id')
+                .eq('business_id', businessId);
+
+            const currentIds = currentSpecialists ? currentSpecialists.map(sp => sp.id) : [];
+            const incomingIds = updates.specialists
+                .filter(sp => sp.id && sp.id.length >= 32)
+                .map(sp => sp.id);
+
+            // B. Delete removed specialists
+            const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
+            if (idsToDelete.length > 0) {
+                await supabase.from('service_specialists').delete().in('specialist_id', idsToDelete);
+                await supabase.from('specialists').delete().in('id', idsToDelete);
+            }
+
+            // C. Upsert (Update or Insert)
+            const specialistsToUpsert = updates.specialists.map(sp => ({
+                id: sp.id,
+                business_id: businessId,
+                name: sp.name,
+                role: sp.role,
+                avatar_url: sp.avatar_url
+            }));
+
+            if (specialistsToUpsert.length > 0) {
+                const { error: upsertError } = await supabase
+                    .from('specialists')
+                    .upsert(specialistsToUpsert);
+
+                if (upsertError) console.error('Error upserting specialists in patch:', upsertError);
+            }
+        }
+
         // Return null data to avoid heavy read timeouts (e.g. if logo is base64)
         return null;
     }
@@ -574,12 +640,62 @@ class SupabaseService {
             return `${year}-${month}-${day}`;
         };
 
+        // Resolve resource_id: if not provided, try to map from legacy IDs
+        let finalResourceId = bookingData.resourceId;
+
+        if (!finalResourceId && (bookingData.courtId || bookingData.serviceId)) {
+            const legacyId = bookingData.courtId || bookingData.serviceId;
+            const type = bookingData.serviceId ? 'service' : 'court';
+
+            try {
+                // Query resources table - fetch all resources for this business/type to match in JS
+                // This is safer than complex .or() filtering on JSONB columns which can be flaky
+                const { data: resources } = await supabase
+                    .from('resources')
+                    .select('id, metadata')
+                    .eq('business_id', bookingData.businessId)
+                    .eq('type', type);
+
+                if (resources && resources.length > 0) {
+                    const strLegacyId = String(legacyId);
+                    const match = resources.find(r => {
+                        const metaOriginal = r.metadata?.original_id;
+                        const metaOldCourt = r.metadata?.old_court_id;
+                        const metaOldService = r.metadata?.old_service_id;
+
+                        // Check exact string match or loose equality
+                        const matchOriginal = metaOriginal && (String(metaOriginal) === strLegacyId || metaOriginal == legacyId);
+                        const matchOldCourt = metaOldCourt && (String(metaOldCourt) === strLegacyId || metaOldCourt == legacyId);
+                        const matchOldService = metaOldService && (String(metaOldService) === strLegacyId || metaOldService == legacyId);
+
+                        return matchOriginal || matchOldCourt || matchOldService;
+                    });
+
+                    if (match) {
+                        finalResourceId = match.id;
+                    } else {
+                        console.warn(`❌ Resource not found for legacy ID: ${legacyId}. Checked ${resources.length} resources.`);
+                        finalResourceId = legacyId;
+                    }
+                } else {
+                    console.warn('❌ No resources found for this business/type');
+                    finalResourceId = legacyId;
+                }
+
+            } catch (err) {
+                console.warn('Error resolving resource_id:', err);
+                finalResourceId = legacyId;
+            }
+        }
+
         const { data, error } = await supabase
             .from('bookings')
             .insert([{
                 business_id: bookingData.businessId,
                 service_id: bookingData.serviceId,
                 court_id: bookingData.courtId,
+                specialist_id: bookingData.specialistId || null,
+                resource_id: finalResourceId,
                 date: formatDateLocal(bookingData.date),
                 time: bookingData.time,
                 customer_name: bookingData.customerName ? bookingData.customerName.toUpperCase() : bookingData.customerName,
@@ -801,6 +917,273 @@ class SupabaseService {
 
         if (error) throw error;
         return this.getPublicUrl(filePath);
+    }
+
+    // ============================================================================
+    // RESOURCES MANAGEMENT (New Schema)
+    // ============================================================================
+
+    /**
+     * Get all resources for a business
+     * @param {string} businessId - Business ID
+     * @param {string} type - Optional filter by type (court, service, venue, additional)
+     * @returns {Promise<Array>} List of resources
+     */
+    async getResources(businessId, type = null) {
+        let query = supabase
+            .from('resources')
+            .select('*')
+            .eq('business_id', businessId)
+            .eq('active', true)
+            .order('name', { ascending: true });
+
+        if (type) {
+            query = query.eq('type', type);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    }
+
+    /**
+     * Get a single resource by ID
+     * @param {string} resourceId - Resource ID
+     * @returns {Promise<Object>} Resource object
+     */
+    async getResourceById(resourceId) {
+        const { data, error } = await supabase
+            .from('resources')
+            .select('*')
+            .eq('id', resourceId)
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    /**
+     * Create a new resource
+     * @param {Object} resourceData - Resource data
+     * @returns {Promise<Object>} Created resource
+     */
+    async createResource(resourceData) {
+        const { data, error } = await supabase
+            .from('resources')
+            .insert([{
+                business_id: resourceData.business_id,
+                name: resourceData.name,
+                type: resourceData.type,
+                sport: resourceData.sport || null,
+                category: resourceData.category || null,
+                base_price: resourceData.base_price || 0,
+                duration_minutes: resourceData.duration_minutes || 60,
+                buffer_minutes: resourceData.buffer_minutes || 15,
+                capacity: resourceData.capacity || 1,
+                consumes_space: resourceData.consumes_space !== undefined ? resourceData.consumes_space : true,
+                active: true,
+                metadata: resourceData.metadata || {}
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    /**
+     * Update a resource
+     * @param {string} resourceId - Resource ID
+     * @param {Object} updates - Fields to update
+     * @returns {Promise<Object>} Updated resource
+     */
+    async updateResource(resourceId, updates) {
+        const { data, error } = await supabase
+            .from('resources')
+            .update({
+                ...updates,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', resourceId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    /**
+     * Delete (deactivate) a resource
+     * @param {string} resourceId - Resource ID
+     * @returns {Promise<Object>} Updated resource
+     */
+    async deleteResource(resourceId) {
+        return this.updateResource(resourceId, { active: false });
+    }
+
+    /**
+     * Check resource availability for a time slot
+     * @param {string} resourceId - Resource ID
+     * @param {string} startTime - Start time (ISO string)
+     * @param {string} endTime - End time (ISO string)
+     * @param {string} excludeBookingId - Optional booking ID to exclude
+     * @returns {Promise<Object>} Availability info
+     */
+    async checkResourceAvailability(resourceId, startTime, endTime, excludeBookingId = null) {
+        const { data, error } = await supabase
+            .rpc('check_resource_availability', {
+                p_resource_id: resourceId,
+                p_start_time: startTime,
+                p_end_time: endTime,
+                p_exclude_booking_id: excludeBookingId
+            });
+
+        if (error) throw error;
+        return data[0]; // Returns { available, slots_used, total_capacity }
+    }
+
+    // ============================================================================
+    // SUBSCRIPTIONS MANAGEMENT
+    // ============================================================================
+
+    /**
+     * Get subscription for a business
+     * @param {string} businessId - Business ID
+     * @returns {Promise<Object>} Subscription object
+     */
+    async getSubscription(businessId) {
+        const { data, error } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('business_id', businessId)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') return null; // Not found
+            throw error;
+        }
+        return data;
+    }
+
+    /**
+     * Get all subscription plans
+     * @param {string} businessType - Optional filter by business type
+     * @returns {Promise<Array>} List of subscription plans
+     */
+    async getSubscriptionPlans(businessType = null) {
+        let query = supabase
+            .from('subscription_plans')
+            .select('*')
+            .eq('active', true)
+            .order('spaces', { ascending: true });
+
+        if (businessType) {
+            query = query.eq('business_type', businessType);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    }
+
+    /**
+     * Create or update subscription for a business
+     * @param {string} businessId - Business ID
+     * @param {string} planId - Plan ID from subscription_plans
+     * @returns {Promise<Object>} Created/updated subscription
+     */
+    async updateSubscription(businessId, planId) {
+        // Get plan details
+        const { data: plan, error: planError } = await supabase
+            .from('subscription_plans')
+            .select('*')
+            .eq('id', planId)
+            .single();
+
+        if (planError) throw planError;
+
+        // Upsert subscription
+        const { data, error } = await supabase
+            .from('subscriptions')
+            .upsert({
+                business_id: businessId,
+                plan_name: plan.name,
+                spaces_included: plan.spaces,
+                monthly_price: plan.monthly_price,
+                status: 'active',
+                billing_start: new Date().toISOString().split('T')[0],
+                next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            }, {
+                onConflict: 'business_id'
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    // ============================================================================
+    // UPDATED BOOKING METHODS (for new schema)
+    // ============================================================================
+
+    /**
+     * Create booking with new schema (resource_id, start_time, end_time)
+     * @param {Object} bookingData - Booking data
+     * @returns {Promise<Object>} Created booking
+     */
+    async createBookingV2(bookingData) {
+        const { data, error } = await supabase
+            .from('bookings')
+            .insert([{
+                business_id: bookingData.businessId,
+                resource_id: bookingData.resourceId,
+                specialist_id: bookingData.specialistId || null,
+                start_time: bookingData.startTime,
+                end_time: bookingData.endTime,
+                customer_name: bookingData.customerName?.toUpperCase(),
+                customer_phone: bookingData.customerPhone,
+                customer_email: bookingData.customerEmail || null,
+                status: bookingData.status || 'pending',
+                total_price: bookingData.totalPrice || 0,
+                notes: bookingData.notes || null,
+                metadata: bookingData.metadata || {}
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    /**
+     * Get bookings with new schema
+     * @param {string} businessId - Business ID
+     * @param {Date} startDate - Optional start date filter
+     * @param {Date} endDate - Optional end date filter
+     * @returns {Promise<Array>} List of bookings
+     */
+    async getBookingsV2(businessId, startDate = null, endDate = null) {
+        let query = supabase
+            .from('bookings')
+            .select(`
+                *,
+                resources (id, name, type, sport, category)
+            `)
+            .eq('business_id', businessId)
+            .order('start_time', { ascending: true });
+
+        if (startDate) {
+            query = query.gte('start_time', startDate.toISOString());
+        }
+
+        if (endDate) {
+            query = query.lte('start_time', endDate.toISOString());
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
     }
 }
 

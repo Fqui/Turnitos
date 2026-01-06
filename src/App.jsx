@@ -1,6 +1,10 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion'; // Added AnimatePresence import
+import { NotificationProvider } from './contexts/NotificationContext';
+import Toast from './components/notifications/Toast';
+import ConfirmDialog from './components/notifications/ConfirmDialog';
+import AlertDialog from './components/notifications/AlertDialog';
 import Header from './components/Header';
 import Footer from './components/Footer';
 
@@ -66,6 +70,11 @@ function AppContent() {
       </main>
 
       {!isAdmin && !isLinkBio && <Footer />}
+
+      {/* Notification Components */}
+      <Toast />
+      <ConfirmDialog />
+      <AlertDialog />
     </div>
   );
 }
@@ -73,7 +82,9 @@ function AppContent() {
 export default function App() {
   return (
     <Router>
-      <AppContent />
+      <NotificationProvider>
+        <AppContent />
+      </NotificationProvider>
     </Router>
   );
 }

@@ -45,9 +45,9 @@ export default function DashboardStats({ bookings, viewMode = 'month', currentDa
 
     const stats = {
         pending: filteredBookings.filter(b => b.status === 'pending').length,
-        confirmed: filteredBookings.filter(b => ['confirmed', 'deposit_paid', 'attended'].includes(b.status)).length,
-        completed: filteredBookings.filter(b => b.status === 'completed').length,
-        cancelled: filteredBookings.filter(b => b.status === 'cancelled').length
+        deposit_paid: filteredBookings.filter(b => b.status === 'deposit_paid').length,
+        confirmed: filteredBookings.filter(b => b.status === 'confirmed').length,
+        completed: filteredBookings.filter(b => b.status === 'completed' || b.status === 'attended').length,
     };
 
     const getPeriodLabel = () => {
@@ -162,8 +162,14 @@ export default function DashboardStats({ bookings, viewMode = 'month', currentDa
                     <StatCard
                         title="Pendientes"
                         value={stats.pending}
-                        color="#F59E0B"
+                        color="#9CA3AF"
                         icon="⏳"
+                    />
+                    <StatCard
+                        title="Señados"
+                        value={stats.deposit_paid}
+                        color="#F59E0B"
+                        icon="🎟️"
                     />
                     <StatCard
                         title="Confirmados"
@@ -176,12 +182,6 @@ export default function DashboardStats({ bookings, viewMode = 'month', currentDa
                         value={stats.completed}
                         color="#00E676"
                         icon="🏁"
-                    />
-                    <StatCard
-                        title="Cancelados"
-                        value={stats.cancelled}
-                        color="#FF4444"
-                        icon="❌"
                     />
                 </div>
             )}
