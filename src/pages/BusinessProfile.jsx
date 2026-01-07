@@ -249,34 +249,10 @@ export default function BusinessProfile() {
         }
     }, [business]);
 
-    // Auto-scroll effects
-    useEffect(() => {
-        if (selectedItem && business?.type === 'service' && calendarRef.current) {
-            setTimeout(() => {
-                calendarRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100);
-        }
-    }, [selectedItem, business]);
 
-    // Auto-scroll to time slots only if business is open
-    useEffect(() => {
-        if (selectedDate && timeRef.current) {
-            const { open, close } = getBusinessHours(selectedDate);
-            // Only scroll if the business is open (not 00:00 - 00:00)
-            if (open !== '00:00' || close !== '00:00') {
-                setTimeout(() => {
-                    timeRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-            }
-        }
-    }, [selectedDate]);
-    useEffect(() => {
-        if (selectedTime && confirmRef.current) {
-            setTimeout(() => {
-                confirmRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100);
-        }
-    }, [selectedTime]);
+
+
+
 
     // Theme Management
     useEffect(() => {
@@ -379,30 +355,19 @@ export default function BusinessProfile() {
             style={{ paddingBottom: '80px' }}
         >
             {/* 1. Immersive Hero Section */}
-            <div style={{
-                position: 'relative',
-                height: '240px', // Reduced height for mobile
-                overflow: 'hidden',
-                marginBottom: '-50px'
-            }}>
-                {/* Use motion.img for shared element transition - Using Banner */}
+            {/* Header / Banner */}
+            <div style={{ position: 'relative', height: '40vh', minHeight: '250px', overflow: 'hidden' }}>
                 <motion.img
                     layoutId={`business-image-${business.id}`}
-                    src={business.banner_image || business.banner || business.image}
+                    src={selectedItem?.image || business.banner || business.image}
                     alt={business.name}
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        filter: 'blur(0px)', // Removed blur for better visibility of banner
-                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    transition={{ duration: 0.5, ease: "circOut" }}
                 />
-
-                {/* Gradient Overlay */}
                 <div style={{
                     position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.6))'
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)'
                 }}></div>
 
                 <button
@@ -442,6 +407,7 @@ export default function BusinessProfile() {
                     padding: '24px 20px',
                     boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
                     textAlign: 'center',
+                    marginTop: '-40px',
                     marginBottom: '30px',
                     border: '1px solid var(--border)'
                 }}>
@@ -803,9 +769,6 @@ export default function BusinessProfile() {
                 {/* Step 3: Select Time (For Sport/Service) */}
                 {selectedDate && business.type !== 'venue' && (
                     <section ref={timeRef} style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
-                        <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                            {business.type === 'service' ? '3. Horarios disponibles' : '2. Horarios disponibles'}
-                        </h3>
                         <div style={{
                             backgroundColor: 'var(--bg-card)',
                             padding: '16px',
@@ -940,14 +903,29 @@ export default function BusinessProfile() {
                                 return (
                                     <TimeSlotPicker
                                         selectedTime={selectedTime}
-                                        onTimeSelect={(slot) => {
-                                            if (slot.status === 'blocked') {
-                                                // If strictly blocked/break, we warn the user but allow proceeding (Administrator override)
-                                                // Ideally detailed modal, but for now native confirm is effective to prove interactivity
-                                                const confirmUnlock = window.confirm("Este horario está fuera del rango de atención habitual (Horario Cortado). ¿Deseas seleccionarlo de todas formas para crear una excepción?");
-                                                if (!confirmUnlock) return;
+                                        onTimeSelect={(time, courtId) => {
+                                            // New signature: (time, courtId)
+                                            // time is the selected time slot string (e.g., "14:00")
+                                            // courtId is the selected court's ID (or null if just time selected)
+
+                                            if (courtId) {
+                                                // Full selection: time + court
+                                                const court = resources.find(r => r.id === courtId);
+                                                const courtName = court ? court.name : 'Cancha';
+
+                                                setSelectedTime({
+                                                    time,
+                                                    courtId,
+                                                    courtName
+                                                });
+                                            } else {
+                                                // Just time selected (no court yet)
+                                                setSelectedTime({
+                                                    time,
+                                                    courtId: null,
+                                                    courtName: null
+                                                });
                                             }
-                                            setSelectedTime(slot);
                                         }}
                                         sportColor={primaryColor}
                                         type={business.type}
@@ -1257,6 +1235,7 @@ export default function BusinessProfile() {
                     />
                 )}
             </div>
+
             {/* Image Lightbox with Navigation */}
             <AnimatePresence>
                 {selectedPhotoIndex !== null && (
@@ -1354,7 +1333,8 @@ export default function BusinessProfile() {
                                     ›
                                 </button>
                             </>
-                        )}
+                        )
+                        }
 
                         <motion.img
                             key={selectedPhotoIndex}
@@ -1386,9 +1366,10 @@ export default function BusinessProfile() {
                         }}>
                             {selectedPhotoIndex + 1} / {business.gallery_images.length}
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.div>
+                    </motion.div >
+                )
+                }
+            </AnimatePresence >
+        </motion.div >
     );
 }

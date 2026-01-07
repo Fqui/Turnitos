@@ -1,92 +1,144 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export default function CourtSelector({ selected, onSelect }) {
-    const sports = [
-        {
-            id: 'paddle',
-            name: 'Padel',
-            image: 'https://images.unsplash.com/photo-1626248596308-25297c2338c3?auto=format&fit=crop&q=80&w=500',
-            color: '#00E676'
-        },
-        {
-            id: 'football',
-            name: 'Fútbol',
-            image: 'https://images.unsplash.com/photo-1579952363873-27f3bde9be2d?auto=format&fit=crop&q=80&w=500',
-            color: '#2979FF'
-        }
-    ];
+export default function CourtSelector({
+    availableCourts,
+    selectedCourt,
+    onCourtSelect,
+    timeSlot,
+    sportColor = '#00e676'
+}) {
+    if (!availableCourts || availableCourts.length === 0) {
+        return null;
+    }
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            {sports.map((sport) => {
-                const isSelected = selected === sport.id;
-                return (
-                    <div
-                        key={sport.id}
-                        onClick={() => onSelect(sport.id)}
-                        style={{
-                            position: 'relative',
-                            height: '120px',
-                            borderRadius: '20px',
-                            overflow: 'hidden',
-                            cursor: 'pointer',
-                            border: isSelected ? `3px solid ${sport.color}` : '3px solid transparent',
-                            transition: 'all 0.3s ease',
-                            boxShadow: isSelected ? `0 10px 30px ${sport.color}40` : '0 4px 10px rgba(0,0,0,0.05)',
-                            transform: isSelected ? 'scale(1.02)' : 'scale(1)'
-                        }}
-                    >
-                        {/* Background Image */}
-                        <img
-                            src={sport.image}
-                            alt={sport.name}
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                filter: isSelected ? 'brightness(0.8)' : 'brightness(0.6) grayscale(0.5)'
-                            }}
-                        />
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                style={{ marginBottom: '24px', overflow: 'hidden' }}
+            >
+                <h4 style={{
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    marginBottom: '12px',
+                    color: 'var(--text-primary)'
+                }}>
+                    Canchas disponibles a las {timeSlot}
+                </h4>
 
-                        {/* Content Overlay */}
-                        <div style={{
-                            position: 'absolute',
-                            inset: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexDirection: 'column'
-                        }}>
-                            <h3 style={{
-                                color: '#fff',
-                                fontSize: '20px',
-                                fontWeight: '800',
-                                textShadow: '0 2px 10px rgba(0,0,0,0.5)',
-                                letterSpacing: '0.5px'
-                            }}>
-                                {sport.name}
-                            </h3>
-                            {isSelected && (
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                }}>
+                    {availableCourts.map((court) => {
+                        const isSelected = selectedCourt?.id === court.id;
+
+                        return (
+                            <motion.div
+                                key={court.id}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => onCourtSelect(court)}
+                                style={{
+                                    padding: '16px',
+                                    borderRadius: '16px',
+                                    border: isSelected
+                                        ? `2px solid ${sportColor}`
+                                        : '1px solid var(--border)',
+                                    backgroundColor: isSelected
+                                        ? `${sportColor}10`
+                                        : 'var(--bg-card)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: isSelected
+                                        ? `0 4px 12px ${sportColor}30`
+                                        : '0 2px 8px rgba(0,0,0,0.05)'
+                                }}
+                            >
                                 <div style={{
-                                    width: '24px',
-                                    height: '24px',
-                                    backgroundColor: sport.color,
-                                    borderRadius: '50%',
                                     display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    marginTop: '8px',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
                                 }}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="20 6 9 17 4 12"></polyline>
-                                    </svg>
+                                    <div>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            marginBottom: '4px'
+                                        }}>
+                                            <span style={{ fontSize: '18px' }}>🎾</span>
+                                            <h5 style={{
+                                                fontSize: '16px',
+                                                fontWeight: '700',
+                                                color: 'var(--text-primary)',
+                                                margin: 0
+                                            }}>
+                                                {court.name}
+                                            </h5>
+                                        </div>
+
+                                        {court.features && court.features.length > 0 && (
+                                            <div style={{
+                                                display: 'flex',
+                                                gap: '6px',
+                                                flexWrap: 'wrap',
+                                                marginTop: '8px'
+                                            }}>
+                                                {court.features.map((feature, idx) => (
+                                                    <span
+                                                        key={idx}
+                                                        style={{
+                                                            fontSize: '11px',
+                                                            padding: '4px 8px',
+                                                            borderRadius: '8px',
+                                                            backgroundColor: 'var(--bg-main)',
+                                                            color: 'var(--text-secondary)',
+                                                            fontWeight: '600'
+                                                        }}
+                                                    >
+                                                        {feature}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div style={{
+                                        width: '24px',
+                                        height: '24px',
+                                        borderRadius: '50%',
+                                        border: `2px solid ${isSelected ? sportColor : 'var(--border)'}`,
+                                        backgroundColor: isSelected ? sportColor : 'transparent',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'all 0.2s'
+                                    }}>
+                                        {isSelected && (
+                                            <svg
+                                                width="14"
+                                                height="14"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="black"
+                                                strokeWidth="3"
+                                            >
+                                                <polyline points="20 6 9 17 4 12" />
+                                            </svg>
+                                        )}
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            </motion.div>
+        </AnimatePresence>
     );
 }

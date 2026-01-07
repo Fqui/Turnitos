@@ -1,8 +1,10 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
 
 export default function Header() {
+    const location = useLocation();
+    const isHome = location.pathname === '/';
     // Show preview badge only on Vercel preview URLs or localhost
     const isPreview = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost');
 
@@ -19,7 +21,7 @@ export default function Header() {
                         )}
                     </div>
                 </Link>
-                <ThemeToggle />
+                {isHome && <ThemeToggle />}
             </div>
         </header>
     );

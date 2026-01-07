@@ -14,6 +14,8 @@ const BusinessProfile = lazy(() => import('./pages/BusinessProfile'));
 const LinkBio = lazy(() => import('./pages/LinkBio'));
 const Admin = lazy(() => import('./pages/Admin'));
 const BusinessPortal = lazy(() => import('./pages/BusinessPortal'));
+const Ayuda = lazy(() => import('./pages/Ayuda'));
+const Negocios = lazy(() => import('./pages/Negocios'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -48,7 +50,9 @@ function AppContent() {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const isAdmin = location.pathname.startsWith('/admin') || location.pathname.startsWith('/portal');
-  const isLinkBio = !isAdmin && !isHome && !location.pathname.endsWith('/turnos');
+  // Determine if it's a LinkBio page (e.g. /my-business) but EXCLUDE known public routes
+  const isPublicRoute = ['/', '/ayuda', '/negocios', '/for-business', '/help'].includes(location.pathname) || location.pathname.endsWith('/turnos');
+  const isLinkBio = !isAdmin && !isPublicRoute;
 
   return (
     <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -59,6 +63,9 @@ function AppContent() {
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<Home />} />
+              <Route path="/ayuda" element={<Ayuda />} />
+              <Route path="/negocios" element={<Negocios />} />
+              {/* Keep old routes temporarily for compatibility if needed, or remove them */}
               <Route path="/:businessSlug" element={<LinkBio />} />
               <Route path="/:businessSlug/turnos" element={<BusinessProfile />} />
               <Route path="/admin" element={<Admin />} />

@@ -12,6 +12,7 @@
   --text-primary: #1A1A1A;
   --text-secondary: #555555;
   --border: #E0E0E0;
+  --dot-color: #E0E0E0;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -29,7 +30,7 @@ body {
   overflow-x: hidden;
 
   /* Modern Dot Grid Background */
-  background-image: radial-gradient(#E0E0E0 1.5px, transparent 1.5px);
+  background-image: radial-gradient(var(--dot-color) 1.5px, transparent 1.5px);
   background-size: 24px 24px;
 }
 
@@ -40,9 +41,7 @@ body {
   --text-primary: #FFFFFF;
   --text-secondary: #B0B0B0;
   --border: #333333;
-
-  /* Dark Mode Dot Grid - More subtle */
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px);
+  --dot-color: rgba(255, 255, 255, 0.05);
 }
 
 /* Reset & Base Styles */
@@ -119,5 +118,80 @@ body {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Promotions Hero Responsive Layout */
+.promo-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.promo-image-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.promo-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 24px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.3) 60%, transparent 100%);
+}
+
+.promo-title-mobile {
+  color: white;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.promo-badge {
+  background: rgba(255, 64, 129, 0.9);
+  color: white;
+  box-shadow: 0 4px 10px rgba(255, 64, 129, 0.3);
+}
+
+.promo-business-name {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+@media (min-width: 900px) {
+  .promo-card {
+    flex-direction: row;
+    align-items: center;
+    background: var(--bg-card);
+  }
+
+  .promo-image-container {
+    position: relative;
+    flex: 1.2;
+    height: 100%;
+    inset: auto;
+  }
+
+  .promo-content {
+    flex: 0.8;
+    justify-content: center;
+    background: none;
+    padding: 40px;
+  }
+
+  /* In desktop, override text colors to match theme instead of white */
+  .promo-title-mobile {
+    color: var(--text-primary);
+    text-shadow: none;
+  }
+
+  .promo-business-name {
+    color: var(--text-secondary);
   }
 }

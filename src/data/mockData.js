@@ -1,16 +1,16 @@
 export const categories = [
-    { id: 'padel', name: 'Padel', icon: '🎾', color: '#00E676' },
-    { id: 'futbol', name: 'Fútbol', icon: '⚽', color: '#2979FF' },
+    { id: 'deportes', name: 'Deportes', icon: '⚽', color: '#00E676' },
     { id: 'belleza', name: 'Belleza', icon: '💇‍♀️', color: '#FF4081' },
     { id: 'salud', name: 'Salud', icon: '🩺', color: '#00B0FF' },
-    { id: 'otros', name: 'Otros', icon: '📅', color: '#FFC107' }
+    { id: 'quinchos', name: 'Quinchos', icon: '🍖', color: '#FF5722' },
+    { id: 'mascotas', name: 'Mascotas', icon: '🐶', color: '#795548' }
 ];
 
 export const businesses = [
     {
         id: 'club-padel-central',
         name: 'Club Padel Central',
-        category: 'padel', // Updated category
+        category: 'padel', // Sub-category kept for specific logic if needed, but matches 'deportes' filter
         type: 'sport',
         image: 'https://images.unsplash.com/photo-1626248596308-25297c2338c3?auto=format&fit=crop&q=80&w=1000',
         location: 'Av. Principal 123, La Rioja',
@@ -176,20 +176,43 @@ export const businesses = [
         ]
     },
     {
-        id: 'lavaauto-express',
-        name: 'LavaAuto Express',
-        category: 'otros',
+        id: 'patitas-shop',
+        name: 'Patitas Pet Shop',
+        category: 'mascotas',
         type: 'service',
-        image: 'https://images.unsplash.com/photo-1601362840469-51e4d8d58785?auto=format&fit=crop&q=80&w=1000',
-        location: 'Av. Perón y Facundo Quiroga',
-        rating: 4.4,
-        theme: 'dark',
-        amenities: ['Sala de Espera', 'Wifi', 'Cafetería'],
-        hours: 'Lunes a Sábado: 09:00 - 19:00',
+        image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=1000',
+        location: 'Rivadavia 900, La Rioja',
+        rating: 4.8,
+        theme: 'light',
+        amenities: ['Estacionamiento', 'Pet Friendly', 'Wifi'],
+        hours: 'Lunes a Sábado: 09:00 - 20:00',
         services: [
-            { id: 'l1', name: 'Lavado Completo Auto', duration: 45, price: 8000 },
-            { id: 'l2', name: 'Lavado Completo Camioneta', duration: 60, price: 10000 },
-            { id: 'l3', name: 'Limpieza de Tapizados', duration: 120, price: 25000 }
+            { id: 'p1', name: 'Baño y Corte (Perro Pequeño)', duration: 60, price: 8000 },
+            { id: 'p2', name: 'Baño y Corte (Perro Grande)', duration: 90, price: 12000 },
+            { id: 'p3', name: 'Consulta Veterinaria', duration: 30, price: 6000 }
+        ]
+    },
+    {
+        id: 'quincho-los-amigos',
+        name: 'Quincho Los Amigos',
+        category: 'quincho',
+        type: 'venue',
+        image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=1000', // BBQ/Outdoor area
+        location: 'Av. Los Caudillos 500, La Rioja',
+        rating: 4.8,
+        theme: 'light',
+        amenities: ['Parrilla', 'Pileta', 'Freezer', 'Mesas y Sillas'],
+        hours: 'Lunes a Domingo: 10:00 - 02:00',
+        price_per_hour: 15000,
+        rental_duration_options: [4, 6, 8, 12],
+        additional_services: [
+            { name: 'Limpieza Post-Evento', price: 10000, icon: '🧹' },
+            { name: 'Vajilla Completa', price: 8000, icon: '🍽️' },
+            { name: 'Castillo Inflable', price: 25000, icon: '🏰' }
+        ],
+        gallery_images: [
+            'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=800',
+            'https://images.unsplash.com/photo-1533158326339-dace9271630b?auto=format&fit=crop&q=80&w=800'
         ]
     }
 ];
@@ -217,5 +240,3 @@ export const promotions = [
         image: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&q=80&w=800' // Spa/Massage
     }
 ];
-
-

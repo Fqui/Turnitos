@@ -1,20 +1,72 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { formatDisplayDate } from '../utils/dateUtils';
 
 export default function BookingSummary({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting }) {
-    const [customerName, setCustomerName] = React.useState('');
-    const [customerPhone, setCustomerPhone] = React.useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
+    const [currentStep, setCurrentStep] = useState(1); // 1 = user details, 2 = payment details
+    const [copiedField, setCopiedField] = useState(null);
+
+    // Block body scroll when modal is open
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, []);
 
     if (!bookingDetails) return null;
 
     const { date, time, courtName, serviceName, price } = bookingDetails;
 
-    const handleConfirm = () => {
-        if (!customerName || !customerPhone) {
-            alert('Por favor completa tu nombre y teléfono');
+    // Calculate deposit (50% of total)
+    const depositAmount = Math.round(price * 0.5);
+
+    // Bank details (these should come from business settings in production)
+    const bankDetails = {
+        banco: bookingDetails.businessBank || 'Banco Galicia',
+        titular: bookingDetails.businessAccountHolder || 'Juan Pérez',
+        alias: bookingDetails.businessAlias || 'RESERVAS.CANCHAS',
+        cbu: bookingDetails.businessCBU || '0000003100010234567890'
+    };
+
+    const handleContinue = () => {
+        if (!firstName || !lastName || !customerPhone) {
+            alert('Por favor completa todos los campos');
             return;
         }
+        setCurrentStep(2);
+    };
+
+    const handleConfirmPayment = () => {
+        const customerName = `${firstName} ${lastName}`;
+
+        // Format the WhatsApp message
+        const serviceName = courtName || bookingDetails.serviceName;
+        const formattedDate = formatDisplayDate(date);
+        const message = `Hola, mi nombre es ${customerName}. Reservé ${serviceName}, el día ${formattedDate} a las ${time}. A continuación le envío una captura del comprobante.`;
+
+        // Get business phone (should come from bookingDetails in production)
+        const businessPhone = bookingDetails.businessPhone || '5493804123456'; // Default fallback
+
+        // Open WhatsApp with pre-filled message
+        const whatsappUrl = `https://wa.me/${businessPhone}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+
+        // Also call the original onConfirm to save the booking
         onConfirm({ ...bookingDetails, customerName, customerPhone });
+    };
+
+    const copyToClipboard = async (text, field) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedField(field);
+            setTimeout(() => setCopiedField(null), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
     };
 
     return (
@@ -33,24 +85,25 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             }}
             onClick={onClose}
         >
-            <div
+            <motion.div
                 onClick={(e) => e.stopPropagation()}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
                 style={{
                     backgroundColor: 'var(--bg-card)',
                     borderRadius: '24px',
                     maxWidth: '500px',
                     width: '100%',
                     boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                    overflow: 'hidden',
-                    animation: 'slideUp 0.3s ease',
-                    maxHeight: '90vh',
-                    overflowY: 'auto'
+                    margin: 'auto'
                 }}
+                className="responsive-modal-container"
             >
                 {/* Header */}
                 <div style={{
                     background: `linear-gradient(135deg, ${sportColor}15 0%, ${sportColor}05 100%)`,
-                    padding: '24px',
+                    padding: '16px 20px',
                     borderBottom: '1px solid var(--border)',
                     position: 'relative'
                 }}>
@@ -86,246 +139,576 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                     </button>
 
                     <div style={{ textAlign: 'center' }}>
+                        {/* Step indicator */}
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+                            <div style={{
+                                width: '32px',
+                                height: '4px',
+                                borderRadius: '2px',
+                                backgroundColor: currentStep >= 1 ? sportColor : 'var(--border)',
+                                transition: 'all 0.3s'
+                            }} />
+                            <div style={{
+                                width: '32px',
+                                height: '4px',
+                                borderRadius: '2px',
+                                backgroundColor: currentStep >= 2 ? sportColor : 'var(--border)',
+                                transition: 'all 0.3s'
+                            }} />
+                        </div>
+
                         <h2 style={{
-                            fontSize: '20px',
+                            fontSize: '18px',
                             fontWeight: '800',
                             color: 'var(--text-primary)',
-                            marginBottom: '4px'
+                            marginBottom: '2px'
                         }}>
-                            Confirmar Reserva
+                            {currentStep === 1 ? 'Confirmar Reserva' : 'Datos de Pago'}
                         </h2>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: 0 }}>
-                            Completa tus datos para finalizar
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
+                            {currentStep === 1 ? 'Completa tus datos para continuar' : 'Transferí la seña para confirmar'}
                         </p>
                     </div>
                 </div>
 
-                {/* Content */}
-                <div style={{ padding: '24px' }}>
-                    {/* Details Cards */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-                        {/* Service/Court */}
-                        <div style={{
-                            padding: '12px 16px',
-                            borderRadius: '12px',
-                            backgroundColor: 'var(--bg-main)',
-                            border: '1px solid var(--border)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                        }}>
-                            <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                                {courtName ? 'Cancha' : 'Servicio'}
-                            </span>
-                            <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                {courtName || serviceName}
-                            </span>
-                        </div>
-
-                        {/* Date & Time */}
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <div style={{
-                                flex: 1,
-                                padding: '12px 16px',
-                                borderRadius: '12px',
-                                backgroundColor: 'var(--bg-main)',
-                                border: '1px solid var(--border)'
-                            }}>
-                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Fecha</div>
-                                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                    {formatDisplayDate(date)}
-                                </div>
-                            </div>
-                            <div style={{
-                                flex: 1,
-                                padding: '12px 16px',
-                                borderRadius: '12px',
-                                backgroundColor: 'var(--bg-main)',
-                                border: '1px solid var(--border)'
-                            }}>
-                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Hora</div>
-                                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                    {time}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Price */}
-                        {price && (
-                            <div style={{
-                                padding: '12px 16px',
-                                borderRadius: '12px',
-                                backgroundColor: `${sportColor}10`,
-                                border: `1px solid ${sportColor}30`,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '8px'
-                            }}>
-                                {/* Base Price & Extras Breakdown */}
-                                {bookingDetails.extras && bookingDetails.extras.length > 0 && (
+                {/* Content with AnimatePresence for smooth transitions */}
+                <div className="responsive-modal-content">
+                    <AnimatePresence mode="wait">
+                        {currentStep === 1 ? (
+                            <motion.div
+                                key="step1"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                transition={{ duration: 0.3 }}
+                                style={{ padding: '16px 20px 20px 20px' }}
+                            >
+                                {/* Details Cards */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                                    {/* Service/Court */}
                                     <div style={{
+                                        padding: '12px 16px',
+                                        borderRadius: '12px',
+                                        backgroundColor: 'var(--bg-main)',
+                                        border: '1px solid var(--border)',
                                         display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '4px',
-                                        marginBottom: '8px',
-                                        paddingBottom: '8px',
-                                        borderBottom: `1px dashed ${sportColor}30`
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
                                     }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                            <span>Alquiler base</span>
-                                            <span>${(price - bookingDetails.extras.reduce((sum, e) => sum + e.price, 0)).toLocaleString()}</span>
-                                        </div>
-                                        {bookingDetails.extras.map((extra, idx) => (
-                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                                <span>+ {extra.name}</span>
-                                                <span>${extra.price.toLocaleString()}</span>
-                                            </div>
-                                        ))}
+                                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                                            {courtName ? 'Cancha' : 'Servicio'}
+                                        </span>
+                                        <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                            {courtName || serviceName}
+                                        </span>
                                     </div>
-                                )}
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Total a pagar</span>
-                                    <span style={{ fontSize: '18px', fontWeight: '900', color: sportColor }}>
-                                        ${price.toLocaleString()}
-                                    </span>
+                                    {/* Date & Time */}
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        <div style={{
+                                            flex: 1,
+                                            padding: '12px 16px',
+                                            borderRadius: '12px',
+                                            backgroundColor: 'var(--bg-main)',
+                                            border: '1px solid var(--border)'
+                                        }}>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Fecha</div>
+                                            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                {formatDisplayDate(date)}
+                                            </div>
+                                        </div>
+                                        <div style={{
+                                            flex: 1,
+                                            padding: '12px 16px',
+                                            borderRadius: '12px',
+                                            backgroundColor: 'var(--bg-main)',
+                                            border: '1px solid var(--border)'
+                                        }}>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Hora</div>
+                                            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                {time}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Price with Deposit */}
+                                    {price && (
+                                        <div style={{
+                                            padding: '12px 16px',
+                                            borderRadius: '12px',
+                                            backgroundColor: `${sportColor}10`,
+                                            border: `1px solid ${sportColor}30`,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '8px'
+                                        }}>
+                                            {/* Base Price & Extras Breakdown */}
+                                            {bookingDetails.extras && bookingDetails.extras.length > 0 && (
+                                                <div style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: '4px',
+                                                    marginBottom: '8px',
+                                                    paddingBottom: '8px',
+                                                    borderBottom: `1px dashed ${sportColor}30`
+                                                }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                        <span>Alquiler base</span>
+                                                        <span>${(price - bookingDetails.extras.reduce((sum, e) => sum + e.price, 0)).toLocaleString()}</span>
+                                                    </div>
+                                                    {bookingDetails.extras.map((extra, idx) => (
+                                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                            <span>+ {extra.name}</span>
+                                                            <span>${extra.price.toLocaleString()}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Total a pagar</span>
+                                                <span style={{ fontSize: '18px', fontWeight: '900', color: sportColor }}>
+                                                    ${price.toLocaleString()}
+                                                </span>
+                                            </div>
+
+                                            {/* Deposit Amount */}
+                                            <div style={{
+                                                paddingTop: '8px',
+                                                borderTop: `1px dashed ${sportColor}30`,
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center'
+                                            }}>
+                                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Seña (50%)</span>
+                                                <span style={{ fontSize: '16px', fontWeight: '700', color: sportColor }}>
+                                                    ${depositAmount.toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+
+                                {/* User Inputs */}
+                                <div style={{ marginBottom: '16px' }}>
+                                    {/* Name Fields - Side by Side */}
+                                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                                Nombre
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={firstName}
+                                                onChange={(e) => setFirstName(e.target.value)}
+                                                placeholder="Ej: Juan"
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px 16px',
+                                                    borderRadius: '12px',
+                                                    border: '1px solid var(--border)',
+                                                    backgroundColor: 'var(--bg-main)',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '16px',
+                                                    outline: 'none'
+                                                }}
+                                            />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                                Apellido
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={lastName}
+                                                onChange={(e) => setLastName(e.target.value)}
+                                                placeholder="Ej: Pérez"
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px 16px',
+                                                    borderRadius: '12px',
+                                                    border: '1px solid var(--border)',
+                                                    backgroundColor: 'var(--bg-main)',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '16px',
+                                                    outline: 'none'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                        Teléfono
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={customerPhone}
+                                        onChange={(e) => setCustomerPhone(e.target.value)}
+                                        placeholder="Ej: 3804123456"
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 16px',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--border)',
+                                            backgroundColor: 'var(--bg-main)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '16px',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button
+                                        onClick={onClose}
+                                        style={{
+                                            flex: 1,
+                                            padding: '16px',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--border)',
+                                            backgroundColor: 'transparent',
+                                            color: 'var(--text-secondary)',
+                                            fontSize: '16px',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = 'var(--bg-main)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                        }}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleContinue}
+                                        disabled={!firstName || !lastName || !customerPhone}
+                                        style={{
+                                            flex: 2,
+                                            padding: '16px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            backgroundColor: (!firstName || !lastName || !customerPhone) ? '#9E9E9E' : sportColor,
+                                            color: '#fff',
+                                            fontSize: '16px',
+                                            fontWeight: '700',
+                                            cursor: (!firstName || !lastName || !customerPhone) ? 'not-allowed' : 'pointer',
+                                            opacity: 1,
+                                            boxShadow: (!firstName || !lastName || !customerPhone) ? 'none' : `0 8px 20px ${sportColor}40`,
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (firstName && lastName && customerPhone) {
+                                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                                e.currentTarget.style.boxShadow = `0 12px 28px ${sportColor}50`;
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (firstName && lastName && customerPhone) {
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.boxShadow = `0 8px 20px ${sportColor}40`;
+                                            }
+                                        }}
+                                    >
+                                        Continuar
+                                    </button>
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="step2"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.3 }}
+                                style={{ padding: '16px 20px 20px 20px' }}
+                            >
+                                {/* Payment Instructions */}
+                                <div style={{ marginBottom: '12px', textAlign: 'center' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                        Transferí la seña
+                                    </h3>
+                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                                        Realizá la transferencia por <strong>${depositAmount.toLocaleString()}</strong> a los siguientes datos
+                                    </p>
+                                </div>
+
+                                {/* Bank Details */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                                    {/* Banco & Titular Row - Responsive */}
+                                    <div className="responsive-bank-row">
+                                        {/* Banco */}
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                                                Banco
+                                            </label>
+                                            <div style={{
+                                                padding: '10px 12px',
+                                                borderRadius: '10px',
+                                                backgroundColor: 'var(--bg-main)',
+                                                border: '1px solid var(--border)',
+                                                fontSize: '14px',
+                                                fontWeight: '600',
+                                                color: 'var(--text-primary)',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }}>
+                                                {bankDetails.banco}
+                                            </div>
+                                        </div>
+
+                                        {/* Titular */}
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                                                Titular
+                                            </label>
+                                            <div style={{
+                                                padding: '10px 12px',
+                                                borderRadius: '10px',
+                                                backgroundColor: 'var(--bg-main)',
+                                                border: '1px solid var(--border)',
+                                                fontSize: '14px',
+                                                fontWeight: '600',
+                                                color: 'var(--text-primary)',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }}>
+                                                {bankDetails.titular}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Alias */}
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                                            Alias
+                                        </label>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <div style={{
+                                                flex: 1,
+                                                padding: '12px 16px',
+                                                borderRadius: '12px',
+                                                backgroundColor: 'var(--bg-main)',
+                                                border: '1px solid var(--border)',
+                                                fontSize: '16px',
+                                                fontWeight: '600',
+                                                color: 'var(--text-primary)',
+                                                fontFamily: 'monospace'
+                                            }}>
+                                                {bankDetails.alias}
+                                            </div>
+                                            <button
+                                                onClick={() => copyToClipboard(bankDetails.alias, 'alias')}
+                                                style={{
+                                                    padding: '10px 12px',
+                                                    borderRadius: '10px',
+                                                    border: '1px solid var(--border)',
+                                                    backgroundColor: copiedField === 'alias' ? `${sportColor}15` : 'var(--bg-card)',
+                                                    color: copiedField === 'alias' ? sportColor : 'var(--text-primary)',
+                                                    fontSize: '13px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    minWidth: '80px'
+                                                }}
+                                            >
+                                                {copiedField === 'alias' ? '✓ Copiado' : 'Copiar'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* CBU */}
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                                            CBU
+                                        </label>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <div style={{
+                                                flex: 1,
+                                                padding: '12px 16px',
+                                                borderRadius: '12px',
+                                                backgroundColor: 'var(--bg-main)',
+                                                border: '1px solid var(--border)',
+                                                fontSize: '16px',
+                                                fontWeight: '600',
+                                                color: 'var(--text-primary)',
+                                                fontFamily: 'monospace'
+                                            }}>
+                                                {bankDetails.cbu}
+                                            </div>
+                                            <button
+                                                onClick={() => copyToClipboard(bankDetails.cbu, 'cbu')}
+                                                style={{
+                                                    padding: '10px 12px',
+                                                    borderRadius: '10px',
+                                                    border: '1px solid var(--border)',
+                                                    backgroundColor: copiedField === 'cbu' ? `${sportColor}15` : 'var(--bg-card)',
+                                                    color: copiedField === 'cbu' ? sportColor : 'var(--text-primary)',
+                                                    fontSize: '13px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    minWidth: '80px'
+                                                }}
+                                            >
+                                                {copiedField === 'cbu' ? '✓ Copiado' : 'Copiar'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Important Note */}
+                                <div style={{
+                                    padding: '8px 12px',
+                                    borderRadius: '10px',
+                                    backgroundColor: `${sportColor}10`,
+                                    border: `1px solid ${sportColor}30`,
+                                    marginBottom: '12px'
+                                }}>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
+                                        <strong style={{ color: sportColor }}>Importante:</strong> Copiá el Alias o CBU, realizá la transferencia por <strong>${depositAmount.toLocaleString()}</strong> y luego presioná "Confirmar Reserva" para enviar el comprobante por WhatsApp.
+                                    </p>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button
+                                        onClick={() => setCurrentStep(1)}
+                                        disabled={isSubmitting}
+                                        style={{
+                                            flex: 1,
+                                            padding: '16px',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--border)',
+                                            backgroundColor: 'transparent',
+                                            color: 'var(--text-secondary)',
+                                            fontSize: '16px',
+                                            fontWeight: '600',
+                                            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                            opacity: isSubmitting ? 0.5 : 1,
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isSubmitting) {
+                                                e.currentTarget.style.backgroundColor = 'var(--bg-main)';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isSubmitting) {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }
+                                        }}
+                                    >
+                                        Volver
+                                    </button>
+                                    <button
+                                        onClick={handleConfirmPayment}
+                                        disabled={isSubmitting}
+                                        style={{
+                                            flex: 2,
+                                            padding: '16px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            backgroundColor: isSubmitting ? '#9E9E9E' : sportColor,
+                                            color: '#fff',
+                                            fontSize: '16px',
+                                            fontWeight: '700',
+                                            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                            opacity: 1,
+                                            boxShadow: isSubmitting ? 'none' : `0 8px 20px ${sportColor}40`,
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isSubmitting) {
+                                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                                e.currentTarget.style.boxShadow = `0 12px 28px ${sportColor}50`;
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isSubmitting) {
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.boxShadow = `0 8px 20px ${sportColor}40`;
+                                            }
+                                        }}
+                                    >
+                                        {isSubmitting ? (
+                                            <>
+                                                <span style={{
+                                                    width: '16px',
+                                                    height: '16px',
+                                                    border: '2px solid #fff',
+                                                    borderTopColor: 'transparent',
+                                                    borderRadius: '50%',
+                                                    animation: 'spin 0.6s linear infinite'
+                                                }}></span>
+                                                Procesando...
+                                            </>
+                                        ) : (
+                                            'Confirmar Reserva'
+                                        )}
+                                    </button>
+                                </div>
+                            </motion.div>
                         )}
-                    </div>
-
-                    {/* User Inputs */}
-                    <div style={{ marginBottom: '24px' }}>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                            Nombre completo
-                        </label>
-                        <input
-                            type="text"
-                            value={customerName}
-                            onChange={(e) => setCustomerName(e.target.value)}
-                            placeholder="Ej: Juan Pérez"
-                            style={{
-                                width: '100%',
-                                padding: '12px 16px',
-                                borderRadius: '12px',
-                                border: '1px solid var(--border)',
-                                backgroundColor: 'var(--bg-main)',
-                                color: 'var(--text-primary)',
-                                fontSize: '16px',
-                                marginBottom: '16px',
-                                outline: 'none'
-                            }}
-                        />
-
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                            Teléfono
-                        </label>
-                        <input
-                            type="tel"
-                            value={customerPhone}
-                            onChange={(e) => setCustomerPhone(e.target.value)}
-                            placeholder="Ej: 3804123456"
-                            style={{
-                                width: '100%',
-                                padding: '12px 16px',
-                                borderRadius: '12px',
-                                border: '1px solid var(--border)',
-                                backgroundColor: 'var(--bg-main)',
-                                color: 'var(--text-primary)',
-                                fontSize: '16px',
-                                outline: 'none'
-                            }}
-                        />
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                        <button
-                            onClick={onClose}
-                            disabled={isSubmitting}
-                            style={{
-                                flex: 1,
-                                padding: '16px',
-                                borderRadius: '12px',
-                                border: '1px solid var(--border)',
-                                backgroundColor: 'transparent',
-                                color: 'var(--text-secondary)',
-                                fontSize: '16px',
-                                fontWeight: '600',
-                                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                                opacity: isSubmitting ? 0.5 : 1,
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!isSubmitting) {
-                                    e.currentTarget.style.backgroundColor = 'var(--bg-main)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!isSubmitting) {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                }
-                            }}
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            onClick={handleConfirm}
-                            disabled={isSubmitting || !customerName || !customerPhone}
-                            style={{
-                                flex: 2,
-                                padding: '16px',
-                                borderRadius: '12px',
-                                border: 'none',
-                                backgroundColor: (isSubmitting || !customerName || !customerPhone) ? '#9E9E9E' : sportColor,
-                                color: '#fff',
-                                fontSize: '16px',
-                                fontWeight: '700',
-                                cursor: (isSubmitting || !customerName || !customerPhone) ? 'not-allowed' : 'pointer',
-                                opacity: 1,
-                                boxShadow: (isSubmitting || !customerName || !customerPhone) ? 'none' : `0 8px 20px ${sportColor}40`,
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px'
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!isSubmitting && customerName && customerPhone) {
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = `0 12px 28px ${sportColor}50`;
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!isSubmitting && customerName && customerPhone) {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = `0 8px 20px ${sportColor}40`;
-                                }
-                            }}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <span style={{
-                                        width: '16px',
-                                        height: '16px',
-                                        border: '2px solid #fff',
-                                        borderTopColor: 'transparent',
-                                        borderRadius: '50%',
-                                        animation: 'spin 0.6s linear infinite'
-                                    }}></span>
-                                    Procesando...
-                                </>
-                            ) : (
-                                'Confirmar Reserva'
-                            )}
-                        </button>
-                    </div>
+                    </AnimatePresence>
                 </div>
-            </div>
+            </motion.div>
 
             <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
                 @keyframes spin {
                     to { transform: rotate(360deg); }
+                }
+
+                /* Mobile First Styles */
+                .responsive-modal-container {
+                    max-height: 90vh;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                }
+
+                .responsive-modal-content {
+                    overflow-y: auto;
+                    flex: 1;
+                    -webkit-overflow-scrolling: touch;
+                }
+
+                .responsive-bank-row {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                /* Desktop Styles */
+                @media (min-width: 768px) {
+                    .responsive-modal-container {
+                        max-height: none;
+                        display: block;
+                        overflow: visible;
+                    }
+                    
+                    .responsive-modal-content {
+                        overflow-y: visible;
+                        flex: none;
+                    }
+                    
+                    .responsive-bank-row {
+                        flex-direction: row;
+                        align-items: center;
+                    }
                 }
             `}</style>
         </div>
