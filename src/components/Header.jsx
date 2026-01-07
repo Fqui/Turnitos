@@ -7,7 +7,7 @@ export default function Header() {
     const isPreview = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost');
 
     return (
-        <header style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+        <header style={{ padding: '20px 0' }}>
             <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '-1px' }}>
