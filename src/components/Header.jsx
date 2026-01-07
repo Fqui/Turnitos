@@ -7,7 +7,7 @@ export default function Header() {
             <div className="container" style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
                 <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '-1px' }}>
-                        Turnitos<span style={{ color: 'var(--primary-paddle)' }}>LR</span>
+                        Turnitos<span style={{ color: 'var(--primary-paddle)' }}>LR</span> <span style={{ color: '#FFD700', fontSize: '0.6em', verticalAlign: 'middle', marginLeft: '5px' }}>(PREVIEW)</span>
                     </div>
                 </Link>
             </div>
