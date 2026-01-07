@@ -2,7 +2,7 @@ export const categories = [
     { id: 'deportes', name: 'Deportes', icon: '⚽', color: '#00E676' },
     { id: 'belleza', name: 'Belleza', icon: '💇‍♀️', color: '#FF4081' },
     { id: 'salud', name: 'Salud', icon: '🩺', color: '#00B0FF' },
-    { id: 'quinchos', name: 'Quinchos', icon: '🍖', color: '#FF5722' },
+    { id: 'quinchos', name: 'Quinchos', icon: '🏡', color: '#FF5722' },
     { id: 'mascotas', name: 'Mascotas', icon: '🐶', color: '#795548' }
 ];
 
