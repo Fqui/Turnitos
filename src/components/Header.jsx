@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import ThemeToggle from './ThemeToggle';
 
 export default function Header() {
     // Show preview badge only on Vercel preview URLs or localhost
@@ -7,7 +8,7 @@ export default function Header() {
 
     return (
         <header style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
-            <div className="container" style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+            <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '-1px' }}>
                         Turnitos<span style={{ color: 'var(--primary-paddle)' }}>LR</span>
@@ -18,6 +19,7 @@ export default function Header() {
                         )}
                     </div>
                 </Link>
+                <ThemeToggle />
             </div>
         </header>
     );
