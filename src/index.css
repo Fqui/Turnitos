@@ -40,9 +40,9 @@ body {
   --text-primary: #FFFFFF;
   --text-secondary: #B0B0B0;
   --border: #333333;
-  
-  /* Dark Mode Dot Grid */
-  background-image: radial-gradient(#333333 1.5px, transparent 1.5px);
+
+  /* Dark Mode Dot Grid - More subtle */
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px);
 }
 
 /* Reset & Base Styles */
