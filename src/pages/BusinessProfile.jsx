@@ -304,13 +304,14 @@ export default function BusinessProfile() {
         return () => {
             const root = document.documentElement;
             const body = document.body;
-            root.style.setProperty('--bg-main', '#F5F7FA');
-            root.style.setProperty('--bg-card', '#FFFFFF');
-            root.style.setProperty('--text-primary', '#1A1A1A');
-            root.style.setProperty('--text-secondary', '#4A4A4A');
-            root.style.setProperty('--border', '#E0E0E0');
-            // Reset to default light mode background
-            body.style.backgroundImage = 'radial-gradient(#E0E0E0 1.5px, transparent 1.5px)';
+
+            // Remove overrides to let global CSS take over based on data-theme
+            root.style.removeProperty('--bg-main');
+            root.style.removeProperty('--bg-card');
+            root.style.removeProperty('--text-primary');
+            root.style.removeProperty('--text-secondary');
+            root.style.removeProperty('--border');
+            body.style.removeProperty('background-image');
         };
     }, [business]);
 
