@@ -45,6 +45,23 @@ export default function PromotionsHero({ promotions, businesses }) {
     const currentPromo = promotions[currentIndex];
     const business = businesses.find(b => b.id === currentPromo.business_id);
 
+    const handleNext = () => {
+        setCurrentIndex((prev) => (prev + 1) % promotions.length);
+    };
+
+    const handlePrev = () => {
+        setCurrentIndex((prev) => (prev - 1 + promotions.length) % promotions.length);
+    };
+
+    const handleDragEnd = (event, info) => {
+        const threshold = 50;
+        if (info.offset.x > threshold) {
+            handlePrev();
+        } else if (info.offset.x < -threshold) {
+            handleNext();
+        }
+    };
+
     return (
         <section style={{ marginBottom: '40px', position: 'relative' }}>
             <div style={{
@@ -61,12 +78,17 @@ export default function PromotionsHero({ promotions, businesses }) {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.4 }}
-                        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+                        drag={window.innerWidth <= 768 ? "x" : false}
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.2}
+                        onDragEnd={handleDragEnd}
+                        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, cursor: window.innerWidth <= 768 ? 'grab' : 'pointer' }}
+                        whileDrag={{ cursor: 'grabbing' }}
                     >
                         <Link
                             to={`/${generateSlug(business?.name || '')}/turnos`}
                             state={{ business }}
-                            style={{ textDecoration: 'none', display: 'block', height: '100%' }}
+                            style={{ textDecoration: 'none', display: 'block', height: '100%', pointerEvents: window.innerWidth <= 768 ? 'none' : 'auto' }}
                         >
                             <div className="promo-card">
                                 {/* Image Section (Background on Mobile, Right Side on Desktop) */}
@@ -128,6 +150,78 @@ export default function PromotionsHero({ promotions, businesses }) {
                         </Link>
                     </motion.div>
                 </AnimatePresence>
+
+                {/* Navigation Arrows - Desktop Only */}
+                {window.innerWidth > 768 && promotions.length > 1 && (
+                    <>
+                        <button
+                            onClick={handlePrev}
+                            style={{
+                                position: 'absolute',
+                                left: '20px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '50%',
+                                background: 'rgba(255, 255, 255, 0.9)',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '20px',
+                                zIndex: 10,
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                transition: 'all 0.2s',
+                                backdropFilter: 'blur(10px)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
+                                e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+                                e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                            }}
+                        >
+                            ‹
+                        </button>
+                        <button
+                            onClick={handleNext}
+                            style={{
+                                position: 'absolute',
+                                right: '20px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '50%',
+                                background: 'rgba(255, 255, 255, 0.9)',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '20px',
+                                zIndex: 10,
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                transition: 'all 0.2s',
+                                backdropFilter: 'blur(10px)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
+                                e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+                                e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                            }}
+                        >
+                            ›
+                        </button>
+                    </>
+                )}
 
                 {/* Indicators */}
                 <div style={{

@@ -772,6 +772,77 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         >
                             {saving ? 'Guardando...' : 'Guardar Información General'}
                         </button>
+
+                        <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+                            <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                                Redes Sociales
+                            </h4>
+                            <div style={{ display: 'grid', gap: '16px' }}>
+                                <div>
+                                    <label style={labelStyle}>Instagram</label>
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        placeholder="@usuario"
+                                        value={formData.instagram ?? ''}
+                                        onChange={(e) => handleInputChange('instagram', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>TikTok</label>
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        placeholder="@usuario"
+                                        value={formData.tiktok ?? ''}
+                                        onChange={(e) => handleInputChange('tiktok', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Facebook</label>
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        placeholder="@usuario o URL"
+                                        value={formData.facebook ?? ''}
+                                        onChange={(e) => handleInputChange('facebook', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>WhatsApp</label>
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        placeholder="+54911..."
+                                        value={formData.whatsapp ?? ''}
+                                        onChange={(e) => handleInputChange('whatsapp', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Sitio Web</label>
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        placeholder="https://..."
+                                        value={formData.website ?? ''}
+                                        onChange={(e) => handleInputChange('website', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => handleSave({
+                                    instagram: formData.instagram,
+                                    tiktok: formData.tiktok,
+                                    facebook: formData.facebook,
+                                    whatsapp: formData.whatsapp,
+                                    website: formData.website
+                                })}
+                                style={{ ...saveButtonStyle, marginTop: '16px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                                disabled={saving}
+                            >
+                                {saving ? 'Guardando...' : 'Guardar Redes Sociales'}
+                            </button>
+                        </div>
                     </div>
                 );
 

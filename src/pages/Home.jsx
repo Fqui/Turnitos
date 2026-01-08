@@ -387,7 +387,8 @@ export default function Home() {
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                        gap: '16px'
+                        gap: '16px',
+                        justifyContent: window.innerWidth > 768 ? 'center' : 'flex-start'
                     }}>
                         <motion.button
                             whileHover={{ scale: 1.05 }}
