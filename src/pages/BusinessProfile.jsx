@@ -569,10 +569,7 @@ export default function BusinessProfile() {
                         if (highlights.length === 0) return null;
 
                         return (
-                            <div id="galeria" style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
-                                <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                                    📸 Nuestros Trabajos
-                                </h3>
+                            <div id="galeria" style={{ marginBottom: '20px', animation: 'slideUp 0.4s ease' }}>
                                 {/* Highlights carousel */}
                                 <div style={{
                                     display: 'flex',

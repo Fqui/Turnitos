@@ -21,11 +21,9 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
             {categories.length > 2 && (
                 <div style={{
                     display: 'flex',
+                    flexWrap: 'wrap',
                     gap: '10px',
-                    marginBottom: '20px',
-                    overflowX: 'auto',
-                    paddingBottom: '4px',
-                    scrollbarWidth: 'none' // Hide scrollbar for cleaner look
+                    marginBottom: '20px'
                 }}>
                     {categories.map(cat => (
                         <button
