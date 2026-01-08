@@ -41,6 +41,7 @@ export default function BusinessProfile() {
     const [selectedDuration, setSelectedDuration] = useState(null);
     // Gallery state
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
+    const [selectedHighlight, setSelectedHighlight] = useState(null); // Which highlight category is open
 
     // Refs for auto-scrolling
     const calendarRef = useRef(null);
@@ -356,7 +357,12 @@ export default function BusinessProfile() {
         >
             {/* 1. Immersive Hero Section */}
             {/* Header / Banner */}
-            <div style={{ position: 'relative', height: '40vh', minHeight: '250px', overflow: 'hidden' }}>
+            <div style={{
+                position: 'relative',
+                height: window.innerWidth <= 768 ? '25vh' : '40vh',
+                minHeight: window.innerWidth <= 768 ? '180px' : '250px',
+                overflow: 'hidden'
+            }}>
                 <motion.img
                     layoutId={`business-image-${business.id}`}
                     src={selectedItem?.image || business.banner || business.image}
@@ -544,33 +550,106 @@ export default function BusinessProfile() {
 
                 </div>
 
-                {/* Work Gallery */}
-                {business.gallery_images && business.gallery_images.length > 0 && (
-                    <div id="galeria" style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
-                        <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                            📸 Nuestra Galería
-                        </h3>
-                        <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: '10px', display: 'flex', gap: '12px' }}>
-                            {business.gallery_images.map((img, index) => (
-                                <img
-                                    key={index}
-                                    src={img}
-                                    alt={`Gallery ${index}`}
-                                    onClick={() => setSelectedPhotoIndex(index)}
-                                    style={{
-                                        width: '280px',
-                                        height: '180px',
-                                        objectFit: 'cover',
-                                        borderRadius: '12px',
-                                        flexShrink: 0,
-                                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-                                        border: '1px solid var(--border)',
-                                        cursor: 'pointer'
-                                    }}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                {/* Instagram-Style Highlights - Only for Service Businesses */}
+                {business.type === 'service' && (
+                    (() => {
+                        // Use gallery_highlights if available, otherwise convert gallery_images
+                        const highlights = business.gallery_highlights && business.gallery_highlights.length > 0
+                            ? business.gallery_highlights
+                            : (business.gallery_images && business.gallery_images.length > 0
+                                ? [{
+                                    id: 'legacy_gallery',
+                                    title: 'Galería',
+                                    cover_image: business.gallery_images[0],
+                                    images: business.gallery_images,
+                                    order: 0
+                                }]
+                                : []);
+
+                        if (highlights.length === 0) return null;
+
+                        return (
+                            <div id="galeria" style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
+                                <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                                    📸 Nuestros Trabajos
+                                </h3>
+                                {/* Highlights carousel */}
+                                <div style={{
+                                    display: 'flex',
+                                    overflowX: 'auto',
+                                    gap: '16px',
+                                    paddingBottom: '10px',
+                                    scrollSnapType: 'x mandatory',
+                                    WebkitOverflowScrolling: 'touch'
+                                }}>
+                                    {highlights.map((highlight, index) => (
+                                        <div
+                                            key={highlight.id || index}
+                                            onClick={() => {
+                                                setSelectedPhotoIndex(0);
+                                                setSelectedHighlight(index);
+                                            }}
+                                            style={{
+                                                flexShrink: 0,
+                                                scrollSnapAlign: 'start',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}
+                                        >
+                                            {/* Circular thumbnail with gradient border */}
+                                            <div style={{
+                                                width: '90px',
+                                                height: '90px',
+                                                borderRadius: '50%',
+                                                padding: '3px',
+                                                background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                                <div style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    borderRadius: '50%',
+                                                    padding: '3px',
+                                                    background: 'var(--bg-card)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    <img
+                                                        src={highlight.cover_image || highlight.images[0]}
+                                                        alt={highlight.title}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover',
+                                                            borderRadius: '50%'
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            {/* Highlight title */}
+                                            <span style={{
+                                                fontSize: '12px',
+                                                color: 'var(--text-secondary)',
+                                                maxWidth: '90px',
+                                                textAlign: 'center',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap'
+                                            }}>
+                                                {highlight.title}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()
                 )}
 
                 {/* 3. Booking Flow Steps */}
@@ -718,6 +797,16 @@ export default function BusinessProfile() {
                                 setSelectedItem(service);
                                 setSelectedDate(null);
                                 setSelectedTime(null);
+
+                                // Auto-scroll to calendar on mobile
+                                setTimeout(() => {
+                                    if (window.innerWidth <= 768 && calendarRef.current) {
+                                        calendarRef.current.scrollIntoView({
+                                            behavior: 'smooth',
+                                            block: 'start'
+                                        });
+                                    }
+                                }, 100);
                             }}
                             color={primaryColor}
                         />
@@ -1247,140 +1336,200 @@ export default function BusinessProfile() {
                 )}
             </div>
 
-            {/* Image Lightbox with Navigation */}
+            {/* Instagram-Style Highlight Viewer */}
             <AnimatePresence>
-                {selectedPhotoIndex !== null && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            backgroundColor: 'rgba(0,0,0,0.92)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 2000,
-                            padding: '20px'
-                        }}
-                        onClick={() => setSelectedPhotoIndex(null)}
-                    >
-                        {/* Close Button */}
-                        <button
-                            style={{
-                                position: 'absolute',
-                                top: '24px',
-                                right: '24px',
-                                background: 'white',
-                                border: 'none',
-                                borderRadius: '50%',
-                                width: '44px',
-                                height: '44px',
-                                cursor: 'pointer',
-                                fontSize: '24px',
-                                color: 'black',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                                zIndex: 2001
-                            }}
-                        >
-                            ×
-                        </button>
+                {selectedHighlight !== null && selectedPhotoIndex !== null && business && (
+                    (() => {
+                        // Use same fallback logic as carousel
+                        const highlights = business.gallery_highlights && business.gallery_highlights.length > 0
+                            ? business.gallery_highlights
+                            : (business.gallery_images && business.gallery_images.length > 0
+                                ? [{
+                                    id: 'legacy_gallery',
+                                    title: 'Galería',
+                                    cover_image: business.gallery_images[0],
+                                    images: business.gallery_images,
+                                    order: 0
+                                }]
+                                : []);
 
-                        {/* Navigation Buttons */}
-                        {business.gallery_images.length > 1 && (
-                            <>
+                        const highlight = highlights[selectedHighlight];
+                        if (!highlight) return null;
+
+                        const images = highlight.images || [];
+                        const totalImages = images.length;
+
+                        return (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                style={{
+                                    position: 'fixed',
+                                    inset: 0,
+                                    backgroundColor: 'rgba(0,0,0,0.95)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 2000
+                                }}
+                                onClick={() => {
+                                    setSelectedPhotoIndex(null);
+                                    setSelectedHighlight(null);
+                                }}
+                            >
+                                {/* Instagram-style progress bars */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '20px',
+                                    left: '20px',
+                                    right: '20px',
+                                    display: 'flex',
+                                    gap: '4px',
+                                    zIndex: 2002
+                                }}>
+                                    {images.map((_, index) => (
+                                        <div
+                                            key={index}
+                                            style={{
+                                                flex: 1,
+                                                height: '3px',
+                                                borderRadius: '2px',
+                                                background: index <= selectedPhotoIndex
+                                                    ? 'white'
+                                                    : 'rgba(255,255,255,0.3)',
+                                                transition: 'background 0.3s'
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Close Button */}
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setSelectedPhotoIndex((prev) => (prev > 0 ? prev - 1 : business.gallery_images.length - 1));
+                                        setSelectedPhotoIndex(null);
+                                        setSelectedHighlight(null);
                                     }}
                                     style={{
                                         position: 'absolute',
-                                        left: '20px',
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.2)',
-                                        borderRadius: '50%',
-                                        width: '50px',
-                                        height: '50px',
-                                        color: 'white',
-                                        fontSize: '24px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        backdropFilter: 'blur(5px)',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    ‹
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedPhotoIndex((prev) => (prev < business.gallery_images.length - 1 ? prev + 1 : 0));
-                                    }}
-                                    style={{
-                                        position: 'absolute',
+                                        top: '50px',
                                         right: '20px',
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        background: 'rgba(255,255,255,0.2)',
+                                        border: 'none',
                                         borderRadius: '50%',
-                                        width: '50px',
-                                        height: '50px',
-                                        color: 'white',
-                                        fontSize: '24px',
+                                        width: '40px',
+                                        height: '40px',
                                         cursor: 'pointer',
+                                        fontSize: '24px',
+                                        color: 'white',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        backdropFilter: 'blur(5px)',
-                                        transition: 'all 0.2s'
+                                        backdropFilter: 'blur(10px)',
+                                        zIndex: 2002
                                     }}
                                 >
-                                    ›
+                                    ×
                                 </button>
-                            </>
-                        )
-                        }
 
-                        <motion.img
-                            key={selectedPhotoIndex}
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            src={business.gallery_images[selectedPhotoIndex]}
-                            alt="Detailed view"
-                            style={{
-                                maxWidth: '100%',
-                                maxHeight: '85vh',
-                                borderRadius: '16px',
-                                boxShadow: '0 0 50px rgba(0,0,0,0.5)',
-                                objectFit: 'contain'
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                        />
+                                {/* Highlight title */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '50px',
+                                    left: '20px',
+                                    color: 'white',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    zIndex: 2002
+                                }}>
+                                    {highlight.title}
+                                </div>
 
-                        {/* Image Counter */}
-                        <div style={{
-                            position: 'absolute',
-                            bottom: '30px',
-                            color: 'white',
-                            fontSize: '14px',
-                            background: 'rgba(0,0,0,0.5)',
-                            padding: '6px 16px',
-                            borderRadius: '20px',
-                            backdropFilter: 'blur(10px)'
-                        }}>
-                            {selectedPhotoIndex + 1} / {business.gallery_images.length}
-                        </div>
-                    </motion.div >
-                )
-                }
-            </AnimatePresence >
+                                {/* Navigation areas (left/right tap zones) */}
+                                <div
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedPhotoIndex((prev) =>
+                                            prev > 0 ? prev - 1 : totalImages - 1
+                                        );
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: '30%',
+                                        cursor: 'pointer',
+                                        zIndex: 2001
+                                    }}
+                                />
+                                <div
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const nextIndex = selectedPhotoIndex + 1;
+                                        if (nextIndex >= totalImages) {
+                                            // Move to next highlight or close
+                                            if (selectedHighlight < highlights.length - 1) {
+                                                setSelectedHighlight(selectedHighlight + 1);
+                                                setSelectedPhotoIndex(0);
+                                            } else {
+                                                setSelectedPhotoIndex(null);
+                                                setSelectedHighlight(null);
+                                            }
+                                        } else {
+                                            setSelectedPhotoIndex(nextIndex);
+                                        }
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        right: 0,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: '70%',
+                                        cursor: 'pointer',
+                                        zIndex: 2001
+                                    }}
+                                />
+
+                                {/* Current image */}
+                                <motion.img
+                                    key={`${selectedHighlight}-${selectedPhotoIndex}`}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    transition={{ duration: 0.2 }}
+                                    src={images[selectedPhotoIndex]}
+                                    alt={`${highlight.title} - ${selectedPhotoIndex + 1}`}
+                                    style={{
+                                        maxWidth: '90%',
+                                        maxHeight: '80vh',
+                                        borderRadius: '8px',
+                                        objectFit: 'contain',
+                                        pointerEvents: 'none'
+                                    }}
+                                />
+
+                                {/* Image counter */}
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '30px',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    background: 'rgba(0,0,0,0.5)',
+                                    padding: '6px 16px',
+                                    borderRadius: '20px',
+                                    backdropFilter: 'blur(10px)',
+                                    zIndex: 2002
+                                }}>
+                                    {selectedPhotoIndex + 1} / {totalImages}
+                                </div>
+                            </motion.div>
+                        );
+                    })()
+                )}
+            </AnimatePresence>
         </motion.div >
     );
 }

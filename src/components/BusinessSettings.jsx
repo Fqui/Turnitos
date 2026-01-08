@@ -15,13 +15,21 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [subscription, setSubscription] = useState(null);
 
+    // Highlights management
+    const [editingHighlight, setEditingHighlight] = useState(null); // null or highlight object
+    const [uploadingHighlightImages, setUploadingHighlightImages] = useState(false);
+
     useEffect(() => {
         if (business) {
             // Only update form data if we switched to a different business
             // or if it's the first load. We compare IDs.
             setFormData(prev => {
                 if (prev.id === business.id) return prev; // Don't overwrite local changes if same business
-                return { ...business };
+                return {
+                    ...business,
+                    // Initialize gallery_highlights if it doesn't exist
+                    gallery_highlights: business.gallery_highlights || []
+                };
             });
         }
     }, [business.id]); // Only re-run if business ID changes
@@ -127,6 +135,119 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
         handleInputChange('gallery_images', updatedGallery);
         await handleSave({ gallery_images: updatedGallery });
+    };
+
+    // ===== HIGHLIGHTS MANAGEMENT =====
+
+    const createHighlight = () => {
+        const highlights = formData.gallery_highlights || [];
+        if (highlights.length >= 10) {
+            showAlert('Límite alcanzado', 'Solo puedes tener hasta 10 destacadas');
+            return;
+        }
+
+        const newHighlight = {
+            id: `highlight_${Date.now()}`,
+            title: `Destacada ${highlights.length + 1}`,
+            cover_image: null,
+            images: [],
+            order: highlights.length
+        };
+
+        setEditingHighlight(newHighlight);
+    };
+
+    const saveHighlight = async (highlight) => {
+        const highlights = formData.gallery_highlights || [];
+        const existingIndex = highlights.findIndex(h => h.id === highlight.id);
+
+        let updatedHighlights;
+        if (existingIndex >= 0) {
+            updatedHighlights = [...highlights];
+            updatedHighlights[existingIndex] = highlight;
+        } else {
+            updatedHighlights = [...highlights, highlight];
+        }
+
+        handleInputChange('gallery_highlights', updatedHighlights);
+        await handleSave({ gallery_highlights: updatedHighlights });
+        setEditingHighlight(null);
+        showToast('Destacada guardada correctamente', 'success');
+    };
+
+    const deleteHighlight = async (highlightId) => {
+        const confirmed = await showConfirm(
+            '¿Eliminar destacada?',
+            'Se eliminarán todas las imágenes de esta destacada'
+        );
+
+        if (!confirmed) return;
+
+        const highlights = formData.gallery_highlights || [];
+        const updatedHighlights = highlights.filter(h => h.id !== highlightId);
+
+        handleInputChange('gallery_highlights', updatedHighlights);
+        await handleSave({ gallery_highlights: updatedHighlights });
+        showToast('Destacada eliminada', 'success');
+    };
+
+    const uploadHighlightImages = async (e, highlight) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+
+        const currentImages = highlight.images || [];
+        if (currentImages.length + files.length > 20) {
+            showAlert('Límite de imágenes', 'Solo puedes tener hasta 20 imágenes por destacada');
+            return;
+        }
+
+        try {
+            setUploadingHighlightImages(true);
+            const newUrls = [];
+
+            for (const file of files) {
+                if (file.size > 5 * 1024 * 1024) {
+                    showToast(`La imagen ${file.name} es muy pesada (máx 5MB)`, 'error');
+                    continue;
+                }
+                const url = await serviceAdapter.uploadImage(file);
+                newUrls.push(url);
+            }
+
+            const updatedImages = [...currentImages, ...newUrls];
+            const updatedHighlight = {
+                ...highlight,
+                images: updatedImages,
+                cover_image: highlight.cover_image || updatedImages[0]
+            };
+
+            setEditingHighlight(updatedHighlight);
+            showToast(`${newUrls.length} imagen(es) subida(s)`, 'success');
+
+        } catch (error) {
+            console.error('Error uploading highlight images:', error);
+            showToast('Error al subir imágenes', 'error');
+        } finally {
+            setUploadingHighlightImages(false);
+        }
+    };
+
+    const removeHighlightImage = (highlight, imageUrl) => {
+        const updatedImages = highlight.images.filter(url => url !== imageUrl);
+        const updatedHighlight = {
+            ...highlight,
+            images: updatedImages,
+            cover_image: highlight.cover_image === imageUrl ? updatedImages[0] : highlight.cover_image
+        };
+        setEditingHighlight(updatedHighlight);
+    };
+
+    const setCoverImage = (highlight, imageUrl) => {
+        const updatedHighlight = {
+            ...highlight,
+            cover_image: imageUrl
+        };
+        setEditingHighlight(updatedHighlight);
     };
 
 
@@ -1192,167 +1313,335 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 );
 
             case 'gallery':
-                const galleryImages = formData.gallery_images || [];
+                const highlights = formData.gallery_highlights || [];
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
-                        <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <div>
-                                    <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '4px', color: 'var(--text-primary)' }}>
-                                        Galería de Trabajos
-                                    </h3>
-                                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                                        Muestra fotos de tus mejores servicios ({galleryImages.length}/20)
-                                    </p>
-                                </div>
-                                <label style={{
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '4px', color: 'var(--text-primary)' }}>
+                                    Destacadas ({highlights.length}/10)
+                                </h3>
+                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                                    Crea categorías de fotos estilo Instagram
+                                </p>
+                            </div>
+                            <button
+                                onClick={createHighlight}
+                                disabled={highlights.length >= 10}
+                                style={{
                                     ...saveButtonStyle,
                                     width: 'auto',
                                     margin: 0,
                                     padding: '8px 16px',
                                     fontSize: '13px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    cursor: uploadingGallery ? 'not-allowed' : 'pointer',
-                                    opacity: uploadingGallery ? 0.7 : 1
-                                }}>
-                                    <input
-                                        type="file"
-                                        multiple
-                                        accept="image/*"
-                                        onChange={handleGalleryUpload}
-                                        style={{ display: 'none' }}
-                                        disabled={uploadingGallery}
-                                    />
-                                    {uploadingGallery ? 'Subiendo...' : '＋ Subir Fotos'}
-                                </label>
-                            </div>
+                                    opacity: highlights.length >= 10 ? 0.5 : 1,
+                                    cursor: highlights.length >= 10 ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                ＋ Nueva Destacada
+                            </button>
+                        </div>
 
-                            {galleryImages.length === 0 && !uploadingGallery ? (
-                                <div style={{
-                                    padding: '40px',
-                                    border: '2px dashed var(--border)',
-                                    borderRadius: '16px',
-                                    textAlign: 'center',
-                                    background: 'var(--bg-main)'
-                                }}>
-                                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📸</div>
-                                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                        Aún no has subido fotos
-                                    </p>
-                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                        Sube fotos para que tus clientes vean tu trabajo
-                                    </p>
-                                </div>
-                            ) : (
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                                    gap: '12px'
-                                }}>
-                                    {galleryImages.map((url, index) => (
-                                        <div key={index} style={{
-                                            position: 'relative',
-                                            aspectRatio: '1',
-                                            borderRadius: '12px',
-                                            overflow: 'hidden',
+                        {/* Highlights List */}
+                        {highlights.length === 0 ? (
+                            <div style={{
+                                padding: '40px',
+                                border: '2px dashed var(--border)',
+                                borderRadius: '16px',
+                                textAlign: 'center',
+                                background: 'var(--bg-main)'
+                            }}>
+                                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📸</div>
+                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                    Aún no has creado destacadas
+                                </p>
+                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                    Crea categorías como "Manicura", "Pedicura", etc.
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gap: '12px' }}>
+                                {highlights.map((highlight, index) => (
+                                    <div
+                                        key={highlight.id}
+                                        style={{
+                                            background: 'var(--bg-main)',
                                             border: '1px solid var(--border)',
-                                            background: 'var(--bg-main)'
+                                            borderRadius: '12px',
+                                            padding: '16px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '16px'
+                                        }}
+                                    >
+                                        {/* Thumbnail */}
+                                        <div style={{
+                                            width: '60px',
+                                            height: '60px',
+                                            borderRadius: '50%',
+                                            overflow: 'hidden',
+                                            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                                            padding: '3px',
+                                            flexShrink: 0
                                         }}>
-                                            <img
-                                                src={url}
-                                                alt={`Trabajo ${index + 1}`}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            />
+                                            <div style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                borderRadius: '50%',
+                                                background: 'var(--bg-card)',
+                                                padding: '2px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                                {highlight.cover_image ? (
+                                                    <img
+                                                        src={highlight.cover_image}
+                                                        alt={highlight.title}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover',
+                                                            borderRadius: '50%'
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <span style={{ fontSize: '24px' }}>📷</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Info */}
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                                {highlight.title}
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                {highlight.images.length} foto{highlight.images.length !== 1 ? 's' : ''}
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div style={{ display: 'flex', gap: '8px' }}>
                                             <button
-                                                onClick={() => removeGalleryImage(url)}
+                                                onClick={() => setEditingHighlight(highlight)}
                                                 style={{
-                                                    position: 'absolute',
-                                                    top: '6px',
-                                                    right: '6px',
-                                                    width: '24px',
-                                                    height: '24px',
-                                                    borderRadius: '50%',
-                                                    background: 'rgba(255, 68, 68, 0.9)',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '14px',
-                                                    fontWeight: '800',
-                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                                    zIndex: 2
+                                                    ...buttonSecondaryStyle,
+                                                    padding: '6px 12px',
+                                                    fontSize: '12px'
                                                 }}
                                             >
-                                                ×
+                                                Editar
+                                            </button>
+                                            <button
+                                                onClick={() => deleteHighlight(highlight.id)}
+                                                style={{
+                                                    ...buttonSecondaryStyle,
+                                                    padding: '6px 12px',
+                                                    fontSize: '12px',
+                                                    background: 'rgba(255, 68, 68, 0.1)',
+                                                    color: '#ff4444'
+                                                }}
+                                            >
+                                                Borrar
                                             </button>
                                         </div>
-                                    ))}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
-                                    {uploadingGallery && (
-                                        <div style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            aspectRatio: '1',
-                                            borderRadius: '12px',
-                                            border: '2px dashed var(--primary-paddle)',
-                                            background: 'var(--bg-main)',
-                                            color: 'var(--primary-paddle)',
-                                            gap: '8px'
-                                        }}>
-                                            <div className="spinner" style={{
-                                                width: '24px',
-                                                height: '24px',
-                                                border: '3px solid var(--primary-paddle)33',
-                                                borderTop: '3px solid var(--primary-paddle)',
-                                                borderRadius: '50%',
-                                                animation: 'spin 1s linear infinite'
-                                            }} />
-                                            <span style={{ fontSize: '11px', fontWeight: '700' }}>Subiendo...</span>
+                        {/* Edit Modal */}
+                        {editingHighlight && (
+                            <div style={{
+                                position: 'fixed',
+                                inset: 0,
+                                background: 'rgba(0,0,0,0.5)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 9999,
+                                padding: '20px'
+                            }}
+                                onClick={() => setEditingHighlight(null)}
+                            >
+                                <div
+                                    style={{
+                                        background: 'var(--bg-card)',
+                                        borderRadius: '16px',
+                                        padding: '24px',
+                                        maxWidth: '600px',
+                                        width: '100%',
+                                        maxHeight: '90vh',
+                                        overflow: 'auto'
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                        <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                            {editingHighlight.images.length > 0 ? 'Editar' : 'Nueva'} Destacada
+                                        </h3>
+                                        <button
+                                            onClick={() => setEditingHighlight(null)}
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                fontSize: '24px',
+                                                cursor: 'pointer',
+                                                color: 'var(--text-secondary)'
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+
+                                    {/* Title Input */}
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <label style={labelStyle}>Título</label>
+                                        <input
+                                            type="text"
+                                            value={editingHighlight.title}
+                                            onChange={(e) => setEditingHighlight({ ...editingHighlight, title: e.target.value })}
+                                            placeholder="Ej: Manicura, Pedicura, etc."
+                                            maxLength={20}
+                                            style={inputStyle}
+                                        />
+                                        <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                            {editingHighlight.title.length}/20
+                                        </p>
+                                    </div>
+
+                                    {/* Images */}
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                            <label style={labelStyle}>Fotos ({editingHighlight.images.length}/20)</label>
+                                            <label style={{
+                                                ...saveButtonStyle,
+                                                width: 'auto',
+                                                margin: 0,
+                                                padding: '6px 12px',
+                                                fontSize: '12px',
+                                                cursor: uploadingHighlightImages ? 'not-allowed' : 'pointer',
+                                                opacity: uploadingHighlightImages ? 0.7 : 1
+                                            }}>
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    accept="image/*"
+                                                    onChange={(e) => uploadHighlightImages(e, editingHighlight)}
+                                                    style={{ display: 'none' }}
+                                                    disabled={uploadingHighlightImages}
+                                                />
+                                                {uploadingHighlightImages ? 'Subiendo...' : '＋ Subir'}
+                                            </label>
                                         </div>
-                                    )}
 
-                                    {galleryImages.length < 20 && !uploadingGallery && (
-                                        <label style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            aspectRatio: '1',
-                                            borderRadius: '12px',
-                                            border: '2px dashed var(--border)',
-                                            background: 'var(--bg-main)',
-                                            cursor: 'pointer',
-                                            color: 'var(--text-secondary)',
-                                            transition: 'border-color 0.2s',
-                                            gap: '8px'
-                                        }}>
-                                            <input
-                                                type="file"
-                                                multiple
-                                                accept="image/*"
-                                                onChange={handleGalleryUpload}
-                                                style={{ display: 'none' }}
-                                            />
-                                            <span style={{ fontSize: '24px' }}>＋</span>
-                                            <span style={{ fontSize: '12px', fontWeight: '600' }}>Añadir</span>
-                                        </label>
-                                    )}
+                                        {editingHighlight.images.length === 0 ? (
+                                            <div style={{
+                                                padding: '30px',
+                                                border: '2px dashed var(--border)',
+                                                borderRadius: '12px',
+                                                textAlign: 'center',
+                                                background: 'var(--bg-main)'
+                                            }}>
+                                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                    Sube fotos para esta destacada
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                                                gap: '8px'
+                                            }}>
+                                                {editingHighlight.images.map((url, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        style={{
+                                                            position: 'relative',
+                                                            aspectRatio: '1',
+                                                            borderRadius: '8px',
+                                                            overflow: 'hidden',
+                                                            border: editingHighlight.cover_image === url ? '3px solid var(--primary-paddle)' : '1px solid var(--border)'
+                                                        }}
+                                                    >
+                                                        <img
+                                                            src={url}
+                                                            alt={`Foto ${idx + 1}`}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                            onClick={() => setCoverImage(editingHighlight, url)}
+                                                        />
+                                                        <button
+                                                            onClick={() => removeHighlightImage(editingHighlight, url)}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: '4px',
+                                                                right: '4px',
+                                                                width: '20px',
+                                                                height: '20px',
+                                                                borderRadius: '50%',
+                                                                background: 'rgba(255, 68, 68, 0.9)',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                fontSize: '12px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center'
+                                                            }}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                        {editingHighlight.cover_image === url && (
+                                                            <div style={{
+                                                                position: 'absolute',
+                                                                bottom: '4px',
+                                                                left: '4px',
+                                                                background: 'var(--primary-paddle)',
+                                                                color: 'white',
+                                                                fontSize: '9px',
+                                                                padding: '2px 6px',
+                                                                borderRadius: '4px',
+                                                                fontWeight: '700'
+                                                            }}>
+                                                                PORTADA
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {editingHighlight.images.length > 0 && (
+                                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                                                💡 Click en una foto para establecerla como portada
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                                        <button
+                                            onClick={() => setEditingHighlight(null)}
+                                            style={buttonSecondaryStyle}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            onClick={() => saveHighlight(editingHighlight)}
+                                            disabled={!editingHighlight.title || editingHighlight.images.length === 0}
+                                            style={{
+                                                ...saveButtonStyle,
+                                                opacity: (!editingHighlight.title || editingHighlight.images.length === 0) ? 0.5 : 1,
+                                                cursor: (!editingHighlight.title || editingHighlight.images.length === 0) ? 'not-allowed' : 'pointer'
+                                            }}
+                                        >
+                                            Guardar
+                                        </button>
+                                    </div>
                                 </div>
-                            )}
-
-                            <style>{`
-                                @keyframes spin {
-                                    0% { transform: rotate(0deg); }
-                                    100% { transform: rotate(360deg); }
-                                }
-                            `}</style>
-                        </div>
+                            </div>
+                        )}
                     </div>
                 );
 
