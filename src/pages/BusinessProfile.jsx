@@ -880,6 +880,8 @@ export default function BusinessProfile() {
                                 }
 
                                 // Otherwise, show time slots
+                                // For services, we need to get the actual resource from the resources table
+                                // which has the capacity field
                                 const resources = business.type === 'sport'
                                     ? (business.courts || [])
                                     : (selectedItem?.specialist
@@ -888,17 +890,25 @@ export default function BusinessProfile() {
                                             name: selectedItem.specialist.name,
                                             features: [selectedItem.specialist.role || 'Especialista'],
                                             price: selectedItem.price || 0,
-                                            sport: null
+                                            sport: null,
+                                            capacity: selectedItem.specialist.capacity || 1
                                         }]
                                         : [{
                                             id: selectedItem?.id || 'no-specialist',
                                             name: 'Sin profesional asignado',
                                             features: ['Servicio'],
                                             price: selectedItem?.price || 0,
-                                            sport: null
+                                            sport: null,
+                                            capacity: selectedItem?.capacity || 2 // ✅ Use capacity from service/resource
                                         }]);
 
+                                console.log('🔍 Resources Debug:', resources);
+                                console.log('🔍 Selected Item:', selectedItem);
+
                                 console.log('Business Hours Debug:', { open, close, ranges, date: selectedDate });
+
+                                // Get business capacity directly from business.capacity field
+                                const businessCapacity = business.capacity || 1;
 
                                 return (
                                     <TimeSlotPicker
@@ -937,6 +947,7 @@ export default function BusinessProfile() {
                                         timeRanges={ranges}
                                         selectedDate={selectedDate}
                                         maxCapacity={business.max_capacity || 1}
+                                        businessCapacity={businessCapacity} // ✅ Pass business capacity
                                     />
                                 );
                             })()}

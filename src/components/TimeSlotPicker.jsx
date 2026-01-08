@@ -1,24 +1,31 @@
-import React, { useState } from 'react';
+import React from 'react';
 import TimeSlotGrid from './TimeSlotGrid';
 import CourtSelector from './CourtSelector';
 
-export default function TimeSlotPicker({
+const TimeSlotPicker = ({
     selectedTime,
     onTimeSelect,
-    sportColor = '#00e676',
-    type = 'sport',
+    sportColor,
+    type,
     resources: providedResources,
-    openingTime = '08:00',
-    closingTime = '22:00',
-    interval = 60,
-    existingBookings = [],
-    timeRanges = [],
-    selectedDate = null
-}) {
-    const [selectedCourt, setSelectedCourt] = useState(null);
-
+    openingTime,
+    closingTime,
+    interval = 30,
+    existingBookings,
+    timeRanges,
+    selectedDate,
+    maxCapacity,
+    businessCapacity // ✅ NEW: Total capacity of the business (number of spaces)
+}) => {
     // Use selectedTime.time directly from props
     const selectedTimeSlot = selectedTime?.time || null;
+
+    // 🔍 Debug: Log resources and business capacity
+    console.log('📊 TimeSlotPicker received:', {
+        resources: providedResources,
+        businessCapacity,
+        existingBookings: existingBookings?.length
+    });
 
     // Helper: Convert "HH:MM" to minutes
     const timeToMinutes = (time) => {
@@ -101,16 +108,34 @@ export default function TimeSlotPicker({
                 continue;
             }
 
-            // Find which courts are available at this time
-            const availableCourts = (providedResources || []).filter(court => {
-                return !isCourtBooked(court.id, time);
-            }).map(court => ({
-                id: court.id,
-                name: court.name,
-                features: court.features || []
-            }));
+            // Find which courts have availability at this time (considering capacity)
+            const availableCourts = (providedResources || []).map(court => {
+                const slotDate = selectedDate?.toISOString().split('T')[0];
 
-            // Only add slot if at least one court is available
+                // Count bookings for this court at this time
+                const bookingsCount = existingBookings?.filter(booking => {
+                    const bookingDate = new Date(booking.date).toISOString().split('T')[0];
+                    const bookingTime = booking.time?.substring(0, 5);
+                    const matchesResource = booking.resource_id === court.id || booking.court_id === court.id;
+                    const isActive = booking.status !== 'cancelled';
+
+                    return bookingDate === slotDate && bookingTime === time && matchesResource && isActive;
+                }).length || 0;
+
+                const courtCapacity = court.capacity || 1;
+                const hasAvailability = bookingsCount < courtCapacity;
+
+                return {
+                    id: court.id,
+                    name: court.name,
+                    features: court.features || [],
+                    slotsUsed: bookingsCount,
+                    totalCapacity: courtCapacity,
+                    hasAvailability
+                };
+            }).filter(court => court.hasAvailability); // Only include courts with at least 1 space available
+
+            // Only add slot if at least one court has availability
             if (availableCourts.length > 0) {
                 slots.push({
                     time,
@@ -146,8 +171,8 @@ export default function TimeSlotPicker({
 
     // FOR SERVICES: Render original flow (resource-first)
     if (type === 'service') {
-        // Generate slots per resource (original logic)
-        const generateSlotsForResource = (resourceId) => {
+        // For services: generate unified time slots with BUSINESS-LEVEL capacity
+        const generateUnifiedServiceSlots = () => {
             const slots = [];
             let startMinutes, endMinutes;
 
@@ -163,95 +188,118 @@ export default function TimeSlotPicker({
                 endMinutes = closeMinutes < startMinutes ? closeMinutes + 1440 : closeMinutes;
             }
 
+            // Get business capacity (total spaces)
+            const totalCapacity = businessCapacity || providedResources?.length || 1;
+
             for (let minutes = startMinutes; minutes < endMinutes; minutes += interval) {
                 const time = minutesToTime(minutes);
 
                 if (!isWithinOperatingHours(minutes)) continue;
 
-                const isBooked = isCourtBooked(resourceId, time);
+                // Count ALL bookings for this business at this time (business-level)
+                const slotDate = selectedDate?.toISOString().split('T')[0];
+                const businessBookingsCount = existingBookings?.filter(booking => {
+                    const bookingDate = new Date(booking.date).toISOString().split('T')[0];
+                    const bookingTime = booking.time?.substring(0, 5);
+                    const isActive = booking.status !== 'cancelled';
+
+                    return bookingDate === slotDate && bookingTime === time && isActive;
+                }).length || 0;
+
+                // Slot is available if total bookings < business capacity
+                const isAvailable = businessBookingsCount < totalCapacity;
+
+                // 🔍 Debug log for specific slots
+                if (time === '09:00' || time === '09:30') {
+                    console.log(`🕐 Service Slot ${time}:`, {
+                        totalCapacity,
+                        businessBookingsCount,
+                        isAvailable,
+                        selectedDate: slotDate
+                    });
+                }
 
                 slots.push({
                     time,
-                    status: isBooked ? 'booked' : 'available'
+                    status: isAvailable ? 'available' : 'booked',
+                    slotsUsed: businessBookingsCount,
+                    totalCapacity: totalCapacity
                 });
             }
 
             return slots;
         };
 
-        const resources = (providedResources || []).map(resource => ({
-            ...resource,
-            slots: generateSlotsForResource(resource.id)
-        }));
+        const allSlots = generateUnifiedServiceSlots();
 
+        // For services, show a unified view with all available slots
         return (
             <div style={{ maxWidth: '800px', margin: '20px auto 0', animation: 'slideUp 0.5s ease' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    {resources.map(resource => (
-                        <div key={resource.id} className="card" style={{ padding: '20px', textAlign: 'left' }}>
-                            {resource.name !== 'Sin profesional asignado' && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                    <div>
-                                        <h4 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{resource.name}</h4>
-                                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                            {resource.features.map((feat, i) => (
-                                                <span key={i} style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px' }}>
-                                                    {feat}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                <div className="card" style={{ padding: '20px', textAlign: 'left' }}>
+                    <h4 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                        Horarios Disponibles
+                    </h4>
 
-                            {/* Time slots grid */}
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))',
-                                gap: '10px'
-                            }}>
-                                {resource.slots.filter(slot => slot.status === 'available').map((slot) => {
-                                    // Check if this slot is selected (compare with courtId since that's what BusinessProfile stores)
-                                    const isSelected = selectedTime?.time === slot.time && selectedTime?.courtId === resource.id;
+                    {/* Time slots grid */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))',
+                        gap: '10px'
+                    }}>
+                        {allSlots.filter(slot => slot.status === 'available').map((slot) => {
+                            const isSelected = selectedTime?.time === slot.time;
 
-                                    return (
-                                        <button
-                                            key={slot.time}
-                                            onClick={() => onTimeSelect(slot.time, resource.id)}
-                                            style={{
-                                                padding: '12px 8px',
-                                                borderRadius: '12px',
-                                                border: isSelected ? `2px solid ${sportColor}` : '1px solid var(--border)',
-                                                backgroundColor: isSelected ? `${sportColor}15` : 'var(--bg-card)',
-                                                color: 'var(--text-primary)',
-                                                cursor: 'pointer',
-                                                fontWeight: isSelected ? '700' : '600',
-                                                fontSize: '14px',
-                                                transition: 'all 0.2s',
-                                                boxShadow: isSelected ? `0 4px 12px ${sportColor}30` : '0 2px 8px rgba(0,0,0,0.05)'
-                                            }}
-                                        >
-                                            {slot.time}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            return (
+                                <button
+                                    key={slot.time}
+                                    onClick={() => onTimeSelect(slot.time, null)} // No courtId for services
+                                    style={{
+                                        padding: '12px 8px',
+                                        borderRadius: '8px',
+                                        border: isSelected ? `2px solid ${sportColor}` : '2px solid var(--border)',
+                                        background: isSelected ? `${sportColor}15` : 'var(--card-bg)',
+                                        color: isSelected ? sportColor : 'var(--text-primary)',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: isSelected ? 'bold' : '500',
+                                        transition: 'all 0.2s',
+                                        textAlign: 'center'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isSelected) {
+                                            e.target.style.borderColor = sportColor;
+                                            e.target.style.background = `${sportColor}08`;
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isSelected) {
+                                            e.target.style.borderColor = 'var(--border)';
+                                            e.target.style.background = 'var(--card-bg)';
+                                        }
+                                    }}
+                                >
+                                    {slot.time}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {allSlots.filter(slot => slot.status === 'available').length === 0 && (
+                        <div style={{
+                            textAlign: 'center',
+                            padding: '40px 20px',
+                            color: 'var(--text-secondary)'
+                        }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>📅</div>
+                            <p style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                No hay horarios disponibles
+                            </p>
+                            <p style={{ fontSize: '14px', marginTop: '8px' }}>
+                                Todos los espacios están ocupados para esta fecha.
+                            </p>
                         </div>
-                    ))}
+                    )}
                 </div>
-
-                <style>{`
-                    @keyframes slideUp {
-                        from {
-                            opacity: 0;
-                            transform: translateY(20px);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: translateY(0);
-                        }
-                    }
-                `}</style>
             </div>
         );
     }
@@ -273,7 +321,7 @@ export default function TimeSlotPicker({
             {selectedTimeSlot && (
                 <CourtSelector
                     availableCourts={getCourtsForSelectedTime()}
-                    selectedCourt={selectedCourt}
+                    selectedCourt={selectedTime?.courtId} // Pass selectedTime.courtId directly
                     onCourtSelect={handleCourtSelect}
                     timeSlot={selectedTimeSlot}
                     sportColor={sportColor}
@@ -295,3 +343,4 @@ export default function TimeSlotPicker({
         </div>
     );
 }
+export default TimeSlotPicker;

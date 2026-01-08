@@ -628,6 +628,27 @@ class SupabaseService {
         return { bookings: bookingsWithResourceId };
     }
 
+    /**
+     * Validate booking availability using database function (BUSINESS-LEVEL)
+     * @param {string} businessId - Business ID (UUID)
+     * @param {string} startTime - Start time (ISO string)
+     * @param {string} endTime - End time (ISO string)
+     * @param {string} excludeBookingId - Optional booking ID to exclude from check
+     * @returns {Promise<Object>} { available, slots_used, total_capacity }
+     */
+    async validateBookingAvailability(businessId, startTime, endTime, excludeBookingId = null) {
+        const { data, error } = await supabase
+            .rpc('check_business_availability', {
+                p_business_id: businessId,
+                p_start_time: startTime,
+                p_end_time: endTime,
+                p_exclude_booking_id: excludeBookingId
+            });
+
+        if (error) throw error;
+        return data[0]; // { available, slots_used, total_capacity }
+    }
+
     async createBooking(bookingData) {
         // Helper function to convert Date to YYYY-MM-DD in local timezone (not UTC)
         const formatDateLocal = (date) => {
@@ -688,6 +709,41 @@ class SupabaseService {
             }
         }
 
+        // ✅ VALIDATE BUSINESS-LEVEL CAPACITY BEFORE CREATING BOOKING
+        try {
+            // Calculate start and end times for validation
+            const dateStr = formatDateLocal(bookingData.date);
+            const startTime = `${dateStr}T${bookingData.time}:00`;
+
+            // Calculate end time based on duration (default 60 minutes)
+            const duration = bookingData.duration || 60;
+            const [hours, minutes] = bookingData.time.split(':').map(Number);
+            const endMinutes = hours * 60 + minutes + duration;
+            const endHours = Math.floor(endMinutes / 60) % 24;
+            const endMins = endMinutes % 60;
+            const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+            const endTime = `${dateStr}T${endTimeStr}:00`;
+
+            const availability = await this.validateBookingAvailability(
+                bookingData.businessId,
+                startTime,
+                endTime
+            );
+
+            if (!availability.available) {
+                throw new Error(
+                    `No hay espacios disponibles para este horario. ` +
+                    `Ocupados: ${availability.slots_used}/${availability.total_capacity}`
+                );
+            }
+
+            console.log('✅ Business capacity validated:', availability);
+        } catch (validationError) {
+            // If validation fails, throw the error to prevent booking creation
+            console.error('❌ Business capacity validation failed:', validationError);
+            throw validationError;
+        }
+
         const { data, error } = await supabase
             .from('bookings')
             .insert([{
@@ -711,6 +767,7 @@ class SupabaseService {
         if (error) throw error;
         return this._processBusinessData(data);
     }
+
 
     async updateBookingStatus(id, status, metadata = {}) {
         const updateData = {
@@ -1120,6 +1177,18 @@ class SupabaseService {
             .single();
 
         if (error) throw error;
+
+        // ✅ UPDATE BUSINESS CAPACITY when subscription changes
+        const { error: capacityError } = await supabase
+            .from('businesses')
+            .update({ capacity: plan.spaces })
+            .eq('id', businessId);
+
+        if (capacityError) {
+            console.error('Error updating business capacity:', capacityError);
+            // Don't throw - subscription was updated successfully
+        }
+
         return data;
     }
 

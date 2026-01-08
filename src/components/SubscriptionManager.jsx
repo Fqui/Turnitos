@@ -55,6 +55,12 @@ const SubscriptionManager = ({ businessId, businessType, business }) => {
             setLoading(true);
             await supabaseService.updateSubscription(businessId, planId);
             await loadSubscriptionData();
+
+            // ✅ Notify parent component to refresh business data
+            if (business?.onSubscriptionUpdate) {
+                await business.onSubscriptionUpdate();
+            }
+
             alert('¡Plan actualizado exitosamente!');
         } catch (err) {
             console.error('Error updating subscription:', err);
@@ -63,6 +69,7 @@ const SubscriptionManager = ({ businessId, businessType, business }) => {
             setLoading(false);
         }
     };
+
 
     const getPlanBadge = (plan) => {
         if (!subscription) return null;
