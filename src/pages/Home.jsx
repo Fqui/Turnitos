@@ -385,10 +385,10 @@ export default function Home() {
                         <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>Categorías</h2>
                     </div>
                     <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                        display: 'flex',
+                        flexWrap: 'wrap',
                         gap: '16px',
-                        justifyContent: window.innerWidth > 768 ? 'center' : 'flex-start'
+                        justifyContent: 'center'
                     }}>
                         <motion.button
                             whileHover={{ scale: 1.05 }}
@@ -408,7 +408,9 @@ export default function Home() {
                                 gap: '12px',
                                 boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
                                 transition: 'all 0.3s',
-                                height: '120px'
+                                height: '120px',
+                                flex: '1 1 130px',
+                                maxWidth: '160px'
                             }}
                         >
                             <span style={{ fontSize: '32px' }}>⚡</span>
@@ -435,7 +437,9 @@ export default function Home() {
                                     gap: '12px',
                                     boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
                                     transition: 'all 0.3s',
-                                    height: '120px'
+                                    height: '120px',
+                                    flex: '1 1 130px',
+                                    maxWidth: '160px'
                                 }}
                             >
                                 <span style={{ fontSize: '32px' }}>{cat.icon}</span>
