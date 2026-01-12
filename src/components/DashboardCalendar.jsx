@@ -177,9 +177,15 @@ export default function DashboardCalendar({
     const getBookingForSlot = (date, time) => {
         const dateKey = formatDateKey(date);
 
-        const slotBookings = bookings.filter(b => {
-            if (b.time !== time) return false;
+        // Helper to convert time to minutes
+        const timeToMinutes = (timeStr) => {
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        };
 
+        const slotMinutes = timeToMinutes(time);
+
+        const slotBookings = bookings.filter(b => {
             // Normalize booking date to YYYY-MM-DD
             let bDateKey = b.date;
             if (b.date.includes('/')) {
@@ -188,7 +194,15 @@ export default function DashboardCalendar({
                 bDateKey = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
             }
 
-            return bDateKey === dateKey;
+            if (bDateKey !== dateKey) return false;
+
+            // Check if slot falls within booking time range
+            const bookingStartMinutes = timeToMinutes(b.time);
+            const bookingDuration = b.duration || 60; // Default to 60 if not specified
+            const bookingEndMinutes = bookingStartMinutes + bookingDuration;
+
+            // Slot is occupied if it falls within [start, end)
+            return slotMinutes >= bookingStartMinutes && slotMinutes < bookingEndMinutes;
         });
 
         if (slotBookings.length === 0) return null;
@@ -507,16 +521,30 @@ export default function DashboardCalendar({
 
                                 {/* Day Columns */}
                                 {displayDays.map((day, j) => {
+                                    // Helper to convert time to minutes
+                                    const timeToMinutes = (timeStr) => {
+                                        const [h, m] = timeStr.split(':').map(Number);
+                                        return h * 60 + m;
+                                    };
+
+                                    const slotMinutes = timeToMinutes(time);
+
                                     // Logic for multiple bookings
                                     const dateKey = formatDateKey(day);
                                     const slotBookings = bookings.filter(b => {
-                                        if (b.time !== time) return false;
                                         let bDateKey = b.date;
                                         if (b.date.includes('/')) {
                                             const [d, m, y] = b.date.split('/');
                                             bDateKey = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                                         }
-                                        return bDateKey === dateKey && b.status !== 'cancelled';
+                                        if (bDateKey !== dateKey || b.status === 'cancelled') return false;
+
+                                        // Check if slot falls within booking duration
+                                        const bookingStartMinutes = timeToMinutes(b.time);
+                                        const bookingDuration = b.duration || 60;
+                                        const bookingEndMinutes = bookingStartMinutes + bookingDuration;
+
+                                        return slotMinutes >= bookingStartMinutes && slotMinutes < bookingEndMinutes;
                                     });
 
                                     // Determine Capacity

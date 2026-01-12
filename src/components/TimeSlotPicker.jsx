@@ -78,6 +78,110 @@ const TimeSlotPicker = ({
         });
     };
 
+    // 🆕 Helper: Calculate end time given start time and duration (in minutes)
+    const calculateEndTime = (startTime, durationMinutes) => {
+        const startMinutes = timeToMinutes(startTime);
+        const endMinutes = startMinutes + durationMinutes;
+        return minutesToTime(endMinutes);
+    };
+
+    // 🆕 Helper: Check if a time slot is occupied by any booking
+    const isTimeSlotOccupied = (courtId, startTime, endTime) => {
+        if (!selectedDate || !existingBookings) return false;
+
+        const slotDate = selectedDate instanceof Date
+            ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+            : selectedDate;
+
+        const startMinutes = timeToMinutes(startTime);
+        const endMinutes = timeToMinutes(endTime);
+
+        const conflicts = existingBookings.filter(booking => {
+            // Only check same court
+            const matchesResource = booking.resource_id === courtId || booking.court_id === courtId;
+            if (!matchesResource) return false;
+
+            // Only check active bookings
+            if (booking.status === 'cancelled') return false;
+
+            // Check date match
+            const bookingDateObj = new Date(booking.date + 'T00:00:00');
+            const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
+            if (bookingDate !== slotDate) return false;
+
+            // Calculate booking time range
+            const bookingStartMinutes = timeToMinutes(booking.time);
+            const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
+
+            // Check overlap: (start < bookingEnd) AND (end > bookingStart)
+            const overlaps = (startMinutes < bookingEndMinutes) && (endMinutes > bookingStartMinutes);
+
+            if (overlaps) {
+                console.log(`      🔴 Conflict found:`, {
+                    bookingTime: booking.time,
+                    bookingDuration: booking.duration || 60,
+                    bookingEnd: minutesToTime(bookingEndMinutes),
+                    checkingSlot: `${startTime}-${endTime}`
+                });
+            }
+
+            return overlaps;
+        });
+
+        return conflicts.length > 0;
+    };
+
+    // 🆕 Helper: Get available durations for a padel court at a specific time
+    const getAvailableDurations = (courtId, startTime) => {
+        const durations = [60, 90, 120];
+        const availableDurations = [];
+
+        console.log(`🎾 Checking durations for court ${courtId} at ${startTime}:`, {
+            closingTime,
+            openingTime,
+            existingBookingsCount: existingBookings?.length
+        });
+
+        // Get closing time in minutes
+        let closeMinutes = timeToMinutes(closingTime);
+        const startMinutes = timeToMinutes(startTime);
+        const openMinutes = timeToMinutes(openingTime);
+
+        // Handle midnight crossing: if close < open, it means next day
+        // Example: open=18:00 (1080), close=03:00 (180) -> close should be 180+1440=1620
+        if (closeMinutes < openMinutes) {
+            closeMinutes += 1440; // Add 24 hours
+        }
+
+        durations.forEach(duration => {
+            const endTime = calculateEndTime(startTime, duration);
+            let endMinutes = timeToMinutes(endTime);
+
+            // If end time wrapped around midnight, add 1440
+            if (endMinutes < startMinutes) {
+                endMinutes += 1440;
+            }
+
+            // Check if exceeds closing time
+            if (endMinutes > closeMinutes) {
+                console.log(`  ❌ ${duration} min: Exceeds closing time (${endTime} [${endMinutes}] > ${closingTime} [${closeMinutes}])`);
+                return; // Skip this duration
+            }
+
+            // Check if overlaps with existing bookings
+            const hasConflict = isTimeSlotOccupied(courtId, startTime, endTime);
+
+            console.log(`  ${hasConflict ? '❌' : '✅'} ${duration} min (${startTime}-${endTime}): ${hasConflict ? 'Has conflict' : 'Available'}`);
+
+            if (!hasConflict) {
+                availableDurations.push(duration);
+            }
+        });
+
+        console.log(`  📊 Available durations:`, availableDurations);
+        return availableDurations;
+    };
+
     // Generate unified time slots with availability info (FOR SPORTS ONLY)
     const generateUnifiedTimeSlots = () => {
         const slots = [];
@@ -99,6 +203,9 @@ const TimeSlotPicker = ({
             endMinutes = closeMinutes < startMinutes ? closeMinutes + 1440 : closeMinutes;
         }
 
+        // Get business total capacity
+        const totalBusinessCapacity = businessCapacity || 1;
+
         // Generate all possible time slots
         for (let minutes = startMinutes; minutes < endMinutes; minutes += interval) {
             const time = minutesToTime(minutes);
@@ -108,33 +215,104 @@ const TimeSlotPicker = ({
                 continue;
             }
 
+            // Format date using LOCAL timezone (not UTC)
+            const slotDate = selectedDate instanceof Date
+                ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+                : selectedDate;
+
+            // ✅ FIRST: Check business-level capacity (total concurrent bookings)
+            const totalBookingsAtTime = existingBookings?.filter(booking => {
+                // Format booking date using LOCAL timezone
+                const bookingDateObj = new Date(booking.date + 'T00:00:00'); // Force local timezone
+                const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
+                const bookingTime = booking.time?.substring(0, 5);
+                const isActive = booking.status !== 'cancelled';
+                return bookingDate === slotDate && bookingTime === time && isActive;
+            }).length || 0;
+
+            // Debug log for specific time slots
+            if (time === '18:00' || time === '19:00') {
+                console.log(`🕐 Slot ${time} Debug:`, {
+                    slotDate,
+                    totalBookingsAtTime,
+                    totalBusinessCapacity,
+                    willSkip: totalBookingsAtTime >= totalBusinessCapacity,
+                    allBookings: existingBookings?.map(b => {
+                        const bDateObj = new Date(b.date + 'T00:00:00');
+                        return {
+                            date: `${bDateObj.getFullYear()}-${String(bDateObj.getMonth() + 1).padStart(2, '0')}-${String(bDateObj.getDate()).padStart(2, '0')}`,
+                            time: b.time?.substring(0, 5),
+                            status: b.status
+                        };
+                    })
+                });
+            }
+
+            // If business is at full capacity, skip this time slot entirely
+            if (totalBookingsAtTime >= totalBusinessCapacity) {
+                continue;
+            }
+
+            // 🆕 Check if this time slot falls within any existing booking
+            // (e.g., if there's a booking from 18:00-19:30, hide 18:00, 18:30, 19:00)
+            const isSlotOccupiedByAnyBooking = existingBookings?.some(booking => {
+                const bookingDateObj = new Date(booking.date + 'T00:00:00');
+                const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
+
+                if (bookingDate !== slotDate) return false;
+                if (booking.status === 'cancelled') return false;
+
+                const bookingStartMinutes = timeToMinutes(booking.time);
+                const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
+                const currentSlotMinutes = minutes;
+
+                // Check if current slot falls within this booking's time range
+                // (inclusive of start, exclusive of end)
+                return currentSlotMinutes >= bookingStartMinutes && currentSlotMinutes < bookingEndMinutes;
+            });
+
+            // Skip this slot if it's occupied by any booking
+            if (isSlotOccupiedByAnyBooking) {
+                continue;
+            }
+
             // Find which courts have availability at this time (considering capacity)
             const availableCourts = (providedResources || []).map(court => {
-                const slotDate = selectedDate?.toISOString().split('T')[0];
+                // For padel courts, we don't check exact time match anymore
+                // because we already filtered out occupied slots above
+                // Just check if the court itself is available (not at capacity)
 
-                // Count bookings for this court at this time
+                const courtCapacity = court.capacity || 1;
+
+                // Count how many bookings are active at this exact time for this court
                 const bookingsCount = existingBookings?.filter(booking => {
-                    const bookingDate = new Date(booking.date).toISOString().split('T')[0];
-                    const bookingTime = booking.time?.substring(0, 5);
+                    const bookingDateObj = new Date(booking.date + 'T00:00:00');
+                    const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
                     const matchesResource = booking.resource_id === court.id || booking.court_id === court.id;
                     const isActive = booking.status !== 'cancelled';
 
-                    return bookingDate === slotDate && bookingTime === time && matchesResource && isActive;
+                    if (bookingDate !== slotDate || !matchesResource || !isActive) return false;
+
+                    // Check if this booking overlaps with current time slot
+                    const bookingStartMinutes = timeToMinutes(booking.time);
+                    const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
+
+                    return minutes >= bookingStartMinutes && minutes < bookingEndMinutes;
                 }).length || 0;
 
-                const courtCapacity = court.capacity || 1;
                 const hasAvailability = bookingsCount < courtCapacity;
 
                 return {
                     id: court.id,
                     name: court.name,
                     features: court.features || [],
-                    price: court.price || 0, // ✅ Pass price to CourtSelector
+                    price: court.price || 0,
+                    sport: court.sport, // 🆕 Include sport type
                     slotsUsed: bookingsCount,
                     totalCapacity: courtCapacity,
                     hasAvailability
                 };
-            }).filter(court => court.hasAvailability); // Only include courts with at least 1 space available
+            }).filter(court => court.hasAvailability);
 
             // Only add slot if at least one court has availability
             if (availableCourts.length > 0) {
@@ -156,8 +334,14 @@ const TimeSlotPicker = ({
 
     // Handle court selection (for sports)
     const handleCourtSelect = (court) => {
-        // Emit final selection to parent
-        onTimeSelect(selectedTimeSlot, court.id);
+        // Check if court has duration info (padel court)
+        if (court.selectedDuration && court.finalPrice !== undefined) {
+            // Padel court with duration selected
+            onTimeSelect(selectedTimeSlot, court.id, court.selectedDuration, court.finalPrice);
+        } else {
+            // Regular court (football, tennis, etc.)
+            onTimeSelect(selectedTimeSlot, court.id);
+        }
     };
 
     // Get courts available for selected time slot
@@ -196,9 +380,15 @@ const TimeSlotPicker = ({
                 if (!isWithinOperatingHours(minutes)) continue;
 
                 // Count ALL bookings for this business at this time (business-level)
-                const slotDate = selectedDate?.toISOString().split('T')[0];
+                // Format date using LOCAL timezone (not UTC)
+                const slotDate = selectedDate instanceof Date
+                    ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+                    : selectedDate;
+
                 const businessBookingsCount = existingBookings?.filter(booking => {
-                    const bookingDate = new Date(booking.date).toISOString().split('T')[0];
+                    // Format booking date using LOCAL timezone
+                    const bookingDateObj = new Date(booking.date + 'T00:00:00');
+                    const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
                     const bookingTime = booking.time?.substring(0, 5);
                     const isActive = booking.status !== 'cancelled';
 
@@ -320,10 +510,14 @@ const TimeSlotPicker = ({
             {selectedTimeSlot && (
                 <CourtSelector
                     availableCourts={getCourtsForSelectedTime()}
-                    selectedCourt={selectedTime?.courtId} // Pass selectedTime.courtId directly
+                    selectedCourt={selectedTime?.courtId}
                     onCourtSelect={handleCourtSelect}
                     timeSlot={selectedTimeSlot}
                     sportColor={sportColor}
+                    existingBookings={existingBookings}
+                    selectedDate={selectedDate}
+                    closingTime={closingTime}
+                    getAvailableDurations={getAvailableDurations}
                 />
             )}
 

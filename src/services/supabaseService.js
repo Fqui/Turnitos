@@ -189,7 +189,9 @@ class SupabaseService {
 
         if (businessError) throw businessError;
 
-        if (businessError) throw businessError;
+        // 1.5 Create default subscription IMMEDIATELY (Critical for triggers)
+        // Without this, triggers checking for business capacity/limits will fail
+        await this._createDefaultSubscription(business.id, businessData.subscription_plan_id);
 
         // 5. Insert subcategories relationships if any
         if (businessData.subcategories && businessData.subcategories.length > 0) {
@@ -208,6 +210,119 @@ class SupabaseService {
             if (subcategoriesError) {
                 console.error('Error inserting subcategories:', subcategoriesError);
                 throw new Error(`Error guardando subcategorías: ${subcategoriesError.message}`);
+            }
+        }
+
+        // 2. Insert services if any (Delete existing first to avoid duplicates on re-seed)
+        if (businessData.services && businessData.services.length > 0) {
+            // Delete existing services for this business
+            await supabase.from('services').delete().eq('business_id', business.id);
+
+            const servicesToInsert = businessData.services.map(s => ({
+                business_id: business.id,
+                name: s.name,
+                duration: s.duration,
+                price: s.price,
+                image_url: s.image || s.image_url,
+                description: s.description,
+                category: s.category
+            }));
+
+            const { data: insertedServices, error: servicesError } = await supabase
+                .from('services')
+                .insert(servicesToInsert)
+                .select();
+
+            if (servicesError) {
+                console.error('Error inserting services:', servicesError);
+            } else if (insertedServices) {
+                // Create service-specialist associations using real service IDs
+                const serviceSpecialistAssociations = [];
+
+                // Map original services to inserted services by matching name and price
+                businessData.services.forEach((originalService, index) => {
+                    if (originalService.specialist_id && insertedServices[index]) {
+                        serviceSpecialistAssociations.push({
+                            service_id: insertedServices[index].id, // Use real ID from database
+                            specialist_id: originalService.specialist_id
+                        });
+                    }
+                });
+
+                if (serviceSpecialistAssociations.length > 0) {
+                    const { error: assocError } = await supabase
+                        .from('service_specialists')
+                        .insert(serviceSpecialistAssociations);
+
+                    if (assocError) console.error('Error creating service-specialist associations:', assocError);
+                }
+            }
+        }
+
+        // 3. Insert or Update courts
+        if (businessData.courts && businessData.courts.length > 0) {
+            // Delete old courts to prevent ID conflicts (safer for overwrite logic)
+            await supabase.from('courts').delete().eq('business_id', business.id);
+
+            const courtsToInsert = businessData.courts.map(c => {
+                // Generate a valid UUID if ID is missing or temp
+                // This fixes "null value in column id" error if DB default is missing
+                const isValidUUID = c.id && c.id.toString().length === 36;
+
+                let courtId = isValidUUID ? c.id : null;
+
+                if (!courtId) {
+                    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                        courtId = crypto.randomUUID();
+                    } else {
+                        // Fallback UUID v4 generator
+                        courtId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                            return v.toString(16);
+                        });
+                    }
+                }
+
+                return {
+                    id: courtId,
+                    business_id: business.id,
+                    name: c.name,
+                    sport: c.sport,
+                    price: c.price
+                };
+            });
+
+            console.log('Inserting courts:', courtsToInsert); // Debug log
+
+            const { error: courtsError } = await supabase
+                .from('courts')
+                .insert(courtsToInsert);
+
+            if (courtsError) {
+                console.error('Error inserting courts:', courtsError);
+                throw new Error(`Error reservando canchas: ${courtsError.message}`);
+            }
+        }
+
+        // 4. Insert specialists if any (for service-type businesses)
+        if (businessData.specialists && businessData.specialists.length > 0) {
+            // Delete existing specialists for this business
+            await supabase.from('specialists').delete().eq('business_id', business.id);
+
+            const specialistsToInsert = businessData.specialists.map(sp => ({
+                business_id: business.id,
+                name: sp.name,
+                role: sp.role,
+                avatar_url: sp.avatar_url
+            }));
+
+            const { data: insertedSpecialists, error: specialistsError } = await supabase
+                .from('specialists')
+                .insert(specialistsToInsert)
+                .select();
+
+            if (specialistsError) {
+                console.error('Error inserting specialists:', specialistsError);
             }
         }
 
@@ -379,13 +494,32 @@ class SupabaseService {
 
             // C. Upsert (Insert or Update) remaining courts
             if (businessData.courts.length > 0) {
-                const courtsToUpsert = businessData.courts.map(c => ({
-                    id: c.id, // Keep ID for updates
-                    business_id: businessId,
-                    name: c.name,
-                    sport: c.sport,
-                    price: c.price
-                }));
+                const courtsToUpsert = businessData.courts.map(c => {
+                    // Check if ID is valid UUID
+                    const isValidUUID = c.id && c.id.toString().length === 36;
+
+                    let courtId = isValidUUID ? c.id : null;
+
+                    // Generate new UUID for new courts (temp IDs)
+                    if (!courtId) {
+                        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                            courtId = crypto.randomUUID();
+                        } else {
+                            courtId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                                return v.toString(16);
+                            });
+                        }
+                    }
+
+                    return {
+                        id: courtId,
+                        business_id: businessId,
+                        name: c.name,
+                        sport: c.sport,
+                        price: c.price
+                    };
+                });
 
                 const { error: courtsError } = await supabase
                     .from('courts')
@@ -538,13 +672,29 @@ class SupabaseService {
             await supabase.from('courts').delete().eq('business_id', businessId);
 
             if (updates.courts.length > 0) {
-                const courtsToInsert = updates.courts.map(c => ({
-                    id: c.id,
-                    business_id: businessId,
-                    name: c.name,
-                    sport: c.sport,
-                    price: c.price
-                }));
+                const courtsToInsert = updates.courts.map(c => {
+                    const isValidUUID = c.id && c.id.toString().length === 36;
+                    let courtId = isValidUUID ? c.id : null;
+
+                    if (!courtId) {
+                        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                            courtId = crypto.randomUUID();
+                        } else {
+                            courtId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                                return v.toString(16);
+                            });
+                        }
+                    }
+
+                    return {
+                        id: courtId,
+                        business_id: businessId,
+                        name: c.name,
+                        sport: c.sport,
+                        price: c.price
+                    };
+                });
 
                 const { error: courtsError } = await supabase
                     .from('courts')
@@ -708,26 +858,49 @@ class SupabaseService {
             }
         }
 
-        // ✅ VALIDATE BUSINESS-LEVEL CAPACITY BEFORE CREATING BOOKING
+        // Calculate times for validation FIRST
+        const dateStr = formatDateLocal(bookingData.date);
+        const startTime = `${dateStr}T${bookingData.time}:00`;
+
+        // Calculate end time based on duration (default 60 minutes)
+        const duration = bookingData.duration || 60;
+        const [hours, minutes] = bookingData.time.split(':').map(Number);
+        const endMinutes = hours * 60 + minutes + duration;
+        const endHours = Math.floor(endMinutes / 60) % 24;
+        const endMins = endMinutes % 60;
+        const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+        const endTime = `${dateStr}T${endTimeStr}:00`;
+
+        // ✅ 1. CHECK RESOURCE AVAILABILITY (Specific Court/Specialist)
+        // This prevents double-booking the same resource regardless of business total capacity
+        if (finalResourceId) {
+            const { data: conflicts, error: conflictError } = await supabase
+                .from('bookings')
+                .select('id')
+                .eq('resource_id', finalResourceId)
+                .neq('status', 'cancelled') // Ignore cancelled
+                .neq('status', 'rejected')  // Ignore rejected
+                .lt('start_time', endTime)  // Overlap logic: Start < NewEnd
+                .gt('end_time', startTime); // Overlap logic: End > NewStart
+
+            if (conflictError) {
+                console.error('Error checking resource conflict:', conflictError);
+                throw conflictError;
+            }
+
+            if (conflicts && conflicts.length > 0) {
+                throw new Error(`Este turno ya está reservado.`);
+            }
+        }
+
+        // ✅ 2. VALIDATE BUSINESS-LEVEL CAPACITY (Total concurrency)
         try {
-            // Calculate start and end times for validation
-            const dateStr = formatDateLocal(bookingData.date);
-            const startTime = `${dateStr}T${bookingData.time}:00`;
-
-            // Calculate end time based on duration (default 60 minutes)
-            const duration = bookingData.duration || 60;
-            const [hours, minutes] = bookingData.time.split(':').map(Number);
-            const endMinutes = hours * 60 + minutes + duration;
-            const endHours = Math.floor(endMinutes / 60) % 24;
-            const endMins = endMinutes % 60;
-            const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
-            const endTime = `${dateStr}T${endTimeStr}:00`;
-
             const availability = await this.validateBookingAvailability(
                 bookingData.businessId,
                 startTime,
                 endTime
             );
+
 
             if (!availability.available) {
                 throw new Error(
@@ -1398,6 +1571,52 @@ class SupabaseService {
 
         if (error) throw error;
         return data;
+    }
+    // --- Internal Helpers ---
+
+    async _createDefaultSubscription(businessId, planId = null) {
+        try {
+            // Get Plan (use provided ID or find Basic)
+            let plan;
+            if (planId) {
+                const { data } = await supabase.from('subscription_plans').select('*').eq('id', planId).single();
+                plan = data;
+            } else {
+                // Fallback to basic if no plan provided
+                // Note: Column is price_monthly in new schema, was monthly_price in old
+                const { data } = await supabase.from('subscription_plans').select('*').order('price_monthly', { ascending: true }).limit(1).single();
+                plan = data;
+            }
+
+            if (!plan) {
+                console.warn('No subscription plan found for default assignment.');
+                throw new Error('No subscription plan found');
+            }
+
+            // Create Subscription
+            const startDate = new Date();
+            const nextBilling = new Date();
+            nextBilling.setMonth(nextBilling.getMonth() + 1);
+
+            const { error } = await supabase.from('subscriptions').insert([{
+                business_id: businessId,
+                plan_name: plan.id, // Using plan ID as name ref for consistency
+                status: 'active',
+                spaces_included: plan.spaces_included, // Correct column from subscription_plans
+                monthly_price: plan.price_monthly, // Correct column mapping
+                billing_start: startDate.toISOString(),
+                next_billing_date: nextBilling.toISOString()
+            }]);
+
+            if (error) throw error;
+
+            // Update Business Capacity
+            await supabase.from('businesses').update({ capacity: plan.spaces_included }).eq('id', businessId);
+
+        } catch (error) {
+            console.error('Error creating default subscription:', error);
+            throw error; // Block creation if subscription fails (critical for triggers)
+        }
     }
 }
 

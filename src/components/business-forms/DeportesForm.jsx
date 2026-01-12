@@ -90,7 +90,7 @@ export default function DeportesForm({ business, onSave, onCancel }) {
         };
     });
 
-    const [newCourt, setNewCourt] = useState({ name: '', price: '' });
+    const [newCourt, setNewCourt] = useState({ name: '', price: '', sport: 'padel' });
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingBanner, setUploadingBanner] = useState(false);
     const [costBreakdown, setCostBreakdown] = useState(null);
@@ -207,9 +207,9 @@ export default function DeportesForm({ business, onSave, onCancel }) {
         // Add court without subscription limit validation
         setFormData(prev => ({
             ...prev,
-            courts: [...prev.courts, { ...newCourt, id: Date.now().toString(), sport: 'sport' }]
+            courts: [...prev.courts, { ...newCourt, id: Date.now().toString(), sport: newCourt.sport || 'padel' }]
         }));
-        setNewCourt({ name: '', price: '' });
+        setNewCourt({ name: '', price: '', sport: 'padel' });
     };
 
     const handleRemoveCourt = (index) => {
@@ -625,29 +625,82 @@ export default function DeportesForm({ business, onSave, onCancel }) {
                     )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '12px', marginBottom: '16px' }}>
-                    <input
-                        type="text"
-                        placeholder="Nombre de la cancha (ej: Cancha 1 - Cristal)"
-                        value={newCourt.name}
-                        onChange={(e) => setNewCourt({ ...newCourt, name: e.target.value })}
-                        style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '14px' }}
-                    />
-                    <input
-                        type="number"
-                        placeholder="Precio/hora"
-                        value={newCourt.price}
-                        onChange={(e) => setNewCourt({ ...newCourt, price: e.target.value })}
-                        style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '14px' }}
-                    />
-                    <button
-                        type="button"
-                        onClick={handleAddCourt}
-                        style={{ padding: '12px 20px', borderRadius: '10px', backgroundColor: 'var(--primary-paddle)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }}
-                    >
-                        + Agregar
-                    </button>
-                </div>
+                {/* Lógica para determinar deportes disponibles según subcategorías seleccionadas */}
+                {(() => {
+                    const selectedSubs = subcategories.filter(s => formData.subcategories.includes(s.id));
+                    const derivedSports = new Set();
+
+                    selectedSubs.forEach(sub => {
+                        const slug = sub.slug.toLowerCase();
+                        if (slug.includes('futbol')) derivedSports.add('futbol');
+                        else if (slug.includes('padel')) derivedSports.add('padel');
+                        else if (slug.includes('tenis') || slug.includes('tennis')) derivedSports.add('tennis');
+                    });
+
+                    // Convertir a array. Si no hay nada detectado (ej: primer carga), default a padel para evitar errores,
+                    // pero idealmente el usuario ya seleccionó algo.
+                    const availableSports = derivedSports.size > 0 ? Array.from(derivedSports) : ['padel'];
+                    const isSingleSport = availableSports.length === 1;
+
+                    // Actualizar el estado de newCourt si el deporte actual no coincide con los disponibles
+                    // (Esto es un efecto render-time, React 18 lo maneja bien, pero idealmente sería un useEffect. 
+                    // Para simplificar aquí, aseguramos que el valor enviado en onClick sea válido).
+
+                    return (
+                        <div style={{ display: 'grid', gridTemplateColumns: isSingleSport ? '2fr 1fr auto' : '2fr 1fr 1fr auto', gap: '12px', marginBottom: '16px' }}>
+                            <input
+                                type="text"
+                                placeholder={isSingleSport ? `Nombre (ej: Cancha 1)` : "Nombre"}
+                                value={newCourt.name}
+                                onChange={(e) => setNewCourt({ ...newCourt, name: e.target.value })}
+                                style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '14px' }}
+                            />
+
+                            {!isSingleSport && (
+                                <select
+                                    value={newCourt.sport || availableSports[0]}
+                                    onChange={(e) => setNewCourt({ ...newCourt, sport: e.target.value })}
+                                    style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '14px' }}
+                                >
+                                    {availableSports.map(sport => (
+                                        <option key={sport} value={sport}>
+                                            {sport === 'futbol' ? 'Fútbol' : sport === 'tennis' ? 'Tenis' : 'Pádel'}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+
+                            <input
+                                type="number"
+                                placeholder="Precio/h"
+                                value={newCourt.price}
+                                onChange={(e) => setNewCourt({ ...newCourt, price: e.target.value })}
+                                style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '14px' }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    // Asegurar que usamos el deporte correcto al agregar
+                                    const sportToAdd = isSingleSport ? availableSports[0] : (newCourt.sport || availableSports[0]);
+
+                                    if (!newCourt.name || !newCourt.price) {
+                                        alert('Completa todos los campos');
+                                        return;
+                                    }
+
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        courts: [...prev.courts, { ...newCourt, id: Date.now().toString(), sport: sportToAdd }]
+                                    }));
+                                    setNewCourt({ name: '', price: '', sport: sportToAdd });
+                                }}
+                                style={{ padding: '12px 20px', borderRadius: '10px', backgroundColor: 'var(--primary-paddle)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }}
+                            >
+                                + Agregar
+                            </button>
+                        </div>
+                    );
+                })()}
 
                 <div style={{ display: 'grid', gap: '12px' }}>
                     {formData.courts.map((court, index) => (

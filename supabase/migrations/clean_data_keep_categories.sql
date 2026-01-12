@@ -1,67 +1,35 @@
--- Script para limpiar todos los datos de la BD excepto categorías y subcategorías
--- Ejecutar en Supabase SQL Editor
+-- ==========================================
+-- SCRIPT DE LIMPIEZA SEGURA
+-- ==========================================
+-- ESTE SCRIPT BORRA: Negocios, Reservas, Clientes.
+-- ESTE SCRIPT MANTIENE (NO BORRA): Categorías, Subcategorías, Planes.
 
--- ============================================
--- LIMPIAR DATOS DE NEGOCIOS Y RELACIONADOS
--- ============================================
-
--- 1. Eliminar todas las reservas (bookings)
+-- 1. Borrar datos transaccionales (Hijos)
+DELETE FROM bookings_analytics;
 DELETE FROM bookings;
-
--- 2. Eliminar relaciones service_specialists
 DELETE FROM service_specialists;
-
--- 3. Eliminar servicios
-DELETE FROM services;
-
--- 4. Eliminar canchas
-DELETE FROM courts;
-
--- 5. Eliminar especialistas
-DELETE FROM specialists;
-
--- 6. Eliminar recursos (resources table si existe)
-DELETE FROM resources;
-
--- 7. Eliminar negocios
-DELETE FROM businesses;
-
--- 8. Eliminar promociones
+DELETE FROM business_subcategories; -- Solo borra la RELACIÓN, NO las subcategorías reales
 DELETE FROM promotions;
 
--- ============================================
--- MANTENER: Categorías, Subcategorías y Planes de Suscripción
--- ============================================
--- NO se eliminan las siguientes tablas:
--- - categories (se mantienen)
--- - subcategories (se mantienen)
--- - subscription_plans (se mantienen)
+-- 2. Borrar recursos del negocio
+DELETE FROM services;
+DELETE FROM courts;
+DELETE FROM specialists;
+DELETE FROM resources;
 
--- ============================================
--- RESETEAR SECUENCIAS (si aplica)
--- ============================================
--- Si tienes columnas con secuencias auto-incrementales, 
--- puedes resetearlas aquí (no aplica para UUIDs)
+-- 3. Borrar suscripciones activas (NO los planes)
+DELETE FROM subscriptions; -- Borra la "suscripción activa" del negocio, pero el PLAN base (ej: Gold) queda intacto
 
--- ============================================
+-- 4. Borrar entidades principales
+DELETE FROM businesses;
+DELETE FROM customers;
+
+-- ==========================================
 -- VERIFICACIÓN
--- ============================================
--- Ejecuta estas queries para verificar que se limpiaron los datos:
-
--- SELECT COUNT(*) FROM bookings;           -- Debe ser 0
--- SELECT COUNT(*) FROM services;           -- Debe ser 0
--- SELECT COUNT(*) FROM courts;             -- Debe ser 0
--- SELECT COUNT(*) FROM specialists;        -- Debe ser 0
--- SELECT COUNT(*) FROM businesses;         -- Debe ser 0
--- SELECT COUNT(*) FROM promotions;         -- Debe ser 0
--- SELECT COUNT(*) FROM categories;         -- Debe tener registros
--- SELECT COUNT(*) FROM subcategories;      -- Debe tener registros
--- SELECT COUNT(*) FROM subscription_plans; -- Debe tener registros
-
--- ============================================
--- NOTAS IMPORTANTES
--- ============================================
--- 1. Este script es IRREVERSIBLE - asegúrate de tener un backup si es necesario
--- 2. Las categorías y subcategorías se mantienen intactas
--- 3. Si tienes archivos en Supabase Storage, deberás eliminarlos manualmente
--- 4. Ejecuta este script en el SQL Editor de Supabase
+-- ==========================================
+-- Al final, estas consultas deben dar resultados > 0
+SELECT 'Categorias (Intactas)' as tipo, count(*) FROM categories
+UNION ALL
+SELECT 'Subcategorias (Intactas)', count(*) FROM subcategories
+UNION ALL
+SELECT 'Planes (Intactos)', count(*) FROM subscription_plans;

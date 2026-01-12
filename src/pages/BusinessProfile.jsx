@@ -11,6 +11,7 @@ import ServiceSelector from '../components/ServiceSelector';
 import Calendar from '../components/Calendar';
 import MonthCalendar from '../components/MonthCalendar';
 import TimeSlotPicker from '../components/TimeSlotPicker';
+import PadelBookingFlow from '../components/PadelBookingFlow'; // 🆕 Padel-specific booking flow
 import BookingSummary from '../components/BookingSummary';
 import { formatDisplayDate } from '../utils/dateUtils';
 
@@ -34,6 +35,7 @@ export default function BusinessProfile() {
     const [selectedTime, setSelectedTime] = useState(null);
     const [existingBookings, setExistingBookings] = useState([]); // State for bookings on selected date
     const [loadingBookings, setLoadingBookings] = useState(false); // 🆕 Loading state for bookings
+    const [bookingRefreshTrigger, setBookingRefreshTrigger] = useState(0); // 🆕 Trigger to force refresh
     const [showModal, setShowModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -228,7 +230,12 @@ export default function BusinessProfile() {
         };
 
         fetchBookingsForDate();
-    }, [business?.id, selectedDate]);
+    }, [business?.id, selectedDate, bookingRefreshTrigger]); // 🆕 Added bookingRefreshTrigger
+
+    // 🆕 Function to refresh bookings after creating a new one
+    const refreshBookings = () => {
+        setBookingRefreshTrigger(prev => prev + 1);
+    };
 
     // Auto-select sport logic
     useEffect(() => {
@@ -315,8 +322,12 @@ export default function BusinessProfile() {
                 price: finalDetails.price,
                 status: 'pending',
                 // Venue specific fields
-                duration: business.type === 'venue' ? (selectedDuration * 60) : (business.type === 'service' ? selectedItem.duration : 60),
+                // Venue specific fields - Prioritize selectedTime.duration for Padel
+                duration: selectedTime?.duration || finalDetails.duration || (business.type === 'venue' ? (selectedDuration * 60) : (business.type === 'service' ? selectedItem.duration : 60)),
                 metadata: business.type === 'venue' ? { additionalServices: selectedAdditionalServices } : null,
+
+
+
                 history: [
                     {
                         action: 'creation',
@@ -329,7 +340,13 @@ export default function BusinessProfile() {
 
             await serviceAdapter.createBooking(bookingData);
             alert('¡Reserva confirmada con éxito!');
-            navigate('/');
+
+            // 🆕 Refresh bookings to show updated timeline instead of navigating away
+            refreshBookings();
+
+            // Reset selection states
+            setSelectedTime(null);
+
         } catch (error) {
             console.error("Booking error:", error);
             alert("Hubo un error al guardar la reserva. Por favor intenta nuevamente.");
@@ -346,6 +363,10 @@ export default function BusinessProfile() {
 
     const { open, close, ranges } = getBusinessHours(selectedDate);
     const interval = selectedItem?.duration || 60; // Use service duration or default 60 min
+
+    // 🆕 Check if business has padel courts to adjust layout width
+    const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
+    const containerWidth = hasPadelCourts ? '90%' : '800px';
 
     return (
         <motion.div
@@ -404,7 +425,7 @@ export default function BusinessProfile() {
                 </button>
             </div>
 
-            <div className="container" style={{ maxWidth: '800px', margin: '0 auto', padding: '0 16px', position: 'relative', zIndex: 2 }}>
+            <div className="container" style={{ maxWidth: containerWidth, margin: '0 auto', padding: '0 16px', position: 'relative', zIndex: 2 }}>
 
                 {/* 2. Business Info Card */}
                 <div style={{
@@ -917,7 +938,7 @@ export default function BusinessProfile() {
                                         : (business.category || '').toLowerCase();
 
                                     if (sportName.includes('padel') || sportName.includes('paddle')) {
-                                        defaultInterval = 90; // Padel: 1.5 hours
+                                        defaultInterval = 30; // Padel: every 30 mins for flexible duration
                                     }
                                 }
 
@@ -1023,13 +1044,45 @@ export default function BusinessProfile() {
                                 // Get business capacity directly from business.capacity field
                                 const businessCapacity = business.capacity || 1;
 
+                                // 🆕 Detect if this is a padel business
+                                const hasPadelCourts = business.type === 'sport' && resources.some(r => r.sport === 'padel');
+
+                                // 🆕 Render PadelBookingFlow for padel courts
+                                if (hasPadelCourts) {
+                                    const padelCourts = resources.filter(r => r.sport === 'padel');
+
+                                    return (
+                                        <PadelBookingFlow
+                                            courts={padelCourts}
+                                            selectedDate={selectedDate}
+                                            existingBookings={existingBookings}
+                                            openingTime={open}
+                                            closingTime={close}
+                                            onSlotSelect={(slotData) => {
+                                                // slotData: { courtId, courtName, time, duration, price }
+                                                setSelectedTime({
+                                                    time: slotData.time,
+                                                    courtId: slotData.courtId,
+                                                    courtName: slotData.courtName,
+                                                    price: slotData.price,
+                                                    duration: slotData.duration
+                                                });
+                                            }}
+                                            sportColor={primaryColor}
+                                        />
+                                    );
+                                }
+
+                                // Regular TimeSlotPicker for non-padel sports and services
                                 return (
                                     <TimeSlotPicker
                                         selectedTime={selectedTime}
-                                        onTimeSelect={(time, courtId) => {
-                                            // New signature: (time, courtId)
-                                            // time is the selected time slot string (e.g., "14:00")
-                                            // courtId is the selected court's ID (or null if just time selected)
+                                        onTimeSelect={(time, courtId, duration, price) => {
+                                            // New signature: (time, courtId, duration, price)
+                                            // time: selected time slot string (e.g., "14:00")
+                                            // courtId: selected court's ID (or null if just time selected)
+                                            // duration: duration in minutes for padel (60, 90, 120) - optional
+                                            // price: final price for padel - optional
 
                                             if (courtId) {
                                                 // Full selection: time + court
@@ -1040,7 +1093,8 @@ export default function BusinessProfile() {
                                                     time,
                                                     courtId,
                                                     courtName,
-                                                    price: court ? court.price : 0 // ✅ Include price from selected court
+                                                    price: price !== undefined ? price : (court ? court.price : 0), // Use padel price or court price
+                                                    duration: duration || (business.type === 'service' ? selectedItem.duration : 60) // Use padel duration or default
                                                 });
                                             } else {
                                                 // Just time selected (no court yet)
@@ -1259,6 +1313,32 @@ export default function BusinessProfile() {
                             Continuar
                         </button>
                     </div>
+                )}
+
+                {/* BookingSummary Modal */}
+                {showModal && selectedTime && (
+                    <BookingSummary
+                        bookingDetails={{
+                            date: selectedDate instanceof Date
+                                ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+                                : selectedDate,
+                            time: selectedTime.time,
+                            courtId: selectedTime.courtId,
+                            courtName: selectedTime.courtName,
+                            serviceName: selectedItem?.name,
+                            price: selectedTime.price,
+                            duration: selectedTime.duration, // 🔥 Pass duration to modal
+                            businessPhone: business.phone,
+                            businessBank: business.bank_name,
+                            businessAccountHolder: business.account_holder,
+                            businessAlias: business.bank_alias,
+                            businessCBU: business.cbu
+                        }}
+                        sportColor={primaryColor}
+                        onClose={() => setShowModal(false)}
+                        onConfirm={handleConfirmBooking}
+                        isSubmitting={isSubmitting}
+                    />
                 )}
 
                 {/* Map and Amenities Section */}
