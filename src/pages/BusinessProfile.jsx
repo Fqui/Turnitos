@@ -1039,7 +1039,8 @@ export default function BusinessProfile() {
                                                 setSelectedTime({
                                                     time,
                                                     courtId,
-                                                    courtName
+                                                    courtName,
+                                                    price: court ? court.price : 0 // ✅ Include price from selected court
                                                 });
                                             } else {
                                                 // Just time selected (no court yet)

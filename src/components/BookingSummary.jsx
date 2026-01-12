@@ -232,7 +232,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                     </div>
 
                                     {/* Price with Deposit */}
-                                    {price && (
+                                    {price > 0 && (
                                         <div style={{
                                             padding: '12px 16px',
                                             borderRadius: '12px',

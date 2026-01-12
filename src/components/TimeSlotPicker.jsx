@@ -129,6 +129,7 @@ const TimeSlotPicker = ({
                     id: court.id,
                     name: court.name,
                     features: court.features || [],
+                    price: court.price || 0, // ✅ Pass price to CourtSelector
                     slotsUsed: bookingsCount,
                     totalCapacity: courtCapacity,
                     hasAvailability
@@ -149,14 +150,12 @@ const TimeSlotPicker = ({
 
     // Handle time slot selection (for sports)
     const handleTimeSlotSelect = (time) => {
-        setSelectedCourt(null); // Reset court selection when time changes
         // Emit time selection to parent
         onTimeSelect(time, null);
     };
 
     // Handle court selection (for sports)
     const handleCourtSelect = (court) => {
-        setSelectedCourt(court);
         // Emit final selection to parent
         onTimeSelect(selectedTimeSlot, court.id);
     };

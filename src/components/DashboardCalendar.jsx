@@ -60,25 +60,31 @@ export default function DashboardCalendar({
             let hasValidHours = false;
 
             Object.values(business.hours).forEach(dayConfig => {
-                if (dayConfig.open && dayConfig.close) {
+                // Only process days that are open
+                if (dayConfig.isOpen !== false && dayConfig.open && dayConfig.close) {
                     const startHour = parseInt(dayConfig.open.split(':')[0]);
-                    const endHour = parseInt(dayConfig.close.split(':')[0]);
+                    let endHour = parseInt(dayConfig.close.split(':')[0]);
 
-                    // Consider minutes? For calendar range, simpler to use hour floor/ceil
+                    // Handle midnight crossing: if close < open, it means next day
+                    // e.g., 18:00-03:00 means 18:00 to 03:00 next day
+                    if (endHour < startHour) {
+                        endHour += 24; // Convert to 24+ hour format (03:00 becomes 27:00)
+                    }
+
                     if (!isNaN(startHour) && startHour < minStart) minStart = startHour;
-                    if (!isNaN(endHour) && endHour > maxEnd) maxEnd = endHour; // Close time is usually exclusive or last hour slot
+                    if (!isNaN(endHour) && endHour > maxEnd) maxEnd = endHour;
                     hasValidHours = true;
                 }
             });
 
-            if (hasValidHours) {
-                // Add some buffer if needed, but user requested exact start
-                // Ensure end covers the last slot. e.g. close 23:00 means we need 22:00-23:00 slot, so loop until < 23.
-                // Actually the current loop is <= end. 
-                // If close is 23:00, we probably want the last slot to be 22:00 or 22:30.
-                // Let's stick to standard logic: range includes start and end hour.
+            if (hasValidHours && minStart < 24 && maxEnd > 0) {
+                console.log('📅 Business hours:', { start: minStart, end: maxEnd, crossesMidnight: maxEnd > 24 });
                 return { start: minStart, end: maxEnd };
             }
+
+            // If no valid hours found, return defaults
+            console.warn('⚠️ No valid business hours found, using defaults 8-23');
+            return { start: 8, end: 23 };
         }
 
         // Handle legacy string format "08:00-23:00"
@@ -92,6 +98,16 @@ export default function DashboardCalendar({
     };
 
     const businessHours = getBusinessHours();
+
+    // 🔍 DEBUG: Log business data to diagnose empty calendar
+    console.log('📊 DashboardCalendar - Business Data:', {
+        businessId: business?.id,
+        businessName: business?.name,
+        courtsCount: business?.courts?.length || 0,
+        specialistsCount: business?.specialists?.length || 0,
+        bookingsCount: bookings?.length || 0,
+        businessHours
+    });
 
     // Helper to get start of week (Monday)
     const getStartOfWeek = (date) => {
@@ -143,12 +159,18 @@ export default function DashboardCalendar({
     // Generate time slots based on business hours
     const timeSlots = useMemo(() => {
         const slots = [];
+        console.log('🕐 Generating time slots:', { start: businessHours.start, end: businessHours.end });
+
         for (let i = businessHours.start; i <= businessHours.end; i++) {
-            slots.push(`${i.toString().padStart(2, '0')}:00`);
+            // Convert hours > 24 to display format (25 → "01", 26 → "02", etc.)
+            const displayHour = i % 24;
+            slots.push(`${displayHour.toString().padStart(2, '0')}:00`);
             if (i < businessHours.end) {
-                slots.push(`${i.toString().padStart(2, '0')}:30`);
+                slots.push(`${displayHour.toString().padStart(2, '0')}:30`);
             }
         }
+
+        console.log('✅ Generated time slots:', slots.length, 'slots');
         return slots;
     }, [businessHours]);
 

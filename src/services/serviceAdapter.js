@@ -164,6 +164,14 @@ class ServiceAdapter {
         return this.service.getSubscriptionPlans(businessType);
     }
 
+    async getCategories(businessType = null) {
+        if (this.isDemoMode) {
+            // Mock categories if needed, or import from mockData
+            return import('../data/mockData').then(m => m.categories);
+        }
+        return this.service.getCategories(businessType);
+    }
+
     subscribeToBookings(businessId, callback) {
         return this.service.subscribeToBookings(businessId, callback);
     }

@@ -12,6 +12,7 @@ export default function Home() {
     const [selectedSubCategory, setSelectedSubCategory] = useState('all');
     const [businesses, setBusinesses] = useState([]);
     const [promotions, setPromotions] = useState([]);
+    const [categoriesData, setCategoriesData] = useState([]); // ✅ New state for dynamic categories
     const [loading, setLoading] = useState(true);
     const resultsRef = useRef(null);
     const searchTimeoutRef = useRef(null);
@@ -45,12 +46,18 @@ export default function Home() {
     useEffect(() => {
         const loadData = async () => {
             try {
-                const [businessesData, promotionsData] = await Promise.all([
+                const [businessesData, promotionsData, categoriesResult] = await Promise.all([
                     serviceAdapter.getBusinesses(),
-                    serviceAdapter.getPromotions()
+                    serviceAdapter.getPromotions(),
+                    serviceAdapter.getCategories() // ✅ Fetch categories
                 ]);
                 setBusinesses(businessesData || []);
                 setPromotions(promotionsData || []);
+                setCategoriesData(categoriesResult || []);
+
+                setBusinesses(businessesData || []);
+                setPromotions(promotionsData || []);
+                setCategoriesData(categoriesResult || []);
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
@@ -68,54 +75,52 @@ export default function Home() {
                 const matchesCategory = (() => {
                     if (selectedCategory === 'all') return true;
 
-                    const cat = b.category?.toLowerCase();
+                    const categorySlug = b.categories?.slug?.toLowerCase() || '';
+                    const categoryName = b.categories?.name?.toLowerCase() || '';
                     const type = b.type?.toLowerCase();
 
-                    // 1. Deportes: Match type 'sport' OR specific sport categories
+                    // 1. Deportes: Match type 'sport' OR category slug/name
                     if (selectedCategory === 'deportes' || selectedCategory === 'sport') {
-                        const isSport = type === 'sport' || ['padel', 'futbol', 'fútbol', 'tennis', 'tenis', 'deporte'].includes(cat);
+                        const isSport = type === 'sport' || categorySlug === 'deportes' || categoryName === 'deportes';
                         if (!isSport) return false;
 
                         // Sub-category logic for Deportes
                         if (selectedSubCategory === 'all') return true;
 
-                        const sub = selectedSubCategory.toLowerCase();
+                        const selectedSub = selectedSubCategory.toLowerCase();
 
-                        // Check direct category match
-                        if (cat.includes(sub)) return true;
+                        // Check if business has ANY of the selected subcategory in its array
+                        const hasSubcategory = b.subcategories?.some(sub => {
+                            const slug = (sub.slug || '').toLowerCase();
+                            const name = (sub.name || '').toLowerCase();
+                            return slug === selectedSub || name === selectedSub;
+                        });
 
-                        // Check sportTypes array
-                        if (b.sportTypes && b.sportTypes.some(s => s.toLowerCase().includes(sub))) return true;
-
-                        // Manual mappings for synonyms
-                        if (sub === 'futbol' && (cat.includes('football') || b.sportTypes?.includes('football'))) return true;
-                        if (sub === 'tenis' && (cat.includes('tennis') || b.sportTypes?.includes('tennis'))) return true;
-
-                        return false;
+                        return hasSubcategory;
                     }
 
                     // 2. Belleza: Match 'belleza', 'beauty', 'estetica'
                     if (selectedCategory === 'belleza' || selectedCategory === 'beauty') {
-                        return cat === 'belleza' || cat === 'beauty' || cat === 'estetica';
+                        return categorySlug === 'belleza' || categoryName === 'belleza';
                     }
 
                     // 3. Salud: Match 'salud', 'health', 'medicina'
                     if (selectedCategory === 'salud' || selectedCategory === 'health') {
-                        return cat === 'salud' || cat === 'health' || cat === 'medicina';
+                        return categorySlug === 'salud' || categoryName === 'salud';
                     }
 
-                    // 4. Quinchos (Venues): Match type 'venue' OR 'eventos', 'quincho'
+                    // 4. Quinchos (Venues): Match type 'venue' OR category
                     if (selectedCategory === 'quinchos' || selectedCategory === 'venue') {
-                        return type === 'venue' || cat === 'eventos' || cat === 'quincho' || cat === 'alquiler';
+                        return type === 'venue' || categorySlug === 'quinchos' || categoryName === 'quinchos';
                     }
 
                     // 5. Mascotas
                     if (selectedCategory === 'mascotas') {
-                        return cat === 'mascotas' || type === 'mascotas';
+                        return categorySlug === 'mascotas' || categoryName === 'mascotas';
                     }
 
                     // Fallback: exact match
-                    return cat === selectedCategory;
+                    return categorySlug === selectedCategory || categoryName === selectedCategory;
                 })();
                 return matchesCategory;
             });
@@ -143,55 +148,90 @@ export default function Home() {
             const matchesCategory = (() => {
                 if (selectedCategory === 'all') return true;
 
-                const cat = b.category?.toLowerCase();
+                const categorySlug = b.categories?.slug?.toLowerCase() || '';
+                const categoryName = b.categories?.name?.toLowerCase() || '';
                 const type = b.type?.toLowerCase();
 
-                // 1. Deportes: Match type 'sport' OR specific sport categories
+                // 1. Deportes: Match type 'sport' OR category slug/name
                 if (selectedCategory === 'deportes' || selectedCategory === 'sport') {
-                    const isSport = type === 'sport' || ['padel', 'futbol', 'fútbol', 'tennis', 'tenis', 'deporte'].includes(cat);
+                    const isSport = type === 'sport' || categorySlug === 'deportes' || categoryName === 'deportes';
 
                     if (!isSport) return false;
 
                     // Sub-category logic for Deportes
                     if (selectedSubCategory === 'all') return true;
 
-                    const sub = selectedSubCategory.toLowerCase();
+                    // Helper to normalize strings (remove accents, lowercase)
+                    const normalizeText = (text) => {
+                        return (text || '')
+                            .toLowerCase()
+                            .normalize("NFD")
+                            .replace(/[\u0300-\u036f]/g, "")
+                            .trim();
+                    };
 
-                    // Check direct category match
-                    if (cat.includes(sub)) return true;
+                    const selectedSubNorm = normalizeText(selectedSub);
 
-                    // Check sportTypes array
-                    if (b.sportTypes && b.sportTypes.some(s => s.toLowerCase().includes(sub))) return true;
+                    // Check if business has ANY of the selected subcategory in its array
+                    let hasSubcategory = b.subcategories?.some(sub => {
+                        const slugNorm = normalizeText(sub.slug);
+                        const nameNorm = normalizeText(sub.name);
+                        return slugNorm === selectedSubNorm || nameNorm === selectedSubNorm;
+                    });
 
-                    // Manual mappings for synonyms
-                    if (sub === 'futbol' && (cat.includes('football') || b.sportTypes?.includes('football'))) return true;
-                    if (sub === 'tenis' && (cat.includes('tennis') || b.sportTypes?.includes('tennis'))) return true;
+                    // 🛠️ FALLBACK: If explicit subcategories array is empty, check legacy subcategory_id
+                    if (!hasSubcategory && b.subcategory_id && categoriesData.length > 0) {
+                        for (const cat of categoriesData) {
+                            const foundSub = cat.subcategories?.find(s => s.id === b.subcategory_id);
+                            if (foundSub) {
+                                const slugNorm = normalizeText(foundSub.slug);
+                                const nameNorm = normalizeText(foundSub.name);
+                                if (slugNorm === selectedSubNorm || nameNorm === selectedSubNorm) {
+                                    hasSubcategory = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
 
-                    return false;
+                    // DEBUG LOG
+                    if (selectedCategory === 'deportes' && !hasSubcategory) {
+                        console.log(`❌ Filter mismatch for ${b.name}:`, {
+                            selectedSub: selectedSubNorm,
+                            businessSubcategories: b.subcategories?.map(s => ({ name: s.name, slug: s.slug })),
+                            legacySubId: b.subcategory_id
+                        });
+                    } else if (selectedCategory === 'deportes' && hasSubcategory) {
+                        console.log(`✅ Filter MATCH for ${b.name}:`, {
+                            selectedSub: selectedSubNorm
+                        });
+                    }
+
+                    return hasSubcategory;
                 }
 
                 // 2. Belleza: Match 'belleza', 'beauty', 'estetica'
                 if (selectedCategory === 'belleza' || selectedCategory === 'beauty') {
-                    return cat === 'belleza' || cat === 'beauty' || cat === 'estetica';
+                    return categorySlug === 'belleza' || categoryName === 'belleza';
                 }
 
                 // 3. Salud: Match 'salud', 'health', 'medicina'
                 if (selectedCategory === 'salud' || selectedCategory === 'health') {
-                    return cat === 'salud' || cat === 'health' || cat === 'medicina';
+                    return categorySlug === 'salud' || categoryName === 'salud';
                 }
 
-                // 4. Quinchos (Venues): Match type 'venue' OR 'eventos', 'quincho'
+                // 4. Quinchos (Venues): Match type 'venue' OR category
                 if (selectedCategory === 'quinchos' || selectedCategory === 'venue') {
-                    return type === 'venue' || cat === 'eventos' || cat === 'quincho' || cat === 'alquiler';
+                    return type === 'venue' || categorySlug === 'quinchos' || categoryName === 'quinchos';
                 }
 
                 // 5. Mascotas
                 if (selectedCategory === 'mascotas') {
-                    return cat === 'mascotas' || type === 'mascotas';
+                    return categorySlug === 'mascotas' || categoryName === 'mascotas';
                 }
 
                 // Fallback: exact match
-                return cat === selectedCategory;
+                return categorySlug === selectedCategory || categoryName === selectedCategory;
             })();
 
             return matchesSearch && matchesCategory;
@@ -203,6 +243,13 @@ export default function Home() {
         setSelectedCategory(category);
         setSelectedSubCategory('all'); // Reset sub-category when main category changes
         setSearchTerm('');
+
+        // Auto scroll to results on mobile
+        if (window.innerWidth < 768 && resultsRef.current) {
+            setTimeout(() => {
+                resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
     }, []);
 
 
@@ -417,17 +464,18 @@ export default function Home() {
                             <span style={{ fontSize: '14px', fontWeight: '700' }}>Todos</span>
                         </motion.button>
 
-                        {categories.map(cat => (
+                        {/* Use DB categories if available, otherwise fallback to static mock */}
+                        {(categoriesData.length > 0 ? categoriesData : categories).map(cat => (
                             <motion.button
-                                key={cat.id}
+                                key={cat.id || cat.slug} // Handle both DB (id) and Mock (id/slug) structures
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => handleCategoryClick(cat.id)}
+                                onClick={() => handleCategoryClick(cat.slug || cat.id)} // Prefer slug for filtering consistency
                                 style={{
                                     padding: '20px 10px',
                                     borderRadius: '24px',
-                                    backgroundColor: selectedCategory === cat.id ? 'var(--text-primary)' : 'var(--bg-card)',
-                                    color: selectedCategory === cat.id ? 'var(--bg-card)' : 'var(--text-secondary)',
+                                    backgroundColor: (selectedCategory === cat.slug || selectedCategory === cat.id) ? 'var(--text-primary)' : 'var(--bg-card)',
+                                    color: (selectedCategory === cat.slug || selectedCategory === cat.id) ? 'var(--bg-card)' : 'var(--text-secondary)',
                                     border: '1px solid var(--border)',
                                     cursor: 'pointer',
                                     display: 'flex',
@@ -449,41 +497,111 @@ export default function Home() {
                     </div>
                 </section>
 
-                {/* Sub-Category Filter for Sports */}
-                {(selectedCategory === 'deportes' || selectedCategory === 'sport') && (
-                    <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px' }}>
-                        {['Todos', 'Padel', 'Futbol', 'Tenis'].map(sub => (
-                            <motion.button
-                                key={sub}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setSelectedSubCategory(sub === 'Todos' ? 'all' : sub.toLowerCase())}
-                                style={{
-                                    padding: '8px 20px',
-                                    borderRadius: '50px',
-                                    border: '1px solid var(--border)',
-                                    backgroundColor: (selectedSubCategory === 'all' && sub === 'Todos') || selectedSubCategory === sub.toLowerCase()
-                                        ? 'var(--primary-paddle)'
-                                        : 'var(--bg-card)',
-                                    color: (selectedSubCategory === 'all' && sub === 'Todos') || selectedSubCategory === sub.toLowerCase()
-                                        ? '#000'
-                                        : 'var(--text-primary)',
-                                    cursor: 'pointer',
-                                    fontWeight: '600',
-                                    whiteSpace: 'nowrap',
-                                    fontSize: '14px',
-                                    boxShadow: (selectedSubCategory === 'all' && sub === 'Todos') || selectedSubCategory === sub.toLowerCase()
-                                        ? '0 4px 10px rgba(0, 230, 118, 0.2)'
-                                        : 'none'
-                                }}
-                            >
-                                {sub}
-                            </motion.button>
-                        ))}
-                    </div>
-                )}
+                {/* Anchor for auto-scroll */}
+                <div ref={resultsRef} style={{ scrollMarginTop: '20px' }} />
+
+                {/* Sub-Category Filter - DYNAMIC */}
+                {(() => {
+                    // Find the full category object for the selected ID/Slug
+                    // The categoriesData typically comes from the DB with nested subcategories
+                    const currentCategory = categoriesData.find(c =>
+                        c.id === selectedCategory || c.slug === selectedCategory
+                    );
+
+                    // If we have subcategories, show them
+                    if (currentCategory && currentCategory.subcategories && currentCategory.subcategories.length > 0) {
+                        // Sort by display_order if available
+                        const sortedSubs = [...currentCategory.subcategories].sort((a, b) =>
+                            (a.display_order || 0) - (b.display_order || 0)
+                        );
+
+                        return (
+                            <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                {/* 'Todos' button is always first */}
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => setSelectedSubCategory('all')}
+                                    style={{
+                                        padding: '8px 20px',
+                                        borderRadius: '50px',
+                                        border: '1px solid var(--border)',
+                                        backgroundColor: selectedSubCategory === 'all' ? 'var(--primary-paddle)' : 'var(--bg-card)',
+                                        color: selectedSubCategory === 'all' ? '#000' : 'var(--text-primary)',
+                                        cursor: 'pointer',
+                                        fontWeight: '600',
+                                        whiteSpace: 'nowrap',
+                                        fontSize: '14px',
+                                        boxShadow: selectedSubCategory === 'all' ? '0 4px 10px rgba(0, 230, 118, 0.2)' : 'none'
+                                    }}
+                                >
+                                    Todos
+                                </motion.button>
+
+                                {sortedSubs.map(sub => (
+                                    <motion.button
+                                        key={sub.id}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => setSelectedSubCategory(sub.slug)}
+                                        style={{
+                                            padding: '8px 20px',
+                                            borderRadius: '50px',
+                                            border: '1px solid var(--border)',
+                                            backgroundColor: selectedSubCategory === sub.slug ? 'var(--primary-paddle)' : 'var(--bg-card)',
+                                            color: selectedSubCategory === sub.slug ? '#000' : 'var(--text-primary)',
+                                            cursor: 'pointer',
+                                            fontWeight: '600',
+                                            whiteSpace: 'nowrap',
+                                            fontSize: '14px',
+                                            boxShadow: selectedSubCategory === sub.slug ? '0 4px 10px rgba(0, 230, 118, 0.2)' : 'none'
+                                        }}
+                                    >
+                                        {sub.name}
+                                    </motion.button>
+                                ))}
+                            </div>
+                        );
+                    }
+
+                    // Fallback for hardcoded "Deportes" if DB categories aren't fully set up yet
+                    if (selectedCategory === 'deportes' || selectedCategory === 'sport') {
+                        return (
+                            <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                {['Todos', 'Padel', 'Futbol', 'Tenis', 'Basquet', 'Hockey'].map(sub => (
+                                    <motion.button
+                                        key={sub}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => setSelectedSubCategory(sub === 'Todos' ? 'all' : sub.toLowerCase())}
+                                        style={{
+                                            padding: '8px 20px',
+                                            borderRadius: '50px',
+                                            border: '1px solid var(--border)',
+                                            backgroundColor: (selectedSubCategory === 'all' && sub === 'Todos') || selectedSubCategory === sub.toLowerCase()
+                                                ? 'var(--primary-paddle)'
+                                                : 'var(--bg-card)',
+                                            color: (selectedSubCategory === 'all' && sub === 'Todos') || selectedSubCategory === sub.toLowerCase()
+                                                ? '#000'
+                                                : 'var(--text-primary)',
+                                            cursor: 'pointer',
+                                            fontWeight: '600',
+                                            whiteSpace: 'nowrap',
+                                            fontSize: '14px',
+                                            boxShadow: (selectedSubCategory === 'all' && sub === 'Todos') || selectedSubCategory === sub.toLowerCase()
+                                                ? '0 4px 10px rgba(0, 230, 118, 0.2)'
+                                                : 'none'
+                                        }}
+                                    >
+                                        {sub}
+                                    </motion.button>
+                                ))}
+                            </div>
+                        );
+                    }
+
+                    return null;
+                })()}
 
                 {/* 4. Featured Businesses */}
-                <section ref={resultsRef}>
+                <section>
                     <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '20px', color: 'var(--text-primary)' }}>
                         {selectedCategory === 'all' ? 'Recomendados para ti' : 'Resultados'}
                     </h2>
@@ -564,6 +682,6 @@ export default function Home() {
                     )}
                 </section>
             </div>
-        </motion.div>
+        </motion.div >
     );
 }

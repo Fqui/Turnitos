@@ -36,7 +36,7 @@ export default function CourtSelector({
                     gap: '12px'
                 }}>
                     {availableCourts.map((court) => {
-                        const isSelected = selectedCourt?.id === court.id;
+                        const isSelected = selectedCourt === court.id;
 
                         return (
                             <motion.div
@@ -68,11 +68,9 @@ export default function CourtSelector({
                                     <div>
                                         <div style={{
                                             display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px',
+                                            flexDirection: 'column', // Changed to column to stack name and price if needed
                                             marginBottom: '4px'
                                         }}>
-                                            <span style={{ fontSize: '18px' }}>🎾</span>
                                             <h5 style={{
                                                 fontSize: '16px',
                                                 fontWeight: '700',
@@ -81,6 +79,16 @@ export default function CourtSelector({
                                             }}>
                                                 {court.name}
                                             </h5>
+                                            {court.price > 0 && (
+                                                <span style={{
+                                                    fontSize: '14px',
+                                                    color: sportColor,
+                                                    fontWeight: '600',
+                                                    marginTop: '2px'
+                                                }}>
+                                                    ${court.price.toLocaleString()}
+                                                </span>
+                                            )}
                                         </div>
 
                                         {court.features && court.features.length > 0 && (

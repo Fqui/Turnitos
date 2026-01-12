@@ -64,7 +64,11 @@ const SubscriptionManager = ({ businessId, businessType, business }) => {
             alert('¡Plan actualizado exitosamente!');
         } catch (err) {
             console.error('Error updating subscription:', err);
-            alert('Error al actualizar el plan: ' + err.message);
+            if (err.message && err.message.includes('valid_spaces')) {
+                alert('No puedes cambiar a un plan menor porque tienes más canchas/espacios creados de los que permite el nuevo plan. Por favor elimina algunos espacios antes de cambiar de plan.');
+            } else {
+                alert('Error al actualizar el plan: ' + err.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -106,7 +110,7 @@ const SubscriptionManager = ({ businessId, businessType, business }) => {
                     <h3>Tu Suscripción Actual</h3>
                     <div className="subscription-card">
                         <div className="subscription-header">
-                            <h4>{subscription.plan_name}</h4>
+                            <h4>{plans.find(p => p.id === subscription.plan_name)?.name || subscription.plan_name}</h4>
                             <span className={`status status-${subscription.status}`}>
                                 {subscription.status === 'active' ? 'Activo' : subscription.status}
                             </span>

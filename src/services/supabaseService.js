@@ -28,13 +28,51 @@ class SupabaseService {
             .from('businesses')
             .select(`
                 *,
+                categories (
+                    id,
+                    name,
+                    slug,
+                    icon
+                ),
+                legacy_subcategory:subcategories!businesses_subcategory_id_fkey (
+                    id,
+                    name,
+                    slug,
+                    icon
+                ),
+                business_subcategories (
+                    subcategories (
+                        id,
+                        name,
+                        slug,
+                        icon,
+                        category_id
+                    )
+                ),
                 services (*),
                 courts (*),
                 specialists (*)
             `);
 
         if (error) throw error;
-        return this._processBusinessData(data);
+
+        // Transform data to flatten subcategories array
+        const businesses = data.map(b => {
+            // Combine M:N subcategories with legacy single subcategory
+            const manyToManySubs = b.business_subcategories?.map(bs => bs.subcategories) || [];
+            const legacySub = b.legacy_subcategory;
+
+            // Deduplicate by ID
+            const allSubs = legacySub ? [...manyToManySubs, legacySub] : manyToManySubs;
+            const uniqueSubs = Array.from(new Map(allSubs.map(item => [item.id, item])).values());
+
+            return {
+                ...b,
+                subcategories: uniqueSubs
+            };
+        });
+
+        return this._processBusinessData(businesses);
     }
 
     async getBusinessById(id) {
@@ -103,133 +141,73 @@ class SupabaseService {
     }
 
     async createBusiness(businessData) {
-        // 1. Upsert business (Insert or Update)
-        const { data: business, error: businessError } = await supabase
-            .from('businesses')
-            .upsert([{
-                id: businessData.id, // Use provided ID
-                name: businessData.name,
-                category: businessData.category,
-                type: businessData.type,
-                image: businessData.image || businessData.logo, // Fallback to logo for backward compatibility
-                logo: businessData.logo,
-                banner_image: businessData.banner_image,
-                location: businessData.location,
-                latitude: businessData.latitude,
-                longitude: businessData.longitude,
-                rating: businessData.rating || 0,
-                theme: businessData.theme || 'light',
-                amenities: businessData.amenities || [],
-                hours: businessData.hours,
-                sport_types: businessData.sportTypes || [],
-                button_color: businessData.buttonColor || businessData.button_color,
-                instagram: businessData.instagram,
-                facebook: businessData.facebook,
-                whatsapp: businessData.whatsapp,
-                primary_color: businessData.primaryColor || businessData.button_color,
-                service_categories: businessData.service_categories || [],
-                time_ranges: businessData.time_ranges || [],
-                // Venue-specific fields
-                price_per_hour: businessData.price_per_hour,
-                rental_duration_options: businessData.rental_duration_options || [],
-                additional_services: businessData.additional_services || [],
-                included_amenities: businessData.included_amenities || [],
-                gallery_images: businessData.gallery_images || [],
-                max_capacity: businessData.max_capacity || 1
-            }])
-            .select()
-            .single();
+        // 1. Prepare business data
+        const businessRecord = {
+            name: businessData.name,
+            category_id: businessData.category_id, // UUID reference to categories table
+            subcategory_id: businessData.subcategory_id, // UUID reference to subcategories table
+            subscription_plan_id: businessData.subscription_plan_id, // UUID reference to subscription_plans table
+            type: businessData.type,
+            email: businessData.email, // Auto-generated email
+            password: businessData.password, // Default password
+            image: businessData.image || businessData.logo, // Fallback to logo for backward compatibility
+            logo: businessData.logo,
+            banner_image: businessData.banner_image,
+            location: businessData.location,
+            latitude: businessData.latitude,
+            longitude: businessData.longitude,
+            rating: businessData.rating || 0,
+            theme: businessData.theme || 'light',
+            amenities: businessData.amenities || [],
+            hours: businessData.hours,
+            sport_types: businessData.sportTypes || [],
+            button_color: businessData.buttonColor || businessData.button_color,
+            instagram: businessData.instagram,
+            facebook: businessData.facebook,
+            whatsapp: businessData.whatsapp,
+            primary_color: businessData.primaryColor || businessData.button_color,
+            service_categories: businessData.service_categories || [],
+            time_ranges: businessData.time_ranges || [],
+            // Venue-specific fields
+            price_per_hour: businessData.price_per_hour,
+            rental_duration_options: businessData.rental_duration_options || [],
+            additional_services: businessData.additional_services || [],
+            included_amenities: businessData.included_amenities || [],
+            gallery_images: businessData.gallery_images || [],
+            max_capacity: businessData.max_capacity || 1
+        };
+
+        // Add id only if provided (for updates)
+        if (businessData.id) {
+            businessRecord.id = businessData.id;
+        }
+
+        // Use upsert if id exists (update), otherwise insert (create new)
+        const { data: business, error: businessError } = businessData.id
+            ? await supabase.from('businesses').upsert([businessRecord]).select().single()
+            : await supabase.from('businesses').insert([businessRecord]).select().single();
 
         if (businessError) throw businessError;
 
-        // 2. Insert services if any (Delete existing first to avoid duplicates on re-seed)
-        if (businessData.services && businessData.services.length > 0) {
-            // Delete existing services for this business
-            await supabase.from('services').delete().eq('business_id', business.id);
+        if (businessError) throw businessError;
 
-            const servicesToInsert = businessData.services.map(s => ({
+        // 5. Insert subcategories relationships if any
+        if (businessData.subcategories && businessData.subcategories.length > 0) {
+            // Delete existing subcategory relationships for this business
+            await supabase.from('business_subcategories').delete().eq('business_id', business.id);
+
+            const subcategoriesToInsert = businessData.subcategories.map(subId => ({
                 business_id: business.id,
-                name: s.name,
-                duration: s.duration,
-                price: s.price,
-                image_url: s.image || s.image_url,
-                description: s.description,
-                category: s.category
+                subcategory_id: subId
             }));
 
-            const { data: insertedServices, error: servicesError } = await supabase
-                .from('services')
-                .insert(servicesToInsert)
-                .select();
+            const { error: subcategoriesError } = await supabase
+                .from('business_subcategories')
+                .insert(subcategoriesToInsert);
 
-            if (servicesError) {
-                console.error('Error inserting services:', servicesError);
-            } else if (insertedServices) {
-                // Create service-specialist associations using real service IDs
-                const serviceSpecialistAssociations = [];
-
-                // Map original services to inserted services by matching name and price
-                businessData.services.forEach((originalService, index) => {
-                    if (originalService.specialist_id && insertedServices[index]) {
-                        serviceSpecialistAssociations.push({
-                            service_id: insertedServices[index].id, // Use real ID from database
-                            specialist_id: originalService.specialist_id
-                        });
-                    }
-                });
-
-                if (serviceSpecialistAssociations.length > 0) {
-                    const { error: assocError } = await supabase
-                        .from('service_specialists')
-                        .insert(serviceSpecialistAssociations);
-
-                    if (assocError) console.error('Error creating service-specialist associations:', assocError);
-                }
-            }
-        }
-
-        // 3. Insert courts if any (Delete existing first)
-        if (businessData.courts && businessData.courts.length > 0) {
-            // Delete existing courts for this business
-            await supabase.from('courts').delete().eq('business_id', business.id);
-
-            const courtsToInsert = businessData.courts.map(c => ({
-                id: c.id,
-                business_id: business.id,
-                name: c.name,
-                sport: c.sport,
-                price: c.price
-            }));
-
-            const { error: courtsError } = await supabase
-                .from('courts')
-                .insert(courtsToInsert);
-
-            if (courtsError) console.error('Error inserting courts:', courtsError);
-        }
-
-        // 4. Insert specialists if any (for service-type businesses)
-        if (businessData.specialists && businessData.specialists.length > 0) {
-            // Delete existing specialists for this business
-            await supabase.from('specialists').delete().eq('business_id', business.id);
-
-            const specialistsToInsert = businessData.specialists.map(sp => ({
-                business_id: business.id,
-                name: sp.name,
-                role: sp.role,
-                avatar_url: sp.avatar_url
-            }));
-
-            const { data: insertedSpecialists, error: specialistsError } = await supabase
-                .from('specialists')
-                .insert(specialistsToInsert)
-                .select();
-
-            if (specialistsError) {
-                console.error('Error inserting specialists:', specialistsError);
-            } else {
-                // Create service-specialist associations (if any were missed above or for new specialists)
-                // Note: The main associations are handled in step 2, this is a fallback or for direct specialist assignment if logic changes
+            if (subcategoriesError) {
+                console.error('Error inserting subcategories:', subcategoriesError);
+                throw new Error(`Error guardando subcategorías: ${subcategoriesError.message}`);
             }
         }
 
@@ -374,26 +352,47 @@ class SupabaseService {
             }
         }
 
-        // 3. Update courts if any (Delete existing first)
-        if (businessData.courts && businessData.courts.length > 0) {
-            await supabase.from('courts').delete().eq('business_id', businessId);
-
-            const courtsToInsert = businessData.courts.map(c => ({
-                id: c.id,
-                business_id: businessId,
-                name: c.name,
-                sport: c.sport,
-                price: c.price
-            }));
-
-            const { error: courtsError } = await supabase
+        // 3. Update courts
+        if (businessData.courts) {
+            // A. Get current courts from DB to identify deletions
+            const { data: currentCourts } = await supabase
                 .from('courts')
-                .insert(courtsToInsert);
+                .select('id')
+                .eq('business_id', businessId);
 
-            if (courtsError) console.error('Error inserting courts:', courtsError);
-        } else {
-            // If no courts provided, delete all existing courts
-            await supabase.from('courts').delete().eq('business_id', businessId);
+            const currentIds = currentCourts ? currentCourts.map(c => c.id) : [];
+            const incomingIds = businessData.courts
+                .map(c => c.id)
+                .filter(id => id); // Filter undefined/null IDs
+
+            // B. Identify IDs to delete
+            const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
+
+            if (idsToDelete.length > 0) {
+                const { error: deleteError } = await supabase
+                    .from('courts')
+                    .delete()
+                    .in('id', idsToDelete);
+
+                if (deleteError) console.error('Error deleting removed courts:', deleteError);
+            }
+
+            // C. Upsert (Insert or Update) remaining courts
+            if (businessData.courts.length > 0) {
+                const courtsToUpsert = businessData.courts.map(c => ({
+                    id: c.id, // Keep ID for updates
+                    business_id: businessId,
+                    name: c.name,
+                    sport: c.sport,
+                    price: c.price
+                }));
+
+                const { error: courtsError } = await supabase
+                    .from('courts')
+                    .upsert(courtsToUpsert, { onConflict: 'id' });
+
+                if (courtsError) console.error('Error upserting courts:', courtsError);
+            }
         }
 
         // 4. Update specialists if any (for service-type businesses)
@@ -1123,16 +1122,15 @@ class SupabaseService {
     }
 
     /**
-     * Get all subscription plans
-     * @param {string} businessType - Optional filter by business type
-     * @returns {Promise<Array>} List of subscription plans
-     */
+ * Get all subscription plans
+ * @param {string} businessType - Optional filter by business type
+ * @returns {Promise<Array>} List of subscription plans
+ */
     async getSubscriptionPlans(businessType = null) {
         let query = supabase
             .from('subscription_plans')
             .select('*')
-            .eq('active', true)
-            .order('spaces', { ascending: true });
+            .order('display_order', { ascending: true });
 
         if (businessType) {
             query = query.eq('business_type', businessType);
@@ -1164,7 +1162,7 @@ class SupabaseService {
             .from('subscriptions')
             .upsert({
                 business_id: businessId,
-                plan_name: plan.name,
+                plan_name: plan.id, // Save ID to match schema consistency (e.g. 'sport_1')
                 spaces_included: plan.spaces,
                 monthly_price: plan.monthly_price,
                 status: 'active',
@@ -1254,6 +1252,154 @@ class SupabaseService {
         if (error) throw error;
         return data || [];
     }
+
+    // --- Categories ---
+
+    async getCategories(businessType = null) {
+        let query = supabase
+            .from('categories')
+            .select('*, subcategories(*)')
+            .order('display_order', { ascending: true });
+
+        if (businessType) {
+            query = query.eq('business_type', businessType);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    }
+
+    async getCategoryById(id) {
+        const { data, error } = await supabase
+            .from('categories')
+            .select('*, subcategories(*)')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    async createCategory(categoryData) {
+        const { data, error } = await supabase
+            .from('categories')
+            .insert([{
+                name: categoryData.name,
+                slug: categoryData.slug,
+                icon: categoryData.icon,
+                color: categoryData.color,
+                business_type: categoryData.business_type,
+                display_order: categoryData.display_order || 0
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    async updateCategory(id, categoryData) {
+        const { data, error } = await supabase
+            .from('categories')
+            .update({
+                name: categoryData.name,
+                slug: categoryData.slug,
+                icon: categoryData.icon,
+                color: categoryData.color,
+                business_type: categoryData.business_type,
+                display_order: categoryData.display_order
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    async deleteCategory(id) {
+        const { error } = await supabase
+            .from('categories')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    }
+
+    // --- Subcategories ---
+
+    async getSubcategories(categoryId = null) {
+        let query = supabase
+            .from('subcategories')
+            .select('*')
+            .order('display_order', { ascending: true });
+
+        if (categoryId) {
+            query = query.eq('category_id', categoryId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    }
+
+    async createSubcategory(subcategoryData) {
+        const { data, error } = await supabase
+            .from('subcategories')
+            .insert([{
+                category_id: subcategoryData.category_id,
+                name: subcategoryData.name,
+                slug: subcategoryData.slug,
+                icon: subcategoryData.icon,
+                display_order: subcategoryData.display_order || 0
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    async updateSubcategory(id, subcategoryData) {
+        const { data, error } = await supabase
+            .from('subcategories')
+            .update({
+                name: subcategoryData.name,
+                slug: subcategoryData.slug,
+                icon: subcategoryData.icon,
+                display_order: subcategoryData.display_order
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    async deleteSubcategory(id) {
+        const { error } = await supabase
+            .from('subcategories')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    }
+
+    // --- Subscription Plans ---
+
+    async getSubscriptionPlanById(id) {
+        const { data, error } = await supabase
+            .from('subscription_plans')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
 }
 
 export default new SupabaseService();
+

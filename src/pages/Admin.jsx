@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { categories } from '../data/mockData';
-import BusinessForm from '../components/BusinessForm';
+import BusinessFormSelector from '../components/business-forms/BusinessFormSelector';
 import CategoryForm from '../components/CategoryForm';
 import PromotionForm from '../components/PromotionForm';
+import CategoryManager from '../components/admin/CategoryManager';
+import SubcategoryManager from '../components/admin/SubcategoryManager';
 import supabaseService from '../services/supabaseService';
 import analyticsService from '../services/analyticsService';
 import MetricsCard from '../components/analytics/MetricsCard';
@@ -24,6 +26,10 @@ export default function Admin() {
     // Analytics states
     const [adminMetrics, setAdminMetrics] = useState(null);
     const [businessComparison, setBusinessComparison] = useState([]);
+
+    // Category management states
+    const [showSubcategoryManager, setShowSubcategoryManager] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState(null);
 
     // Fetch data on mount
     useEffect(() => {
@@ -452,63 +458,25 @@ export default function Admin() {
                             </div>
                         )}
 
-                        {/* Categories List */}
+                        {/* Categories Management */}
                         {activeTab === 'categories' && (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-                                {categoryList.map(category => (
-                                    <div key={category.id} style={{
-                                        backgroundColor: 'var(--bg-card)',
-                                        borderRadius: '16px',
-                                        padding: '24px',
-                                        border: '1px solid var(--border)',
-                                        transition: 'all 0.2s'
-                                    }}>
-                                        <div style={{ fontSize: '48px', marginBottom: '12px', textAlign: 'center' }}>
-                                            {category.icon}
-                                        </div>
-                                        <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)', textAlign: 'center' }}>
-                                            {category.name}
-                                        </h3>
-                                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '16px', textAlign: 'center' }}>
-                                            ID: {category.id}
-                                        </p>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button
-                                                onClick={() => handleEdit(category)}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '10px',
-                                                    borderRadius: '10px',
-                                                    border: '1px solid var(--border)',
-                                                    backgroundColor: 'var(--bg-card)',
-                                                    color: 'var(--text-primary)',
-                                                    cursor: 'pointer',
-                                                    fontWeight: '600',
-                                                    fontSize: '14px'
-                                                }}
-                                            >
-                                                ✏️ Editar
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(category.id)}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '10px',
-                                                    borderRadius: '10px',
-                                                    border: '1px solid #FF4444',
-                                                    backgroundColor: '#FF444410',
-                                                    color: '#FF4444',
-                                                    cursor: 'pointer',
-                                                    fontWeight: '600',
-                                                    fontSize: '14px'
-                                                }}
-                                            >
-                                                🗑️
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            showSubcategoryManager && selectedCategory ? (
+                                <SubcategoryManager
+                                    categoryId={selectedCategory.id}
+                                    categoryName={selectedCategory.name}
+                                    onClose={() => {
+                                        setShowSubcategoryManager(false);
+                                        setSelectedCategory(null);
+                                    }}
+                                />
+                            ) : (
+                                <CategoryManager
+                                    onManageSubcategories={(category) => {
+                                        setSelectedCategory(category);
+                                        setShowSubcategoryManager(true);
+                                    }}
+                                />
+                            )
                         )}
 
                         {/* Promotions List */}
@@ -743,7 +711,7 @@ export default function Admin() {
 
                         {/* Render appropriate form based on active tab */}
                         {activeTab === 'businesses' && (
-                            <BusinessForm
+                            <BusinessFormSelector
                                 business={editingItem}
                                 onSave={handleSave}
                                 onCancel={() => {
