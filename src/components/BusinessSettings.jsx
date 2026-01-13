@@ -332,11 +332,16 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         return 'Profesionales / Staff';
     };
 
+    const isServiceBusiness = (formData.type || business.type) === 'service';
+
     const tabs = [
         { id: 'general', label: 'General', icon: '🏢' },
         { id: 'subscription', label: 'Suscripción', icon: '💳' },
         { id: 'resources', label: getResourceLabel(), icon: '👥' },
+        ...(isServiceBusiness ? [{ id: 'services', label: 'Servicios', icon: '💼' }] : []),
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
+        { id: 'policies', label: 'Políticas', icon: '📜' },
+        { id: 'special_days', label: 'Días Especiales', icon: '📅' },
         { id: 'linkbio', label: 'Link Bio', icon: '🔗' },
         { id: 'gallery', label: 'Galería', icon: '📸' },
         { id: 'rules', label: 'Reglas', icon: '📋' },
@@ -2062,6 +2067,493 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 {saving ? 'Guardando...' : 'Guardar Configuración de Pagos'}
                             </button>
                         </div>
+                    </div>
+                );
+
+            case 'services':
+                const services = formData.services || [];
+                const serviceCategories = formData.service_categories || [];
+
+                return (
+                    <div style={{ display: 'grid', gap: '24px' }}>
+                        <div>
+                            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                Gestionar Servicios
+                            </h3>
+                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                                Edita los servicios que ofreces, sus precios y duraciones.
+                            </p>
+
+                            {services.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '40px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                                        No hay servicios configurados aún.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gap: '12px' }}>
+                                    {services.map((service, index) => (
+                                        <div key={service.id || index} style={{
+                                            padding: '16px',
+                                            background: 'var(--bg-main)',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--border)'
+                                        }}>
+                                            <div style={{ display: 'grid', gap: '12px' }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr', gap: '12px' }}>
+                                                    <div>
+                                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Nombre del Servicio</label>
+                                                        <input
+                                                            type="text"
+                                                            value={service.name || ''}
+                                                            onChange={(e) => {
+                                                                const newServices = [...services];
+                                                                newServices[index] = { ...service, name: e.target.value };
+                                                                handleInputChange('services', newServices);
+                                                            }}
+                                                            style={inputStyle}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Precio ($)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={service.price || ''}
+                                                            onChange={(e) => {
+                                                                const newServices = [...services];
+                                                                newServices[index] = { ...service, price: e.target.value };
+                                                                handleInputChange('services', newServices);
+                                                            }}
+                                                            style={inputStyle}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Duración (min)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={service.duration || ''}
+                                                            onChange={(e) => {
+                                                                const newServices = [...services];
+                                                                newServices[index] = { ...service, duration: e.target.value };
+                                                                handleInputChange('services', newServices);
+                                                            }}
+                                                            style={inputStyle}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label style={{ ...labelStyle, marginBottom: '4px' }}>Descripción (opcional)</label>
+                                                    <textarea
+                                                        value={service.description || ''}
+                                                        onChange={(e) => {
+                                                            const newServices = [...services];
+                                                            newServices[index] = { ...service, description: e.target.value };
+                                                            handleInputChange('services', newServices);
+                                                        }}
+                                                        style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }}
+                                                    />
+                                                </div>
+                                                {serviceCategories.length > 0 && (
+                                                    <div>
+                                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Categoría</label>
+                                                        <select
+                                                            value={service.category || ''}
+                                                            onChange={(e) => {
+                                                                const newServices = [...services];
+                                                                newServices[index] = { ...service, category: e.target.value };
+                                                                handleInputChange('services', newServices);
+                                                            }}
+                                                            style={inputStyle}
+                                                        >
+                                                            <option value="">Sin categoría</option>
+                                                            {serviceCategories.map(cat => (
+                                                                <option key={cat} value={cat}>{cat}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                )}
+                                                <button
+                                                    onClick={async () => {
+                                                        const confirmed = await showConfirm(
+                                                            '¿Eliminar servicio?',
+                                                            `¿Estás seguro de que deseas eliminar "${service.name}"?`,
+                                                            'Eliminar',
+                                                            'Cancelar'
+                                                        );
+                                                        if (confirmed) {
+                                                            const newServices = services.filter((_, i) => i !== index);
+                                                            handleInputChange('services', newServices);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        padding: '8px 16px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #ef4444',
+                                                        background: 'rgba(239, 68, 68, 0.1)',
+                                                        color: '#ef4444',
+                                                        cursor: 'pointer',
+                                                        fontWeight: '600',
+                                                        fontSize: '13px'
+                                                    }}
+                                                >
+                                                    🗑️ Eliminar Servicio
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={() => handleSave({ services: formData.services })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Servicios'}
+                        </button>
+                    </div>
+                );
+
+            case 'policies':
+                return (
+                    <div style={{ display: 'grid', gap: '24px' }}>
+                        <div>
+                            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                Políticas de Reserva
+                            </h3>
+                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                                Configura las reglas de anticipación, cancelación y señas.
+                            </p>
+                        </div>
+
+                        {/* Advance Booking Rules */}
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
+                            <div>
+                                <label style={labelStyle}>Anticipación Mínima (horas)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={formData.min_advance_hours ?? 0}
+                                    onChange={(e) => handleInputChange('min_advance_hours', parseInt(e.target.value) || 0)}
+                                    style={inputStyle}
+                                />
+                                <p style={hintStyle}>Ej: 2 horas = no pueden reservar con menos de 2hs de anticipación</p>
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Ventana Máxima (días)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={formData.max_advance_days ?? 30}
+                                    onChange={(e) => handleInputChange('max_advance_days', parseInt(e.target.value) || 30)}
+                                    style={inputStyle}
+                                />
+                                <p style={hintStyle}>Ej: 30 días = pueden reservar hasta 30 días adelante</p>
+                            </div>
+                        </div>
+
+                        {/* Cancellation Policy */}
+                        <div>
+                            <label style={labelStyle}>Política de Cancelación (horas)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={formData.cancellation_limit_hours ?? 24}
+                                onChange={(e) => handleInputChange('cancellation_limit_hours', parseInt(e.target.value) || 24)}
+                                style={inputStyle}
+                            />
+                            <p style={hintStyle}>Tiempo límite para que el cliente cancele sin penalización</p>
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Texto de Política de Cancelación</label>
+                            <textarea
+                                value={formData.cancellation_policy ?? ''}
+                                onChange={(e) => handleInputChange('cancellation_policy', e.target.value)}
+                                placeholder="Ej: Cancelaciones gratuitas hasta 24hs antes. Después de ese plazo, se pierde la seña."
+                                style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }}
+                            />
+                            <p style={hintStyle}>Este texto se mostrará a los clientes al reservar</p>
+                        </div>
+
+                        {/* Deposit Configuration */}
+                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
+                            <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                                Configuración de Seña/Depósito
+                            </h4>
+
+                            <div>
+                                <label style={labelStyle}>Tipo de Seña</label>
+                                <select
+                                    value={formData.deposit_type ?? 'none'}
+                                    onChange={(e) => handleInputChange('deposit_type', e.target.value)}
+                                    style={inputStyle}
+                                >
+                                    <option value="none">No requiere seña</option>
+                                    <option value="percentage">Porcentaje del total</option>
+                                    <option value="fixed">Monto fijo</option>
+                                </select>
+                            </div>
+
+                            {formData.deposit_type === 'percentage' && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <label style={labelStyle}>Porcentaje de Seña (%)</label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            step="5"
+                                            value={formData.deposit_percentage ?? 0}
+                                            onChange={(e) => handleInputChange('deposit_percentage', parseInt(e.target.value))}
+                                            style={{ flex: 1 }}
+                                        />
+                                        <span style={{ fontWeight: '700', fontSize: '18px', minWidth: '60px', textAlign: 'right' }}>
+                                            {formData.deposit_percentage ?? 0}%
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {formData.deposit_type === 'fixed' && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <label style={labelStyle}>Monto Fijo de Seña ($)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={formData.deposit_amount ?? 0}
+                                        onChange={(e) => handleInputChange('deposit_amount', parseInt(e.target.value) || 0)}
+                                        style={inputStyle}
+                                    />
+                                </div>
+                            )}
+
+                            {formData.deposit_type !== 'none' && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <label style={labelStyle}>Instrucciones de Pago</label>
+                                    <textarea
+                                        value={formData.payment_instructions ?? ''}
+                                        onChange={(e) => handleInputChange('payment_instructions', e.target.value)}
+                                        placeholder="Ej: Transferir al Alias: MI.ALIAS.OK o CBU: 1234567890. Enviar comprobante por WhatsApp."
+                                        style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }}
+                                    />
+                                    <p style={hintStyle}>Incluye datos bancarios, alias, CBU, links de MercadoPago, etc.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={() => handleSave({
+                                min_advance_hours: formData.min_advance_hours,
+                                max_advance_days: formData.max_advance_days,
+                                cancellation_limit_hours: formData.cancellation_limit_hours,
+                                cancellation_policy: formData.cancellation_policy,
+                                deposit_type: formData.deposit_type,
+                                deposit_percentage: formData.deposit_percentage,
+                                deposit_amount: formData.deposit_amount,
+                                payment_instructions: formData.payment_instructions
+                            })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Políticas'}
+                        </button>
+                    </div>
+                );
+
+            case 'special_days':
+                const specialDays = formData.special_days || [];
+
+                return (
+                    <div style={{ display: 'grid', gap: '24px' }}>
+                        <div>
+                            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                Días Especiales y Feriados
+                            </h3>
+                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                                Marca días cerrados, feriados o con horarios/precios especiales.
+                            </p>
+                        </div>
+
+                        {/* Add New Special Day */}
+                        <div style={{ padding: '20px', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                            <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                                Agregar Día Especial
+                            </h4>
+                            <div style={{ display: 'grid', gap: '12px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                                    <div>
+                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Fecha</label>
+                                        <input
+                                            type="date"
+                                            id="new-special-day-date"
+                                            style={inputStyle}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Tipo</label>
+                                        <select id="new-special-day-type" style={inputStyle}>
+                                            <option value="closed">Cerrado</option>
+                                            <option value="holiday">Feriado</option>
+                                            <option value="special_hours">Horario Especial</option>
+                                            <option value="special_price">Precio Especial</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ ...labelStyle, marginBottom: '4px' }}>Descripción</label>
+                                    <input
+                                        type="text"
+                                        id="new-special-day-description"
+                                        placeholder="Ej: Navidad, Año Nuevo, Promoción Especial"
+                                        style={inputStyle}
+                                    />
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const dateInput = document.getElementById('new-special-day-date');
+                                        const typeInput = document.getElementById('new-special-day-type');
+                                        const descInput = document.getElementById('new-special-day-description');
+
+                                        if (!dateInput.value) {
+                                            showToast('Por favor selecciona una fecha', 'warning');
+                                            return;
+                                        }
+
+                                        const newSpecialDay = {
+                                            id: `special_${Date.now()}`,
+                                            date: dateInput.value,
+                                            type: typeInput.value,
+                                            description: descInput.value || typeInput.options[typeInput.selectedIndex].text
+                                        };
+
+                                        const updatedDays = [...specialDays, newSpecialDay];
+                                        handleInputChange('special_days', updatedDays);
+
+                                        // Clear inputs
+                                        dateInput.value = '';
+                                        typeInput.value = 'closed';
+                                        descInput.value = '';
+
+                                        showToast('Día especial agregado', 'success');
+                                    }}
+                                    style={{
+                                        padding: '10px 16px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        background: 'var(--primary-paddle)',
+                                        color: '#000',
+                                        cursor: 'pointer',
+                                        fontWeight: '700',
+                                        fontSize: '14px'
+                                    }}
+                                >
+                                    + Agregar
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* List of Special Days */}
+                        {specialDays.length > 0 ? (
+                            <div style={{ display: 'grid', gap: '12px' }}>
+                                {specialDays
+                                    .sort((a, b) => new Date(a.date) - new Date(b.date))
+                                    .map((day, index) => {
+                                        const typeLabels = {
+                                            closed: { label: 'Cerrado', color: '#ef4444', icon: '🚫' },
+                                            holiday: { label: 'Feriado', color: '#f59e0b', icon: '🎉' },
+                                            special_hours: { label: 'Horario Especial', color: '#3b82f6', icon: '🕐' },
+                                            special_price: { label: 'Precio Especial', color: '#10b981', icon: '💰' }
+                                        };
+                                        const typeInfo = typeLabels[day.type] || typeLabels.closed;
+
+                                        return (
+                                            <div key={day.id || index} style={{
+                                                padding: '16px',
+                                                background: 'var(--bg-main)',
+                                                borderRadius: '12px',
+                                                border: '1px solid var(--border)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                gap: '16px'
+                                            }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                        <span style={{ fontSize: '16px' }}>{typeInfo.icon}</span>
+                                                        <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                            {new Date(day.date + 'T00:00:00').toLocaleDateString('es-AR', {
+                                                                weekday: 'long',
+                                                                year: 'numeric',
+                                                                month: 'long',
+                                                                day: 'numeric'
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                                        <span style={{
+                                                            padding: '4px 8px',
+                                                            borderRadius: '6px',
+                                                            background: `${typeInfo.color}20`,
+                                                            color: typeInfo.color,
+                                                            fontSize: '12px',
+                                                            fontWeight: '600'
+                                                        }}>
+                                                            {typeInfo.label}
+                                                        </span>
+                                                        {day.description && (
+                                                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                                {day.description}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={async () => {
+                                                        const confirmed = await showConfirm(
+                                                            '¿Eliminar día especial?',
+                                                            `¿Estás seguro de eliminar este día especial?`,
+                                                            'Eliminar',
+                                                            'Cancelar'
+                                                        );
+                                                        if (confirmed) {
+                                                            const updatedDays = specialDays.filter((_, i) => i !== index);
+                                                            handleInputChange('special_days', updatedDays);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #ef4444',
+                                                        background: 'rgba(239, 68, 68, 0.1)',
+                                                        color: '#ef4444',
+                                                        cursor: 'pointer',
+                                                        fontWeight: '600',
+                                                        fontSize: '13px'
+                                                    }}
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '40px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                                    No hay días especiales configurados.
+                                </p>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={() => handleSave({ special_days: formData.special_days })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Días Especiales'}
+                        </button>
                     </div>
                 );
 
