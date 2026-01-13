@@ -101,7 +101,22 @@ export default function Home() {
 
                     // 2. Belleza: Match 'belleza', 'beauty', 'estetica'
                     if (selectedCategory === 'belleza' || selectedCategory === 'beauty') {
-                        return categorySlug === 'belleza' || categoryName === 'belleza';
+                        const isBelleza = categorySlug === 'belleza' || categoryName === 'belleza';
+                        if (!isBelleza) return false;
+
+                        // Sub-category logic for Belleza (same as Deportes)
+                        if (selectedSubCategory === 'all') return true;
+
+                        const selectedSub = selectedSubCategory.toLowerCase();
+
+                        // Check if business has ANY of the selected subcategory in its array
+                        const hasSubcategory = b.subcategories?.some(sub => {
+                            const slug = (sub.slug || '').toLowerCase();
+                            const name = (sub.name || '').toLowerCase();
+                            return slug === selectedSub || name === selectedSub;
+                        });
+
+                        return hasSubcategory;
                     }
 
                     // 3. Salud: Match 'salud', 'health', 'medicina'
@@ -212,7 +227,46 @@ export default function Home() {
 
                 // 2. Belleza: Match 'belleza', 'beauty', 'estetica'
                 if (selectedCategory === 'belleza' || selectedCategory === 'beauty') {
-                    return categorySlug === 'belleza' || categoryName === 'belleza';
+                    const isBelleza = categorySlug === 'belleza' || categoryName === 'belleza';
+                    if (!isBelleza) return false;
+
+                    // Sub-category logic for Belleza (same as Deportes)
+                    if (selectedSubCategory === 'all') return true;
+
+                    // Helper to normalize strings (remove accents, lowercase)
+                    const normalizeText = (text) => {
+                        return (text || '')
+                            .toLowerCase()
+                            .normalize("NFD")
+                            .replace(/[\u0300-\u036f]/g, "")
+                            .trim();
+                    };
+
+                    const selectedSubNorm = normalizeText(selectedSubCategory);
+
+                    // Check if business has ANY of the selected subcategory in its array
+                    let hasSubcategory = b.subcategories?.some(sub => {
+                        const slugNorm = normalizeText(sub.slug);
+                        const nameNorm = normalizeText(sub.name);
+                        return slugNorm === selectedSubNorm || nameNorm === selectedSubNorm;
+                    });
+
+                    // 🛠️ FALLBACK: If explicit subcategories array is empty, check legacy subcategory_id
+                    if (!hasSubcategory && b.subcategory_id && categoriesData.length > 0) {
+                        for (const cat of categoriesData) {
+                            const foundSub = cat.subcategories?.find(s => s.id === b.subcategory_id);
+                            if (foundSub) {
+                                const slugNorm = normalizeText(foundSub.slug);
+                                const nameNorm = normalizeText(foundSub.name);
+                                if (slugNorm === selectedSubNorm || nameNorm === selectedSubNorm) {
+                                    hasSubcategory = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    return hasSubcategory;
                 }
 
                 // 3. Salud: Match 'salud', 'health', 'medicina'
@@ -644,36 +698,76 @@ export default function Home() {
                                         <div style={{ position: 'relative', height: '180px', overflow: 'hidden' }}>
                                             <motion.img
                                                 layoutId={`business-image-${business.id}`}
-                                                src={business.image}
+                                                src={business.banner_image || business.image}
                                                 alt={business.name}
                                                 loading="lazy"
                                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             />
                                         </div>
-                                        <div style={{ padding: '16px' }}>
-                                            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                                                {business.name}
-                                            </h3>
-                                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <span>📍</span> {business.location}
-                                            </p>
-
-                                            {business.amenities && business.amenities.length > 0 && (
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                                    {business.amenities.slice(0, 3).map((amenity, idx) => (
-                                                        <span key={idx} style={{
-                                                            fontSize: '11px',
-                                                            padding: '4px 8px',
-                                                            borderRadius: '12px',
-                                                            backgroundColor: 'var(--bg-main)',
-                                                            color: 'var(--text-secondary)',
-                                                            fontWeight: '600'
-                                                        }}>
-                                                            {amenity}
-                                                        </span>
-                                                    ))}
+                                        <div style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                            {/* Logo on the left */}
+                                            {business.logo && (
+                                                <div style={{
+                                                    width: '60px',
+                                                    height: '60px',
+                                                    borderRadius: '12px',
+                                                    overflow: 'hidden',
+                                                    flexShrink: 0,
+                                                    border: '2px solid var(--border)',
+                                                    backgroundColor: 'var(--bg-main)'
+                                                }}>
+                                                    <img
+                                                        src={business.logo}
+                                                        alt={`${business.name} logo`}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    />
                                                 </div>
                                             )}
+
+                                            {/* Info on the right */}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <h3 style={{
+                                                    fontSize: '18px',
+                                                    fontWeight: '800',
+                                                    marginBottom: '6px',
+                                                    color: 'var(--text-primary)',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    {business.name}
+                                                </h3>
+                                                <p style={{
+                                                    fontSize: '13px',
+                                                    color: 'var(--text-secondary)',
+                                                    marginBottom: '8px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    <span>📍</span> {business.location}
+                                                </p>
+
+                                                {business.amenities && business.amenities.length > 0 && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                        {business.amenities.slice(0, 2).map((amenity, idx) => (
+                                                            <span key={idx} style={{
+                                                                fontSize: '10px',
+                                                                padding: '3px 6px',
+                                                                borderRadius: '8px',
+                                                                backgroundColor: 'var(--bg-main)',
+                                                                color: 'var(--text-secondary)',
+                                                                fontWeight: '600'
+                                                            }}>
+                                                                {amenity}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </motion.div>
                                 </div>

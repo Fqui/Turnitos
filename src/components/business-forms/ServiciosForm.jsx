@@ -202,6 +202,8 @@ export default function ServiciosForm({ business, onSave, onCancel }) {
         try {
             const credentials = generateBusinessCredentials(formData.name);
             const businessData = { ...formData, email: credentials.email, password: credentials.password, slug: slugify(formData.name), primary_color: formData.primaryColor };
+            console.log('🎨 Saving business with primaryColor:', formData.primaryColor);
+            console.log('🎨 Business data primary_color:', businessData.primary_color);
             await onSave(businessData);
         } catch (error) {
             console.error('Error saving business:', error);

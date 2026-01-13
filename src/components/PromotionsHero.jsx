@@ -116,7 +116,8 @@ export default function PromotionsHero({ promotions, businesses }) {
                                             fontWeight: '700',
                                             marginBottom: '16px',
                                         }}>
-                                            {currentPromo.discount} OFF
+                                            {currentPromo.discount}
+                                            {currentPromo.discount && currentPromo.discount.toString().trim().endsWith('%') && ' OFF'}
                                         </div>
                                         <h2 className="promo-title-mobile" style={{
                                             fontSize: 'clamp(24px, 4vw, 42px)',

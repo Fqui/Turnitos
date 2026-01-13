@@ -94,8 +94,27 @@ export default function BusinessProfile() {
             if (schedule && schedule.isOpen) {
                 // Check if split schedule is enabled in the new format (from BusinessSettings)
                 if (schedule.isSplit) {
-                    // Check split shift (break) - Enforce split even if times are missing (default to 13-16)
-                    // This prevents falling back to continuous day if user clears the inputs
+                    // 🔧 FIX: Support both formats
+                    // ServiciosForm uses: open, close, open2, close2
+                    // BusinessSettings uses: open, close, breakStart, breakEnd
+
+                    // Try ServiciosForm format first (open2/close2)
+                    if (schedule.open2 && schedule.close2) {
+                        const derivedRanges = [
+                            { open: schedule.open, close: schedule.close },  // Morning shift
+                            { open: schedule.open2, close: schedule.close2 }  // Afternoon shift
+                        ];
+
+                        console.log(`🕒 Generated split ranges for ${dayName} (ServiciosForm format):`, derivedRanges);
+
+                        return {
+                            open: schedule.open,
+                            close: schedule.close2,  // Use close2 as the final closing time
+                            ranges: derivedRanges
+                        };
+                    }
+
+                    // Fallback to BusinessSettings format (breakStart/breakEnd)
                     const breakStart = schedule.breakStart || '13:00';
                     const breakEnd = schedule.breakEnd || '16:00';
 
@@ -107,7 +126,7 @@ export default function BusinessProfile() {
                         { open: breakEnd, close: schedule.close }
                     ];
 
-                    console.log(`🕒 Generated split ranges for ${dayName}:`, derivedRanges);
+                    console.log(`🕒 Generated split ranges for ${dayName} (BusinessSettings format):`, derivedRanges);
 
                     return {
                         open: schedule.open,
@@ -303,7 +322,7 @@ export default function BusinessProfile() {
     if (!business) return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
 
     // Use custom button color from business or fallback to category-based color
-    const primaryColor = business.primaryColor || business.button_color || business.buttonColor ||
+    const primaryColor = business.primary_color || business.button_color || business.buttonColor ||
         (business.category === 'beauty' ? '#FF4081' :
             business.category === 'health' ? '#2979FF' : '#00E676');
 
@@ -347,6 +366,9 @@ export default function BusinessProfile() {
             // Reset selection states
             setSelectedTime(null);
 
+            // Navigate to Home after successful booking
+            navigate('/');
+
         } catch (error) {
             console.error("Booking error:", error);
             alert("Hubo un error al guardar la reserva. Por favor intenta nuevamente.");
@@ -386,7 +408,7 @@ export default function BusinessProfile() {
             }}>
                 <motion.img
                     layoutId={`business-image-${business.id}`}
-                    src={selectedItem?.image || business.banner || business.image}
+                    src={selectedItem?.image || business.banner_image || business.image}
                     alt={business.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     transition={{ duration: 0.5, ease: "circOut" }}
@@ -1344,7 +1366,7 @@ export default function BusinessProfile() {
                 {/* Map and Amenities Section */}
                 <section style={{ marginBottom: '30px', marginTop: '40px', animation: 'slideUp 0.4s ease' }}>
                     <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                        Ubicación y Servicios
+                        Información General
                     </h3>
                     <div style={{
                         display: 'grid',
@@ -1393,28 +1415,192 @@ export default function BusinessProfile() {
                             </div>
                         )}
 
-                        {/* Amenities */}
+                        {/* Amenities & Hours Combined */}
                         <div style={{
                             backgroundColor: 'var(--bg-card)',
                             padding: '20px',
                             borderRadius: '20px',
-                            border: '1px solid var(--border)'
+                            border: '1px solid var(--border)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '20px'
                         }}>
-                            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-primary)' }}>
-                                Comodidades
-                            </h4>
-                            {business.amenities && business.amenities.length > 0 ? (
-                                <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: '12px' }}>
-                                    {business.amenities.map((amenity, index) => (
-                                        <li key={index} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)' }}>
-                                            <span style={{ color: primaryColor, fontWeight: 'bold' }}>✓</span>
-                                            {amenity}
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>No hay comodidades especificadas.</p>
-                            )}
+                            {/* Amenities - Top Half */}
+                            <div>
+                                <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-primary)' }}>
+                                    Comodidades
+                                </h4>
+                                {business.amenities && business.amenities.length > 0 ? (
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(2, 1fr)',
+                                        gap: '12px',
+                                        fontSize: '14px'
+                                    }}>
+                                        {business.amenities.map((amenity, index) => (
+                                            <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
+                                                <span style={{ fontSize: '16px' }}>✓</span>
+                                                <span>{amenity}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>No hay comodidades especificadas.</p>
+                                )}
+                            </div>
+
+                            {/* Divider */}
+                            <div style={{ height: '1px', backgroundColor: 'var(--border)' }}></div>
+
+                            {/* Business Hours - Bottom Half */}
+                            <div>
+                                <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-primary)' }}>
+                                    🕐 Horarios de Atención
+                                </h4>
+                                {business.hours ? (
+                                    <div style={{ display: 'grid', gap: '10px' }}>
+                                        {(() => {
+                                            const dayNames = {
+                                                monday: 'Lunes',
+                                                tuesday: 'Martes',
+                                                wednesday: 'Miércoles',
+                                                thursday: 'Jueves',
+                                                friday: 'Viernes',
+                                                saturday: 'Sábado',
+                                                sunday: 'Domingo'
+                                            };
+
+                                            // Parse hours if string
+                                            let hours = business.hours;
+                                            if (typeof hours === 'string') {
+                                                try {
+                                                    hours = JSON.parse(hours);
+                                                } catch (e) {
+                                                    return <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>No hay horarios especificados.</p>;
+                                                }
+                                            }
+
+                                            // Handle new object format (per-day schedule) - GROUP BY SAME SCHEDULE
+                                            if (typeof hours === 'object' && !hours.weekday) {
+                                                // Group days with same schedule
+                                                const scheduleGroups = {};
+
+                                                Object.entries(dayNames).forEach(([day, label]) => {
+                                                    const schedule = hours[day];
+
+                                                    // Create schedule key
+                                                    let scheduleKey;
+                                                    if (!schedule || !schedule.isOpen) {
+                                                        scheduleKey = 'CLOSED';
+                                                    } else if (schedule.isSplit) {
+                                                        if (schedule.open2 && schedule.close2) {
+                                                            scheduleKey = `${schedule.open}-${schedule.close}|${schedule.open2}-${schedule.close2}`;
+                                                        } else {
+                                                            const breakStart = schedule.breakStart || '13:00';
+                                                            const breakEnd = schedule.breakEnd || '16:00';
+                                                            scheduleKey = `${schedule.open}-${breakStart}|${breakEnd}-${schedule.close}`;
+                                                        }
+                                                    } else {
+                                                        scheduleKey = `${schedule.open}-${schedule.close}`;
+                                                    }
+
+                                                    if (!scheduleGroups[scheduleKey]) {
+                                                        scheduleGroups[scheduleKey] = {
+                                                            days: [],
+                                                            schedule: schedule
+                                                        };
+                                                    }
+                                                    scheduleGroups[scheduleKey].days.push(label);
+                                                });
+
+                                                // Render grouped schedules
+                                                return Object.entries(scheduleGroups).map(([key, group], index) => {
+                                                    if (key === 'CLOSED') {
+                                                        return (
+                                                            <div key={index} style={{ fontSize: '13px' }}>
+                                                                <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                                                    {group.days.join(', ')}
+                                                                </div>
+                                                                <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                                                    Cerrado
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    const schedule = group.schedule;
+                                                    let timeDisplay;
+
+                                                    if (schedule.isSplit) {
+                                                        if (schedule.open2 && schedule.close2) {
+                                                            timeDisplay = `${schedule.open} a ${schedule.close} | ${schedule.open2} a ${schedule.close2}`;
+                                                        } else {
+                                                            const breakStart = schedule.breakStart || '13:00';
+                                                            const breakEnd = schedule.breakEnd || '16:00';
+                                                            timeDisplay = `${schedule.open} a ${breakStart} | ${breakEnd} a ${schedule.close}`;
+                                                        }
+                                                    } else {
+                                                        timeDisplay = `${schedule.open} a ${schedule.close}`;
+                                                    }
+
+                                                    return (
+                                                        <div key={index} style={{ fontSize: '13px' }}>
+                                                            <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                                                {group.days.join(', ')}
+                                                            </div>
+                                                            <div style={{ color: 'var(--text-secondary)' }}>
+                                                                {timeDisplay}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                });
+                                            }
+
+                                            // Handle legacy format (weekday/weekend)
+                                            if (typeof hours === 'object' && hours.weekday) {
+                                                return (
+                                                    <>
+                                                        <div style={{ fontSize: '13px' }}>
+                                                            <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                                                Lunes a Viernes
+                                                            </div>
+                                                            <div style={{ color: 'var(--text-secondary)' }}>
+                                                                {hours.weekday}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ fontSize: '13px' }}>
+                                                            <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                                                Sábado y Domingo
+                                                            </div>
+                                                            <div style={{ color: 'var(--text-secondary)' }}>
+                                                                {hours.weekend}
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                );
+                                            }
+
+                                            // Handle string format
+                                            if (typeof hours === 'string') {
+                                                return (
+                                                    <div style={{ fontSize: '13px' }}>
+                                                        <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                                            Horario
+                                                        </div>
+                                                        <div style={{ color: 'var(--text-secondary)' }}>
+                                                            {hours}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>No hay horarios especificados.</p>;
+                                        })()}
+                                    </div>
+                                ) : (
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>No hay horarios especificados.</p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </section>
