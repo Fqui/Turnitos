@@ -88,7 +88,7 @@ export default function PromotionsHero({ promotions, businesses }) {
                         <Link
                             to={`/${generateSlug(business?.name || '')}/turnos`}
                             state={{ business }}
-                            style={{ textDecoration: 'none', display: 'block', height: '100%', pointerEvents: window.innerWidth <= 768 ? 'none' : 'auto' }}
+                            style={{ textDecoration: 'none', display: 'block', height: '100%', pointerEvents: 'auto' }}
                         >
                             <div className="promo-card">
                                 {/* Image Section (Background on Mobile, Right Side on Desktop) */}

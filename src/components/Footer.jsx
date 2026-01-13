@@ -23,7 +23,7 @@ export default function Footer() {
                             TurnitosLR
                         </h3>
                         <p style={{ color: '#A0A0A0', fontSize: '14px', lineHeight: '1.6' }}>
-                            La plataforma líder en La Rioja para reservar tus canchas, turnos de belleza y salud en un solo lugar.
+                            Simplificamos tus reservas de canchas, belleza y salud en La Rioja. Todo en un solo lugar.
                         </p>
                     </div>
 

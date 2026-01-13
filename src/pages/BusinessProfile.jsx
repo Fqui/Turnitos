@@ -13,6 +13,7 @@ import MonthCalendar from '../components/MonthCalendar';
 import TimeSlotPicker from '../components/TimeSlotPicker';
 import PadelBookingFlow from '../components/PadelBookingFlow'; // 🆕 Padel-specific booking flow
 import BookingSummary from '../components/BookingSummary';
+import SpecialistsShowcase from '../components/SpecialistsShowcase';
 import { formatDisplayDate } from '../utils/dateUtils';
 
 // Fix for default marker icon
@@ -286,6 +287,15 @@ export default function BusinessProfile() {
         if (business) {
             const root = document.documentElement;
             const body = document.body;
+
+            // Calculate primary color
+            const color = business.primary_color || business.button_color || business.buttonColor ||
+                (business.category === 'beauty' ? '#FF4081' :
+                    business.category === 'health' ? '#2979FF' : '#00E676');
+
+            // Set primary color variable
+            root.style.setProperty('--primary-paddle', color);
+
             if (business.theme === 'light') {
                 root.style.setProperty('--bg-main', '#F5F7FA');
                 root.style.setProperty('--bg-card', '#FFFFFF');
@@ -308,7 +318,8 @@ export default function BusinessProfile() {
             const root = document.documentElement;
             const body = document.body;
 
-            // Remove overrides to let global CSS take over based on data-theme
+            // Remove overrides
+            root.style.removeProperty('--primary-paddle');
             root.style.removeProperty('--bg-main');
             root.style.removeProperty('--bg-card');
             root.style.removeProperty('--text-primary');
@@ -389,6 +400,22 @@ export default function BusinessProfile() {
     // 🆕 Check if business has padel courts to adjust layout width
     const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
     const containerWidth = hasPadelCourts ? '90%' : '800px';
+
+
+
+    // Helper to format social links
+    const getSocialLink = (url, platform) => {
+        if (!url) return '';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+        switch (platform) {
+            case 'instagram': return `https://instagram.com/${url.replace('@', '')}`;
+            case 'facebook': return `https://facebook.com/${url}`;
+            case 'tiktok': return `https://tiktok.com/@${url.replace('@', '')}`;
+            case 'website': return `https://${url}`;
+            default: return url;
+        }
+    };
 
     return (
         <motion.div
@@ -488,7 +515,7 @@ export default function BusinessProfile() {
                         {/* Instagram */}
                         {business.instagram && (
                             <a
-                                href={business.instagram}
+                                href={getSocialLink(business.instagram, 'instagram')}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{
@@ -514,7 +541,7 @@ export default function BusinessProfile() {
                         {/* Facebook */}
                         {business.facebook && (
                             <a
-                                href={business.facebook}
+                                href={getSocialLink(business.facebook, 'facebook')}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{
@@ -566,7 +593,33 @@ export default function BusinessProfile() {
                         {/* TikTok */}
                         {business.tiktok && (
                             <a
-                                href={business.tiktok}
+                                href={getSocialLink(business.tiktok, 'tiktok')}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#000000',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
+                                </svg>
+                            </a>
+                        )}
+
+                        {/* Website */}
+                        {business.website && (
+                            <a
+                                href={getSocialLink(business.website, 'website')}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{
@@ -618,6 +671,14 @@ export default function BusinessProfile() {
 
 
                 </div>
+
+                {/* Specialists Showcase - High Priority for Services */}
+                {business.type === 'service' && (
+                    <SpecialistsShowcase
+                        specialists={business.specialists}
+                        businessType={business.type}
+                    />
+                )}
 
                 {/* Instagram-Style Highlights - Only for Service Businesses */}
                 {business.type === 'service' && (

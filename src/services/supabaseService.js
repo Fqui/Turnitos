@@ -34,12 +34,6 @@ class SupabaseService {
                     slug,
                     icon
                 ),
-                legacy_subcategory:subcategories!businesses_subcategory_id_fkey (
-                    id,
-                    name,
-                    slug,
-                    icon
-                ),
                 business_subcategories (
                     subcategories (
                         id,
@@ -58,21 +52,28 @@ class SupabaseService {
 
         // Transform data to flatten subcategories array
         const businesses = data.map(b => {
-            // Combine M:N subcategories with legacy single subcategory
-            const manyToManySubs = b.business_subcategories?.map(bs => bs.subcategories) || [];
-            const legacySub = b.legacy_subcategory;
-
-            // Deduplicate by ID
-            const allSubs = legacySub ? [...manyToManySubs, legacySub] : manyToManySubs;
-            const uniqueSubs = Array.from(new Map(allSubs.map(item => [item.id, item])).values());
+            // Get subcategories from M:N relationship
+            const subcategories = b.business_subcategories?.map(bs => bs.subcategories) || [];
 
             return {
                 ...b,
-                subcategories: uniqueSubs
+                subcategories
             };
         });
 
         return this._processBusinessData(businesses);
+    }
+
+    async getNearbyBusinesses(lat, lng, radius = 5000) {
+        const { data, error } = await supabase
+            .rpc('get_nearby_businesses', {
+                user_lat: lat,
+                user_lng: lng,
+                radius_meters: radius
+            });
+
+        if (error) throw error;
+        return this._processBusinessData(data);
     }
 
     async getBusinessById(id) {

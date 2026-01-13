@@ -101,9 +101,8 @@ const PadelMobileATC = ({
     useEffect(() => {
         if (selectedTimeSlot && !availableTimeSlots.includes(selectedTimeSlot)) {
             setSelectedTimeSlot(null);
+            setSelectedSelection(null);
         }
-        // Also reset selection if time changes
-        setSelectedSelection(null);
     }, [availableTimeSlots, selectedTimeSlot]);
 
 
@@ -124,25 +123,25 @@ const PadelMobileATC = ({
         if (selectedSelection?.court.id === court.id && selectedSelection?.duration === duration) {
             setSelectedSelection(null); // Deselect if same clicked
         } else {
-            setSelectedSelection({ court, duration, price });
-        }
-    };
+            const newSelection = { court, duration, price };
+            setSelectedSelection(newSelection);
 
-    const handleContinue = () => {
-        if (selectedSelection && selectedTimeSlot) {
-            onSlotSelect({
-                courtId: selectedSelection.court.id,
-                courtName: selectedSelection.court.name,
-                time: selectedTimeSlot,
-                duration: selectedSelection.duration,
-                price: selectedSelection.price
-            });
+            // Immediately trigger onSlotSelect to show the main Continue button
+            if (selectedTimeSlot) {
+                onSlotSelect({
+                    courtId: court.id,
+                    courtName: court.name,
+                    time: selectedTimeSlot,
+                    duration: duration,
+                    price: price
+                });
+            }
         }
     };
 
     // --- Render ---
     return (
-        <div style={{ marginTop: '20px', paddingBottom: '100px' }}>
+        <div style={{ marginTop: '20px', paddingBottom: '20px' }}>
             {/* Step 1: Time Grid */}
             <h3 style={{
                 fontSize: '16px',
@@ -291,25 +290,23 @@ const PadelMobileATC = ({
                                                         style={{
                                                             padding: '10px 4px',
                                                             borderRadius: '8px',
-                                                            // Highlight Logic:
-                                                            // If selected: Solid Green, White Text (as requested for visibility)
-                                                            // If not: Light Green BG, Dark Text
-                                                            backgroundColor: isSelected ? sportColor : `${sportColor}20`,
-                                                            border: `1px solid ${sportColor}`,
-                                                            color: isSelected ? '#000' : 'var(--text-primary)',
+                                                            // Match calendar time slot styling
+                                                            border: isSelected ? `2px solid ${sportColor}` : '1px solid var(--border)',
+                                                            backgroundColor: isSelected ? `${sportColor}15` : 'var(--bg-card)',
+                                                            color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                                                             cursor: 'pointer',
                                                             display: 'flex',
                                                             flexDirection: 'column',
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
                                                             gap: '4px',
-                                                            boxShadow: isSelected ? `0 0 10px ${sportColor}60` : 'none',
-                                                            transform: isSelected ? 'scale(1.02)' : 'none'
+                                                            fontWeight: isSelected ? '700' : '500',
+                                                            transition: 'all 0.2s ease'
                                                         }}
                                                     >
                                                         <span style={{
                                                             fontSize: '13px',
-                                                            fontWeight: '700',
+                                                            fontWeight: '700'
                                                         }}>
                                                             ${price.toLocaleString()}
                                                         </span>
@@ -327,50 +324,6 @@ const PadelMobileATC = ({
                                 );
                             })}
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Step 3: Fixed Continue Bar */}
-            <AnimatePresence>
-                {selectedSelection && (
-                    <motion.div
-                        initial={{ y: 100 }}
-                        animate={{ y: 0 }}
-                        exit={{ y: 100 }}
-                        style={{
-                            position: 'fixed',
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            padding: '16px 20px 30px', // Extra bottom pad for iOS bar
-                            backgroundColor: 'var(--bg-card)',
-                            borderTop: '1px solid var(--border)',
-                            zIndex: 100,
-                            boxShadow: '0 -4px 20px rgba(0,0,0,0.1)'
-                        }}
-                    >
-                        <button
-                            onClick={handleContinue}
-                            style={{
-                                width: '100%',
-                                padding: '16px',
-                                backgroundColor: sportColor,
-                                color: '#000',
-                                border: 'none',
-                                borderRadius: '12px',
-                                fontSize: '16px',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px'
-                            }}
-                        >
-                            <span>Confirmar Reserva</span>
-                            <span>→</span>
-                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>

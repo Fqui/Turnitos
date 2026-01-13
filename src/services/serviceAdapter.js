@@ -31,6 +31,15 @@ class ServiceAdapter {
         return this.service.getBusinesses();
     }
 
+    async getNearbyBusinesses(lat, lng, radius) {
+        if (this.isDemoMode) {
+            // Mock implementation could go here, for now just return all
+            console.warn('Geolocation mock not implemented, returning all businesses');
+            return this.service.getBusinesses();
+        }
+        return this.service.getNearbyBusinesses(lat, lng, radius);
+    }
+
     async getBusinessById(id) {
         return this.service.getBusinessById(id);
     }
