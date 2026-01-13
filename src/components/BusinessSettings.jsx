@@ -342,10 +342,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
         { id: 'policies', label: 'Políticas', icon: '📜' },
         { id: 'special_days', label: 'Días Especiales', icon: '📅' },
-        { id: 'linkbio', label: 'Link Bio', icon: '🔗' },
-        { id: 'gallery', label: 'Galería', icon: '📸' },
-        { id: 'rules', label: 'Reglas', icon: '📋' },
-        { id: 'payments', label: 'Pagos', icon: '💰' }
+        { id: 'gallery', label: 'Galería', icon: '📸' }
     ];
 
     const daysTranslation = {
