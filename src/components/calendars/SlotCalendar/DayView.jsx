@@ -77,13 +77,17 @@ export default function DayView({
 
         if (dayConfig?.isOpen === false) return false;
 
-        // Verificar si es horario cortado
+        // Verificar si es horario cortado (con open/close/open2/close2)
         if (dayConfig?.isSplit) {
-            const breakStart = dayConfig.breakStart || '13:00';
-            const breakEnd = dayConfig.breakEnd || '16:00';
-            if (time >= breakStart && time < breakEnd) {
-                return false; // Cerrado en el descanso
-            }
+            const inFirstShift = time >= dayConfig.open && time < dayConfig.close;
+            const inSecondShift = dayConfig.open2 && dayConfig.close2 &&
+                time >= dayConfig.open2 && time < dayConfig.close2;
+            return inFirstShift || inSecondShift;
+        }
+
+        // Horario continuo
+        if (dayConfig?.open && dayConfig?.close) {
+            return time >= dayConfig.open && time < dayConfig.close;
         }
 
         return true;
@@ -184,7 +188,11 @@ export default function DayView({
                         {config.showResourceColumns ? (
                             resources.map((resource, j) => {
                                 const slotBookings = getBookingsForSlot(
-                                    bookings.filter(b => b.court_id === resource.id || b.specialist_id === resource.id),
+                                    bookings.filter(b =>
+                                        b.court_id === resource.id ||
+                                        b.specialist_id === resource.id ||
+                                        b.resource_id === resource.id  // ✅ Soporte para resource_id
+                                    ),
                                     currentDate,
                                     time,
                                     config.slotSize

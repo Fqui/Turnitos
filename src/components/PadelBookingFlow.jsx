@@ -8,6 +8,7 @@ const PadelBookingFlow = ({
     existingBookings,
     openingTime,
     closingTime,
+    timeRanges, // 🆕 Add timeRanges for split shifts
     onSlotSelect,
     sportColor = '#00e676'
 }) => {
@@ -38,6 +39,7 @@ const PadelBookingFlow = ({
                 existingBookings={existingBookings}
                 openingTime={openingTime}
                 closingTime={closingTime}
+                timeRanges={timeRanges} // 🆕 Pass timeRanges
                 onSlotSelect={handleSlotSelect}
                 sportColor={sportColor}
             />
@@ -52,10 +54,12 @@ const PadelBookingFlow = ({
             existingBookings={existingBookings}
             openingTime={openingTime}
             closingTime={closingTime}
+            timeRanges={timeRanges} // 🆕 Pass timeRanges
             onSlotSelect={handleSlotSelect}
             sportColor={sportColor}
         />
     );
 };
+
 
 export default PadelBookingFlow;

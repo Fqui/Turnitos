@@ -928,9 +928,9 @@ export default function BusinessProfile() {
                                 setSelectedDate(null);
                                 setSelectedTime(null);
 
-                                // Auto-scroll to calendar on mobile
+                                // 🆕 Auto-scroll to calendar for all devices
                                 setTimeout(() => {
-                                    if (window.innerWidth <= 768 && calendarRef.current) {
+                                    if (calendarRef.current) {
                                         calendarRef.current.scrollIntoView({
                                             behavior: 'smooth',
                                             block: 'start'
@@ -1143,6 +1143,7 @@ export default function BusinessProfile() {
                                             existingBookings={existingBookings}
                                             openingTime={open}
                                             closingTime={close}
+                                            timeRanges={ranges} // 🆕 Pass timeRanges for split shifts
                                             onSlotSelect={(slotData) => {
                                                 // slotData: { courtId, courtName, time, duration, price }
                                                 setSelectedTime({

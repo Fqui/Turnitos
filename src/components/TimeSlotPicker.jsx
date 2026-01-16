@@ -359,6 +359,14 @@ const TimeSlotPicker = ({
             const slots = [];
             let startMinutes, endMinutes;
 
+            // 🔍 Debug: Log timeRanges
+            console.log('🔍 TimeSlotPicker - Service Mode Debug:', {
+                timeRanges,
+                openingTime,
+                closingTime,
+                hasTimeRanges: timeRanges && timeRanges.length > 0
+            });
+
             if (timeRanges && timeRanges.length > 0) {
                 startMinutes = Math.min(...timeRanges.map(r => timeToMinutes(r.open)));
                 endMinutes = Math.max(...timeRanges.map(r => {

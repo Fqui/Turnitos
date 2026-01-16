@@ -8,6 +8,7 @@ const PadelTimeline = ({
     existingBookings,
     openingTime,
     closingTime,
+    timeRanges, // 🆕 Add timeRanges for split shifts
     onSlotSelect,
     sportColor = '#00e676'
 }) => {
@@ -25,6 +26,25 @@ const PadelTimeline = ({
         const h = Math.floor(minutes / 60) % 24;
         const m = minutes % 60;
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+
+    // 🆕 Helper: Check if a time slot falls within operating hours (respects split shifts)
+    const isWithinOperatingHours = (slotMinutes) => {
+        if (!timeRanges || timeRanges.length === 0) {
+            // Simple continuous hours
+            const start = timeToMinutes(openingTime);
+            const close = timeToMinutes(closingTime);
+            const end = close < start ? close + 1440 : close;
+            return slotMinutes >= start && slotMinutes < end;
+        }
+
+        // Check if slot falls within any of the time ranges (for split shifts)
+        return timeRanges.some(range => {
+            const rangeStart = timeToMinutes(range.open);
+            const rangeClose = timeToMinutes(range.close);
+            const rangeEnd = rangeClose < rangeStart ? rangeClose + 1440 : rangeClose;
+            return slotMinutes >= rangeStart && slotMinutes < rangeEnd;
+        });
     };
 
     // Helper: Calculate end time
@@ -97,7 +117,7 @@ const PadelTimeline = ({
         return availableDurations;
     };
 
-    // Generate time slots array (every 30 minutes)
+    // Generate time slots array (every 30 minutes) - 🆕 Now filters by timeRanges
     const hours = useMemo(() => {
         const startMinutes = timeToMinutes(openingTime);
         let endMinutes = timeToMinutes(closingTime);
@@ -108,10 +128,17 @@ const PadelTimeline = ({
 
         const hoursArray = [];
         for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
-            hoursArray.push(minutesToTime(minutes % 1440));
+            const normalizedMinutes = minutes % 1440;
+
+            // 🆕 Skip if not within operating hours (handles split shifts)
+            if (!isWithinOperatingHours(normalizedMinutes)) {
+                continue;
+            }
+
+            hoursArray.push(minutesToTime(normalizedMinutes));
         }
         return hoursArray;
-    }, [openingTime, closingTime]);
+    }, [openingTime, closingTime, timeRanges]);
 
     // Get bookings for a specific court
     const getCourtBookings = (courtId) => {

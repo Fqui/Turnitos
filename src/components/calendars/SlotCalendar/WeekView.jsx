@@ -179,7 +179,11 @@ export default function WeekView({
                     {displayDays.map((day, dayIdx) => (
                         resources.map((resource, resourceIdx) => {
                             const slotBookings = getBookingsForSlot(
-                                bookings.filter(b => b.court_id === resource.id || b.specialist_id === resource.id),
+                                bookings.filter(b =>
+                                    b.court_id === resource.id ||
+                                    b.specialist_id === resource.id ||
+                                    b.resource_id === resource.id  // ✅ Soporte para resource_id
+                                ),
                                 day,
                                 time,
                                 config.slotSize

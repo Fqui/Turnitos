@@ -7,6 +7,7 @@ const PadelMobileATC = ({
     existingBookings,
     openingTime,
     closingTime,
+    timeRanges, // 🆕 Add timeRanges for split shifts
     onSlotSelect,
     sportColor = '#00e676'
 }) => {
@@ -23,6 +24,25 @@ const PadelMobileATC = ({
         const h = Math.floor(minutes / 60) % 24;
         const m = minutes % 60;
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+
+    // 🆕 Helper: Check if a time slot falls within operating hours (respects split shifts)
+    const isWithinOperatingHours = (slotMinutes) => {
+        if (!timeRanges || timeRanges.length === 0) {
+            // Simple continuous hours
+            const start = timeToMinutes(openingTime);
+            const close = timeToMinutes(closingTime);
+            const end = close < start ? close + 1440 : close;
+            return slotMinutes >= start && slotMinutes < end;
+        }
+
+        // Check if slot falls within any of the time ranges (for split shifts)
+        return timeRanges.some(range => {
+            const rangeStart = timeToMinutes(range.open);
+            const rangeClose = timeToMinutes(range.close);
+            const rangeEnd = rangeClose < rangeStart ? rangeClose + 1440 : rangeClose;
+            return slotMinutes >= rangeStart && slotMinutes < rangeEnd;
+        });
     };
 
     const calculateEndTime = (startTime, durationMinutes) => {
@@ -76,7 +96,7 @@ const PadelMobileATC = ({
 
     // --- Data Prep ---
 
-    // 1. Generate all possible time slots
+    // 1. Generate all possible time slots - 🆕 Now filters by timeRanges
     const allTimeSlots = useMemo(() => {
         const slots = [];
         const startMinutes = timeToMinutes(openingTime);
@@ -84,10 +104,17 @@ const PadelMobileATC = ({
         if (endMinutes < startMinutes) endMinutes += 1440;
 
         for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
-            slots.push(minutesToTime(minutes % 1440));
+            const normalizedMinutes = minutes % 1440;
+
+            // 🆕 Skip if not within operating hours (handles split shifts)
+            if (!isWithinOperatingHours(normalizedMinutes)) {
+                continue;
+            }
+
+            slots.push(minutesToTime(normalizedMinutes));
         }
         return slots;
-    }, [openingTime, closingTime]);
+    }, [openingTime, closingTime, timeRanges]);
 
     // 2. Filter slots that have at least one court available
     const availableTimeSlots = useMemo(() => {
