@@ -156,13 +156,13 @@ const SubscriptionManager = ({ businessId, businessType, business }) => {
                                 {getPlanBadge(plan)}
                             </div>
                             <div className="plan-price">
-                                <span className="amount">{formatPrice(plan.monthly_price)}</span>
+                                <span className="amount">{formatPrice(plan.price_monthly || plan.monthly_price || 0)}</span>
                                 <span className="period">/mes</span>
                             </div>
                             <div className="plan-features">
                                 <div className="feature">
                                     <span className="icon">✓</span>
-                                    <span>{plan.spaces} {businessType === 'sport' ? 'canchas' : businessType === 'service' ? 'especialistas' : 'espacios'}</span>
+                                    <span><strong>{plan.spaces_included || plan.spaces}</strong> {businessType === 'sport' ? 'canchas' : businessType === 'service' ? 'especialistas' : 'espacios'}</span>
                                 </div>
                                 {plan.price_per_space && (
                                     <div className="feature secondary">
@@ -188,7 +188,7 @@ const SubscriptionManager = ({ businessId, businessType, business }) => {
                                     onClick={() => handleUpgrade(plan.id)}
                                     disabled={loading}
                                 >
-                                    {plan.spaces > (subscription?.spaces_included || 0) ? 'Actualizar Plan' : 'Cambiar Plan'}
+                                    {(plan.spaces_included || plan.spaces) > (subscription?.spaces_included || 0) ? 'Actualizar Plan' : 'Cambiar Plan'}
                                 </button>
                             )}
                         </div>

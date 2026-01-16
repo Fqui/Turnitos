@@ -3,7 +3,7 @@ import supabaseService from '../services/supabaseService';
 import serviceAdapter from '../services/serviceAdapter';
 import analyticsService from '../services/analyticsService';
 import DashboardStats from '../components/DashboardStats';
-import DashboardCalendar from '../components/DashboardCalendar';
+import { CalendarWrapper } from '../components/calendars';
 import MetricsCard from '../components/analytics/MetricsCard';
 import RevenueChart from '../components/analytics/RevenueChart';
 import PeakHoursHeatmap from '../components/analytics/PeakHoursHeatmap';
@@ -1099,7 +1099,7 @@ export default function BusinessPortal() {
                                     </div>
                                 )}
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                                    <DashboardCalendar
+                                    <CalendarWrapper
                                         bookings={bookings}
                                         business={currentBusiness}
                                         isMobile={isMobile}
@@ -1108,10 +1108,6 @@ export default function BusinessPortal() {
                                         onCreateBooking={handleCreateBooking}
                                         onBookingClick={handleBookingClick}
                                         onMoveBooking={handleMoveBooking}
-                                        viewMode={calendarViewMode}
-                                        setViewMode={setCalendarViewMode}
-                                        currentDate={calendarDate}
-                                        setCurrentDate={setCalendarDate}
                                         isRescheduling={!!reschedulingBooking}
                                         reschedulingBooking={reschedulingBooking}
                                         onStartReschedule={(booking) => setReschedulingBooking(booking)}

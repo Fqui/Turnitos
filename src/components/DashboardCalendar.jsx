@@ -99,6 +99,18 @@ export default function DashboardCalendar({
 
     const businessHours = getBusinessHours();
 
+    // 🎾 Detect Padel courts
+    const hasPadelCourts = business?.courts?.some(c =>
+        c.name?.toLowerCase().includes('padel') ||
+        c.name?.toLowerCase().includes('cancha')
+    );
+    const padelCourts = hasPadelCourts
+        ? business.courts.filter(c =>
+            c.name?.toLowerCase().includes('padel') ||
+            c.name?.toLowerCase().includes('cancha')
+        )
+        : [];
+
     // 🔍 DEBUG: Log business data to diagnose empty calendar
     console.log('📊 DashboardCalendar - Business Data:', {
         businessId: business?.id,
@@ -106,7 +118,9 @@ export default function DashboardCalendar({
         courtsCount: business?.courts?.length || 0,
         specialistsCount: business?.specialists?.length || 0,
         bookingsCount: bookings?.length || 0,
-        businessHours
+        businessHours,
+        hasPadelCourts,
+        padelCourtsCount: padelCourts.length
     });
 
     // Helper to get start of week (Monday)
@@ -268,6 +282,14 @@ export default function DashboardCalendar({
     };
 
     const getBookingLabel = (booking) => {
+        // For Padel in day view, don't show court name (column header already shows it)
+        if (hasPadelCourts && viewMode === 'day' && booking.court_id) {
+            return booking.status === 'confirmed' ? 'Confirmado' :
+                booking.status === 'pending' ? 'Pendiente' :
+                    booking.status === 'deposit_paid' ? 'Seña Pagada' :
+                        booking.status === 'cancelled' ? 'Cancelado' :
+                            booking.status === 'completed' ? 'Completado' : 'Reserva';
+        }
         if (booking.service_id && booking.services?.name) return booking.services.name;
         if (booking.court_id && booking.courts?.name) return booking.courts.name;
         return booking.service || 'Reserva';
@@ -436,7 +458,10 @@ export default function DashboardCalendar({
                 {viewMode !== 'month' ? (
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: `70px repeat(${displayDays.length}, 1fr)`,
+                        gridTemplateColumns: (hasPadelCourts && viewMode === 'day')
+                            ? `70px repeat(${padelCourts.length}, 1fr)` // Court columns for Padel
+                            : `70px repeat(${displayDays.length}, 1fr)`, // Day columns for others
+                        gridAutoRows: '60px', // Fixed row height for consistency
                         minWidth: viewMode === 'day' ? 'auto' : '900px',
                         width: '100%'
                     }}>
@@ -451,51 +476,93 @@ export default function DashboardCalendar({
                             borderRight: viewMode === 'day' ? 'none' : '1px solid var(--border)',
                             height: viewMode === 'day' ? 0 : 'auto'
                         }}></div>
-                        {displayDays.map((day, i) => {
-                            const isToday = formatDateKey(day) === formatDateKey(new Date());
-                            return (
-                                <div key={i} style={{
-                                    padding: viewMode === 'day' ? '0' : '16px 8px',
-                                    height: viewMode === 'day' ? '0' : 'auto',
-                                    overflow: 'hidden',
+
+                        {/* Padel Day View: Show Court Names */}
+                        {(hasPadelCourts && viewMode === 'day') ? (
+                            padelCourts.map((court, i) => (
+                                <div key={court.id} style={{
+                                    padding: '16px 8px',
                                     textAlign: 'center',
-                                    borderBottom: viewMode === 'day' ? 'none' : '1px solid var(--border)',
-                                    borderRight: i < displayDays.length - 1 ? '1px solid var(--border)' : 'none',
+                                    borderBottom: '1px solid var(--border)',
+                                    borderRight: i < padelCourts.length - 1 ? '1px solid var(--border)' : 'none',
                                     position: 'sticky',
                                     top: 0,
                                     zIndex: 20,
-                                    background: viewMode !== 'day' && isToday ? 'rgba(0, 0, 0, 0.04)' : 'var(--bg-card)',
+                                    background: 'var(--bg-card)',
+                                    display: 'flex',
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px'
                                 }}>
-                                    {viewMode === 'day' ? null : (
-                                        // Vista de semana: diseño original
-                                        <>
-                                            <div style={{
-                                                fontSize: '13px',
-                                                fontWeight: '600',
-                                                color: isToday ? 'var(--primary-paddle)' : 'var(--text-secondary)',
-                                                marginBottom: '4px',
-                                                textTransform: 'uppercase'
-                                            }}>
-                                                {day.toLocaleDateString('es-ES', { weekday: 'short' })}
-                                            </div>
-                                            <div style={{
-                                                fontSize: '24px',
-                                                fontWeight: '800',
-                                                color: isToday ? 'var(--primary-paddle)' : 'var(--text-primary)',
-                                                width: '40px',
-                                                height: '40px',
-                                                lineHeight: '40px',
-                                                borderRadius: '50%',
-                                                background: isToday ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
-                                                margin: '0 auto'
-                                            }}>
-                                                {day.getDate()}
-                                            </div>
-                                        </>
-                                    )}
+                                    <span style={{
+                                        fontSize: '20px',
+                                        lineHeight: '1',
+                                        display: 'flex',
+                                        alignItems: 'center'
+                                    }}>
+                                        🎾
+                                    </span>
+                                    <span style={{
+                                        fontSize: '16px',
+                                        fontWeight: '800',
+                                        color: 'var(--text-primary)',
+                                        lineHeight: '1',
+                                        display: 'flex',
+                                        alignItems: 'center'
+                                    }}>
+                                        {court.name}
+                                    </span>
                                 </div>
-                            );
-                        })}
+                            ))
+                        ) : (
+                            /* Standard Day/Week View: Show Dates */
+                            displayDays.map((day, i) => {
+                                const isToday = formatDateKey(day) === formatDateKey(new Date());
+                                return (
+                                    <div key={i} style={{
+                                        padding: viewMode === 'day' ? '0' : '16px 8px',
+                                        height: viewMode === 'day' ? '0' : 'auto',
+                                        overflow: 'hidden',
+                                        textAlign: 'center',
+                                        borderBottom: viewMode === 'day' ? 'none' : '1px solid var(--border)',
+                                        borderRight: i < displayDays.length - 1 ? '1px solid var(--border)' : 'none',
+                                        position: 'sticky',
+                                        top: 0,
+                                        zIndex: 20,
+                                        background: viewMode !== 'day' && isToday ? 'rgba(0, 0, 0, 0.04)' : 'var(--bg-card)',
+                                    }}>
+                                        {viewMode === 'day' ? null : (
+                                            // Vista de semana: diseño original
+                                            <>
+                                                <div style={{
+                                                    fontSize: '13px',
+                                                    fontWeight: '600',
+                                                    color: isToday ? 'var(--primary-paddle)' : 'var(--text-secondary)',
+                                                    marginBottom: '4px',
+                                                    textTransform: 'uppercase'
+                                                }}>
+                                                    {day.toLocaleDateString('es-ES', { weekday: 'short' })}
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '24px',
+                                                    fontWeight: '800',
+                                                    color: isToday ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    lineHeight: '40px',
+                                                    borderRadius: '50%',
+                                                    background: isToday ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                                    margin: '0 auto'
+                                                }}>
+                                                    {day.getDate()}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
 
                         {timeSlots.map((time, i) => (
                             <React.Fragment key={time}>

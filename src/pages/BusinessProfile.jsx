@@ -14,6 +14,7 @@ import TimeSlotPicker from '../components/TimeSlotPicker';
 import PadelBookingFlow from '../components/PadelBookingFlow'; // 🆕 Padel-specific booking flow
 import BookingSummary from '../components/BookingSummary';
 import SpecialistsShowcase from '../components/SpecialistsShowcase';
+import BookingSuccessModal from '../components/BookingSuccessModal';
 import { formatDisplayDate } from '../utils/dateUtils';
 
 // Fix for default marker icon
@@ -38,6 +39,7 @@ export default function BusinessProfile() {
     const [loadingBookings, setLoadingBookings] = useState(false); // 🆕 Loading state for bookings
     const [bookingRefreshTrigger, setBookingRefreshTrigger] = useState(0); // 🆕 Trigger to force refresh
     const [showModal, setShowModal] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Venue specific state
@@ -369,16 +371,16 @@ export default function BusinessProfile() {
             };
 
             await serviceAdapter.createBooking(bookingData);
-            alert('¡Reserva confirmada con éxito!');
 
-            // 🆕 Refresh bookings to show updated timeline instead of navigating away
+            // Close booking modal and show success modal
+            setShowModal(false);
+            setShowSuccessModal(true);
+
+            // 🆕 Refresh bookings to show updated timeline
             refreshBookings();
 
             // Reset selection states
             setSelectedTime(null);
-
-            // Navigate to Home after successful booking
-            navigate('/');
 
         } catch (error) {
             console.error("Booking error:", error);
@@ -1150,6 +1152,9 @@ export default function BusinessProfile() {
                                                     price: slotData.price,
                                                     duration: slotData.duration
                                                 });
+
+                                                // Auto-open booking modal for Padel
+                                                setShowModal(true);
                                             }}
                                             sportColor={primaryColor}
                                         />
@@ -1365,8 +1370,8 @@ export default function BusinessProfile() {
                     </>
                 )}
 
-                {/* Confirmation Button - Sticky on Mobile */}
-                {selectedTime && (
+                {/* Confirmation Button - Sticky on Mobile (Hidden for Padel since modal opens automatically) */}
+                {selectedTime && !business.courts?.some(c => c.sport === 'padel') && (
                     <div ref={confirmRef} style={{
                         textAlign: 'center',
                         marginTop: '40px',
@@ -1421,6 +1426,16 @@ export default function BusinessProfile() {
                         onClose={() => setShowModal(false)}
                         onConfirm={handleConfirmBooking}
                         isSubmitting={isSubmitting}
+                    />
+                )}
+
+                {/* Booking Success Modal */}
+                {showSuccessModal && (
+                    <BookingSuccessModal
+                        onClose={() => {
+                            setShowSuccessModal(false);
+                            navigate('/');
+                        }}
                     />
                 )}
 
