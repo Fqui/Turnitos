@@ -112,7 +112,8 @@ export default function DashboardCalendar({
         : [];
 
     // 🔍 DEBUG: Log business data to diagnose empty calendar
-    // console.log('📊 DashboardCalendar - Business Data:', {
+    /*
+    console.log('📊 DashboardCalendar - Business Data:', {
         businessId: business?.id,
         businessName: business?.name,
         courtsCount: business?.courts?.length || 0,
@@ -122,6 +123,7 @@ export default function DashboardCalendar({
         hasPadelCourts,
         padelCourtsCount: padelCourts.length
     });
+    */
 
     // Helper to get start of week (Monday)
     const getStartOfWeek = (date) => {
@@ -611,6 +613,19 @@ export default function DashboardCalendar({
                                         const bookingDuration = b.duration || 60;
                                         const bookingEndMinutes = bookingStartMinutes + bookingDuration;
 
+                                        /*
+                                        if (b.status === 'blocked') {
+                                           console.log('🔒 Debug Blocked:', {
+                                               bTime: b.time,
+                                               slotTime: time,
+                                               bookingStartMinutes,
+                                               bookingEndMinutes,
+                                               slotMinutes,
+                                               match: slotMinutes >= bookingStartMinutes && slotMinutes < bookingEndMinutes
+                                           });
+                                        }
+                                        */
+
                                         return slotMinutes >= bookingStartMinutes && slotMinutes < bookingEndMinutes;
                                     });
 
@@ -743,7 +758,9 @@ export default function DashboardCalendar({
                                                         }}
                                                         style={{
                                                             flex: 1, // Allow 50/50 split if row
-                                                            background: getStatusColor(booking),
+                                                            background: booking.status === 'blocked'
+                                                                ? 'repeating-linear-gradient(45deg, #374151, #374151 10px, #4B5563 10px, #4B5563 20px)'
+                                                                : getStatusColor(booking),
                                                             color: '#fff',
                                                             minHeight: '38px', // Slightly taller for 2 lines
                                                             borderRadius: '6px',
@@ -752,7 +769,7 @@ export default function DashboardCalendar({
                                                             overflow: 'hidden',
                                                             cursor: 'pointer',
                                                             boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                                            borderLeft: '4px solid rgba(0,0,0,0.2)',
+                                                            borderLeft: booking.status === 'blocked' ? '4px solid #1F2937' : '4px solid rgba(0,0,0,0.2)',
                                                             opacity: (booking.status === 'cancelled' || (isRescheduling && reschedulingBooking?.id !== booking.id)) ? 0.7 : 1,
                                                             display: 'flex',
                                                             flexDirection: 'column', // Stack Content
@@ -766,8 +783,8 @@ export default function DashboardCalendar({
                                                         title={booking.status === 'blocked' ? 'BLOQUEADO' : `${booking.customer_name || booking.customerName} - ${getBookingLabel(booking)}`}
                                                     >
                                                         {booking.status === 'blocked' ? (
-                                                            <span style={{ fontWeight: '800', fontSize: '12px', width: '100%', textAlign: 'center' }}>
-                                                                BLOQUEADO
+                                                            <span style={{ fontWeight: '800', fontSize: '11px', width: '100%', textAlign: 'center', letterSpacing: '1px' }}>
+                                                                🚫 BLOQUEADO
                                                             </span>
                                                         ) : (
                                                             <>

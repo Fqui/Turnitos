@@ -29,15 +29,22 @@ class AnalyticsService {
             const { data: bookings, error } = await query;
             if (error) throw error;
 
+            // Estados válidos para contabilizar ingresos y ocupación
+            const VALID_STATES = ['confirmed', 'attended', 'completed', 'deposit_paid'];
+
+            // Filtrar reservas válidas (excluir bloqueos y cancelados para métricas generales)
+            const activeBookings = bookings.filter(b => VALID_STATES.includes(b.status));
+
             // Calculate metrics
-            const totalBookings = bookings.length;
-            const totalRevenue = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
+            const totalBookings = activeBookings.length;
+            const totalRevenue = activeBookings.reduce((sum, b) => sum + (b.price || 0), 0);
             const avgBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
 
-            // Calculate completion rate (confirmed vs cancelled)
-            const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
+            // Calculate completion rate (confirmed/attended/completed vs cancelled)
+            // Total attempts = active + cancelled (ignoring blocked)
             const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
-            const completionRate = totalBookings > 0 ? (confirmedBookings / totalBookings) * 100 : 0;
+            const totalAttempts = totalBookings + cancelledBookings;
+            const completionRate = totalAttempts > 0 ? (totalBookings / totalAttempts) * 100 : 0;
 
             // Get previous period for comparison
             const previousPeriod = this._getPreviousPeriod(start, end);
@@ -108,7 +115,7 @@ class AnalyticsService {
                 .from('bookings')
                 .select('date, time')
                 .eq('business_id', businessId)
-                .eq('status', 'confirmed');
+                .in('status', ['confirmed', 'attended', 'completed', 'deposit_paid']);
 
             if (error) throw error;
 
@@ -147,7 +154,7 @@ class AnalyticsService {
                 .from('bookings')
                 .select('customer_name, customer_phone, date, services(name)')
                 .eq('business_id', businessId)
-                .eq('status', 'confirmed');
+                .in('status', ['confirmed', 'attended', 'completed', 'deposit_paid']);
 
             if (error) throw error;
 
@@ -344,9 +351,11 @@ class AnalyticsService {
             .gte('date', start)
             .lte('date', end);
 
+        const validBookings = bookings?.filter(b => ['confirmed', 'attended', 'completed', 'deposit_paid'].includes(b.status)) || [];
+
         return {
-            bookings: bookings?.length || 0,
-            revenue: bookings?.reduce((sum, b) => sum + (b.price || 0), 0) || 0
+            bookings: validBookings.length,
+            revenue: validBookings.reduce((sum, b) => sum + (b.price || 0), 0)
         };
     }
 
@@ -375,6 +384,9 @@ class AnalyticsService {
             if (!grouped[key]) {
                 grouped[key] = { date: key, count: 0, revenue: 0 };
             }
+
+            // Exclude cancelled and blocked from trends revenue/count
+            if (['cancelled', 'blocked'].includes(booking.status)) return;
 
             grouped[key].count++;
             grouped[key].revenue += booking.price || 0;

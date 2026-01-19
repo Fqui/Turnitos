@@ -43,6 +43,48 @@ export default function DayView({
         }
     }, [showSlotMenu, showBookingMenu]);
 
+    // Auto-scroll to current time on mount (only for today)
+    useEffect(() => {
+        const scrollToCurrentTime = () => {
+            const now = new Date();
+            const isToday = formatDateKey(now) === formatDateKey(currentDate);
+
+            if (isToday) {
+                const currentHour = now.getHours();
+                const currentMinute = now.getMinutes();
+
+                // Find closest previous slot
+                // Assuming slots are ordered, string comparison works well enough for "HH:MM"
+                // but let's be more robust if possible.
+                // Simple approach: Construct "HH:MM" and find match. 
+                // Since slots are generated based on start/end, we might not match exact minute if it's 10:17
+
+                // Round down to nearest slot
+                const slotMinutes = config.slotSize;
+                const roundedMinutes = Math.floor(currentMinute / slotMinutes) * slotMinutes;
+                const timeString = `${String(currentHour).padStart(2, '0')}:${String(roundedMinutes).padStart(2, '0')}`;
+
+                // Try to find exact match
+                let element = document.getElementById(`time-slot-${timeString}`);
+
+                // If not found (maybe outside business hours?), try fallback or just closest valid slot
+                if (!element) {
+                    // Find first slot that is AFTER current time? No, we want to see current time.
+                    // Just filtering timeSlots to find closest?
+                    // Let's just try the constructed string. If it fails, maybe user is outside execution hours.
+                }
+
+                if (element) {
+                    // Scroll with a bit of offset so it's not at the very top edge
+                    element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                }
+            }
+        };
+
+        // Small timeout to ensure rendering is complete
+        setTimeout(scrollToCurrentTime, 100);
+    }, [currentDate, config.slotSize]);
+
     const handleSlotClick = (e, time, resource = null) => {
         e.stopPropagation();
         const rect = e.currentTarget.getBoundingClientRect();
@@ -162,6 +204,20 @@ export default function DayView({
             {timeSlots.map((time) => {
                 const isOpen = isBusinessOpen(time);
 
+                // Check if this slot corresponds to current time
+                const isCurrentSlot = (() => {
+                    if (formatDateKey(currentDate) !== formatDateKey(new Date())) return false;
+                    const [slotHour, slotMinute] = time.split(':').map(Number);
+                    const now = new Date();
+                    const currentHour = now.getHours();
+                    const currentMinute = now.getMinutes();
+
+                    if (slotHour !== currentHour) return false;
+
+                    // Check if current minute falls within this slot
+                    return currentMinute >= slotMinute && currentMinute < slotMinute + config.slotSize;
+                })();
+
                 return (
                     <React.Fragment key={time}>
                         {/* Time Column */}
@@ -175,12 +231,17 @@ export default function DayView({
                             borderRight: '1px solid var(--border)',
                             position: 'sticky',
                             left: 0,
-                            background: 'var(--bg-card)',
+                            left: 0,
+                            background: isCurrentSlot ? 'var(--primary-paddle)' : 'var(--bg-card)',
+                            color: isCurrentSlot ? '#ffffff' : 'var(--text-secondary)',
+                            fontWeight: isCurrentSlot ? '700' : '500',
                             zIndex: 10,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center'
-                        }}>
+                        }}
+                            id={`time-slot-${time}`}
+                        >
                             {time}
                         </div>
 
@@ -190,6 +251,9 @@ export default function DayView({
                                 // Filter bookings for this specific resource
                                 const slotBookings = getBookingsForSlot(
                                     bookings.filter(b => {
+                                        // Global blocks (apply to all resources)
+                                        if (b.status === 'blocked' && !b.court_id && !b.service_id && !b.resource_id) return true;
+
                                         // Match by court_id (for sports)
                                         if (b.court_id === resource.id) return true;
 
@@ -210,14 +274,15 @@ export default function DayView({
                                     <div
                                         key={`${resource.id}-${time}`}
                                         style={{
-                                            borderBottom: '1px solid var(--border)',
+                                            borderBottom: isCurrentSlot ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                            borderTop: isCurrentSlot ? '2px solid var(--primary-paddle)' : 'none',
                                             borderRight: j < resources.length - 1 ? '1px solid var(--border)' : 'none',
                                             minHeight: `${config.gridRowHeight}px`,
                                             padding: '4px',
                                             position: 'relative',
                                             background: !isOpen
                                                 ? 'repeating-linear-gradient(45deg, var(--bg-main), var(--bg-main) 10px, var(--border) 10px, var(--border) 11px)'
-                                                : 'transparent',
+                                                : isCurrentSlot ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
                                             opacity: !isOpen ? 0.6 : 1,
                                             cursor: !isOpen ? 'not-allowed' : 'default',
                                             display: 'flex',
@@ -313,16 +378,108 @@ export default function DayView({
                             // Single column (no resources)
                             <div
                                 style={{
-                                    borderBottom: '1px solid var(--border)',
-                                    minHeight: `${config.gridRowHeight}px`,
-                                    padding: '4px',
+                                    borderBottom: isCurrentSlot ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                    borderTop: isCurrentSlot ? '2px solid var(--primary-paddle)' : 'none',
+                                    position: 'relative',
                                     background: !isOpen
                                         ? 'repeating-linear-gradient(45deg, var(--bg-main), var(--bg-main) 10px, var(--border) 10px, var(--border) 11px)'
-                                        : 'transparent',
+                                        : isCurrentSlot ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
                                     opacity: !isOpen ? 0.6 : 1
                                 }}
                             >
-                                {/* Single column logic */}
+                                {(() => {
+                                    const slotBookings = getBookingsForSlot(
+                                        bookings,
+                                        currentDate,
+                                        time,
+                                        config.slotSize
+                                    );
+
+                                    if (slotBookings.length > 0) {
+                                        return slotBookings.map((booking, idx) => {
+                                            if (!isFirstSlotOfBooking(booking, time)) return null;
+
+                                            const slotSpan = calculateSlotSpan(booking);
+                                            const cardHeight = (config.gridRowHeight * slotSpan) - 8;
+
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '4px',
+                                                        left: '4px',
+                                                        right: '4px',
+                                                        height: `${cardHeight}px`,
+                                                        zIndex: 2
+                                                    }}
+                                                >
+                                                    <BookingCard
+                                                        booking={booking}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (isRescheduling) return;
+                                                            if (booking.status === 'pending' || booking.status === 'deposit_paid') {
+                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                setShowBookingMenu({
+                                                                    booking,
+                                                                    x: rect.left + rect.width / 2,
+                                                                    y: rect.top
+                                                                });
+                                                            } else {
+                                                                onBookingClick && onBookingClick(booking);
+                                                            }
+                                                        }}
+                                                        slotSize={config.slotSize}
+                                                        showDuration={type !== 'futbol'}
+                                                        showTimeRange={true}
+                                                        isRescheduling={isRescheduling}
+                                                        isSelected={reschedulingBooking?.id === booking.id}
+                                                    />
+                                                </div>
+                                            );
+                                        });
+                                    }
+
+                                    if (isOpen) {
+                                        return (
+                                            <div
+                                                onClick={(e) => {
+                                                    if (isRescheduling) {
+                                                        // No resource ID for single column? Pass null or handle in parent
+                                                        onMoveBooking && onMoveBooking(
+                                                            reschedulingBooking.id,
+                                                            formatDateKey(currentDate),
+                                                            time,
+                                                            null
+                                                        );
+                                                    } else {
+                                                        handleSlotClick(e, time, null);
+                                                    }
+                                                }}
+                                                style={{
+                                                    flex: 1,
+                                                    minHeight: '100%',
+                                                    borderRadius: '8px',
+                                                    border: '1.5px dashed rgba(0,0,0,0.08)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: 'pointer',
+                                                    color: 'rgba(0,0,0,0.15)',
+                                                    fontSize: '20px',
+                                                    fontWeight: '300',
+                                                    transition: 'all 0.2s',
+                                                    background: 'transparent'
+                                                }}
+                                                className="slot-add-area"
+                                            >
+                                                +
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
                             </div>
                         )}
                     </React.Fragment>

@@ -4,6 +4,7 @@ import serviceAdapter from '../services/serviceAdapter';
 import analyticsService from '../services/analyticsService';
 import DashboardStats from '../components/DashboardStats';
 import { CalendarWrapper } from '../components/calendars';
+import { getCalendarType, getSlotConfig } from '../components/calendars/shared/config';
 import MetricsCard from '../components/analytics/MetricsCard';
 import RevenueChart from '../components/analytics/RevenueChart';
 import PeakHoursHeatmap from '../components/analytics/PeakHoursHeatmap';
@@ -17,6 +18,7 @@ import BusinessLogin from '../components/business/BusinessLogin';
 import BusinessPortalSidebar from '../components/business/BusinessPortalSidebar';
 import BookingDetailsModal from '../components/business/BookingDetailsModal';
 import NewBookingModal from '../components/business/NewBookingModal';
+import BlockSlotModal from '../components/business/BlockSlotModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 
 export default function BusinessPortal() {
@@ -31,6 +33,8 @@ export default function BusinessPortal() {
     const [rememberMe, setRememberMe] = useState(false);
     const [requirePasswordChange, setRequirePasswordChange] = useState(false);
     const [currentBusinessId, setCurrentBusinessId] = useState(null);
+    const [showBlockModal, setShowBlockModal] = useState(false);
+    const [pendingBlockData, setPendingBlockData] = useState(null);
 
     useEffect(() => {
         const checkAutoLogin = async () => {
@@ -431,6 +435,7 @@ export default function BusinessPortal() {
             businessId: selectedBusinessId,
             serviceId: isCourt ? null : newBookingData.serviceId || null,
             courtId: isCourt ? newBookingData.serviceId : null,
+            specialistId: newBookingData.specialistId || null, // Create booking with specialist
             date: newBookingData.date,
             time: newBookingData.time,
             customerName: newBookingData.customerName,
@@ -457,6 +462,7 @@ export default function BusinessPortal() {
                 customerName: '',
                 customerPhone: '',
                 serviceId: '',
+                specialistId: null, // Reset specialist
                 price: 0
             });
         } catch (error) {
@@ -474,7 +480,6 @@ export default function BusinessPortal() {
             const day = String(date.getDate()).padStart(2, '0');
             dateStr = `${year}-${month}-${day}`;
             timeStr = time;
-            if (!confirm(`¿Bloquear horario ${dateStr} ${timeStr}?`)) return;
         } else {
             timeStr = prompt('Ingrese la hora a bloquear (ej: 14:00)');
             if (!timeStr) return;
@@ -482,13 +487,27 @@ export default function BusinessPortal() {
             dateStr = now.toISOString().split('T')[0];
         }
 
+        setPendingBlockData({ date: dateStr, time: timeStr });
+        setShowBlockModal(true);
+    };
+
+    const confirmBlockSlot = async (reason) => {
+        if (!pendingBlockData) return;
+
+        const { date, time } = pendingBlockData;
+
+        const calendarType = getCalendarType(currentBusiness);
+        const slotConfig = getSlotConfig(calendarType);
+        const blockDuration = slotConfig.slotSize || 60;
+
         const bookingData = {
             businessId: selectedBusinessId,
             serviceId: null,
             courtId: null,
-            date: dateStr,
-            time: timeStr,
-            customerName: 'BLOQUEADO POR ADMIN',
+            date: date,
+            time: time,
+            duration: blockDuration,
+            customerName: reason || 'BLOQUEADO POR ADMIN', // Use reason as name/label
             customerEmail: '-',
             customerPhone: '-',
             status: 'blocked',
@@ -496,7 +515,7 @@ export default function BusinessPortal() {
             history: [
                 {
                     action: 'blocked',
-                    label: 'Horario Bloqueado',
+                    label: reason || 'Horario Bloqueado',
                     timestamp: new Date().toISOString(),
                     status: 'blocked'
                 }
@@ -506,6 +525,8 @@ export default function BusinessPortal() {
         try {
             await serviceAdapter.createBooking(bookingData);
             fetchBookings();
+            setShowBlockModal(false);
+            setPendingBlockData(null);
         } catch (error) {
             console.error('Error blocking slot:', error);
             alert('Error al bloquear horario');
@@ -1523,6 +1544,19 @@ export default function BusinessPortal() {
                 onSubmit={handleSubmitNewBooking}
                 currentBusiness={currentBusiness}
                 isMobile={isMobile}
+                bookings={bookings} // Pass bookings for availability check
+            />
+
+            {/* Block Slot Modal */}
+            <BlockSlotModal
+                isOpen={showBlockModal}
+                onClose={() => {
+                    setShowBlockModal(false);
+                    setPendingBlockData(null);
+                }}
+                onConfirm={confirmBlockSlot}
+                date={pendingBlockData?.date}
+                time={pendingBlockData?.time}
             />
 
             {/* Change Password Modal (First Login) */}

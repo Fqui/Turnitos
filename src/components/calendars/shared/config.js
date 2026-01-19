@@ -74,8 +74,8 @@ export const STATUS_COLORS = {
         dark: '#34D399',   // Emerald-400
     },
     blocked: {
-        light: '#374151',  // Gray-700
-        dark: '#4B5563',   // Gray-600
+        light: 'repeating-linear-gradient(45deg, #374151, #374151 10px, #4B5563 10px, #4B5563 20px)',  // Gray-700/600 striped
+        dark: 'repeating-linear-gradient(45deg, #1F2937, #1F2937 10px, #374151 10px, #374151 20px)',   // Gray-800/700 striped
     },
 };
 
