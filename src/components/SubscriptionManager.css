@@ -80,6 +80,13 @@
     box-shadow: 0 0 12px rgba(46, 213, 115, 0.3);
 }
 
+.status-trial {
+    background: rgba(253, 203, 110, 0.25);
+    border: 1.5px solid rgba(253, 203, 110, 0.6);
+    box-shadow: 0 0 12px rgba(253, 203, 110, 0.3);
+    color: #fcebb6;
+}
+
 .subscription-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

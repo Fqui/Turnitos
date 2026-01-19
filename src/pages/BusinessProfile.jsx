@@ -42,6 +42,11 @@ export default function BusinessProfile() {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Specialist selection state
+    const [availableSpecialists, setAvailableSpecialists] = useState([]);
+    const [selectedSpecialist, setSelectedSpecialist] = useState(null);
+    const [loadingSpecialists, setLoadingSpecialists] = useState(false);
+
     // Venue specific state
     const [selectedDuration, setSelectedDuration] = useState(null);
     // Gallery state
@@ -88,38 +93,43 @@ export default function BusinessProfile() {
             const dayName = days[dayIndex];
             const schedule = hours[dayName];
 
-            console.log('📅 getBusinessHours for', dayName, ':', {
-                schedule,
-                hasRanges: schedule?.ranges,
-                rangesLength: schedule?.ranges?.length
-            });
 
-            if (schedule && schedule.isOpen) {
+            // console.log('📅 getBusinessHours for', dayName, ':', {
+            //     schedule,
+            //     isOpen: schedule?.isOpen,
+            //     isSplit: schedule?.isSplit,
+            //     hasRanges: schedule?.ranges,
+            //     rangesLength: schedule?.ranges?.length,
+            //     breakStart: schedule?.breakStart,
+            //     breakEnd: schedule?.breakEnd
+            // });
+
+            // Treat schedule as open if either isOpen is true OR if isSplit is true (defensive)
+            // Treat schedule as open if either isOpen is true OR if isSplit is true (defensive)
+            // This handles legacy data where isSplit exists but isOpen might be undefined
+            const isValidTime = (t) => t && t !== '00:00';
+            const isScheduleOpen = schedule.isOpen === true ||
+                (schedule.isSplit && schedule.isOpen !== false) ||
+                (schedule.isOpen !== false && isValidTime(schedule.open) && isValidTime(schedule.close));
+
+            if (schedule && isScheduleOpen) {
+                // console.log('✅ Schedule is OPEN for', dayName);
+
                 // Check if split schedule is enabled in the new format (from BusinessSettings)
                 if (schedule.isSplit) {
-                    // 🔧 FIX: Support both formats
-                    // ServiciosForm uses: open, close, open2, close2
-                    // BusinessSettings uses: open, close, breakStart, breakEnd
+                    // console.log('🔄 SPLIT SHIFT detected for', dayName);
 
-                    // Try ServiciosForm format first (open2/close2)
-                    if (schedule.open2 && schedule.close2) {
-                        const derivedRanges = [
-                            { open: schedule.open, close: schedule.close },  // Morning shift
-                            { open: schedule.open2, close: schedule.close2 }  // Afternoon shift
-                        ];
-
-                        console.log(`🕒 Generated split ranges for ${dayName} (ServiciosForm format):`, derivedRanges);
-
-                        return {
-                            open: schedule.open,
-                            close: schedule.close2,  // Use close2 as the final closing time
-                            ranges: derivedRanges
-                        };
-                    }
-
-                    // Fallback to BusinessSettings format (breakStart/breakEnd)
+                    // Use breakStart/breakEnd (the actual fields saved by BusinessSettings)
                     const breakStart = schedule.breakStart || '13:00';
                     const breakEnd = schedule.breakEnd || '16:00';
+
+
+                    // console.log('📊 Split shift times:', {
+                    //     open: schedule.open,
+                    //     breakStart,
+                    //     breakEnd,
+                    //     close: schedule.close
+                    // });
 
                     // Create ranges from the split schedule
                     // Range 1: Open time to Break Start
@@ -129,7 +139,7 @@ export default function BusinessProfile() {
                         { open: breakEnd, close: schedule.close }
                     ];
 
-                    console.log(`🕒 Generated split ranges for ${dayName} (BusinessSettings format):`, derivedRanges);
+                    // console.log(`🕒 Generated split ranges for ${dayName}:`, derivedRanges);
 
                     return {
                         open: schedule.open,
@@ -137,6 +147,8 @@ export default function BusinessProfile() {
                         ranges: derivedRanges
                     };
                 }
+
+                // console.log('➡️ Continuous shift for', dayName);
 
                 // Fallback to explicit ranges if they exist (old logic)
                 return {
@@ -196,17 +208,17 @@ export default function BusinessProfile() {
         if (!business) {
             const fetchBusiness = async () => {
                 try {
-                    // Fetch all businesses and find by slug
-                    const allBusinesses = await serviceAdapter.getBusinesses();
-                    const foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
+                    // Fetch specific business by slug
+                    const foundBusiness = await serviceAdapter.getBusinessBySlug(businessSlug);
 
-                    console.log('📊 Business data loaded:', foundBusiness);
-                    console.log('📋 Services:', foundBusiness?.services);
+                    // console.log('📊 Business data loaded:', foundBusiness);
+                    // console.log('📋 Services:', foundBusiness?.services);
                     if (foundBusiness?.services) {
                         foundBusiness.services.forEach(service => {
-                            console.log(`Service "${service.name}" specialists:`, service.service_specialists);
+                            // console.log(`Service "${service.name}" specialists:`, service.service_specialists);
                         });
                     }
+
                     if (foundBusiness) {
                         setBusiness(foundBusiness);
                     } else {
@@ -237,7 +249,7 @@ export default function BusinessProfile() {
                         : selectedDate;
 
                     const { bookings } = await serviceAdapter.getBookings(business.id, dateStr);
-                    console.log('📅 Fetched bookings for date:', dateStr, bookings);
+                    // console.log('📅 Fetched bookings for date:', dateStr, bookings);
                     setExistingBookings(bookings || []);
                 } catch (error) {
                     console.error("Error fetching bookings:", error);
@@ -343,10 +355,18 @@ export default function BusinessProfile() {
         setIsSubmitting(true);
 
         try {
+            // Auto-assign specialist if not selected (for services)
+            let finalSpecialistId = selectedSpecialist?.id;
+            if (business.type === 'service' && !finalSpecialistId && availableSpecialists.length > 0) {
+                // Auto-assign specialist with lowest booking count (first in sorted array)
+                finalSpecialistId = availableSpecialists[0].id;
+            }
+
             const bookingData = {
                 businessId: business.id,
                 serviceId: business.type === 'service' ? selectedItem.id : null,
                 courtId: business.type === 'sport' ? finalDetails.courtId : null,
+                specialistId: business.type === 'service' ? finalSpecialistId : null, // ✅ Include specialist
                 date: finalDetails.date,
                 time: finalDetails.time,
                 customerName: finalDetails.customerName,
@@ -388,8 +408,6 @@ export default function BusinessProfile() {
         } finally {
             setIsSubmitting(false);
         }
-
-        return { open: '08:00', close: '22:00' };
     };
 
 
@@ -437,7 +455,7 @@ export default function BusinessProfile() {
             }}>
                 <motion.img
                     layoutId={`business-image-${business.id}`}
-                    src={selectedItem?.image || business.banner_image || business.image}
+                    src={selectedItem?.image_url || business.banner_image || business.image}
                     alt={business.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     transition={{ duration: 0.5, ease: "circOut" }}
@@ -674,8 +692,8 @@ export default function BusinessProfile() {
 
                 </div>
 
-                {/* Specialists Showcase - High Priority for Services */}
-                {business.type === 'service' && (
+                {/* Specialists Showcase - High Priority for Services (Only show if more than 1) */}
+                {business.type === 'service' && business.specialists && business.specialists.length > 1 && (
                     <SpecialistsShowcase
                         specialists={business.specialists}
                         businessType={business.type}
@@ -922,8 +940,8 @@ export default function BusinessProfile() {
                             services={business.services}
                             selected={selectedItem}
                             onSelect={(service) => {
-                                console.log('🎯 Selected service:', service);
-                                console.log('👥 Service specialists:', service?.service_specialists);
+                                // console.log('🎯 Selected service:', service);
+                                // console.log('👥 Service specialists:', service?.service_specialists);
                                 setSelectedItem(service);
                                 setSelectedDate(null);
                                 setSelectedTime(null);
@@ -1121,10 +1139,10 @@ export default function BusinessProfile() {
                                             capacity: selectedItem?.capacity || 2 // ✅ Use capacity from service/resource
                                         }]);
 
-                                console.log('🔍 Resources Debug:', resources);
-                                console.log('🔍 Selected Item:', selectedItem);
+                                // console.log('🔍 Resources Debug:', resources);
+                                // console.log('🔍 Selected Item:', selectedItem);
 
-                                console.log('Business Hours Debug:', { open, close, ranges, date: selectedDate });
+                                // console.log('Business Hours Debug:', { open, close, ranges, date: selectedDate });
 
                                 // Get business capacity directly from business.capacity field
                                 const businessCapacity = business.capacity || 1;
@@ -1166,7 +1184,7 @@ export default function BusinessProfile() {
                                 return (
                                     <TimeSlotPicker
                                         selectedTime={selectedTime}
-                                        onTimeSelect={(time, courtId, duration, price) => {
+                                        onTimeSelect={async (time, courtId, duration, price) => {
                                             // New signature: (time, courtId, duration, price)
                                             // time: selected time slot string (e.g., "14:00")
                                             // courtId: selected court's ID (or null if just time selected)
@@ -1193,6 +1211,40 @@ export default function BusinessProfile() {
                                                     courtName: null
                                                 });
                                             }
+
+                                            // For service businesses: fetch available specialists
+                                            if (business.type === 'service' && selectedItem?.id) {
+                                                setLoadingSpecialists(true);
+                                                try {
+                                                    const serviceDuration = selectedItem.duration || 60;
+                                                    const dateStr = selectedDate instanceof Date
+                                                        ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+                                                        : selectedDate;
+
+                                                    const specialists = await serviceAdapter.getAvailableSpecialists(
+                                                        selectedItem.id,
+                                                        dateStr,
+                                                        time,
+                                                        serviceDuration,
+                                                        business.id // Pass business ID for fallback logic
+                                                    );
+
+                                                    setAvailableSpecialists(specialists);
+
+                                                    // Auto-assign if only one specialist available
+                                                    if (specialists.length === 1) {
+                                                        setSelectedSpecialist(specialists[0].id);
+                                                    } else {
+                                                        setSelectedSpecialist(null);
+                                                    }
+                                                } catch (error) {
+                                                    console.error('Error fetching available specialists:', error);
+                                                    setAvailableSpecialists([]);
+                                                    setSelectedSpecialist(null);
+                                                } finally {
+                                                    setLoadingSpecialists(false);
+                                                }
+                                            }
                                         }}
                                         sportColor={primaryColor}
                                         type={business.type}
@@ -1205,9 +1257,71 @@ export default function BusinessProfile() {
                                         selectedDate={selectedDate}
                                         maxCapacity={business.max_capacity || 1}
                                         businessCapacity={businessCapacity} // ✅ Pass business capacity
+                                        serviceDuration={business.type === 'service' ? (selectedItem?.duration || 60) : null} // 🆕 Pass service duration for validation
                                     />
                                 );
                             })()}
+
+                            {/* Specialist Selector - Only for service businesses */}
+                            {business.type === 'service' && selectedTime && !loadingSpecialists && (availableSpecialists.length === 0 || availableSpecialists.length > 1) && (
+                                <div style={{
+                                    marginTop: '24px',
+                                    padding: '20px',
+                                    background: 'var(--bg-card)',
+                                    borderRadius: '12px',
+                                    border: '1px solid var(--border)'
+                                }}>
+                                    <h4 style={{
+                                        fontSize: '16px',
+                                        fontWeight: '600',
+                                        marginBottom: '12px',
+                                        color: 'var(--text-primary)'
+                                    }}>
+                                        Especialista
+                                    </h4>
+
+                                    {loadingSpecialists ? (
+                                        <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                            Cargando especialistas disponibles...
+                                        </div>
+                                    ) : availableSpecialists.length === 0 ? (
+                                        <div style={{
+                                            padding: '12px',
+                                            background: 'rgba(255, 0, 0, 0.05)',
+                                            borderRadius: '8px',
+                                            color: 'var(--error)',
+                                            fontSize: '14px'
+                                        }}>
+                                            ⚠️ No hay especialistas disponibles para este horario
+                                        </div>
+                                    ) : (
+                                        <select
+                                            value={selectedSpecialist?.id || ''}
+                                            onChange={(e) => {
+                                                const specialist = availableSpecialists.find(s => s.id === e.target.value);
+                                                setSelectedSpecialist(specialist);
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px',
+                                                fontSize: '14px',
+                                                borderRadius: '8px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-main)',
+                                                color: 'var(--text-primary)',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <option value="">Seleccionar especialista...</option>
+                                            {availableSpecialists.map(specialist => (
+                                                <option key={specialist.id} value={specialist.id}>
+                                                    {specialist.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </section>
                 )}
@@ -1398,8 +1512,9 @@ export default function BusinessProfile() {
                                 maxWidth: '400px'
                             }}
                             onClick={() => setShowModal(true)}
+                            disabled={loadingSpecialists} // Disable while loading specialists
                         >
-                            Continuar
+                            {loadingSpecialists ? 'Cargando...' : 'Continuar'}
                         </button>
                     </div>
                 )}
@@ -1415,9 +1530,11 @@ export default function BusinessProfile() {
                             courtId: selectedTime.courtId,
                             courtName: selectedTime.courtName,
                             serviceName: selectedItem?.name,
+                            specialistName: selectedSpecialist?.name, // Pass specialist name
                             price: selectedTime.price,
                             duration: selectedTime.duration, // 🔥 Pass duration to modal
                             businessPhone: business.phone,
+                            business: business, // Pass full business object for settings
                             businessBank: business.bank_name,
                             businessAccountHolder: business.account_holder,
                             businessAlias: business.bank_alias,
@@ -1567,16 +1684,23 @@ export default function BusinessProfile() {
 
                                                     // Create schedule key
                                                     let scheduleKey;
-                                                    if (!schedule || !schedule.isOpen) {
+
+                                                    // Determine effective Open state
+                                                    // Open if: explicitly true, OR (not explicitly false AND has valid times)
+                                                    const isValidTime = (t) => t && t !== '00:00';
+                                                    const isEffectiveOpen = schedule && (
+                                                        schedule.isOpen === true ||
+                                                        (schedule.isSplit && schedule.isOpen !== false) ||
+                                                        (schedule.isOpen !== false && isValidTime(schedule.open) && isValidTime(schedule.close))
+                                                    );
+
+                                                    if (!isEffectiveOpen) {
                                                         scheduleKey = 'CLOSED';
                                                     } else if (schedule.isSplit) {
-                                                        if (schedule.open2 && schedule.close2) {
-                                                            scheduleKey = `${schedule.open}-${schedule.close}|${schedule.open2}-${schedule.close2}`;
-                                                        } else {
-                                                            const breakStart = schedule.breakStart || '13:00';
-                                                            const breakEnd = schedule.breakEnd || '16:00';
-                                                            scheduleKey = `${schedule.open}-${breakStart}|${breakEnd}-${schedule.close}`;
-                                                        }
+                                                        // Use breakStart/breakEnd (the actual fields saved by BusinessSettings)
+                                                        const breakStart = schedule.breakStart || '13:00';
+                                                        const breakEnd = schedule.breakEnd || '16:00';
+                                                        scheduleKey = `${schedule.open}-${breakStart}|${breakEnd}-${schedule.close}`;
                                                     } else {
                                                         scheduleKey = `${schedule.open}-${schedule.close}`;
                                                     }
@@ -1609,13 +1733,9 @@ export default function BusinessProfile() {
                                                     let timeDisplay;
 
                                                     if (schedule.isSplit) {
-                                                        if (schedule.open2 && schedule.close2) {
-                                                            timeDisplay = `${schedule.open} a ${schedule.close} | ${schedule.open2} a ${schedule.close2}`;
-                                                        } else {
-                                                            const breakStart = schedule.breakStart || '13:00';
-                                                            const breakEnd = schedule.breakEnd || '16:00';
-                                                            timeDisplay = `${schedule.open} a ${breakStart} | ${breakEnd} a ${schedule.close}`;
-                                                        }
+                                                        const breakStart = schedule.breakStart || '13:00';
+                                                        const breakEnd = schedule.breakEnd || '16:00';
+                                                        timeDisplay = `${schedule.open} a ${breakStart} | ${breakEnd} a ${schedule.close}`;
                                                     } else {
                                                         timeDisplay = `${schedule.open} a ${schedule.close}`;
                                                     }
@@ -1688,8 +1808,10 @@ export default function BusinessProfile() {
                         bookingDetails={{
                             businessName: business.name,
                             serviceName: business.type === 'venue' ? `Alquiler ${selectedDuration}hs` : (business.type === 'service' ? selectedItem.name : selectedItem),
+                            specialistName: selectedSpecialist?.name, // Pass specialist name
                             date: selectedDate,
                             time: selectedTime.time || selectedTime,
+                            duration: selectedTime.duration || (business.type === 'service' ? selectedItem.duration : 60), // Ensure duration is passed
                             price: (selectedTime.price || (business.type === 'service' ? selectedItem.price : 0)) +
                                 (business.type === 'venue' ? selectedAdditionalServices.reduce((sum, s) => sum + Number(s.price), 0) : 0),
                             courtName: business.type === 'sport' ? selectedTime.courtName : null,
@@ -1901,3 +2023,4 @@ export default function BusinessProfile() {
         </motion.div >
     );
 }
+

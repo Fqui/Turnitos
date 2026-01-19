@@ -78,7 +78,7 @@ export default function DashboardCalendar({
             });
 
             if (hasValidHours && minStart < 24 && maxEnd > 0) {
-                console.log('📅 Business hours:', { start: minStart, end: maxEnd, crossesMidnight: maxEnd > 24 });
+                // console.log('📅 Business hours:', { start: minStart, end: maxEnd, crossesMidnight: maxEnd > 24 });
                 return { start: minStart, end: maxEnd };
             }
 
@@ -112,7 +112,7 @@ export default function DashboardCalendar({
         : [];
 
     // 🔍 DEBUG: Log business data to diagnose empty calendar
-    console.log('📊 DashboardCalendar - Business Data:', {
+    // console.log('📊 DashboardCalendar - Business Data:', {
         businessId: business?.id,
         businessName: business?.name,
         courtsCount: business?.courts?.length || 0,
@@ -173,7 +173,7 @@ export default function DashboardCalendar({
     // Generate time slots based on business hours
     const timeSlots = useMemo(() => {
         const slots = [];
-        console.log('🕐 Generating time slots:', { start: businessHours.start, end: businessHours.end });
+        // console.log('🕐 Generating time slots:', { start: businessHours.start, end: businessHours.end });
 
         for (let i = businessHours.start; i <= businessHours.end; i++) {
             // Convert hours > 24 to display format (25 → "01", 26 → "02", etc.)
@@ -184,7 +184,7 @@ export default function DashboardCalendar({
             }
         }
 
-        console.log('✅ Generated time slots:', slots.length, 'slots');
+        // console.log('✅ Generated time slots:', slots.length, 'slots');
         return slots;
     }, [businessHours]);
 
@@ -1232,3 +1232,4 @@ export default function DashboardCalendar({
         </div >
     );
 }
+

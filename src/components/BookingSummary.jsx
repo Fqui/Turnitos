@@ -1,13 +1,74 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { formatDisplayDate } from '../utils/dateUtils';
+import { formatDisplayDate, calculateEndTime } from '../utils/dateUtils';
+
+// 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
+// Esto soluciona el problema si el componente se desmonta y vuelve a montar con datos vacíos
+let globalCachedPaymentData = {
+    businessId: null,
+    data: null
+};
 
 export default function BookingSummary({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting }) {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
-    const [currentStep, setCurrentStep] = useState(1); // 1 = user details, 2 = payment details
+    const [currentStep, setCurrentStep] = useState(1);
     const [copiedField, setCopiedField] = useState(null);
+
+    const incomingBusiness = bookingDetails.business || {};
+    const businessId = incomingBusiness.id;
+    const incomingPaymentSettings = incomingBusiness.payment_settings || {};
+
+    // 1. Intentar recuperar del caché global si coincide el ID
+    let initialData = {
+        business: {},
+        paymentSettings: {},
+        depositSettings: {},
+        bankDetailsFromSettings: {}
+    };
+
+    if (globalCachedPaymentData.data && (globalCachedPaymentData.businessId === businessId || !businessId)) {
+
+        initialData = globalCachedPaymentData.data;
+    }
+
+    const paymentDataRef = useRef(initialData);
+
+    // 2. Validar datos entrantes
+    const hasValidData = incomingPaymentSettings && Object.keys(incomingPaymentSettings).length > 0;
+
+    if (hasValidData) {
+        const currentSettings = paymentDataRef.current.paymentSettings;
+        // Si hay datos nuevos y válidos (y diferentes), actualizamos todo
+        if (JSON.stringify(incomingPaymentSettings) !== JSON.stringify(currentSettings)) {
+
+
+            const newData = {
+                business: incomingBusiness,
+                paymentSettings: incomingPaymentSettings,
+                depositSettings: incomingPaymentSettings.deposit || {},
+                bankDetailsFromSettings: incomingPaymentSettings.bank_details || {}
+            };
+
+            // Actualizar ref local
+            paymentDataRef.current = newData;
+
+            // Actualizar caché global
+            if (businessId) {
+                globalCachedPaymentData = {
+                    businessId: businessId,
+                    data: newData
+                };
+            }
+        }
+    } else {
+        // Debug: saber por qué estamos esperando
+
+    }
+
+    // Usamos SIEMPRE los datos del ref (que tendrá los últimos datos válidos conocidos)
+    const { business, paymentSettings, depositSettings, bankDetailsFromSettings } = paymentDataRef.current;
 
     // Block body scroll when modal is open
     useEffect(() => {
@@ -19,18 +80,54 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
 
     if (!bookingDetails) return null;
 
-    const { date, time, courtName, serviceName, price } = bookingDetails;
+    const { date, time, courtName, serviceName, price, specialistName, duration } = bookingDetails;
 
-    // Calculate deposit (50% of total)
-    const depositAmount = Math.round(price * 0.5);
+    // Calculate deposit
+    let depositAmount = 0;
+    let depositLabel = 'Seña';
 
-    // Bank details (these should come from business settings in production)
+    // 🔍 DEBUG: Ver valores específicos del depósito
+    /*    console.log('🔍 Deposit calculation:', {
+            enabled: depositSettings.enabled,
+            type: depositSettings.type,
+            percentage: depositSettings.percentage,
+            percentage_type: typeof depositSettings.percentage,
+            fixed_amount: depositSettings.fixed_amount
+        });*/
+
+    if (depositSettings.enabled === false) {
+        depositAmount = 0;
+    } else if (depositSettings.type === 'fixed') {
+        depositAmount = parseInt(depositSettings.fixed_amount) || 0;
+        depositLabel = 'Seña (Monto Fijo)';
+    } else {
+        // Percentage type - SIN valor por defecto
+        const percentage = parseInt(depositSettings.percentage);
+
+        if (!percentage || isNaN(percentage)) {
+            console.error('❌ ERROR: No hay porcentaje configurado en payment_settings!');
+            depositAmount = 0;
+            depositLabel = 'Seña (No configurada)';
+        } else {
+            depositAmount = Math.round(price * (percentage / 100));
+            depositLabel = `Seña (${percentage}%)`;
+
+
+        }
+    }
+
+    // Bank details - prioritize payment_settings.bank_details
     const bankDetails = {
-        banco: bookingDetails.businessBank || 'Banco Galicia',
-        titular: bookingDetails.businessAccountHolder || 'Juan Pérez',
-        alias: bookingDetails.businessAlias || 'RESERVAS.CANCHAS',
-        cbu: bookingDetails.businessCBU || '0000003100010234567890'
+        banco: bankDetailsFromSettings.bank_name || business.bank_name || '',
+        titular: bankDetailsFromSettings.account_holder || business.account_holder || '',
+        alias: bankDetailsFromSettings.alias || business.bank_alias || '',
+        cbu: bankDetailsFromSettings.cbu || business.cbu || ''
     };
+
+    const hasBankDetails = bankDetails.banco || bankDetails.alias || bankDetails.cbu;
+
+
+
 
     const handleContinue = () => {
         if (!firstName || !lastName || !customerPhone) {
@@ -44,9 +141,10 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
         const customerName = `${firstName} ${lastName}`;
 
         // Format the WhatsApp message
-        const serviceName = courtName || bookingDetails.serviceName;
+        const displayServiceName = courtName || serviceName;
         const formattedDate = formatDisplayDate(date);
-        const message = `Hola, mi nombre es ${customerName}. Reservé ${serviceName}, el día ${formattedDate} a las ${time}. A continuación le envío una captura del comprobante.`;
+        const specialistText = specialistName ? ` con ${specialistName}` : '';
+        const message = `Hola, mi nombre es ${customerName}. Reservé ${displayServiceName}${specialistText}, el día ${formattedDate} a las ${time}. A continuación le envío una captura del comprobante.`;
 
         // Get business phone (should come from bookingDetails in production)
         const businessPhone = bookingDetails.businessPhone || '5493804123456'; // Default fallback
@@ -198,9 +296,16 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                         <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
                                             {courtName ? 'Cancha' : 'Servicio'}
                                         </span>
-                                        <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                            {courtName || serviceName}
-                                        </span>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                {courtName || serviceName}
+                                            </div>
+                                            {specialistName && (
+                                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                                    {specialistName}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Date & Time */}
@@ -226,7 +331,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                         }}>
                                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Hora</div>
                                             <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                {time}
+                                                {time} {duration ? `- ${calculateEndTime(time, duration)}` : ''}
                                             </div>
                                         </div>
                                     </div>
@@ -280,7 +385,9 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                 justifyContent: 'space-between',
                                                 alignItems: 'center'
                                             }}>
-                                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Seña (50%)</span>
+                                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                    {depositLabel}
+                                                </span>
                                                 <span style={{ fontSize: '16px', fontWeight: '700', color: sportColor }}>
                                                     ${depositAmount.toLocaleString()}
                                                 </span>
@@ -438,143 +545,143 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
 
                                 {/* Bank Details */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-                                    {/* Banco & Titular Row - Responsive */}
-                                    <div className="responsive-bank-row">
-                                        {/* Banco */}
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
-                                                Banco
-                                            </label>
-                                            <div style={{
-                                                padding: '10px 12px',
-                                                borderRadius: '10px',
-                                                backgroundColor: 'var(--bg-main)',
-                                                border: '1px solid var(--border)',
-                                                fontSize: '14px',
-                                                fontWeight: '600',
-                                                color: 'var(--text-primary)',
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis'
-                                            }}>
-                                                {bankDetails.banco}
-                                            </div>
-                                        </div>
 
-                                        {/* Titular */}
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
-                                                Titular
-                                            </label>
-                                            <div style={{
-                                                padding: '10px 12px',
-                                                borderRadius: '10px',
-                                                backgroundColor: 'var(--bg-main)',
-                                                border: '1px solid var(--border)',
-                                                fontSize: '14px',
-                                                fontWeight: '600',
-                                                color: 'var(--text-primary)',
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis'
-                                            }}>
-                                                {bankDetails.titular}
+
+                                    {/* Bank Details Section */}
+                                    {hasBankDetails ? (
+                                        <div style={{
+                                            backgroundColor: 'var(--bg-card)',
+                                            borderRadius: '16px',
+                                            padding: '16px',
+                                            border: '1px solid var(--border)',
+                                            marginBottom: '16px'
+                                        }}>
+                                            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                                Datos para la transferencia
+                                            </h4>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                                                        Banco
+                                                    </label>
+                                                    <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>
+                                                        {bankDetails.banco || '-'}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                                                        Titular
+                                                    </label>
+                                                    <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>
+                                                        {bankDetails.titular || '-'}
+                                                    </div>
+                                                </div>
                                             </div>
+
+                                            {/* Alias */}
+                                            {bankDetails.alias && (
+                                                <div style={{ marginBottom: '12px' }}>
+                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                                                        Alias
+                                                    </label>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        <div style={{
+                                                            flex: 1,
+                                                            padding: '12px 16px',
+                                                            borderRadius: '12px',
+                                                            backgroundColor: 'var(--bg-main)',
+                                                            border: '1px solid var(--border)',
+                                                            fontSize: '16px',
+                                                            fontWeight: '600',
+                                                            color: 'var(--text-primary)',
+                                                            fontFamily: 'monospace',
+                                                            letterSpacing: '0.5px'
+                                                        }}>
+                                                            {bankDetails.alias}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => copyToClipboard(bankDetails.alias, 'alias')}
+                                                            style={{
+                                                                padding: '10px 12px',
+                                                                borderRadius: '10px',
+                                                                border: '1px solid var(--border)',
+                                                                backgroundColor: copiedField === 'alias' ? `${sportColor}15` : 'var(--bg-card)',
+                                                                color: copiedField === 'alias' ? sportColor : 'var(--text-primary)',
+                                                                fontSize: '13px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s',
+                                                                minWidth: '80px'
+                                                            }}
+                                                        >
+                                                            {copiedField === 'alias' ? '✓ Copiado' : 'Copiar'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* CBU */}
+                                            {bankDetails.cbu && (
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                                                        CBU
+                                                    </label>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        <div style={{
+                                                            flex: 1,
+                                                            padding: '12px 16px',
+                                                            borderRadius: '12px',
+                                                            backgroundColor: 'var(--bg-main)',
+                                                            border: '1px solid var(--border)',
+                                                            fontSize: '16px',
+                                                            fontWeight: '600',
+                                                            color: 'var(--text-primary)',
+                                                            fontFamily: 'monospace'
+                                                        }}>
+                                                            {bankDetails.cbu}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => copyToClipboard(bankDetails.cbu, 'cbu')}
+                                                            style={{
+                                                                padding: '10px 12px',
+                                                                borderRadius: '10px',
+                                                                border: '1px solid var(--border)',
+                                                                backgroundColor: copiedField === 'cbu' ? `${sportColor}15` : 'var(--bg-card)',
+                                                                color: copiedField === 'cbu' ? sportColor : 'var(--text-primary)',
+                                                                fontSize: '13px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s',
+                                                                minWidth: '80px'
+                                                            }}
+                                                        >
+                                                            {copiedField === 'cbu' ? '✓ Copiado' : 'Copiar'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
+                                    ) : (
+                                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '14px', border: '1px dashed var(--border)', borderRadius: '12px', marginBottom: '16px' }}>
+                                            No se han configurado datos bancarios para este negocio.
+                                        </div>
+                                    )}
+
+                                    {/* Important Note */}
+                                    <div style={{
+                                        padding: '8px 12px',
+                                        borderRadius: '10px',
+                                        backgroundColor: `${sportColor}10`,
+                                        border: `1px solid ${sportColor}30`,
+                                        marginBottom: '12px'
+                                    }}>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
+                                            <strong style={{ color: sportColor }}>Importante:</strong> Copiá el Alias o CBU, realizá la transferencia por <strong>${depositAmount.toLocaleString()}</strong> y luego presioná "Confirmar Reserva" para enviar el comprobante por WhatsApp.
+                                        </p>
                                     </div>
 
-                                    {/* Alias */}
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
-                                            Alias
-                                        </label>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <div style={{
-                                                flex: 1,
-                                                padding: '12px 16px',
-                                                borderRadius: '12px',
-                                                backgroundColor: 'var(--bg-main)',
-                                                border: '1px solid var(--border)',
-                                                fontSize: '16px',
-                                                fontWeight: '600',
-                                                color: 'var(--text-primary)',
-                                                fontFamily: 'monospace'
-                                            }}>
-                                                {bankDetails.alias}
-                                            </div>
-                                            <button
-                                                onClick={() => copyToClipboard(bankDetails.alias, 'alias')}
-                                                style={{
-                                                    padding: '10px 12px',
-                                                    borderRadius: '10px',
-                                                    border: '1px solid var(--border)',
-                                                    backgroundColor: copiedField === 'alias' ? `${sportColor}15` : 'var(--bg-card)',
-                                                    color: copiedField === 'alias' ? sportColor : 'var(--text-primary)',
-                                                    fontSize: '13px',
-                                                    fontWeight: '600',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    minWidth: '80px'
-                                                }}
-                                            >
-                                                {copiedField === 'alias' ? '✓ Copiado' : 'Copiar'}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* CBU */}
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
-                                            CBU
-                                        </label>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <div style={{
-                                                flex: 1,
-                                                padding: '12px 16px',
-                                                borderRadius: '12px',
-                                                backgroundColor: 'var(--bg-main)',
-                                                border: '1px solid var(--border)',
-                                                fontSize: '16px',
-                                                fontWeight: '600',
-                                                color: 'var(--text-primary)',
-                                                fontFamily: 'monospace'
-                                            }}>
-                                                {bankDetails.cbu}
-                                            </div>
-                                            <button
-                                                onClick={() => copyToClipboard(bankDetails.cbu, 'cbu')}
-                                                style={{
-                                                    padding: '10px 12px',
-                                                    borderRadius: '10px',
-                                                    border: '1px solid var(--border)',
-                                                    backgroundColor: copiedField === 'cbu' ? `${sportColor}15` : 'var(--bg-card)',
-                                                    color: copiedField === 'cbu' ? sportColor : 'var(--text-primary)',
-                                                    fontSize: '13px',
-                                                    fontWeight: '600',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    minWidth: '80px'
-                                                }}
-                                            >
-                                                {copiedField === 'cbu' ? '✓ Copiado' : 'Copiar'}
-                                            </button>
-                                        </div>
-                                    </div>
                                 </div>
-
-                                {/* Important Note */}
-                                <div style={{
-                                    padding: '8px 12px',
-                                    borderRadius: '10px',
-                                    backgroundColor: `${sportColor}10`,
-                                    border: `1px solid ${sportColor}30`,
-                                    marginBottom: '12px'
-                                }}>
-                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
-                                        <strong style={{ color: sportColor }}>Importante:</strong> Copiá el Alias o CBU, realizá la transferencia por <strong>${depositAmount.toLocaleString()}</strong> y luego presioná "Confirmar Reserva" para enviar el comprobante por WhatsApp.
-                                    </p>
-                                </div>
-
                                 {/* Action Buttons */}
                                 <div style={{ display: 'flex', gap: '12px' }}>
                                     <button

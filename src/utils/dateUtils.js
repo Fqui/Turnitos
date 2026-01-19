@@ -64,3 +64,24 @@ export function formatLongDate(date) {
     // Capitalize first letter
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
+
+/**
+ * Calculates end time given start time and duration in minutes
+ * @param {string} startTime - HH:MM format
+ * @param {number} durationMinutes - duration in minutes
+ * @returns {string} - End time in HH:MM format
+ */
+export function calculateEndTime(startTime, durationMinutes) {
+    if (!startTime || !durationMinutes) return '';
+
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    date.setMinutes(date.getMinutes() + Number(durationMinutes));
+
+    return date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).slice(0, 5);
+}

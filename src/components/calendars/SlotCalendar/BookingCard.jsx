@@ -23,6 +23,8 @@ export default function BookingCard({
     const endM = endMinutes % 60;
     const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
+    const isCompact = slotSpan <= 1;
+
     // Label de la reserva
     const getLabel = () => {
         if (booking.status === 'blocked') return 'BLOQUEADO';
@@ -45,10 +47,10 @@ export default function BookingCard({
                 width: '100%',
                 background: color,
                 color: '#fff',
-                minHeight: '50px',
-                borderRadius: '8px',
-                padding: '8px 10px',
-                fontSize: '12px',
+                minHeight: isCompact ? 'auto' : '50px',
+                borderRadius: '6px',
+                padding: isCompact ? '2px 6px' : '8px 10px',
+                fontSize: isCompact ? '11px' : '12px',
                 overflow: 'hidden',
                 cursor: booking.status === 'blocked' ? 'default' : 'pointer',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
@@ -56,14 +58,15 @@ export default function BookingCard({
                 opacity: booking.status === 'cancelled' || (isRescheduling && !isSelected) ? 0.6 : 1,
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'center',
+                justifyContent: isCompact ? 'center' : 'center',
                 alignItems: 'flex-start',
-                gap: '3px',
+                gap: isCompact ? '0px' : '3px',
                 border: isSelected ? '2px solid white' : 'none',
                 position: 'relative',
                 zIndex: isSelected ? 5 : 1,
                 transition: 'all 0.2s',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                lineHeight: isCompact ? '1.1' : '1.2'
             }}
             title={booking.status === 'blocked' ? 'BLOQUEADO' : `${getLabel()} - ${getSubLabel() || ''}`}
             onMouseEnter={(e) => {
@@ -77,58 +80,66 @@ export default function BookingCard({
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
             }}
         >
-            {/* Nombre del cliente */}
-            <span style={{
-                fontWeight: '800',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                width: '100%',
-                lineHeight: '1.3',
-                fontSize: '13px',
-                letterSpacing: '-0.01em'
+            {/* Contenedor flexible para modo compacto y normal */}
+            <div style={{
+                display: 'flex',
+                flexDirection: isCompact ? 'row' : 'column',
+                flexWrap: isCompact ? 'wrap' : 'nowrap',
+                alignItems: isCompact ? 'center' : 'flex-start',
+                gap: isCompact ? '4px' : '0px',
+                width: '100%'
             }}>
-                {getLabel()}
-            </span>
-
-            {/* Sublabel (servicio/cancha) */}
-            {getSubLabel() && (
+                {/* Nombre del cliente */}
                 <span style={{
-                    opacity: 0.95,
+                    fontWeight: '800',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    width: '100%',
-                    fontSize: '11px',
-                    lineHeight: '1.2',
-                    fontWeight: '500'
+                    maxWidth: '100%', // Asegura que no rompa el layout
+                    fontSize: isCompact ? '12px' : '13px',
+                    letterSpacing: '-0.01em'
                 }}>
-                    {getSubLabel()}
+                    {getLabel()}
                 </span>
+
+                {/* Sublabel (servicio/cancha) */}
+                {getSubLabel() && (
+                    <span style={{
+                        opacity: 0.95,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%',
+                        fontSize: isCompact ? '10px' : '11px',
+                        fontWeight: '500'
+                    }}>
+                        {isCompact && getLabel() ? '• ' : ''}{getSubLabel()}
+                    </span>
+                )}
+            </div>
+
+            {/* Duración y Hora - Ocultar en muy compacto si es necesario, o mostrar inline */}
+            {!isCompact && (
+                <>
+                    {showDuration && booking.status !== 'blocked' && (
+                        <span style={{ opacity: 0.9, fontSize: '11px', fontWeight: '700' }}>
+                            {booking.duration} min
+                        </span>
+                    )}
+                    {showTimeRange && booking.status !== 'blocked' && (
+                        <span style={{ opacity: 0.85, fontSize: '10px', fontWeight: '600' }}>
+                            {booking.time} - {endTime}
+                        </span>
+                    )}
+                </>
             )}
 
-            {/* Duración */}
-            {showDuration && booking.status !== 'blocked' && (
-                <span style={{
-                    opacity: 0.9,
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    lineHeight: '1.2'
-                }}>
-                    {booking.duration} min
-                </span>
-            )}
-
-            {/* Rango de tiempo */}
-            {showTimeRange && booking.status !== 'blocked' && (
-                <span style={{
-                    opacity: 0.85,
-                    fontSize: '10px',
-                    lineHeight: '1.2',
-                    fontWeight: '600'
-                }}>
-                    {booking.time} - {endTime}
-                </span>
+            {/* Modo compacto: Mostrar duración/hora solo si hay espacio o simplificado */}
+            {isCompact && booking.status !== 'blocked' && (
+                <div style={{ display: 'flex', gap: '4px', opacity: 0.9, fontSize: '10px' }}>
+                    {showDuration && <span>{booking.duration}m</span>}
+                    {showTimeRange && <span>{booking.time}</span>}
+                </div>
             )}
         </div>
     );

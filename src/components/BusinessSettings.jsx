@@ -2,6 +2,29 @@ import React, { useState, useEffect } from 'react';
 import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
 import SubscriptionManager from './SubscriptionManager';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+function LocationPicker({ position, onLocationSelect }) {
+    const map = useMapEvents({
+        click(e) {
+            onLocationSelect(e.latlng);
+        },
+    });
+
+    return position ? <Marker position={position} /> : null;
+}
 
 export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const { showToast, showConfirm, showAlert } = useNotification();
@@ -18,6 +41,42 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     // Highlights management
     const [editingHighlight, setEditingHighlight] = useState(null); // null or highlight object
     const [uploadingHighlightImages, setUploadingHighlightImages] = useState(false);
+
+    // Amenities management
+    const [newAmenity, setNewAmenity] = useState('');
+
+    // Services management
+    const [newService, setNewService] = useState({ name: '', price: '', duration: '60', description: '', category: '', image_url: null });
+    const [newCategory, setNewCategory] = useState('');
+
+    // Service-Specialist Assignments
+    const [serviceSpecialists, setServiceSpecialists] = useState({}); // { serviceId: [specialistId1, ...] }
+
+    // Fetch specialist assignments when services tab is active
+    useEffect(() => {
+        if (activeTab === 'services' && formData.services?.length > 0) {
+            const fetchAssignments = async () => {
+                const assignments = {};
+                // Parallelize fetching
+                await Promise.all(formData.services.map(async (service) => {
+                    // Only for existing services (with ID)
+                    if (service.id) {
+                        try {
+                            const specialists = await serviceAdapter.getQualifiedSpecialists(service.id);
+                            assignments[service.id] = specialists.map(s => s.id);
+                        } catch (err) {
+                            console.error(`Error fetching specialists for service ${service.id}:`, err);
+                        }
+                    }
+                }));
+                // Only update if we have data to avoid wiping state on quick tab switches if fetch is slow
+                if (Object.keys(assignments).length > 0) {
+                    setServiceSpecialists(prev => ({ ...prev, ...assignments }));
+                }
+            };
+            fetchAssignments();
+        }
+    }, [activeTab]); // Run when entering tab
 
     useEffect(() => {
         if (business) {
@@ -312,6 +371,24 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
             // patchBusiness now returns null to avoid read timeouts
             await serviceAdapter.patchBusiness(business.id, dataToSave);
 
+            // Save service-specialist assignments for services that have IDs
+            if (activeTab === 'services' && Object.keys(serviceSpecialists).length > 0) {
+                const updatePromises = [];
+                for (const service of (dataToSave.services || [])) {
+                    // Only update if service has ID and we have local changes/data for it
+                    if (service.id && serviceSpecialists[service.id]) {
+                        updatePromises.push(
+                            serviceAdapter.updateServiceSpecialists(service.id, serviceSpecialists[service.id])
+                        );
+                    }
+                }
+
+                if (updatePromises.length > 0) {
+                    await Promise.all(updatePromises);
+                    console.log(`Updated specialists for ${updatePromises.length} services`);
+                }
+            }
+
             // Manually construct the updated object for local state sync
             const updated = { ...business, ...dataToSave };
             console.log('Update response (manual):', updated);
@@ -336,11 +413,13 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
     const tabs = [
         { id: 'general', label: 'General', icon: '🏢' },
+        { id: 'design', label: 'Diseño', icon: '🎨' },
         { id: 'subscription', label: 'Suscripción', icon: '💳' },
         { id: 'resources', label: getResourceLabel(), icon: '👥' },
         ...(isServiceBusiness ? [{ id: 'services', label: 'Servicios', icon: '💼' }] : []),
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
-        { id: 'policies', label: 'Políticas', icon: '📜' },
+        { id: 'policies_and_payments', label: 'Políticas y Pagos', icon: '📜' },
+
         { id: 'special_days', label: 'Días Especiales', icon: '📅' },
         { id: 'gallery', label: 'Galería', icon: '📸' }
     ];
@@ -597,34 +676,127 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         borderRadius: '12px',
                                         border: '1px solid var(--border)'
                                     }}>
-                                        <div style={{
-                                            width: '32px',
-                                            height: '32px',
-                                            borderRadius: '50%',
-                                            background: 'rgba(0,0,0,0.05)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '16px'
-                                        }}>
-                                            {isSport ? '🏟️' : '👤'}
+                                        {/* Specialist Photo Upload */}
+                                        {!isSport && (
+                                            <div style={{ position: 'relative', width: '40px', height: '40px' }}>
+                                                <div style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '50%',
+                                                    overflow: 'hidden',
+                                                    background: 'var(--bg-card)',
+                                                    border: '1px solid var(--border)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    {resource.avatar_url ? (
+                                                        <img src={resource.avatar_url} alt={resource.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <span style={{ fontSize: '20px' }}>👤</span>
+                                                    )}
+                                                </div>
+                                                <input
+                                                    type="file"
+                                                    id={`specialist-upload-${index}`}
+                                                    style={{ display: 'none' }}
+                                                    accept="image/*"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files[0];
+                                                        if (!file) return;
+                                                        try {
+                                                            showToast('Subiendo foto...', 'info');
+                                                            const url = await serviceAdapter.uploadImage(file);
+                                                            const newResources = [...resources];
+                                                            newResources[index] = { ...resource, avatar_url: url };
+                                                            handleInputChange(resourceKey, newResources);
+
+                                                            // Auto-save the updated resources
+                                                            await handleSave({ [resourceKey]: newResources });
+                                                            showToast('Foto guardada correctamente', 'success');
+                                                        } catch (error) {
+                                                            console.error(error);
+                                                            showToast('Error al subir imagen', 'error');
+                                                        }
+                                                    }}
+                                                />
+                                                <label
+                                                    htmlFor={`specialist-upload-${index}`}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        bottom: '-5px',
+                                                        right: '-5px',
+                                                        background: 'var(--primary-paddle)',
+                                                        color: '#000',
+                                                        width: '20px',
+                                                        height: '20px',
+                                                        borderRadius: '50%',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '10px',
+                                                        cursor: 'pointer',
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                                    }}
+                                                    title="Cambiar foto"
+                                                >
+                                                    📷
+                                                </label>
+                                            </div>
+                                        )}
+                                        {isSport && (
+                                            <div style={{
+                                                width: '32px',
+                                                height: '32px',
+                                                borderRadius: '50%',
+                                                background: 'rgba(0,0,0,0.05)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '16px'
+                                            }}>
+                                                {isSport ? '🏟️' : '👤'}
+                                            </div>
+                                        )}
+                                        <div style={{ flex: 1, display: 'grid', gap: '8px' }}>
+                                            <input
+                                                type="text"
+                                                value={resource.name}
+                                                onChange={(e) => {
+                                                    const newResources = [...resources];
+                                                    newResources[index] = { ...resource, name: e.target.value };
+                                                    handleInputChange(resourceKey, newResources);
+                                                }}
+                                                placeholder="Nombre del profesional"
+                                                style={{
+                                                    ...inputStyle,
+                                                    border: 'none',
+                                                    background: 'transparent',
+                                                    padding: '0',
+                                                    fontWeight: '600'
+                                                }}
+                                            />
+                                            {!isSport && (
+                                                <input
+                                                    type="text"
+                                                    value={resource.role || ''}
+                                                    onChange={(e) => {
+                                                        const newResources = [...resources];
+                                                        newResources[index] = { ...resource, role: e.target.value };
+                                                        handleInputChange(resourceKey, newResources);
+                                                    }}
+                                                    placeholder="Rol (ej: Peluquero, Masajista)"
+                                                    style={{
+                                                        ...inputStyle,
+                                                        border: 'none',
+                                                        background: 'transparent',
+                                                        padding: '0',
+                                                        fontSize: '13px',
+                                                        color: 'var(--text-secondary)'
+                                                    }}
+                                                />
+                                            )}
                                         </div>
-                                        <input
-                                            type="text"
-                                            value={resource.name}
-                                            onChange={(e) => {
-                                                const newResources = [...resources];
-                                                newResources[index] = { ...resource, name: e.target.value };
-                                                handleInputChange(resourceKey, newResources);
-                                            }}
-                                            style={{
-                                                ...inputStyle,
-                                                border: 'none',
-                                                background: 'transparent',
-                                                padding: '0',
-                                                fontWeight: '600'
-                                            }}
-                                        />
                                         <button
                                             onClick={async () => {
                                                 if (resources.length <= 1) {
@@ -691,7 +863,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     const newResource = {
                                         id: generateUUID(),
                                         name: `${resourceLabel} ${resources.length + 1}`,
-                                        type: isSport ? 'court' : 'specialist'
+                                        type: isSport ? 'court' : 'specialist',
+                                        ...(isSport ? { sport: 'Fútbol', price: 0 } : { role: '', avatar_url: null })
                                     };
                                     const updatedResources = [...resources, newResource];
                                     handleInputChange(resourceKey, updatedResources);
@@ -734,6 +907,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 );
 
             case 'general':
+                const validAmenities = Array.isArray(formData.amenities) ? formData.amenities : [];
+                // Default center: Buenos Aires Obelisco
+                const mapCenter = [formData.latitude || -34.6037, formData.longitude || -58.3816];
+
                 return (
                     <div style={{ display: 'grid', gap: '20px' }}>
                         <div>
@@ -745,6 +922,68 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 onChange={(e) => handleInputChange('name', e.target.value)}
                             />
                         </div>
+
+                        {/* Logo and Banner Upload Section */}
+                        <div style={{ display: 'grid', gap: '24px', padding: '20px', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                            <h4 style={{ fontSize: '15px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>Imágenes del Perfil</h4>
+
+                            {/* Logo Upload */}
+                            <div>
+                                <label style={labelStyle}>Logo</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '10px' }}>
+                                    <div style={{
+                                        width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden',
+                                        background: 'var(--bg-card)', border: '1px solid var(--border)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+                                    }}>
+                                        {formData.logo ? (
+                                            <img src={formData.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <span style={{ fontSize: '24px' }}>🏢</span>
+                                        )}
+                                        {uploadingLogo && (
+                                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <div className="spinner" style={{ width: '20px', height: '20px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <input type="file" id="logo-upload" style={{ display: 'none' }} accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                                        <label htmlFor="logo-upload" style={{ ...buttonSecondaryStyle, display: 'inline-block', cursor: uploadingLogo ? 'not-allowed' : 'pointer', opacity: uploadingLogo ? 0.7 : 1 }}>
+                                            {uploadingLogo ? 'Subiendo...' : 'Cambiar Logo'}
+                                        </label>
+                                        <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>Recomendado: 512x512px. JPG o PNG.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Banner Upload */}
+                            <div>
+                                <label style={labelStyle}>Banner</label>
+                                <div style={{ marginTop: '10px' }}>
+                                    <div style={{
+                                        width: '100%', height: '140px', borderRadius: '16px', overflow: 'hidden',
+                                        background: 'var(--bg-card)', border: '1px solid var(--border)', marginBottom: '12px', position: 'relative'
+                                    }}>
+                                        {formData.banner_image ? (
+                                            <img src={formData.banner_image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <div style={{ width: '100%', height: '100%', background: 'linear-gradient(45deg, #eee, #f5f5f5)' }} />
+                                        )}
+                                        {uploadingBanner && (
+                                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <div className="spinner" style={{ width: '30px', height: '30px', border: '3px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <input type="file" id="banner-upload" style={{ display: 'none' }} accept="image/*" onChange={handleBannerUpload} disabled={uploadingBanner} />
+                                    <label htmlFor="banner-upload" style={{ ...buttonSecondaryStyle, display: 'inline-block', cursor: uploadingBanner ? 'not-allowed' : 'pointer', opacity: uploadingBanner ? 0.7 : 1 }}>
+                                        {uploadingBanner ? 'Subiendo...' : 'Cambiar Banner'}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
                         <div>
                             <label style={labelStyle}>Descripción / Bio</label>
                             <textarea
@@ -754,96 +993,129 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 placeholder="Breve descripción que verán tus clientes..."
                             />
                         </div>
-                        <div>
-                            <label style={labelStyle}>Ubicación</label>
-                            <input
-                                type="text"
-                                style={inputStyle}
-                                value={formData.location ?? ''}
-                                onChange={(e) => handleInputChange('location', e.target.value)}
-                            />
-                        </div>
-                        <button
-                            onClick={() => handleSave({
-                                name: formData.name,
-                                description: formData.description,
-                                location: formData.location
-                            })}
-                            style={saveButtonStyle}
-                            disabled={saving}
-                        >
-                            {saving ? 'Guardando...' : 'Guardar Información General'}
-                        </button>
 
-                        <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
-                            <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                                Redes Sociales
-                            </h4>
-                            <div style={{ display: 'grid', gap: '16px' }}>
-                                <div>
-                                    <label style={labelStyle}>Instagram</label>
-                                    <input
-                                        type="text"
-                                        style={inputStyle}
-                                        placeholder="@usuario"
-                                        value={formData.instagram ?? ''}
-                                        onChange={(e) => handleInputChange('instagram', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>TikTok</label>
-                                    <input
-                                        type="text"
-                                        style={inputStyle}
-                                        placeholder="@usuario"
-                                        value={formData.tiktok ?? ''}
-                                        onChange={(e) => handleInputChange('tiktok', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Facebook</label>
-                                    <input
-                                        type="text"
-                                        style={inputStyle}
-                                        placeholder="@usuario o URL"
-                                        value={formData.facebook ?? ''}
-                                        onChange={(e) => handleInputChange('facebook', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>WhatsApp</label>
-                                    <input
-                                        type="text"
-                                        style={inputStyle}
-                                        placeholder="+54911..."
-                                        value={formData.whatsapp ?? ''}
-                                        onChange={(e) => handleInputChange('whatsapp', e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Sitio Web</label>
-                                    <input
-                                        type="text"
-                                        style={inputStyle}
-                                        placeholder="https://..."
-                                        value={formData.website ?? ''}
-                                        onChange={(e) => handleInputChange('website', e.target.value)}
-                                    />
-                                </div>
+                        {/* Location Section */}
+                        <div style={{ marginTop: '10px' }}>
+                            <label style={labelStyle}>Ubicación</label>
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                                <input type="text" style={inputStyle} value={formData.location ?? ''} onChange={(e) => handleInputChange('location', e.target.value)} placeholder="Dirección text..." />
                             </div>
+
+                            <div style={{ marginTop: '16px' }}>
+                                <label style={{ ...labelStyle, fontSize: '13px', color: 'var(--text-secondary)' }}>Ubicación en el Mapa (Click para marcar)</label>
+                                <div style={{ height: '300px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px', border: '1px solid var(--border)', zIndex: 0 }}>
+                                    <MapContainer key={`${mapCenter[0]}-${mapCenter[1]}`} center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+                                        <TileLayer
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                        />
+                                        <LocationPicker
+                                            position={formData.latitude ? [formData.latitude, formData.longitude] : null}
+                                            onLocationSelect={(latlng) => {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    latitude: latlng.lat,
+                                                    longitude: latlng.lng
+                                                }));
+                                            }}
+                                        />
+                                    </MapContainer>
+                                </div>
+                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                    Haz click en el mapa para marcar la ubicación exacta.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Amenities Section */}
+                        <div style={{ marginTop: '10px' }}>
+                            <label style={labelStyle}>Comodidades / Amenities</label>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', marginTop: '8px' }}>
+                                <input
+                                    type="text"
+                                    style={inputStyle}
+                                    placeholder="Ej: Wifi, Estacionamiento, Vestuarios..."
+                                    value={newAmenity}
+                                    onChange={(e) => setNewAmenity(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            if (newAmenity.trim()) {
+                                                const updatedAmenities = [...validAmenities, newAmenity.trim()];
+                                                handleInputChange('amenities', updatedAmenities);
+                                                setNewAmenity('');
+                                            }
+                                        }
+                                    }}
+                                />
+                                <button
+                                    onClick={() => {
+                                        if (newAmenity.trim()) {
+                                            const updatedAmenities = [...validAmenities, newAmenity.trim()];
+                                            handleInputChange('amenities', updatedAmenities);
+                                            setNewAmenity('');
+                                        }
+                                    }}
+                                    style={{ ...buttonSecondaryStyle, padding: '0 20px' }}
+                                >
+                                    Agregar
+                                </button>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                {validAmenities.map((amenity, idx) => (
+                                    <span key={idx} style={{
+                                        padding: '6px 12px', borderRadius: '20px', background: 'var(--bg-card)',
+                                        border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px'
+                                    }}>
+                                        {amenity}
+                                        <button
+                                            onClick={() => {
+                                                const updatedAmenities = validAmenities.filter((_, i) => i !== idx);
+                                                handleInputChange('amenities', updatedAmenities);
+                                            }}
+                                            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-secondary)' }}
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Consolidated Save Button */}
+                        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
                             <button
                                 onClick={() => handleSave({
-                                    instagram: formData.instagram,
-                                    tiktok: formData.tiktok,
-                                    facebook: formData.facebook,
-                                    whatsapp: formData.whatsapp,
-                                    website: formData.website
+                                    name: formData.name,
+                                    description: formData.description,
+                                    location: formData.location,
+                                    latitude: formData.latitude,
+                                    longitude: formData.longitude,
+                                    logo: formData.logo,
+                                    banner_image: formData.banner_image,
+                                    amenities: formData.amenities
                                 })}
-                                style={{ ...saveButtonStyle, marginTop: '16px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                                style={saveButtonStyle}
                                 disabled={saving}
                             >
-                                {saving ? 'Guardando...' : 'Guardar Redes Sociales'}
+                                {saving ? 'Guardando...' : 'Guardar Información General'}
                             </button>
+                        </div>
+
+                        <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+                            <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>Redes Sociales</h4>
+                            <div style={{ display: 'grid', gap: '16px' }}>
+                                <div> <label style={labelStyle}>Instagram</label> <input type="text" style={inputStyle} placeholder="@usuario" value={formData.instagram ?? ''} onChange={(e) => handleInputChange('instagram', e.target.value)} /> </div>
+                                <div> <label style={labelStyle}>TikTok</label> <input type="text" style={inputStyle} placeholder="@usuario" value={formData.tiktok ?? ''} onChange={(e) => handleInputChange('tiktok', e.target.value)} /> </div>
+                                <div> <label style={labelStyle}>Facebook</label> <input type="text" style={inputStyle} placeholder="@usuario o URL" value={formData.facebook ?? ''} onChange={(e) => handleInputChange('facebook', e.target.value)} /> </div>
+                                <div> <label style={labelStyle}>WhatsApp</label> <input type="text" style={inputStyle} placeholder="+54911..." value={formData.whatsapp ?? ''} onChange={(e) => handleInputChange('whatsapp', e.target.value)} /> </div>
+                                <div> <label style={labelStyle}>Sitio Web</label> <input type="text" style={inputStyle} placeholder="https://..." value={formData.website ?? ''} onChange={(e) => handleInputChange('website', e.target.value)} /> </div>
+                            </div>
+                            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button onClick={() => handleSave({ instagram: formData.instagram, tiktok: formData.tiktok, facebook: formData.facebook, whatsapp: formData.whatsapp, website: formData.website })} style={{ ...saveButtonStyle, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-primary)' }} disabled={saving}>
+                                    {saving ? 'Guardando...' : 'Guardar Redes Sociales'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 );
@@ -1109,107 +1381,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         </button>
                     </div>
                 );
-            case 'rules':
-                return (
-                    <div style={{ display: 'grid', gap: '20px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                            <div>
-                                <label style={labelStyle}>Mín. Anticipación (días)</label>
-                                <input
-                                    type="number"
-                                    style={inputStyle}
-                                    min="0"
-                                    value={formData.min_advance_days ?? 0}
-                                    onChange={(e) => {
-                                        const val = e.target.value === '' ? 0 : parseInt(e.target.value);
-                                        handleInputChange('min_advance_days', isNaN(val) ? 0 : val);
-                                    }}
-                                />
-                                <p style={hintStyle}>Garantiza que no te reserven sobre la hora.</p>
-                            </div>
-                            <div>
-                                <label style={labelStyle}>Máx. Anticipación (días)</label>
-                                <input
-                                    type="number"
-                                    style={inputStyle}
-                                    min="1"
-                                    value={formData.max_advance_days ?? 30}
-                                    onChange={(e) => {
-                                        const val = e.target.value === '' ? 1 : parseInt(e.target.value);
-                                        handleInputChange('max_advance_days', isNaN(val) ? 30 : val);
-                                    }}
-                                />
-                                <p style={hintStyle}>Hasta qué fecha pueden reservar.</p>
-                            </div>
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Política de Cancelación (horas)</label>
-                            <input
-                                type="number"
-                                style={inputStyle}
-                                min="0"
-                                value={formData.cancellation_limit_hours ?? 24}
-                                onChange={(e) => {
-                                    const val = e.target.value === '' ? 0 : parseInt(e.target.value);
-                                    handleInputChange('cancellation_limit_hours', isNaN(val) ? 24 : val);
-                                }}
-                            />
-                            <p style={hintStyle}>Tiempo límite para que el cliente cancele por su cuenta.</p>
-                        </div>
-                        <button
-                            onClick={() => handleSave({
-                                min_advance_days: formData.min_advance_days,
-                                max_advance_days: formData.max_advance_days,
-                                cancellation_limit_hours: formData.cancellation_limit_hours
-                            })}
-                            style={saveButtonStyle}
-                            disabled={saving}
-                        >
-                            {saving ? 'Guardando...' : 'Guardar Reglas'}
-                        </button>
-                    </div>
-                );
-            case 'payments':
-                return (
-                    <div style={{ display: 'grid', gap: '24px' }}>
-                        <div>
-                            <label style={labelStyle}>Requiere Seña (%)</label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    step="5"
-                                    style={{ flex: 1 }}
-                                    value={formData.deposit_percentage ?? 0}
-                                    onChange={(e) => handleInputChange('deposit_percentage', parseInt(e.target.value) || 0)}
-                                />
-                                <span style={{ fontWeight: '700', fontSize: '18px', width: '50px' }}>{formData.deposit_percentage ?? 0}%</span>
-                            </div>
-                            <p style={hintStyle}>Dejá en 0% si no cobrás seña previa.</p>
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Información de Pago (WhatsApp)</label>
-                            <textarea
-                                style={{ ...inputStyle, height: '100px', resize: 'none' }}
-                                value={formData.payment_instructions ?? ''}
-                                onChange={(e) => handleInputChange('payment_instructions', e.target.value)}
-                                placeholder="Ej: Podes transferir al Alias: PADDLE.BOX.OK. Enviame el comprobante por acá."
-                            />
-                            <p style={hintStyle}>Este texto se incluirá en el mensaje automático de WhatsApp al reservar.</p>
-                        </div>
-                        <button
-                            onClick={() => handleSave({
-                                deposit_percentage: formData.deposit_percentage,
-                                payment_instructions: formData.payment_instructions
-                            })}
-                            style={saveButtonStyle}
-                            disabled={saving}
-                        >
-                            {saving ? 'Guardando...' : 'Guardar Pagos'}
-                        </button>
-                    </div>
-                );
+
             case 'contact':
                 return (
                     <div style={{ display: 'grid', gap: '20px' }}>
@@ -1255,7 +1427,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         >
                             {saving ? 'Guardando...' : 'Guardar Contacto'}
                         </button>
-                    </div>
+                    </div >
                 );
 
             case 'linkbio':
@@ -1718,13 +1890,20 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     </div>
                 );
 
-            case 'rules':
+            case 'policies_and_payments':
                 const rules = formData.booking_rules || {};
                 const advanceBooking = rules.advance_booking || { min_hours: 2, max_days: 30 };
                 const cancellation = rules.cancellation || { deadline_hours: 24, refund_policy: 'full' };
                 const limits = rules.limits || { max_per_day: 5, max_per_week: 20 };
                 const timeRules = rules.time || { min_duration: 60, max_duration: 240, buffer_minutes: 0 };
                 const requirements = rules.requirements || { phone_required: true, email_verification: false, terms_text: '' };
+
+                // Payment Settings
+                const paymentSettings = formData.payment_settings || {};
+                const deposit = paymentSettings.deposit || { enabled: false, type: 'percentage', percentage: 30, fixed_amount: 0 };
+                const methods = paymentSettings.methods || [{ type: 'cash', enabled: true }];
+                const instructions = paymentSettings.instructions || '';
+                const bankDetails = paymentSettings.bank_details || { bank_name: '', account_holder: '', cbu: '', alias: '' };
 
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
@@ -1892,180 +2071,248 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 {saving ? 'Guardando...' : 'Guardar Reglas'}
                             </button>
                         </div>
-                    </div>
-                );
 
-            case 'payments':
-                const paymentSettings = formData.payment_settings || {};
-                const deposit = paymentSettings.deposit || { enabled: false, type: 'percentage', percentage: 30, fixed_amount: 0 };
-                const methods = paymentSettings.methods || [{ type: 'cash', enabled: true }];
-                const instructions = paymentSettings.instructions || '';
+                        {/* ================= PAYMENTS SECTION ================= */}
+                        <div style={{ padding: '24px 0', borderTop: '1px solid var(--border)' }}>
+                            <div style={{ display: 'grid', gap: '24px' }}>
+                                <div>
+                                    <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                        Pagos y Señas
+                                    </h3>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                                        Configura los métodos de pago y requisitos de seña para las reservas.
+                                    </p>
 
-                return (
-                    <div style={{ display: 'grid', gap: '24px' }}>
-                        <div>
-                            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                                Pagos y Señas
-                            </h3>
-                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-                                Configura los métodos de pago y requisitos de seña para las reservas.
-                            </p>
+                                    {/* Deposit Configuration */}
+                                    <div style={{ marginBottom: '24px', padding: '20px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                                        <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                                            💵 Configuración de Seña
+                                        </h4>
 
-                            {/* Deposit Configuration */}
-                            <div style={{ marginBottom: '24px', padding: '20px', background: 'var(--bg-main)', borderRadius: '12px' }}>
-                                <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                                    💵 Configuración de Seña
-                                </h4>
-
-                                <div style={{ marginBottom: '16px' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={deposit.enabled}
-                                            onChange={(e) => handleInputChange('payment_settings', {
-                                                ...paymentSettings,
-                                                deposit: { ...deposit, enabled: e.target.checked }
-                                            })}
-                                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                                        />
-                                        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                                            Requerir seña para reservas
-                                        </span>
-                                    </label>
-                                </div>
-
-                                {deposit.enabled && (
-                                    <div style={{ display: 'grid', gap: '12px' }}>
-                                        <div>
-                                            <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
-                                                Tipo de seña
+                                        <div style={{ marginBottom: '16px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={deposit.enabled}
+                                                    onChange={(e) => handleInputChange('payment_settings', {
+                                                        ...paymentSettings,
+                                                        deposit: { ...deposit, enabled: e.target.checked }
+                                                    })}
+                                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                />
+                                                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                                    Requerir seña para reservas
+                                                </span>
                                             </label>
-                                            <select
-                                                value={deposit.type}
-                                                onChange={(e) => handleInputChange('payment_settings', {
-                                                    ...paymentSettings,
-                                                    deposit: { ...deposit, type: e.target.value }
-                                                })}
-                                                style={inputStyle}
-                                            >
-                                                <option value="percentage">Porcentaje del total</option>
-                                                <option value="fixed">Monto fijo</option>
-                                            </select>
                                         </div>
 
-                                        {deposit.type === 'percentage' ? (
-                                            <div>
-                                                <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
-                                                    Porcentaje de seña (%)
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    max="100"
-                                                    value={deposit.percentage}
-                                                    onChange={(e) => handleInputChange('payment_settings', {
-                                                        ...paymentSettings,
-                                                        deposit: { ...deposit, percentage: parseInt(e.target.value) || 30 }
-                                                    })}
-                                                    style={inputStyle}
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
-                                                    Monto fijo de seña ($)
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    value={deposit.fixed_amount}
-                                                    onChange={(e) => handleInputChange('payment_settings', {
-                                                        ...paymentSettings,
-                                                        deposit: { ...deposit, fixed_amount: parseInt(e.target.value) || 0 }
-                                                    })}
-                                                    style={inputStyle}
-                                                />
+                                        {deposit.enabled && (
+                                            <div style={{ display: 'grid', gap: '12px' }}>
+                                                <div>
+                                                    <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                        Tipo de seña
+                                                    </label>
+                                                    <select
+                                                        value={deposit.type}
+                                                        onChange={(e) => handleInputChange('payment_settings', {
+                                                            ...paymentSettings,
+                                                            deposit: { ...deposit, type: e.target.value }
+                                                        })}
+                                                        style={inputStyle}
+                                                    >
+                                                        <option value="percentage">Porcentaje del total</option>
+                                                        <option value="fixed">Monto fijo</option>
+                                                    </select>
+                                                </div>
+
+                                                {deposit.type === 'percentage' ? (
+                                                    <div>
+                                                        <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                            Porcentaje de seña (%)
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            max="100"
+                                                            value={deposit.percentage}
+                                                            onChange={(e) => handleInputChange('payment_settings', {
+                                                                ...paymentSettings,
+                                                                deposit: { ...deposit, percentage: parseInt(e.target.value) || 30 }
+                                                            })}
+                                                            style={inputStyle}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                            Monto fijo de seña ($)
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            value={deposit.fixed_amount}
+                                                            onChange={(e) => handleInputChange('payment_settings', {
+                                                                ...paymentSettings,
+                                                                deposit: { ...deposit, fixed_amount: parseInt(e.target.value) || 0 }
+                                                            })}
+                                                            style={inputStyle}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Payment Methods */}
-                            <div style={{ marginBottom: '24px', padding: '20px', background: 'var(--bg-main)', borderRadius: '12px' }}>
-                                <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                                    💳 Métodos de Pago Aceptados
-                                </h4>
+                                    {/* Payment Methods */}
+                                    <div style={{ marginBottom: '24px', padding: '20px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                                        <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                                            💳 Métodos de Pago Aceptados
+                                        </h4>
 
-                                <div style={{ display: 'grid', gap: '12px' }}>
-                                    {['cash', 'transfer', 'mercadopago', 'card'].map(methodType => {
-                                        const method = methods.find(m => m.type === methodType) || { type: methodType, enabled: false };
-                                        const methodLabels = {
-                                            cash: '💵 Efectivo',
-                                            transfer: '🏦 Transferencia Bancaria',
-                                            mercadopago: '💰 MercadoPago',
-                                            card: '💳 Tarjeta de Crédito/Débito'
-                                        };
+                                        <div style={{ display: 'grid', gap: '12px' }}>
+                                            {['cash', 'transfer', 'mercadopago', 'card'].map(methodType => {
+                                                const method = methods.find(m => m.type === methodType) || { type: methodType, enabled: false };
+                                                const methodLabels = {
+                                                    cash: '💵 Efectivo',
+                                                    transfer: '🏦 Transferencia Bancaria',
+                                                    mercadopago: '💰 MercadoPago',
+                                                    card: '💳 Tarjeta de Crédito/Débito'
+                                                };
 
-                                        return (
-                                            <label key={methodType} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                                return (
+                                                    <label key={methodType} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={method.enabled}
+                                                            onChange={(e) => {
+                                                                const newMethods = methods.filter(m => m.type !== methodType);
+                                                                if (e.target.checked) {
+                                                                    newMethods.push({ type: methodType, enabled: true });
+                                                                }
+                                                                handleInputChange('payment_settings', {
+                                                                    ...paymentSettings,
+                                                                    methods: newMethods
+                                                                });
+                                                            }}
+                                                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                        />
+                                                        <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
+                                                            {methodLabels[methodType]}
+                                                        </span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Banking Details */}
+                                    <div style={{ marginBottom: '24px', padding: '20px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                                        <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                                            🏦 Datos Bancarios
+                                        </h4>
+                                        <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
+                                            <div>
+                                                <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                    Banco
+                                                </label>
                                                 <input
-                                                    type="checkbox"
-                                                    checked={method.enabled}
-                                                    onChange={(e) => {
-                                                        const newMethods = methods.filter(m => m.type !== methodType);
-                                                        if (e.target.checked) {
-                                                            newMethods.push({ type: methodType, enabled: true });
-                                                        }
-                                                        handleInputChange('payment_settings', {
-                                                            ...paymentSettings,
-                                                            methods: newMethods
-                                                        });
-                                                    }}
-                                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                    type="text"
+                                                    value={bankDetails.bank_name || ''}
+                                                    onChange={(e) => handleInputChange('payment_settings', {
+                                                        ...paymentSettings,
+                                                        bank_details: { ...bankDetails, bank_name: e.target.value }
+                                                    })}
+                                                    placeholder="Ej: Banco Galicia"
+                                                    style={inputStyle}
                                                 />
-                                                <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
-                                                    {methodLabels[methodType]}
-                                                </span>
-                                            </label>
-                                        );
-                                    })}
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                    Titular de la cuenta
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={bankDetails.account_holder || ''}
+                                                    onChange={(e) => handleInputChange('payment_settings', {
+                                                        ...paymentSettings,
+                                                        bank_details: { ...bankDetails, account_holder: e.target.value }
+                                                    })}
+                                                    placeholder="Nombre del titular"
+                                                    style={inputStyle}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                    CBU / CVU
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={bankDetails.cbu || ''}
+                                                    onChange={(e) => handleInputChange('payment_settings', {
+                                                        ...paymentSettings,
+                                                        bank_details: { ...bankDetails, cbu: e.target.value }
+                                                    })}
+                                                    placeholder="0000000000000000000000"
+                                                    style={inputStyle}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                    Alias
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={bankDetails.alias || ''}
+                                                    onChange={(e) => handleInputChange('payment_settings', {
+                                                        ...paymentSettings,
+                                                        bank_details: { ...bankDetails, alias: e.target.value }
+                                                    })}
+                                                    placeholder="mi.alias.mp"
+                                                    style={inputStyle}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Payment Instructions (Legacy/Extra) */}
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <label style={labelStyle}>Instrucciones Adicionales</label>
+                                        <textarea
+                                            value={instructions}
+                                            onChange={(e) => handleInputChange('payment_settings', {
+                                                ...paymentSettings,
+                                                instructions: e.target.value
+                                            })}
+                                            placeholder="Instrucciones extra para el cliente..."
+                                            style={{
+                                                ...inputStyle,
+                                                minHeight: '100px',
+                                                resize: 'vertical',
+                                                fontFamily: 'inherit'
+                                            }}
+                                        />
+                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                            Información extra que quieras mostrar al cliente.
+                                        </p>
+                                    </div>
+
+                                    {/* Save Button */}
+                                    <button
+                                        onClick={() => handleSave({
+                                            payment_settings: formData.payment_settings
+                                        })}
+                                        style={saveButtonStyle}
+                                        disabled={saving}
+                                    >
+                                        {saving ? 'Guardando...' : 'Guardar Configuración de Pagos'}
+                                    </button>
                                 </div>
                             </div>
-
-                            {/* Payment Instructions */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <label style={labelStyle}>Instrucciones de Pago</label>
-                                <textarea
-                                    value={instructions}
-                                    onChange={(e) => handleInputChange('payment_settings', {
-                                        ...paymentSettings,
-                                        instructions: e.target.value
-                                    })}
-                                    placeholder="Ej: CBU: 1234567890123456789012, Alias: mi.alias.mp, etc."
-                                    style={{
-                                        ...inputStyle,
-                                        minHeight: '100px',
-                                        resize: 'vertical',
-                                        fontFamily: 'inherit'
-                                    }}
-                                />
-                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                    Incluye datos bancarios, alias, links de MercadoPago, etc.
-                                </p>
-                            </div>
-
-                            {/* Save Button */}
-                            <button
-                                onClick={() => handleSave()}
-                                style={saveButtonStyle}
-                                disabled={saving}
-                            >
-                                {saving ? 'Guardando...' : 'Guardar Configuración de Pagos'}
-                            </button>
                         </div>
                     </div>
                 );
+
+
 
             case 'services':
                 const services = formData.services || [];
@@ -2080,6 +2327,217 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
                                 Edita los servicios que ofreces, sus precios y duraciones.
                             </p>
+
+                            {/* Category Management Section */}
+                            <div style={{ padding: '20px', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '20px' }}>
+                                <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px', color: 'var(--text-primary)' }}>Categorías de Servicios</h4>
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                                    Gestiona las categorías para organizar tus servicios (ej: Corte, Coloración, Tratamientos).
+                                </p>
+
+                                {/* Add Category Input */}
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        placeholder="Ej: Corte de Pelo"
+                                        value={newCategory}
+                                        onChange={(e) => setNewCategory(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                if (newCategory.trim()) {
+                                                    if (serviceCategories.includes(newCategory.trim())) {
+                                                        showToast('Esta categoría ya existe', 'warning');
+                                                        return;
+                                                    }
+                                                    const updatedCategories = [...serviceCategories, newCategory.trim()];
+                                                    handleInputChange('service_categories', updatedCategories);
+                                                    setNewCategory('');
+                                                    showToast('Categoría agregada. No olvides guardar.', 'success');
+                                                }
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            if (newCategory.trim()) {
+                                                if (serviceCategories.includes(newCategory.trim())) {
+                                                    showToast('Esta categoría ya existe', 'warning');
+                                                    return;
+                                                }
+                                                const updatedCategories = [...serviceCategories, newCategory.trim()];
+                                                handleInputChange('service_categories', updatedCategories);
+                                                setNewCategory('');
+                                                showToast('Categoría agregada. No olvides guardar.', 'success');
+                                            }
+                                        }}
+                                        style={{ ...buttonSecondaryStyle, padding: '0 20px' }}
+                                    >
+                                        Agregar
+                                    </button>
+                                </div>
+
+                                {/* Display Categories */}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    {serviceCategories.length === 0 ? (
+                                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                            No hay categorías configuradas aún.
+                                        </p>
+                                    ) : (
+                                        serviceCategories.map((category, idx) => (
+                                            <span key={idx} style={{
+                                                padding: '6px 12px', borderRadius: '20px', background: 'var(--bg-card)',
+                                                border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px'
+                                            }}>
+                                                {category}
+                                                <button
+                                                    onClick={async () => {
+                                                        const confirmed = await showConfirm(
+                                                            '¿Eliminar categoría?',
+                                                            `¿Estás seguro de eliminar "${category}"? Los servicios con esta categoría no se eliminarán.`,
+                                                            'Eliminar',
+                                                            'Cancelar'
+                                                        );
+                                                        if (confirmed) {
+                                                            const updatedCategories = serviceCategories.filter((_, i) => i !== idx);
+                                                            handleInputChange('service_categories', updatedCategories);
+                                                            showToast('Categoría eliminada. No olvides guardar.', 'success');
+                                                        }
+                                                    }}
+                                                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-secondary)', fontSize: '14px' }}
+                                                >
+                                                    ×
+                                                </button>
+                                            </span>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* New Service Form */}
+                            <div style={{ padding: '20px', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>Agregar Nuevo Servicio</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                                    <div>
+                                        <label style={labelStyle}>Nombre del Servicio</label>
+                                        <input type="text" style={inputStyle} value={newService.name} onChange={e => setNewService({ ...newService, name: e.target.value })} placeholder="Ej: Corte de Pelo" />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Precio ($)</label>
+                                        <input type="number" style={inputStyle} value={newService.price} onChange={e => setNewService({ ...newService, price: e.target.value })} placeholder="0.00" />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Duración (min)</label>
+                                        <input type="number" style={inputStyle} value={newService.duration} onChange={e => setNewService({ ...newService, duration: e.target.value })} placeholder="60" />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Categoría</label>
+                                        <select style={inputStyle} value={newService.category} onChange={e => setNewService({ ...newService, category: e.target.value })}>
+                                            <option value="">Seleccionar Categoría</option>
+                                            {serviceCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                    </div>
+                                    <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                                        <label style={labelStyle}>Descripción</label>
+                                        <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} value={newService.description} onChange={e => setNewService({ ...newService, description: e.target.value })} placeholder="Descripción opcional..." />
+                                    </div>
+                                    <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                                        <label style={labelStyle}>Imagen de Referencia (Opcional)</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                                            {newService.image_url && (
+                                                <img
+                                                    src={newService.image_url}
+                                                    alt="Preview"
+                                                    style={{
+                                                        width: '80px',
+                                                        height: '80px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid var(--border)'
+                                                    }}
+                                                />
+                                            )}
+                                            <input
+                                                type="file"
+                                                id="new-service-image"
+                                                style={{ display: 'none' }}
+                                                accept="image/*"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files[0];
+                                                    if (!file) return;
+                                                    try {
+                                                        showToast('Subiendo imagen...', 'info');
+                                                        const url = await serviceAdapter.uploadImage(file);
+                                                        setNewService({ ...newService, image_url: url });
+                                                        showToast('Imagen cargada', 'success');
+                                                    } catch (error) {
+                                                        console.error(error);
+                                                        showToast('Error al subir imagen', 'error');
+                                                    }
+                                                }}
+                                            />
+                                            <label
+                                                htmlFor="new-service-image"
+                                                style={{
+                                                    padding: '8px 16px',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid var(--border)',
+                                                    background: 'var(--bg-card)',
+                                                    cursor: 'pointer',
+                                                    fontSize: '13px',
+                                                    fontWeight: '600',
+                                                    color: 'var(--text-primary)'
+                                                }}
+                                            >
+                                                📷 {newService.image_url ? 'Cambiar' : 'Subir'} Imagen
+                                            </label>
+                                            {newService.image_url && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setNewService({ ...newService, image_url: null })}
+                                                    style={{
+                                                        padding: '8px 16px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #ef4444',
+                                                        background: 'rgba(239, 68, 68, 0.1)',
+                                                        color: '#ef4444',
+                                                        cursor: 'pointer',
+                                                        fontSize: '13px',
+                                                        fontWeight: '600'
+                                                    }}
+                                                >
+                                                    🗑️ Quitar
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (!newService.name || !newService.price) {
+                                            showToast('Nombre y precio son obligatorios', 'error');
+                                            return;
+                                        }
+                                        const generateUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                                            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                                            return v.toString(16);
+                                        });
+                                        const serviceToAdd = { ...newService, id: generateUUID() };
+                                        const updatedServices = [...services, serviceToAdd];
+                                        handleInputChange('services', updatedServices);
+                                        setNewService({ name: '', price: '', duration: '60', description: '', category: '', image_url: null });
+                                        showToast('Servicio agregado a la lista. No olvides guardar.', 'success');
+                                    }}
+                                    style={{
+                                        width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--primary-paddle)', color: '#fff',
+                                        fontWeight: '700', cursor: 'pointer', marginTop: '16px', border: 'none'
+                                    }}
+                                >
+                                    + Agregar a la Lista
+                                </button>
+                            </div>
 
                             {services.length === 0 ? (
                                 <div style={{ textAlign: 'center', padding: '40px', background: 'var(--bg-main)', borderRadius: '12px' }}>
@@ -2168,7 +2626,132 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                             ))}
                                                         </select>
                                                     </div>
-                                                )}
+                                                )}\r
+                                                <div>
+                                                    <label style={{ ...labelStyle, marginBottom: '4px' }}>Imagen de Referencia</label>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                                                        {service.image_url && (
+                                                            <img
+                                                                src={service.image_url}
+                                                                alt={service.name}
+                                                                style={{
+                                                                    width: '60px',
+                                                                    height: '60px',
+                                                                    objectFit: 'cover',
+                                                                    borderRadius: '8px',
+                                                                    border: '1px solid var(--border)'
+                                                                }}
+                                                            />
+                                                        )}
+                                                        <input
+                                                            type="file"
+                                                            id={`service-image-${index}`}
+                                                            style={{ display: 'none' }}
+                                                            accept="image/*"
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files[0];
+                                                                if (!file) return;
+                                                                try {
+                                                                    // Show loading state implicitly or use a toaster
+                                                                    // In BusinessSettings, handleGalleryUpload uses serviceAdapter.uploadBusinessGalleryImage
+                                                                    const imageUrl = await serviceAdapter.uploadBusinessGalleryImage(business.id, file);
+
+                                                                    const newServices = [...services];
+                                                                    newServices[index] = { ...service, image_url: imageUrl };
+                                                                    handleInputChange('services', newServices);
+                                                                    showToast('Imagen cargada', 'success');
+                                                                } catch (error) {
+                                                                    console.error('Error uploading image:', error);
+                                                                    showToast('Error al subir imagen', 'error');
+                                                                }
+                                                            }}
+                                                        />
+                                                        <label
+                                                            htmlFor={`service-image-${index}`}
+                                                            style={{
+                                                                padding: '6px 12px',
+                                                                borderRadius: '8px',
+                                                                border: '1px solid var(--border)',
+                                                                background: 'var(--bg-card)',
+                                                                cursor: 'pointer',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                color: 'var(--text-primary)'
+                                                            }}
+                                                        >
+                                                            📷 {service.image_url ? 'Cambiar' : 'Subir'}
+                                                        </label>
+                                                        {service.image_url && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const newServices = [...services];
+                                                                    newServices[index] = { ...service, image_url: null };
+                                                                    handleInputChange('services', newServices);
+                                                                }}
+                                                                style={{
+                                                                    padding: '6px 12px',
+                                                                    borderRadius: '8px',
+                                                                    border: '1px solid #ef4444',
+                                                                    background: 'rgba(239, 68, 68, 0.1)',
+                                                                    color: '#ef4444',
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: '600'
+                                                                }}
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Specialist Assignment Section */}
+                                                <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(0,0,0,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                                    <h5 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: 'var(--text-primary)' }}>
+                                                        Profesionales Asignados
+                                                    </h5>
+                                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                                                        Selecciona quiénes pueden realizar este servicio:
+                                                    </p>
+
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                                                        {formData.specialists?.map(specialist => (
+                                                            <label key={specialist.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', padding: '4px' }}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={serviceSpecialists[service.id]?.includes(specialist.id) || false}
+                                                                    onChange={(e) => {
+                                                                        const isChecked = e.target.checked;
+                                                                        setServiceSpecialists(prev => {
+                                                                            const current = prev[service.id] || [];
+                                                                            const updated = isChecked
+                                                                                ? [...current, specialist.id]
+                                                                                : current.filter(id => id !== specialist.id);
+                                                                            return { ...prev, [service.id]: updated };
+                                                                        });
+                                                                    }}
+                                                                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                                                />
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                    {specialist.avatar_url && (
+                                                                        <img src={specialist.avatar_url} alt="" style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                                    )}
+                                                                    <span>{specialist.name}</span>
+                                                                </div>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                    {(!serviceSpecialists[service.id] || serviceSpecialists[service.id].length === 0) && (
+                                                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#ff9800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            ⚠️ No hay profesionales asignados. Este servicio no podrá ser reservado.
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                            </div>
+
+                                            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
                                                 <button
                                                     onClick={async () => {
                                                         const confirmed = await showConfirm(
@@ -2200,10 +2783,16 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     ))}
                                 </div>
                             )}
+
+                            {/* Add Service Button */}
+
                         </div>
 
                         <button
-                            onClick={() => handleSave({ services: formData.services })}
+                            onClick={() => handleSave({
+                                services: formData.services,
+                                service_categories: formData.service_categories
+                            })}
                             style={saveButtonStyle}
                             disabled={saving}
                         >
@@ -2283,8 +2872,15 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             <div>
                                 <label style={labelStyle}>Tipo de Seña</label>
                                 <select
-                                    value={formData.deposit_type ?? 'none'}
-                                    onChange={(e) => handleInputChange('deposit_type', e.target.value)}
+                                    value={formData.payment_settings?.deposit?.type || 'none'}
+                                    onChange={(e) => {
+                                        const currentSettings = formData.payment_settings || {};
+                                        const currentDeposit = currentSettings.deposit || { enabled: false, type: 'none', percentage: 30, fixed_amount: 0 };
+                                        handleInputChange('payment_settings', {
+                                            ...currentSettings,
+                                            deposit: { ...currentDeposit, type: e.target.value, enabled: e.target.value !== 'none' }
+                                        });
+                                    }}
                                     style={inputStyle}
                                 >
                                     <option value="none">No requiere seña</option>
@@ -2293,7 +2889,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 </select>
                             </div>
 
-                            {formData.deposit_type === 'percentage' && (
+                            {(formData.payment_settings?.deposit?.type === 'percentage') && (
                                 <div style={{ marginTop: '16px' }}>
                                     <label style={labelStyle}>Porcentaje de Seña (%)</label>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -2302,36 +2898,56 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                             min="0"
                                             max="100"
                                             step="5"
-                                            value={formData.deposit_percentage ?? 0}
-                                            onChange={(e) => handleInputChange('deposit_percentage', parseInt(e.target.value))}
+                                            value={formData.payment_settings?.deposit?.percentage || 0}
+                                            onChange={(e) => {
+                                                const currentSettings = formData.payment_settings || {};
+                                                const currentDeposit = currentSettings.deposit || {};
+                                                handleInputChange('payment_settings', {
+                                                    ...currentSettings,
+                                                    deposit: { ...currentDeposit, percentage: parseInt(e.target.value) }
+                                                });
+                                            }}
                                             style={{ flex: 1 }}
                                         />
                                         <span style={{ fontWeight: '700', fontSize: '18px', minWidth: '60px', textAlign: 'right' }}>
-                                            {formData.deposit_percentage ?? 0}%
+                                            {formData.payment_settings?.deposit?.percentage || 0}%
                                         </span>
                                     </div>
                                 </div>
                             )}
 
-                            {formData.deposit_type === 'fixed' && (
+                            {(formData.payment_settings?.deposit?.type === 'fixed') && (
                                 <div style={{ marginTop: '16px' }}>
                                     <label style={labelStyle}>Monto Fijo de Seña ($)</label>
                                     <input
                                         type="number"
                                         min="0"
-                                        value={formData.deposit_amount ?? 0}
-                                        onChange={(e) => handleInputChange('deposit_amount', parseInt(e.target.value) || 0)}
+                                        value={formData.payment_settings?.deposit?.fixed_amount || 0}
+                                        onChange={(e) => {
+                                            const currentSettings = formData.payment_settings || {};
+                                            const currentDeposit = currentSettings.deposit || {};
+                                            handleInputChange('payment_settings', {
+                                                ...currentSettings,
+                                                deposit: { ...currentDeposit, fixed_amount: parseInt(e.target.value) || 0 }
+                                            });
+                                        }}
                                         style={inputStyle}
                                     />
                                 </div>
                             )}
 
-                            {formData.deposit_type !== 'none' && (
+                            {formData.payment_settings?.deposit?.enabled && (
                                 <div style={{ marginTop: '16px' }}>
                                     <label style={labelStyle}>Instrucciones de Pago</label>
                                     <textarea
-                                        value={formData.payment_instructions ?? ''}
-                                        onChange={(e) => handleInputChange('payment_instructions', e.target.value)}
+                                        value={formData.payment_settings?.instructions || ''}
+                                        onChange={(e) => {
+                                            const currentSettings = formData.payment_settings || {};
+                                            handleInputChange('payment_settings', {
+                                                ...currentSettings,
+                                                instructions: e.target.value
+                                            });
+                                        }}
                                         placeholder="Ej: Transferir al Alias: MI.ALIAS.OK o CBU: 1234567890. Enviar comprobante por WhatsApp."
                                         style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }}
                                     />
@@ -2346,10 +2962,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 max_advance_days: formData.max_advance_days,
                                 cancellation_limit_hours: formData.cancellation_limit_hours,
                                 cancellation_policy: formData.cancellation_policy,
-                                deposit_type: formData.deposit_type,
-                                deposit_percentage: formData.deposit_percentage,
-                                deposit_amount: formData.deposit_amount,
-                                payment_instructions: formData.payment_instructions
+                                payment_settings: formData.payment_settings // Save full payment settings object
                             })}
                             style={saveButtonStyle}
                             disabled={saving}
@@ -2550,6 +3163,172 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             disabled={saving}
                         >
                             {saving ? 'Guardando...' : 'Guardar Días Especiales'}
+                        </button>
+                    </div>
+                );
+
+            case 'design':
+                return (
+                    <div style={{ display: 'grid', gap: '24px' }}>
+                        <div>
+                            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                Personalización de Diseño
+                            </h3>
+                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                                Personaliza la apariencia de tu perfil público para que se ajuste a tu marca.
+                            </p>
+
+                            <div style={{ display: 'grid', gap: '24px' }}>
+                                {/* Theme Selection */}
+                                <div>
+                                    <label style={labelStyle}>Tema del Perfil</label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
+                                        <div
+                                            onClick={() => handleInputChange('theme', 'light')}
+                                            style={{
+                                                padding: '16px',
+                                                borderRadius: '12px',
+                                                border: formData.theme === 'light' ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                background: '#ffffff',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '16px', fontWeight: '700', color: '#000000', marginBottom: '4px' }}>Claro</div>
+                                            <div style={{ fontSize: '12px', color: '#666666' }}>Fondo blanco, texto oscuro</div>
+                                            {formData.theme === 'light' && (
+                                                <div style={{ position: 'absolute', top: '8px', right: '8px', color: 'var(--primary-paddle)' }}>✓</div>
+                                            )}
+                                        </div>
+
+                                        <div
+                                            onClick={() => handleInputChange('theme', 'dark')}
+                                            style={{
+                                                padding: '16px',
+                                                borderRadius: '12px',
+                                                border: formData.theme === 'dark' ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                background: '#1a1a1a',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '16px', fontWeight: '700', color: '#ffffff', marginBottom: '4px' }}>Oscuro</div>
+                                            <div style={{ fontSize: '12px', color: '#999999' }}>Fondo oscuro, texto claro</div>
+                                            {formData.theme === 'dark' && (
+                                                <div style={{ position: 'absolute', top: '8px', right: '8px', color: 'var(--primary-paddle)' }}>✓</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Colors */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                    <div>
+                                        <label style={labelStyle}>Color Principal</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                                            <input
+                                                type="color"
+                                                value={formData.primary_color || '#3b82f6'}
+                                                onChange={(e) => handleInputChange('primary_color', e.target.value)}
+                                                style={{
+                                                    width: '50px',
+                                                    height: '50px',
+                                                    padding: '0',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    background: 'none'
+                                                }}
+                                            />
+                                            <input
+                                                type="text"
+                                                value={formData.primary_color || '#3b82f6'}
+                                                onChange={(e) => handleInputChange('primary_color', e.target.value)}
+                                                style={{ ...inputStyle, width: '120px' }}
+                                                placeholder="#3b82f6"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Color de Botones</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                                            <input
+                                                type="color"
+                                                value={formData.button_color || '#3b82f6'}
+                                                onChange={(e) => handleInputChange('button_color', e.target.value)}
+                                                style={{
+                                                    width: '50px',
+                                                    height: '50px',
+                                                    padding: '0',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    background: 'none'
+                                                }}
+                                            />
+                                            <input
+                                                type="text"
+                                                value={formData.button_color || '#3b82f6'}
+                                                onChange={(e) => handleInputChange('button_color', e.target.value)}
+                                                style={{ ...inputStyle, width: '120px' }}
+                                                placeholder="#3b82f6"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Recommended Colors */}
+                                <div>
+                                    <label style={labelStyle}>Colores Recomendados</label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '10px' }}>
+                                        {[
+                                            '#3b82f6', // Blue
+                                            '#8b5cf6', // Purple
+                                            '#ec4899', // Pink
+                                            '#f97316', // Orange
+                                            '#10b981', // Green
+                                            '#ef4444', // Red
+                                            '#14b8a6', // Teal
+                                            '#111827'  // Dark
+                                        ].map(color => (
+                                            <div
+                                                key={color}
+                                                onClick={() => {
+                                                    handleInputChange('primary_color', color);
+                                                    handleInputChange('button_color', color);
+                                                }}
+                                                style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '50%',
+                                                    background: color,
+                                                    cursor: 'pointer',
+                                                    border: formData.primary_color === color ? '3px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.1)',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                                    transition: 'transform 0.2s',
+                                                }}
+                                                title={color}
+                                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => handleSave({
+                                theme: formData.theme,
+                                primary_color: formData.primary_color,
+                                button_color: formData.button_color
+                            })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Diseño'}
                         </button>
                     </div>
                 );

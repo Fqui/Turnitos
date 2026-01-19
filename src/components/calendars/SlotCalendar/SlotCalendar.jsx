@@ -37,17 +37,34 @@ export default function SlotCalendar({
             let hasValidHours = false;
 
             Object.values(business.hours).forEach(dayConfig => {
-                if (dayConfig.isOpen !== false && dayConfig.open && dayConfig.close) {
-                    const startHour = parseInt(dayConfig.open.split(':')[0]);
-                    let endHour = parseInt(dayConfig.close.split(':')[0]);
+                if (dayConfig.isOpen !== false) {
+                    // Primer turno
+                    if (dayConfig.open && dayConfig.close) {
+                        const startHour = parseInt(dayConfig.open.split(':')[0]);
+                        let endHour = parseInt(dayConfig.close.split(':')[0]);
 
-                    if (endHour < startHour) {
-                        endHour += 24;
+                        if (endHour < startHour) {
+                            endHour += 24;
+                        }
+
+                        if (!isNaN(startHour) && startHour < minStart) minStart = startHour;
+                        if (!isNaN(endHour) && endHour > maxEnd) maxEnd = endHour;
+                        hasValidHours = true;
                     }
 
-                    if (!isNaN(startHour) && startHour < minStart) minStart = startHour;
-                    if (!isNaN(endHour) && endHour > maxEnd) maxEnd = endHour;
-                    hasValidHours = true;
+                    // Segundo turno (para horarios divididos)
+                    if (dayConfig.open2 && dayConfig.close2) {
+                        const startHour2 = parseInt(dayConfig.open2.split(':')[0]);
+                        let endHour2 = parseInt(dayConfig.close2.split(':')[0]);
+
+                        if (endHour2 < startHour2) {
+                            endHour2 += 24;
+                        }
+
+                        if (!isNaN(startHour2) && startHour2 < minStart) minStart = startHour2;
+                        if (!isNaN(endHour2) && endHour2 > maxEnd) maxEnd = endHour2;
+                        hasValidHours = true;
+                    }
                 }
             });
 

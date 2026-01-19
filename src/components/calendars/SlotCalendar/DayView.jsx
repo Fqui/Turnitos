@@ -187,12 +187,20 @@ export default function DayView({
                         {/* Resource Columns */}
                         {config.showResourceColumns ? (
                             resources.map((resource, j) => {
+                                // Filter bookings for this specific resource
                                 const slotBookings = getBookingsForSlot(
-                                    bookings.filter(b =>
-                                        b.court_id === resource.id ||
-                                        b.specialist_id === resource.id ||
-                                        b.resource_id === resource.id  // ✅ Soporte para resource_id
-                                    ),
+                                    bookings.filter(b => {
+                                        // Match by court_id (for sports)
+                                        if (b.court_id === resource.id) return true;
+
+                                        // Match by specialist_id (for services with assigned specialist)
+                                        if (b.specialist_id === resource.id) return true;
+
+                                        // Match by resource_id (generic)
+                                        if (b.resource_id === resource.id) return true;
+
+                                        return false;
+                                    }),
                                     currentDate,
                                     time,
                                     config.slotSize

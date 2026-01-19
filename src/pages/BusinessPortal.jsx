@@ -17,6 +17,7 @@ import BusinessLogin from '../components/business/BusinessLogin';
 import BusinessPortalSidebar from '../components/business/BusinessPortalSidebar';
 import BookingDetailsModal from '../components/business/BookingDetailsModal';
 import NewBookingModal from '../components/business/NewBookingModal';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 export default function BusinessPortal() {
     const [businesses, setBusinesses] = useState([]);
@@ -28,6 +29,8 @@ export default function BusinessPortal() {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
+    const [requirePasswordChange, setRequirePasswordChange] = useState(false);
+    const [currentBusinessId, setCurrentBusinessId] = useState(null);
 
     useEffect(() => {
         const checkAutoLogin = async () => {
@@ -150,6 +153,14 @@ export default function BusinessPortal() {
         try {
             const business = await serviceAdapter.login(email, inputPassword);
             if (business) {
+                // Check if password change is required
+                if (business.requirePasswordChange) {
+                    setRequirePasswordChange(true);
+                    setCurrentBusinessId(business.id);
+                    setLoading(false);
+                    return;
+                }
+
                 const fullBusiness = await serviceAdapter.getBusinessById(business.id);
                 setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
                 setSelectedBusinessId(business.id);
@@ -627,6 +638,43 @@ export default function BusinessPortal() {
             alert('Error al procesar la acción');
         }
     };
+
+    // Check for forced password change FIRST
+    if (requirePasswordChange) {
+        return (
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '100vh',
+                background: 'var(--bg-main)',
+                padding: '20px'
+            }}>
+                <ChangePasswordModal
+                    businessId={currentBusinessId}
+                    onPasswordChanged={async () => {
+                        setRequirePasswordChange(false);
+                        setLoading(true);
+                        try {
+                            const fullBusiness = await serviceAdapter.getBusinessById(currentBusinessId);
+                            setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
+                            setSelectedBusinessId(currentBusinessId);
+                            setIsLoggedIn(true);
+
+                            if (rememberMe) {
+                                localStorage.setItem('turnitos_business_email', loginEmail);
+                            }
+                        } catch (err) {
+                            console.error("Error finalizing login:", err);
+                            alert("Error al finalizar el inicio de sesión");
+                        } finally {
+                            setLoading(false);
+                        }
+                    }}
+                />
+            </div>
+        );
+    }
 
     if (!isLoggedIn) {
         return (
@@ -1476,6 +1524,25 @@ export default function BusinessPortal() {
                 currentBusiness={currentBusiness}
                 isMobile={isMobile}
             />
+
+            {/* Change Password Modal (First Login) */}
+            {requirePasswordChange && (
+                <ChangePasswordModal
+                    businessId={currentBusinessId}
+                    onPasswordChanged={async () => {
+                        setRequirePasswordChange(false);
+                        // Reload business data and proceed with login
+                        const fullBusiness = await serviceAdapter.getBusinessById(currentBusinessId);
+                        setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
+                        setSelectedBusinessId(currentBusinessId);
+                        setIsLoggedIn(true);
+
+                        if (rememberMe) {
+                            localStorage.setItem('turnitos_business_email', loginEmail);
+                        }
+                    }}
+                />
+            )}
         </div >
     );
 }

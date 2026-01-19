@@ -189,6 +189,54 @@ class ServiceAdapter {
     isDemo() {
         return this.isDemoMode;
     }
+
+    // --- Specialist Methods ---
+
+    async getQualifiedSpecialists(serviceId, businessId = null) {
+        if (this.isDemoMode) return [];
+        return this.service.getQualifiedSpecialists(serviceId, businessId);
+    }
+
+    async getSpecialistBookings(specialistId, date) {
+        if (this.isDemoMode) return [];
+        return this.service.getSpecialistBookings(specialistId, date);
+    }
+
+    async updateServiceSpecialists(serviceId, specialistIds) {
+        if (this.isDemoMode) {
+            console.warn('updateServiceSpecialists not implemented in demo mode');
+            return true;
+        }
+        return this.service.updateServiceSpecialists(serviceId, specialistIds);
+    }
+
+    async getAvailableSpecialists(serviceId, date, time, duration, businessId = null) {
+        if (this.isDemoMode) return [];
+        // Support the new method if it exists on the service, otherwise use old (unlikely if we just updated it)
+        if (this.service.getAvailableSpecialists) {
+            return this.service.getAvailableSpecialists(serviceId, date, time, duration, businessId);
+        }
+        return [];
+    }
+
+    // --- Image Upload Methods ---
+
+    async uploadBusinessGalleryImage(businessId, file) {
+        if (this.isDemoMode) throw new Error('Not available in demo mode');
+        // Check if method exists in service, otherwise rely on uploadImage generic
+        if (this.service.uploadBusinessGalleryImage) {
+            return this.service.uploadBusinessGalleryImage(businessId, file);
+        }
+        return this.service.uploadImage(file);
+    }
+
+    async uploadBusinessLogo(businessId, file) {
+        if (this.isDemoMode) throw new Error('Not available in demo mode');
+        if (this.service.uploadBusinessLogo) {
+            return this.service.uploadBusinessLogo(businessId, file);
+        }
+        return this.service.uploadImage(file);
+    }
 }
 
 // Export singleton instance

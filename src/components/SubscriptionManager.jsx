@@ -110,10 +110,18 @@ const SubscriptionManager = ({ businessId, businessType, business }) => {
                     <h3>Tu Suscripción Actual</h3>
                     <div className="subscription-card">
                         <div className="subscription-header">
-                            <h4>{plans.find(p => p.id === subscription.plan_name)?.name || subscription.plan_name}</h4>
-                            <span className={`status status-${subscription.status}`}>
-                                {subscription.status === 'active' ? 'Activo' : subscription.status}
-                            </span>
+                            <h4>
+                                {plans.find(p => p.id === subscription.plan_name)?.name || 'Plan Personalizado'}
+                            </h4>
+                            {subscription.status === 'trial' || (subscription.trial_end_date && new Date(subscription.trial_end_date) > new Date()) ? (
+                                <span className="status status-trial">
+                                    En periodo de prueba
+                                </span>
+                            ) : (
+                                <span className={`status status-${subscription.status}`}>
+                                    {subscription.status === 'active' ? 'Activo' : subscription.status}
+                                </span>
+                            )}
                         </div>
                         <div className="subscription-details">
                             <div className="detail-item">
@@ -134,8 +142,19 @@ const SubscriptionManager = ({ businessId, businessType, business }) => {
                                 <span className="value price">{formatPrice(subscription.monthly_price)}</span>
                             </div>
                             <div className="detail-item">
-                                <span className="label">Próxima facturación:</span>
-                                <span className="value">{new Date(subscription.next_billing_date).toLocaleDateString('es-AR')}</span>
+                                {subscription.status === 'trial' || (subscription.trial_end_date && new Date(subscription.trial_end_date) > new Date()) ? (
+                                    <>
+                                        <span className="label">Finaliza el:</span>
+                                        <span className="value" style={{ color: 'var(--warning)' }}>
+                                            {new Date(subscription.trial_end_date).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="label">Próxima facturación:</span>
+                                        <span className="value">{new Date(subscription.next_billing_date).toLocaleDateString('es-AR')}</span>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
