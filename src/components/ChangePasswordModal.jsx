@@ -95,7 +95,9 @@ const ChangePasswordModal = ({ businessId, onPasswordChanged }) => {
                         maxWidth: '500px',
                         width: '100%',
                         border: '1px solid rgba(255,255,255,0.1)',
-                        boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                        maxHeight: '90vh',
+                        overflowY: 'auto'
                     }}
                 >
                     {/* Header */}
@@ -287,7 +289,7 @@ const ChangePasswordModal = ({ businessId, onPasswordChanged }) => {
                             disabled={loading}
                             style={{
                                 padding: '14px',
-                                background: 'var(--primary-paddle)',
+                                background: 'var(--primary-paddle, #00E676)',
                                 color: '#000',
                                 border: 'none',
                                 borderRadius: '12px',
@@ -296,7 +298,8 @@ const ChangePasswordModal = ({ businessId, onPasswordChanged }) => {
                                 fontSize: '16px',
                                 boxShadow: '0 4px 12px rgba(0, 230, 118, 0.3)',
                                 opacity: loading ? 0.7 : 1,
-                                marginTop: '8px'
+                                marginTop: '24px',
+                                marginBottom: '10px'
                             }}
                         >
                             {loading ? 'Cambiando contraseña...' : 'Cambiar Contraseña'}

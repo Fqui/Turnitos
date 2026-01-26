@@ -49,6 +49,7 @@ export default function BusinessProfile() {
 
     // Venue specific state
     const [selectedDuration, setSelectedDuration] = useState(null);
+    const [selectedAdditionalServices, setSelectedAdditionalServices] = useState([]);
     // Gallery state
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
     const [selectedHighlight, setSelectedHighlight] = useState(null); // Which highlight category is open
@@ -119,17 +120,24 @@ export default function BusinessProfile() {
                 if (schedule.isSplit) {
                     // console.log('🔄 SPLIT SHIFT detected for', dayName);
 
+                    // ✅ NEW LOGIC: Handle open/close + open2/close2 format
+                    // This format implies: Shift 1 = open-close, Shift 2 = open2-close2
+                    if (schedule.open2 && schedule.close2) {
+                        const derivedRanges = [
+                            { open: schedule.open, close: schedule.close },
+                            { open: schedule.open2, close: schedule.close2 }
+                        ];
+                        // console.log(`🕒 Generated split ranges (Type 2) for ${dayName}:`, derivedRanges);
+                        return {
+                            open: schedule.open,
+                            close: schedule.close2, // Global close is the end of second shift
+                            ranges: derivedRanges
+                        };
+                    }
+
                     // Use breakStart/breakEnd (the actual fields saved by BusinessSettings)
                     const breakStart = schedule.breakStart || '13:00';
                     const breakEnd = schedule.breakEnd || '16:00';
-
-
-                    // console.log('📊 Split shift times:', {
-                    //     open: schedule.open,
-                    //     breakStart,
-                    //     breakEnd,
-                    //     close: schedule.close
-                    // });
 
                     // Create ranges from the split schedule
                     // Range 1: Open time to Break Start
@@ -1332,100 +1340,190 @@ export default function BusinessProfile() {
                         {/* Step 2: Time & Duration */}
                         <section style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                                2. Horario y Duración
+                                2. {business.pricing_model === 'daily' ? 'Disponibilidad y Tarifa' : 'Horario y Duración'}
                             </h3>
                             <div style={{ backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: '20px', border: '1px solid var(--border)' }}>
-                                <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--text-secondary)' }}>Hora de Inicio</label>
-                                    <select
-                                        value={selectedTime?.time || ''}
-                                        onChange={(e) => {
-                                            const time = e.target.value;
-                                            const price = (business.price_per_hour || 0) * (selectedDuration || 0);
-                                            setSelectedTime({ time, price });
-                                        }}
-                                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)' }}
-                                    >
-                                        <option value="">Seleccionar hora...</option>
-                                        {(() => {
-                                            const { open, close, ranges } = getBusinessHours(selectedDate);
-                                            const slots = [];
-
-                                            // Helper to add slots for a given range
-                                            const addSlots = (startStr, endStr) => {
-                                                const start = parseInt(startStr.split(':')[0]);
-                                                const end = endStr === '00:00' ? 24 : parseInt(endStr.split(':')[0]);
-
-                                                for (let i = start; i < end; i++) {
-                                                    const timeStr = `${String(i).padStart(2, '0')}:00`;
-                                                    // Check if slot is booked
-                                                    const isBooked = existingBookings?.some(booking => {
-                                                        const bookingStatus = booking.status?.toLowerCase() || '';
-                                                        const blockedStatuses = ['confirmed', 'blocked', 'deposit', 'pending', 'completed'];
-                                                        // Ensure DB time matches our formatting (handle HH:MM:SS vs HH:MM)
-                                                        const bookingTime = booking.time.substring(0, 5);
-                                                        return bookingTime === timeStr && (blockedStatuses.includes(bookingStatus) || bookingStatus !== 'cancelled');
-                                                    });
-
-                                                    if (!isBooked) {
-                                                        slots.push(i);
-                                                    }
-                                                }
-                                            };
-
-                                            if (ranges && ranges.length > 0) {
-                                                // Handle split shifts / multiple ranges
-                                                ranges.forEach(range => {
-                                                    addSlots(range.open, range.close);
-                                                });
-                                            } else {
-                                                // Use standard open/close
-                                                addSlots(open, close);
-                                            }
-
-                                            if (slots.length === 0) {
-                                                return <option value="" disabled>No hay horarios disponibles</option>;
-                                            }
-
-                                            // Remove duplicates and sort just in case
-                                            const uniqueSlots = [...new Set(slots)].sort((a, b) => a - b);
-
-                                            return uniqueSlots.map(hour => (
-                                                <option key={hour} value={`${hour}:00`}>{`${hour}:00`}</option>
-                                            ));
-                                        })()}
-                                    </select>
-                                </div>
-
-                                {business.rental_duration_options && (
+                                {business.pricing_model === 'daily' ? (
+                                    // === DAILY PRICING LOGIC ===
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--text-secondary)' }}>Duración</label>
-                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                            {business.rental_duration_options.map(hours => (
-                                                <button
-                                                    key={hours}
+                                        {(() => {
+                                            // Check availability for the whole day
+                                            const dateStr = selectedDate instanceof Date
+                                                ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+                                                : selectedDate;
+
+                                            const isDayBlocked = existingBookings?.some(booking => {
+                                                const bookingStatus = booking.status?.toLowerCase() || '';
+                                                const blockedStatuses = ['confirmed', 'blocked', 'deposit', 'pending', 'completed'];
+                                                return booking.date === dateStr && (blockedStatuses.includes(bookingStatus) || bookingStatus !== 'cancelled');
+                                            });
+
+                                            if (isDayBlocked) {
+                                                return (
+                                                    <div style={{ textAlign: 'center', padding: '20px', color: '#ef4444' }}>
+                                                        <div style={{ fontSize: '24px', marginBottom: '8px' }}>📅❌</div>
+                                                        <div style={{ fontWeight: '700' }}>Fecha No Disponible</div>
+                                                        <div style={{ fontSize: '14px' }}>Ya existe una reserva confirmada para este día.</div>
+                                                    </div>
+                                                );
+                                            }
+
+                                            const isSelected = selectedTime?.time === '12:00' && selectedTime?.price === parseFloat(business.price_per_day);
+
+                                            return (
+                                                <div
                                                     onClick={() => {
-                                                        setSelectedDuration(hours);
-                                                        if (selectedTime?.time) {
-                                                            const price = (business.price_per_hour || 0) * hours;
-                                                            setSelectedTime({ ...selectedTime, price });
-                                                        }
+                                                        setSelectedTime({
+                                                            time: '12:00', // Dummy time for daily bookings
+                                                            price: parseFloat(business.price_per_day) || 0,
+                                                            duration: 24,
+                                                            rentalType: 'daily'
+                                                        });
+                                                        // Clear specific duration logic if any was set
+                                                        setSelectedDuration(24);
                                                     }}
                                                     style={{
-                                                        padding: '10px 20px',
-                                                        borderRadius: '12px',
-                                                        border: selectedDuration === hours ? `2px solid ${primaryColor}` : '1px solid var(--border)',
-                                                        backgroundColor: selectedDuration === hours ? `${primaryColor}20` : 'transparent',
-                                                        color: selectedDuration === hours ? primaryColor : 'var(--text-primary)',
+                                                        padding: '20px',
+                                                        borderRadius: '16px',
+                                                        border: isSelected ? `2px solid ${primaryColor}` : '2px solid var(--border)',
+                                                        background: isSelected ? `${primaryColor}10` : 'var(--bg-main)',
                                                         cursor: 'pointer',
-                                                        fontWeight: '600'
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        transition: 'all 0.2s'
                                                     }}
                                                 >
-                                                    {hours} hs
-                                                </button>
-                                            ))}
-                                        </div>
+                                                    <div>
+                                                        <div style={{ fontWeight: '800', fontSize: '18px', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                                            Alquiler Diario Completo
+                                                        </div>
+                                                        <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                                                            Incluye acceso exclusivo por todo el día
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontSize: '20px', fontWeight: '800', color: primaryColor }}>
+                                                            ${parseFloat(business.price_per_day || 0).toLocaleString()}
+                                                        </div>
+                                                        {isSelected && (
+                                                            <div style={{ fontSize: '12px', fontWeight: '700', color: primaryColor, marginTop: '4px' }}>
+                                                                ✓ Seleccionado
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
+                                ) : (
+                                    // === HOURLY PRICING LOGIC (Existing) ===
+                                    <>
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--text-secondary)' }}>Hora de Inicio</label>
+                                            <select
+                                                value={selectedTime?.time || ''}
+                                                onChange={(e) => {
+                                                    const time = e.target.value;
+                                                    const price = (business.price_per_hour || 0) * (selectedDuration || 0);
+                                                    setSelectedTime({ time, price });
+                                                }}
+                                                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)' }}
+                                            >
+                                                <option value="">Seleccionar hora...</option>
+                                                {(() => {
+                                                    const { open, close, ranges } = getBusinessHours(selectedDate);
+                                                    const slots = [];
+
+                                                    // Helper to add slots for a given range
+                                                    const addSlots = (startStr, endStr) => {
+                                                        const start = parseInt(startStr.split(':')[0]);
+                                                        const end = endStr === '00:00' ? 24 : parseInt(endStr.split(':')[0]);
+
+                                                        for (let i = start; i < end; i++) {
+                                                            // Check if slot is booked considering duration
+                                                            const isBooked = existingBookings?.some(booking => {
+                                                                const bookingStatus = booking.status?.toLowerCase() || '';
+                                                                const blockedStatuses = ['confirmed', 'blocked', 'deposit', 'pending', 'completed'];
+
+                                                                if (!blockedStatuses.includes(bookingStatus) && bookingStatus === 'cancelled') return false;
+
+                                                                const bookingStartHour = parseInt(booking.time.split(':')[0]);
+                                                                // Default duration to 1 if not present, though venues usually have it set
+                                                                const bookingDuration = booking.duration || 1;
+                                                                const bookingEndHour = bookingStartHour + bookingDuration;
+
+                                                                // Check if current slot 'i' is within the booking range [start, end)
+                                                                return i >= bookingStartHour && i < bookingEndHour && booking.date === dateStr;
+                                                            });
+
+                                                            if (!isBooked) {
+                                                                slots.push(i);
+                                                            }
+                                                        }
+                                                    };
+
+                                                    // Need dateStr for the check above
+                                                    const dateStr = selectedDate instanceof Date
+                                                        ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+                                                        : selectedDate;
+                                                    ;
+
+                                                    if (ranges && ranges.length > 0) {
+                                                        // Handle split shifts / multiple ranges
+                                                        ranges.forEach(range => {
+                                                            addSlots(range.open, range.close);
+                                                        });
+                                                    } else {
+                                                        // Use standard open/close
+                                                        addSlots(open, close);
+                                                    }
+
+                                                    if (slots.length === 0) {
+                                                        return <option value="" disabled>No hay horarios disponibles</option>;
+                                                    }
+
+                                                    // Remove duplicates and sort just in case
+                                                    const uniqueSlots = [...new Set(slots)].sort((a, b) => a - b);
+
+                                                    return uniqueSlots.map(hour => (
+                                                        <option key={hour} value={`${hour}:00`}>{`${hour}:00`}</option>
+                                                    ));
+                                                })()}
+                                            </select>
+                                        </div>
+
+                                        {business.rental_duration_options && (
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--text-secondary)' }}>Duración</label>
+                                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                    {business.rental_duration_options.map(hours => (
+                                                        <button
+                                                            key={hours}
+                                                            onClick={() => {
+                                                                setSelectedDuration(hours);
+                                                                if (selectedTime?.time) {
+                                                                    const price = (business.price_per_hour || 0) * hours;
+                                                                    setSelectedTime({ ...selectedTime, price });
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                padding: '10px 20px',
+                                                                borderRadius: '12px',
+                                                                border: selectedDuration === hours ? `2px solid ${primaryColor}` : '1px solid var(--border)',
+                                                                backgroundColor: selectedDuration === hours ? `${primaryColor}20` : 'transparent',
+                                                                color: selectedDuration === hours ? primaryColor : 'var(--text-primary)',
+                                                                cursor: 'pointer',
+                                                                fontWeight: '600'
+                                                            }}
+                                                        >
+                                                            {hours} hs
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </section>

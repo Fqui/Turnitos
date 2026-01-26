@@ -269,6 +269,8 @@ class SupabaseService {
             primary_color: businessData.primaryColor || businessData.button_color || '#3b82f6',
             // Venue-specific fields
             price_per_hour: businessData.price_per_hour,
+            pricing_model: businessData.pricing_model || 'hourly',
+            price_per_day: businessData.price_per_day,
             rental_duration_options: businessData.rental_duration_options || [],
             additional_services: businessData.additional_services || [],
             included_amenities: businessData.included_amenities || [],
@@ -1149,35 +1151,46 @@ class SupabaseService {
     }
 
     async moveBooking(id, newDate, newTime, newItemId) {
-        // We need to know if the business is service or venue/sport
-        // to update correctly court_id or service_id.
-        // For simplicity, we check the current booking or just try to 
-        // update based on the ID format or provided type.
-        // Usually, we can just update both and Supabase will handle the schema.
-
         const updateData = {
             date: newDate,
             time: newTime,
             updated_at: new Date().toISOString()
         };
 
-        // Heuristic: if newItemId looks like it might be a court or service
-        // In this app, many IDs are UUIDs. 
-        // We'll try to find if it's a service or court first or just pass both 
-        // if we are not sure, but better to be precise.
+        // If a new resource ID is provided, we must determine if it's a court or service
+        // to update the correct foreign key column and clear the other one.
+        if (newItemId) {
+            try {
+                // 1. Check if it's a court
+                const { data: court } = await supabase
+                    .from('courts')
+                    .select('id')
+                    .eq('id', newItemId)
+                    .maybeSingle();
 
-        // Let's get the booking first to see its type
-        const { data: currentBooking } = await supabase
-            .from('bookings')
-            .select('court_id, service_id')
-            .eq('id', id)
-            .single();
+                if (court) {
+                    updateData.court_id = newItemId;
+                    updateData.service_id = null; // Clear service_id to avoid FK violation
+                    updateData.resource_id = newItemId; // Keeps unified resource_id in sync
+                } else {
+                    // 2. Check if it's a service
+                    const { data: service } = await supabase
+                        .from('services')
+                        .select('id')
+                        .eq('id', newItemId)
+                        .maybeSingle();
 
-        if (currentBooking) {
-            if (currentBooking.court_id) {
-                updateData.court_id = newItemId;
-            } else if (currentBooking.service_id) {
-                updateData.service_id = newItemId;
+                    if (service) {
+                        updateData.service_id = newItemId;
+                        updateData.court_id = null; // Clear court_id
+                        updateData.resource_id = newItemId;
+                    } else {
+                        console.warn(`⚠️ moveBooking: Resource ID ${newItemId} not found in courts or services.`);
+                    }
+                }
+            } catch (err) {
+                console.error('Error verifying resource type in moveBooking:', err);
+                // Fallback: Do not update IDs if verification fails, just date/time
             }
         }
 

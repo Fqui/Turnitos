@@ -91,40 +91,103 @@ export default function DayCell({
                     flex: 1
                 }}>
                     {isBooked ? (
-                        <div style={{
-                            width: '100%',
-                            background: '#FEE2E2',
-                            borderRadius: '8px',
-                            padding: '12px 8px',
-                            textAlign: 'center'
-                        }}>
-                            <div style={{
-                                fontSize: '24px',
-                                marginBottom: '4px'
-                            }}>✗</div>
-                            <div style={{
-                                fontSize: '11px',
-                                fontWeight: '600',
-                                color: '#DC2626',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                            }}>
-                                {bookings[0].customer_name || 'Reservado'}
-                            </div>
-                            {bookings[0].metadata?.eventName && (
+                        (() => {
+                            const booking = bookings[0];
+                            const status = booking.status;
+
+                            // Definir colores y etiquetas según el estado
+                            const statusConfig = {
+                                pending: {
+                                    bg: '#FEF3C7',
+                                    color: '#D97706',
+                                    icon: '⏳',
+                                    label: 'Pendiente'
+                                },
+                                confirmed: {
+                                    bg: '#DBEAFE',
+                                    color: '#1D4ED8',
+                                    icon: '✓',
+                                    label: 'Confirmado'
+                                },
+                                deposit_paid: {
+                                    bg: '#FED7AA',
+                                    color: '#EA580C',
+                                    icon: '💰',
+                                    label: 'Seña Pagada'
+                                },
+                                cancelled: {
+                                    bg: '#FEE2E2',
+                                    color: '#DC2626',
+                                    icon: '✗',
+                                    label: 'Cancelado'
+                                },
+                                completed: {
+                                    bg: '#D1FAE5',
+                                    color: '#059669',
+                                    icon: '✓',
+                                    label: 'Completado'
+                                },
+                                blocked: {
+                                    bg: '#E5E7EB',
+                                    color: '#374151',
+                                    icon: '🚫',
+                                    label: 'Bloqueado'
+                                }
+                            };
+
+                            const config = statusConfig[status] || statusConfig.pending;
+
+                            return (
                                 <div style={{
-                                    fontSize: '10px',
-                                    color: '#991B1B',
-                                    marginTop: '2px',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis'
+                                    width: '100%',
+                                    background: config.bg,
+                                    borderRadius: '8px',
+                                    padding: '12px 8px',
+                                    textAlign: 'center'
                                 }}>
-                                    {bookings[0].metadata.eventName}
+                                    <div style={{
+                                        fontSize: '24px',
+                                        marginBottom: '4px'
+                                    }}>{config.icon}</div>
+                                    <div style={{
+                                        fontSize: '11px',
+                                        fontWeight: '600',
+                                        color: config.color,
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
+                                    }}>
+                                        {config.label}
+                                    </div>
+                                    {booking.customer_name && (
+                                        <div style={{
+                                            fontSize: '10px',
+                                            color: config.color,
+                                            marginTop: '2px',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            opacity: 0.8
+                                        }}>
+                                            {booking.customer_name}
+                                        </div>
+                                    )}
+                                    {booking.metadata?.eventName && (
+                                        <div style={{
+                                            fontSize: '10px',
+                                            color: config.color,
+                                            marginTop: '2px',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            opacity: 0.7
+                                        }}>
+                                            {booking.metadata.eventName}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
+                            );
+                        })()
                     ) : (
                         <div style={{
                             width: '100%',

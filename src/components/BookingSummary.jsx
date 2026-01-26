@@ -97,22 +97,21 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
 
     if (depositSettings.enabled === false) {
         depositAmount = 0;
-    } else if (depositSettings.type === 'fixed') {
-        depositAmount = parseInt(depositSettings.fixed_amount) || 0;
-        depositLabel = 'Seña (Monto Fijo)';
     } else {
-        // Percentage type - SIN valor por defecto
-        const percentage = parseInt(depositSettings.percentage);
+        const percentage = parseFloat(depositSettings.percentage);
+        const fixed = parseInt(depositSettings.fixed_amount);
 
-        if (!percentage || isNaN(percentage)) {
-            console.error('❌ ERROR: No hay porcentaje configurado en payment_settings!');
-            depositAmount = 0;
-            depositLabel = 'Seña (No configurada)';
-        } else {
+        // Prioritize percentage if set/valid
+        if (depositSettings.percentage && !isNaN(percentage) && percentage > 0) {
             depositAmount = Math.round(price * (percentage / 100));
             depositLabel = `Seña (${percentage}%)`;
-
-
+        } else if (!isNaN(fixed) && fixed > 0) {
+            depositAmount = fixed;
+            depositLabel = 'Seña (Monto Fijo)';
+        } else {
+            // Fallback if enabled but no valid values
+            depositAmount = 0;
+            depositLabel = 'Seña (No configurada)';
         }
     }
 

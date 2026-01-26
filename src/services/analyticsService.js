@@ -29,21 +29,30 @@ class AnalyticsService {
             const { data: bookings, error } = await query;
             if (error) throw error;
 
-            // Estados válidos para contabilizar ingresos y ocupación
-            const VALID_STATES = ['confirmed', 'attended', 'completed', 'deposit_paid'];
+            // Estados válidos para contabilizar ocupación
+            const ACTIVE_STATES = ['confirmed', 'attended', 'completed', 'deposit_paid'];
 
-            // Filtrar reservas válidas (excluir bloqueos y cancelados para métricas generales)
-            const activeBookings = bookings.filter(b => VALID_STATES.includes(b.status));
+            // Filtrar reservas válidas (excluir bloqueos y cancelados para métricas de cantidad)
+            const activeBookings = bookings.filter(b => ACTIVE_STATES.includes(b.status));
 
             // Calculate metrics
             const totalBookings = activeBookings.length;
-            const totalRevenue = activeBookings.reduce((sum, b) => sum + (b.price || 0), 0);
-            const avgBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
+
+            // Revenue only counts 'completed' bookings per user request
+            const revenueBookings = bookings.filter(b => b.status === 'completed');
+            const totalRevenue = revenueBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+
+            // Average booking value based on revenue bookings or all active? 
+            // Usually avg ticket = Revenue / Paying Customers. 
+            // If Revenue is only from completed, Avg should probably be TotalRevenue / CompletedCount.
+            const totalCompleted = revenueBookings.length;
+            const avgBookingValue = totalCompleted > 0 ? totalRevenue / totalCompleted : 0;
 
             // Calculate completion rate (confirmed/attended/completed vs cancelled)
             // Total attempts = active + cancelled (ignoring blocked)
             const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
             const totalAttempts = totalBookings + cancelledBookings;
+            // Completion rate in this context usually means "Not Cancelled" success rate
             const completionRate = totalAttempts > 0 ? (totalBookings / totalAttempts) * 100 : 0;
 
             // Get previous period for comparison
@@ -120,14 +129,32 @@ class AnalyticsService {
             if (error) throw error;
 
             // Create heatmap: days of week x hours
+            // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
             const heatmap = Array(7).fill(null).map(() => Array(24).fill(0));
 
             bookings.forEach(booking => {
+                // Fix timezone issue:
+                // When parsing "2023-10-25" with new Date("2023-10-25"), it assumes UTC.
+                // If local timezone is UTC-3, it might shift to previus day if not careful.
+                // Safer approach: split the string and use Y, M, D directly.
+                const [year, month, day] = booking.date.split('-').map(Number);
+                // Create date with local components (no timezone shift) or use UTC logic if consistent
+                // const date = new Date(year, month - 1, day); 
+                // date.getDay() returns local day. 
+
+                // OR simpler: create Date from string + "T00:00:00" to force local time?
+                // Actually, new Date("YYYY-MM-DD") is UTC. new Date("YYYY-MM-DDT00:00") is local.
+                // Let's use UTCDay to be consistent with the "YYYY-MM-DD" string being date-only.
+                // new Date("2026-01-26").getUTCDay() -> 1 (Monday)
+
                 const date = new Date(booking.date);
-                const dayOfWeek = date.getDay(); // 0 = Sunday
+                const dayOfWeek = date.getUTCDay(); // Use UTC day to match the date string exactly
+
                 const hour = parseInt(booking.time.split(':')[0]);
 
-                heatmap[dayOfWeek][hour]++;
+                if (dayOfWeek >= 0 && dayOfWeek <= 6 && hour >= 0 && hour <= 23) {
+                    heatmap[dayOfWeek][hour]++;
+                }
             });
 
             return {
@@ -313,8 +340,10 @@ class AnalyticsService {
             };
         }
 
-        // Default: last 30 days
+        // Default: last 30 days to next 30 days (broad window for default view)
         const end = new Date();
+        end.setDate(end.getDate() + 30); // Include future bookings by default
+
         const start = new Date();
         start.setDate(start.getDate() - 30);
 
@@ -352,10 +381,11 @@ class AnalyticsService {
             .lte('date', end);
 
         const validBookings = bookings?.filter(b => ['confirmed', 'attended', 'completed', 'deposit_paid'].includes(b.status)) || [];
+        const completedBookings = bookings?.filter(b => b.status === 'completed') || [];
 
         return {
             bookings: validBookings.length,
-            revenue: validBookings.reduce((sum, b) => sum + (b.price || 0), 0)
+            revenue: completedBookings.reduce((sum, b) => sum + (b.price || 0), 0)
         };
     }
 
@@ -385,11 +415,14 @@ class AnalyticsService {
                 grouped[key] = { date: key, count: 0, revenue: 0 };
             }
 
-            // Exclude cancelled and blocked from trends revenue/count
             if (['cancelled', 'blocked'].includes(booking.status)) return;
 
             grouped[key].count++;
-            grouped[key].revenue += booking.price || 0;
+
+            // Only add revenue if completed
+            if (booking.status === 'completed') {
+                grouped[key].revenue += booking.price || 0;
+            }
         });
 
         return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
