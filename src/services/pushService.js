@@ -35,7 +35,6 @@ export const pushService = {
                 });
 
                 if (token) {
-                    console.log('Token de notificación obtenido:', token);
                     await this.saveTokenToSupabase(businessId, token);
                     return token;
                 }
@@ -60,8 +59,6 @@ export const pushService = {
 
         if (error) {
             console.error('Error al guardar token en Supabase:', error);
-        } else {
-            console.log('Token guardado exitosamente en Supabase');
         }
     },
 
@@ -70,7 +67,6 @@ export const pushService = {
         if (!messaging) return;
 
         onMessage(messaging, (payload) => {
-            console.log('Mensaje recibido en primer plano:', payload);
             alert(`¡Nueva Notificación!\n${payload.notification.title}: ${payload.notification.body}`);
         });
     }

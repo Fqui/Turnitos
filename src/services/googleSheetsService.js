@@ -59,7 +59,6 @@ class GoogleSheetsService {
 
             // Retry logic
             if (retryCount < this.maxRetries) {
-                console.log(`Retrying in ${this.retryDelay}ms...`);
                 await this.delay(this.retryDelay);
                 return this.makeRequest(data, retryCount + 1);
             }

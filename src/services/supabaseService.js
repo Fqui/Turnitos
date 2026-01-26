@@ -11,12 +11,6 @@ class SupabaseService {
 
         const business = { ...data };
 
-        // 🔍 DEBUG: Log para ver datos crudos de Supabase
-        console.log('🔍 _processBusinessData received:', {
-            payment_settings: business.payment_settings,
-            payment_settings_type: typeof business.payment_settings
-        });
-
         // Ensure hours is an object if it comes as a stringified JSON
         if (typeof business.hours === 'string' && business.hours.trim().startsWith('{')) {
             try {
@@ -39,12 +33,6 @@ class SupabaseService {
         if (!business.payment_settings || typeof business.payment_settings !== 'object') {
             business.payment_settings = {};
         }
-
-        console.log('🔍 _processBusinessData result:', {
-            payment_settings: business.payment_settings,
-            has_deposit: !!business.payment_settings?.deposit,
-            has_bank_details: !!business.payment_settings?.bank_details
-        });
 
         return business;
     }
@@ -392,8 +380,6 @@ class SupabaseService {
                     price: c.price
                 };
             });
-
-            console.log('Inserting courts:', courtsToInsert); // Debug log
 
             const { error: courtsError } = await supabase
                 .from('courts')
@@ -1087,8 +1073,6 @@ class SupabaseService {
                     `Ocupados: ${availability.slots_used}/${availability.total_capacity}`
                 );
             }
-
-            console.log('✅ Business capacity validated:', availability);
         } catch (validationError) {
             // If validation fails, throw the error to prevent booking creation
             console.error('❌ Business capacity validation failed:', validationError);
@@ -2064,7 +2048,6 @@ class SupabaseService {
         if (businessError) throw businessError;
 
         if (!business.seller_id) {
-            console.log('Business has no seller, skipping commission');
             return null;
         }
 
@@ -2096,7 +2079,6 @@ class SupabaseService {
 
         // If no commission for this month, skip
         if (baseRate === 0) {
-            console.log(`No commission for month ${subscriptionMonth}`);
             return null;
         }
 
@@ -2893,7 +2875,6 @@ class SupabaseService {
         // FALLBACK: If no specialists assigned and businessId provided, fetch all business specialists
         // This ensures existing services work without manual assignment
         if (specialists.length === 0 && businessId) {
-            console.log(`No specialists assigned to service ${serviceId}, falling back to all business specialists`);
             const { data: allSpecialists, error: fallbackError } = await supabase
                 .from('specialists')
                 .select('id, name, role, avatar_url')

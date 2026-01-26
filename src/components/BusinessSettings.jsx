@@ -111,7 +111,6 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const handleInputChange = (field, value) => {
         setFormData(prev => {
             const newState = { ...prev, [field]: value };
-            console.log(`Updated ${field}:`, value); // Debug log
             return newState;
         });
     };
@@ -314,7 +313,6 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         try {
             setSaving(true);
             const dataToSave = specificUpdates || formData;
-            console.log('Saving data:', dataToSave);
 
             // Validate subscription limits for specialists or courts
             if (dataToSave.specialists || dataToSave.courts) {
@@ -324,12 +322,6 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 if (resourceCount > 0) {
                     try {
                         const currentSub = await serviceAdapter.getSubscription(business.id);
-
-                        console.log('🔍 Validation check:', {
-                            resourceCount,
-                            spaces_included: currentSub?.spaces_included,
-                            willBlock: resourceCount > currentSub?.spaces_included
-                        });
 
                         if (currentSub && resourceCount > currentSub.spaces_included) {
                             // Calculate suggested plan
@@ -385,13 +377,11 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
                 if (updatePromises.length > 0) {
                     await Promise.all(updatePromises);
-                    console.log(`Updated specialists for ${updatePromises.length} services`);
                 }
             }
 
             // Manually construct the updated object for local state sync
             const updated = { ...business, ...dataToSave };
-            console.log('Update response (manual):', updated);
 
             onUpdate(updated);
             showToast('Configuración guardada correctamente', 'success');

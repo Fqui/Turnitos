@@ -51,7 +51,7 @@ export default function BusinessPortal() {
                         setIsLoggedIn(true);
                     }
                 } catch (err) {
-                    console.log("Auto-login failed", err);
+                    // Auto-login failed silently
                 }
             }
         };
@@ -218,7 +218,6 @@ export default function BusinessPortal() {
 
             // Sincronización en tiempo real
             const subscription = serviceAdapter.subscribeToBookings(selectedBusinessId, (payload) => {
-                console.log('Real-time update:', payload);
 
                 // Enriquecer el payload con datos de la empresa actual (nombres de servicios/canchas)
                 // Esto es necesario porque el payload de Realtime solo trae IDs planos.

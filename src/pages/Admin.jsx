@@ -44,7 +44,6 @@ export default function Admin() {
                 supabaseService.getPromotions(),
                 supabaseService.getBookings(null, null)
             ]);
-            console.log('Fetched bookings:', bookings);
             setBusinessList(businesses || []);
             setPromotionList(promotions || []);
             setBookingList(bookings?.bookings || []);
@@ -92,14 +91,12 @@ export default function Admin() {
 
             let count = 0;
             for (const business of mockBusinesses) {
-                console.log('Seeding business:', business.name);
                 await supabaseService.createBusiness(business);
                 count++;
             }
 
             // Seed promotions
             for (const promo of mockPromotions) {
-                console.log('Seeding promotion:', promo.title);
                 await supabaseService.createPromotion({
                     title: promo.title,
                     description: promo.description || '',

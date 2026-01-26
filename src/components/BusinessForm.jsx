@@ -68,13 +68,6 @@ export default function BusinessForm({ business, onSave, onCancel }) {
             hours = defaultHours;
         }
 
-        console.log('🔍 BusinessForm loaded hours:', {
-            raw: business.hours,
-            parsed: hours,
-            fridaySchedule: hours?.friday,
-            fridayRanges: hours?.friday?.ranges
-        });
-
         return {
             ...business,
             hours,

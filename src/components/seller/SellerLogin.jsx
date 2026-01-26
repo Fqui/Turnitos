@@ -27,7 +27,6 @@ const SellerLogin = () => {
                 return;
             } catch (superAdminErr) {
                 // If super admin login fails, continue to try seller login
-                console.log('Not a super admin, trying seller login...');
             }
 
             // Try seller login
