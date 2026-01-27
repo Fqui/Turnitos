@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quincho El Paraíso - Reserva tu Evento</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F8F9FA;
+            color: #1a1a1a;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            height: 65vh;
+            min-height: 500px;
+            background: linear-gradient(135deg, #2D3748 0%, #1A202C 100%);
+            overflow: hidden;
+        }
+
+        .hero-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.7;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.6) 100%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 40px;
+            color: white;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            width: fit-content;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: 900;
+            margin-bottom: 12px;
+            line-height: 1.1;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-location {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            opacity: 0.95;
+            margin-bottom: 24px;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .hero-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 1fr 450px;
+            gap: 32px;
+            margin-top: -80px;
+            position: relative;
+            z-index: 20;
+        }
+
+        /* Left Column */
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Gallery Section */
+        .gallery-section {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .see-all {
+            color: #84CC16;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 12px;
+            height: 400px;
+        }
+
+        .gallery-main {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .gallery-main:hover {
+            transform: scale(1.02);
+        }
+
+        .gallery-main img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-badge {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .gallery-side {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .gallery-item {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-more {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        /* Amenities Section */
+        .amenities-section {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        .amenities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 16px;
+        }
+
+        .amenity-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+            background: #F8F9FA;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .amenity-card:hover {
+            background: #84CC16;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(132, 204, 22, 0.25);
+        }
+
+        .amenity-card:hover .amenity-icon {
+            transform: scale(1.1);
+        }
+
+        .amenity-card:hover .amenity-label {
+            color: white;
+        }
+
+        .amenity-icon {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .amenity-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #4A5568;
+            text-align: center;
+            transition: color 0.3s ease;
+        }
+
+        /* Description Section */
+        .description-section {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        .description-text {
+            color: #4A5568;
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .read-more {
+            color: #84CC16;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* Right Column - Booking Panel */
+        .booking-panel {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+
+        .price-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid #F1F5F9;
+        }
+
+        .price-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .price-label {
+            font-size: 13px;
+            color: #64748B;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .price-value {
+            font-size: 36px;
+            font-weight: 900;
+            color: #1a1a1a;
+            line-height: 1;
+        }
+
+        .price-unit {
+            font-size: 16px;
+            color: #64748B;
+            font-weight: 500;
+        }
+
+        .rating-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #FEF3C7;
+            padding: 8px 16px;
+            border-radius: 12px;
+        }
+
+        .rating-star {
+            color: #F59E0B;
+            font-size: 18px;
+        }
+
+        .rating-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        /* Calendar */
+        .calendar-container {
+            margin-bottom: 24px;
+        }
+
+        .calendar-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-month {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .calendar-nav {
+            background: #F8F9FA;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: #1a1a1a;
+        }
+
+        .calendar-nav:hover {
+            background: #84CC16;
+            color: white;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: 600;
+            color: #94A3B8;
+            font-size: 11px;
+            padding: 8px 0;
+            text-transform: uppercase;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .calendar-day:hover {
+            background: #F1F5F9;
+        }
+
+        .calendar-day.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .calendar-day.available {
+            color: #1a1a1a;
+        }
+
+        .calendar-day.available:hover {
+            background: #E8F5E9;
+            color: #84CC16;
+        }
+
+        .calendar-day.selected {
+            background: #84CC16;
+            color: white;
+            box-shadow: 0 4px 12px rgba(132, 204, 22, 0.3);
+        }
+
+        .calendar-day.booked {
+            background: #FEE2E2;
+            color: #DC2626;
+            cursor: not-allowed;
+        }
+
+        .calendar-day.booked::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: #DC2626;
+            border-radius: 50%;
+        }
+
+        /* Guest Counter */
+        .guest-section {
+            margin-bottom: 24px;
+        }
+
+        .guest-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+        }
+
+        .guest-counter {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #F8F9FA;
+            border-radius: 16px;
+            padding: 16px 20px;
+        }
+
+        .guest-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: none;
+            background: white;
+            color: #1a1a1a;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .guest-btn:hover {
+            background: #84CC16;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .guest-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        .guest-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .guest-count {
+            font-size: 28px;
+            font-weight: 900;
+            color: #1a1a1a;
+        }
+
+        .guest-tier {
+            font-size: 12px;
+            color: #64748B;
+            font-weight: 500;
+        }
+
+        /* Price Breakdown */
+        .price-breakdown {
+            background: #F8F9FA;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .breakdown-row:last-child {
+            margin-bottom: 0;
+            padding-top: 12px;
+            border-top: 2px solid #E2E8F0;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .breakdown-label {
+            color: #64748B;
+        }
+
+        .breakdown-value {
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .breakdown-total {
+            color: #84CC16;
+            font-size: 24px;
+            font-weight: 900;
+        }
+
+        /* Reserve Button */
+        .reserve-btn {
+            width: 100%;
+            padding: 18px;
+            background: #84CC16;
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 24px rgba(132, 204, 22, 0.3);
+        }
+
+        .reserve-btn:hover {
+            background: #65A30D;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(132, 204, 22, 0.4);
+        }
+
+        .reserve-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .reserve-note {
+            text-align: center;
+            font-size: 12px;
+            color: #94A3B8;
+            margin-top: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                padding: 24px;
+            }
+
+            .booking-panel {
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 32px;
+            }
+
+            .gallery-grid {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .gallery-side {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 200px;
+            }
+
+            .amenities-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Hero Section -->
+    <div class="hero">
+        <img class="hero-image" src="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=1600&h=900&fit=crop"
+            alt="Quincho El Paraíso">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span>⭐</span>
+                <span>Premium Venue</span>
+            </div>
+            <h1 class="hero-title">Quincho El Paraíso</h1>
+            <div class="hero-location">
+                <span>📍</span>
+                <span>Av. Circunvalación 1234, La Rioja</span>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span>👥</span>
+                    <span>Hasta 100 personas</span>
+                </div>
+                <div class="hero-stat">
+                    <span>🏊</span>
+                    <span>Piscina climatizada</span>
+                </div>
+                <div class="hero-stat">
+                    <span>🔥</span>
+                    <span>Parrilla profesional</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="main-content">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Gallery Section -->
+                <div class="gallery-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Galería</h2>
+                        <a href="#" class="see-all">Ver todas →</a>
+                    </div>
+                    <div class="gallery-grid">
+                        <div class="gallery-main">
+                            <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop"
+                                alt="Piscina">
+                            <div class="gallery-badge">Piscina Principal</div>
+                        </div>
+                        <div class="gallery-side">
+                            <div class="gallery-item">
+                                <img src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop"
+                                    alt="Parrilla">
+                            </div>
+                            <div class="gallery-item">
+                                <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop"
+                                    alt="Interior">
+                                <div class="gallery-more">+12 fotos</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Amenities Section -->
+                <div class="amenities-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Comodidades Destacadas</h2>
+                    </div>
+                    <div class="amenities-grid">
+                        <div class="amenity-card">
+                            <div class="amenity-icon">📶</div>
+                            <div class="amenity-label">WiFi</div>
+                        </div>
+                        <div class="amenity-card">
+                            <div class="amenity-icon">🏊</div>
+                            <div class="amenity-label">Piscina</div>
+                        </div>
+                        <div class="amenity-card">
+                            <div class="amenity-icon">🚗</div>
+                            <div class="amenity-label">Parking</div>
+                        </div>
+                        <div class="amenity-card">
+                            <div class="amenity-icon">❄️</div>
+                            <div class="amenity-label">A/C</div>
+                        </div>
+                        <div class="amenity-card">
+                            <div class="amenity-icon">🔥</div>
+                            <div class="amenity-label">Parrilla</div>
+                        </div>
+                        <div class="amenity-card">
+                            <div class="amenity-icon">🔊</div>
+                            <div class="amenity-label">Sonido</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description Section -->
+                <div class="description-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Sobre el Espacio</h2>
+                    </div>
+                    <p class="description-text">
+                        Quincho El Paraíso es el lugar perfecto para tus eventos y celebraciones.
+                        Contamos con un amplio espacio al aire libre, piscina climatizada, parrilla
+                        profesional y todas las comodidades que necesitas para que tu evento sea
+                        inolvidable. Ideal para cumpleaños, reuniones familiares, eventos corporativos
+                        y celebraciones especiales.
+                    </p>
+                    <a href="#" class="read-more">Leer más →</a>
+                </div>
+            </div>
+
+            <!-- Right Column - Booking Panel -->
+            <div class="booking-panel">
+                <div class="price-header">
+                    <div class="price-info">
+                        <div class="price-label">Desde</div>
+                        <div>
+                            <span class="price-value">$3,000</span>
+                            <span class="price-unit">/hora</span>
+                        </div>
+                    </div>
+                    <div class="rating-badge">
+                        <span class="rating-star">★</span>
+                        <span class="rating-value">4.9</span>
+                    </div>
+                </div>
+
+                <!-- Calendar -->
+                <div class="calendar-container">
+                    <div class="calendar-label">Selecciona una fecha</div>
+                    <div class="calendar-header">
+                        <button class="calendar-nav" onclick="previousMonth()">‹</button>
+                        <div class="calendar-month" id="currentMonth">Enero 2026</div>
+                        <button class="calendar-nav" onclick="nextMonth()">›</button>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid">
+                        <div class="calendar-day-header">D</div>
+                        <div class="calendar-day-header">L</div>
+                        <div class="calendar-day-header">M</div>
+                        <div class="calendar-day-header">M</div>
+                        <div class="calendar-day-header">J</div>
+                        <div class="calendar-day-header">V</div>
+                        <div class="calendar-day-header">S</div>
+                    </div>
+                </div>
+
+                <!-- Guest Counter -->
+                <div class="guest-section">
+                    <div class="guest-label">Cantidad de invitados</div>
+                    <div class="guest-counter">
+                        <button class="guest-btn" onclick="decrementGuests()">−</button>
+                        <div class="guest-display">
+                            <div class="guest-count" id="guestCount">30</div>
+                            <div class="guest-tier" id="guestTier">1-30 personas</div>
+                        </div>
+                        <button class="guest-btn" onclick="incrementGuests()">+</button>
+                    </div>
+                </div>
+
+                <!-- Price Breakdown -->
+                <div class="price-breakdown">
+                    <div class="breakdown-row">
+                        <span class="breakdown-label">Precio por hora</span>
+                        <span class="breakdown-value" id="pricePerHour">$3,000</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span class="breakdown-label">Duración (4 horas)</span>
+                        <span class="breakdown-value">×4</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span class="breakdown-label">Total</span>
+                        <span class="breakdown-total" id="totalPrice">$12,000</span>
+                    </div>
+                </div>
+
+                <!-- Reserve Button -->
+                <button class="reserve-btn" id="reserveBtn" disabled onclick="makeReservation()">
+                    Selecciona una fecha
+                </button>
+                <div class="reserve-note">No se realizará ningún cargo todavía</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentDate = new Date();
+        let selectedDate = null;
+        let guestCount = 30;
+        const minGuests = 1;
+        const maxGuests = 100;
+        const defaultHours = 4;
+
+        // Pricing tiers
+        const pricingTiers = [
+            { min: 1, max: 30, price: 3000, label: '1-30 personas' },
+            { min: 31, max: 60, price: 4500, label: '31-60 personas' },
+            { min: 61, max: 100, price: 6000, label: '61-100 personas' }
+        ];
+
+        // Simulated booked dates
+        const bookedDates = [
+            '2026-01-15', '2026-01-22', '2026-01-29',
+            '2026-02-14', '2026-02-21'
+        ];
+
+        // Initialize
+        renderCalendar();
+        updatePrice();
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            document.getElementById('currentMonth').textContent = `${monthNames[month]} ${year}`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const grid = document.getElementById('calendarGrid');
+            const headers = grid.querySelectorAll('.calendar-day-header');
+            grid.innerHTML = '';
+            headers.forEach(header => grid.appendChild(header));
+
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day disabled';
+                grid.appendChild(emptyDay);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDate = new Date(year, month, day);
+                dayDate.setHours(0, 0, 0, 0);
+                const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.textContent = day;
+
+                if (dayDate < today) {
+                    dayElement.classList.add('disabled');
+                } else if (bookedDates.includes(dateString)) {
+                    dayElement.classList.add('booked');
+                } else {
+                    dayElement.classList.add('available');
+                    dayElement.onclick = () => selectDate(dayDate, dateString);
+                }
+
+                if (selectedDate && selectedDate === dateString) {
+                    dayElement.classList.add('selected');
+                }
+
+                grid.appendChild(dayElement);
+            }
+        }
+
+        function selectDate(date, dateString) {
+            selectedDate = dateString;
+            renderCalendar();
+
+            const btn = document.getElementById('reserveBtn');
+            btn.disabled = false;
+            btn.textContent = 'Reservar Ahora';
+        }
+
+        function previousMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        }
+
+        function incrementGuests() {
+            if (guestCount < maxGuests) {
+                guestCount += 5;
+                if (guestCount > maxGuests) guestCount = maxGuests;
+                updateGuestDisplay();
+            }
+        }
+
+        function decrementGuests() {
+            if (guestCount > minGuests) {
+                guestCount -= 5;
+                if (guestCount < minGuests) guestCount = minGuests;
+                updateGuestDisplay();
+            }
+        }
+
+        function updateGuestDisplay() {
+            document.getElementById('guestCount').textContent = guestCount;
+
+            const tier = pricingTiers.find(t => guestCount >= t.min && guestCount <= t.max);
+            document.getElementById('guestTier').textContent = tier.label;
+
+            updatePrice();
+        }
+
+        function getCurrentPrice() {
+            const tier = pricingTiers.find(t => guestCount >= t.min && guestCount <= t.max);
+            return tier ? tier.price : pricingTiers[0].price;
+        }
+
+        function updatePrice() {
+            const pricePerHour = getCurrentPrice();
+            const totalPrice = pricePerHour * defaultHours;
+
+            document.getElementById('pricePerHour').textContent = `$${pricePerHour.toLocaleString('es-AR')}`;
+            document.getElementById('totalPrice').textContent = `$${totalPrice.toLocaleString('es-AR')}`;
+        }
+
+        function makeReservation() {
+            if (!selectedDate) {
+                alert('Por favor selecciona una fecha');
+                return;
+            }
+
+            const pricePerHour = getCurrentPrice();
+            const totalPrice = pricePerHour * defaultHours;
+
+            alert(`¡Reserva confirmada!\n\nInvitados: ${guestCount} personas\nPrecio: $${totalPrice.toLocaleString('es-AR')}\n\n¡Nos vemos pronto!`);
+        }
+    </script>
+</body>
+
+</html>

@@ -16,16 +16,41 @@ class SupabaseService {
             try {
                 business.hours = JSON.parse(business.hours);
             } catch (e) {
-                console.error('Error parsing business hours JSON:', e);
+                // Error parsing business hours JSON
             }
         }
 
-        // Ensure payment_settings is an object if it comes as a stringified JSON
-        if (typeof business.payment_settings === 'string' && business.payment_settings.trim().startsWith('{')) {
+        // Ensure payment_settings is properly parsed
+        if (business.payment_settings) {
+            if (typeof business.payment_settings === 'string') {
+                try {
+                    business.payment_settings = JSON.parse(business.payment_settings);
+                } catch (e) {
+                    // Failed to parse payment_settings
+                    business.payment_settings = {};
+                }
+            }
+        } else {
+            business.payment_settings = {};
+        }
+
+        // Ensure time_ranges is an array
+        if (business.time_ranges && typeof business.time_ranges === 'string') {
             try {
-                business.payment_settings = JSON.parse(business.payment_settings);
+                business.time_ranges = JSON.parse(business.time_ranges);
             } catch (e) {
-                console.error('Error parsing payment_settings JSON:', e);
+                // Failed to parse time_ranges
+                business.time_ranges = [];
+            }
+        }
+
+        // Ensure operating_hours is properly parsed
+        if (business.operating_hours && typeof business.operating_hours === 'string') {
+            try {
+                business.operating_hours = JSON.parse(business.operating_hours);
+            } catch (e) {
+                // Failed to parse operating_hours
+                business.operating_hours = {};
             }
         }
         // If payment_settings is already an object (from JSONB), keep it as is
@@ -207,7 +232,6 @@ class SupabaseService {
         });
 
         if (error) {
-            console.error('Login RPC error:', error);
             throw new Error('Error al iniciar sesión');
         }
 
@@ -297,7 +321,6 @@ class SupabaseService {
                 .insert(subcategoriesToInsert);
 
             if (subcategoriesError) {
-                console.error('Error inserting subcategories:', subcategoriesError);
                 throw new Error(`Error guardando subcategorías: ${subcategoriesError.message}`);
             }
         }
@@ -323,7 +346,7 @@ class SupabaseService {
                 .select();
 
             if (servicesError) {
-                console.error('Error inserting services:', servicesError);
+                // Error inserting services
             } else if (insertedServices) {
                 // Create service-specialist associations using real service IDs
                 const serviceSpecialistAssociations = [];
@@ -343,7 +366,7 @@ class SupabaseService {
                         .from('service_specialists')
                         .insert(serviceSpecialistAssociations);
 
-                    if (assocError) console.error('Error creating service-specialist associations:', assocError);
+                    if (assocError) { /* Error creating service-specialist associations */ }
                 }
             }
         }
@@ -386,7 +409,6 @@ class SupabaseService {
                 .insert(courtsToInsert);
 
             if (courtsError) {
-                console.error('Error inserting courts:', courtsError);
                 throw new Error(`Error reservando canchas: ${courtsError.message}`);
             }
         }
@@ -409,7 +431,7 @@ class SupabaseService {
                 .select();
 
             if (specialistsError) {
-                console.error('Error inserting specialists:', specialistsError);
+                // Error inserting specialists
             }
         }
 
@@ -486,7 +508,7 @@ class SupabaseService {
                     .delete()
                     .in('id', idsToDelete);
 
-                if (deleteError) console.error('Error deleting removed services:', deleteError);
+                if (deleteError) { /* Error deleting removed services */ }
             }
 
             // C. Split into Updates (Upsert) and Inserts (New)
@@ -527,7 +549,7 @@ class SupabaseService {
                     .from('services')
                     .upsert(servicesToUpdate);
 
-                if (updateError) console.error('Error updating services:', updateError);
+                if (updateError) { /* Error updating services */ }
             }
 
             // E. Execute Inserts
@@ -538,7 +560,7 @@ class SupabaseService {
                     .select();
 
                 if (insertError) {
-                    console.error('Error inserting new services:', insertError);
+                    // Error inserting new services
                 } else if (insertedServices) {
 
 
@@ -576,7 +598,7 @@ class SupabaseService {
                     .delete()
                     .in('id', idsToDelete);
 
-                if (deleteError) console.error('Error deleting removed courts:', deleteError);
+                if (deleteError) { /* Error deleting removed courts */ }
             }
 
             // C. Upsert (Insert or Update) remaining courts
@@ -612,7 +634,7 @@ class SupabaseService {
                     .from('courts')
                     .upsert(courtsToUpsert, { onConflict: 'id' });
 
-                if (courtsError) console.error('Error upserting courts:', courtsError);
+                if (courtsError) { /* Error upserting courts */ }
             }
         }
 
@@ -645,7 +667,7 @@ class SupabaseService {
                     .delete()
                     .in('id', idsToDelete);
 
-                if (deleteError) console.error('Error deleting removed specialists:', deleteError);
+                if (deleteError) { /* Error deleting removed specialists */ }
             }
 
             // C. Split into Updates and Inserts
@@ -676,7 +698,7 @@ class SupabaseService {
                     .from('specialists')
                     .upsert(specialistsToUpdate);
 
-                if (updateError) console.error('Error updating specialists:', updateError);
+                if (updateError) { /* Error updating specialists */ }
             }
 
             // E. Execute Inserts
@@ -685,7 +707,7 @@ class SupabaseService {
                     .from('specialists')
                     .insert(specialistsToInsert);
 
-                if (insertError) console.error('Error inserting new specialists:', insertError);
+                if (insertError) { /* Error inserting new specialists */ }
             }
 
             // F. Update service-specialist associations
@@ -721,7 +743,7 @@ class SupabaseService {
                             .insert(serviceSpecialistAssociations);
 
                         if (assocError) {
-                            console.error('Error creating service-specialist associations:', assocError);
+                            // Error creating service-specialist associations
                         }
                     }
                 }
@@ -787,7 +809,7 @@ class SupabaseService {
                     .from('courts')
                     .insert(courtsToInsert);
 
-                if (courtsError) console.error('Error updating courts in patch:', courtsError);
+                if (courtsError) { /* Error updating courts in patch */ }
             }
         }
 
@@ -817,8 +839,7 @@ class SupabaseService {
                     .in('id', idsToDelete);
 
                 if (deleteError) {
-                    console.error('Error deleting removed services:', deleteError);
-                    // If delete fails (e.g. due to bookings), we should probably warn or handle it, 
+                    // If delete fails (e.g. due to bookings), we should probably warn or handle it,
                     // but for now we proceed to upsert the others.
                 }
             }
@@ -855,7 +876,7 @@ class SupabaseService {
                     .from('services')
                     .upsert(servicesToUpsert); // Use UPSERT instead of INSERT
 
-                if (servicesError) console.error('Error updating services in patch:', servicesError);
+                if (servicesError) { /* Error updating services in patch */ }
             }
         }
 
@@ -866,7 +887,7 @@ class SupabaseService {
                 .update({ service_categories: updates.service_categories })
                 .eq('id', businessId);
 
-            if (categoriesError) console.error('Error updating service_categories:', categoriesError);
+            if (categoriesError) { /* Error updating service_categories */ }
         }
 
         // 5. Handle Specialists update
@@ -882,7 +903,7 @@ class SupabaseService {
                 .filter(sp => sp.id && sp.id.length >= 32)
                 .map(sp => sp.id);
 
-            // B. Delete removed specialists
+            // B. Identify IDs to delete
             const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
             if (idsToDelete.length > 0) {
                 await supabase.from('service_specialists').delete().in('specialist_id', idsToDelete);
@@ -903,7 +924,7 @@ class SupabaseService {
                     .from('specialists')
                     .upsert(specialistsToUpsert);
 
-                if (upsertError) console.error('Error upserting specialists in patch:', upsertError);
+                if (upsertError) { /* Error upserting specialists in patch */ }
             }
         }
 
@@ -1009,16 +1030,16 @@ class SupabaseService {
                     if (match) {
                         finalResourceId = match.id;
                     } else {
-                        console.warn(`❌ Resource not found for legacy ID: ${legacyId}. Checked ${resources.length} resources.`);
+                        // Resource not found for legacy ID
                         finalResourceId = legacyId;
                     }
                 } else {
-                    console.warn('❌ No resources found for this business/type');
+                    // No resources found for this business/type
                     finalResourceId = legacyId;
                 }
 
             } catch (err) {
-                console.warn('Error resolving resource_id:', err);
+                // Error resolving resource_id
                 finalResourceId = legacyId;
             }
         }
@@ -1049,7 +1070,6 @@ class SupabaseService {
                 .gt('end_time', startTime); // Overlap logic: End > NewStart
 
             if (conflictError) {
-                console.error('Error checking resource conflict:', conflictError);
                 throw conflictError;
             }
 
@@ -1075,7 +1095,6 @@ class SupabaseService {
             }
         } catch (validationError) {
             // If validation fails, throw the error to prevent booking creation
-            console.error('❌ Business capacity validation failed:', validationError);
             throw validationError;
         }
 
@@ -1169,11 +1188,11 @@ class SupabaseService {
                         updateData.court_id = null; // Clear court_id
                         updateData.resource_id = newItemId;
                     } else {
-                        console.warn(`⚠️ moveBooking: Resource ID ${newItemId} not found in courts or services.`);
+                        // moveBooking: Resource ID not found in courts or services.
                     }
                 }
             } catch (err) {
-                console.error('Error verifying resource type in moveBooking:', err);
+                // Error verifying resource type in moveBooking
                 // Fallback: Do not update IDs if verification fails, just date/time
             }
         }
@@ -1530,7 +1549,7 @@ class SupabaseService {
             .eq('id', businessId);
 
         if (capacityError) {
-            console.error('Error updating business capacity:', capacityError);
+            // Error updating business capacity
             // Don't throw - subscription was updated successfully
         }
 
@@ -1763,7 +1782,6 @@ class SupabaseService {
             }
 
             if (!plan) {
-                console.warn('No subscription plan found for default assignment.');
                 throw new Error('No subscription plan found');
             }
 
@@ -1788,7 +1806,6 @@ class SupabaseService {
             await supabase.from('businesses').update({ capacity: plan.spaces_included }).eq('id', businessId);
 
         } catch (error) {
-            console.error('Error creating default subscription:', error);
             throw error; // Block creation if subscription fails (critical for triggers)
         }
     }
@@ -1886,7 +1903,7 @@ class SupabaseService {
                     planId = plans[0].id;
                 }
             } catch (err) {
-                console.error("Error fetching default plan:", err);
+                // Error fetching default plan
             }
         }
 
@@ -2510,14 +2527,14 @@ class SupabaseService {
 
         if (seller.error) throw seller.error;
 
-        const totalCommissions = commissions.data?.reduce((sum, c) =>
-            sum + parseFloat(c.commission_amount || 0), 0) || 0;
+        const total = commissions.data?.reduce((sum, comm) =>
+            sum + parseFloat(comm.commission_amount || 0), 0) || 0;
 
         return {
             seller: seller.data,
             businesses,
             recentCommissions: commissions.data || [],
-            totalCommissions,
+            totalCommissions: total,
             totalBusinesses: businesses.length,
             activeBusinesses: businesses.filter(b => b.subscription_status === 'active').length
         };
@@ -2865,7 +2882,7 @@ class SupabaseService {
             .eq('service_id', serviceId);
 
         if (error) {
-            console.error('Error fetching qualified specialists:', error);
+            // Error fetching qualified specialists
             return [];
         }
 
@@ -2902,7 +2919,7 @@ class SupabaseService {
             .eq('service_id', serviceId);
 
         if (deleteError) {
-            console.error('Error deleting service specialists:', deleteError);
+            // Error deleting service specialists
             return false;
         }
 
@@ -2921,7 +2938,7 @@ class SupabaseService {
             );
 
         if (insertError) {
-            console.error('Error updating service specialists:', insertError);
+            // Error updating service specialists
             return false;
         }
 

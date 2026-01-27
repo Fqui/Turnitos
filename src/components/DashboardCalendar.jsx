@@ -113,16 +113,7 @@ export default function DashboardCalendar({
 
     // 🔍 DEBUG: Log business data to diagnose empty calendar
     /*
-    console.log('📊 DashboardCalendar - Business Data:', {
-        businessId: business?.id,
-        businessName: business?.name,
-        courtsCount: business?.courts?.length || 0,
-        specialistsCount: business?.specialists?.length || 0,
-        bookingsCount: bookings?.length || 0,
-        businessHours,
-        hasPadelCourts,
-        padelCourtsCount: padelCourts.length
-    });
+    // Business data debug
     */
 
     // Helper to get start of week (Monday)
@@ -615,14 +606,7 @@ export default function DashboardCalendar({
 
                                         /*
                                         if (b.status === 'blocked') {
-                                           console.log('🔒 Debug Blocked:', {
-                                               bTime: b.time,
-                                               slotTime: time,
-                                               bookingStartMinutes,
-                                               bookingEndMinutes,
-                                               slotMinutes,
-                                               match: slotMinutes >= bookingStartMinutes && slotMinutes < bookingEndMinutes
-                                           });
+                                            // Debug blocked booking
                                         }
                                         */
 

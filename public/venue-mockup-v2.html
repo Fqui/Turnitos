@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quincho El Paraíso - Reserva tu Evento</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #1a1a1a;
+            line-height: 1.6;
+            padding-bottom: 60px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            text-align: center;
+        }
+
+        .business-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto 16px;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        }
+
+        .business-name {
+            font-size: 32px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .business-location {
+            color: #666;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 24px;
+        }
+
+        /* Calendar Section */
+        .calendar-section {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Calendar */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            color: white;
+        }
+
+        .calendar-nav {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .calendar-nav:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .calendar-month {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: 700;
+            color: #666;
+            font-size: 12px;
+            padding: 12px 0;
+            text-transform: uppercase;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            background: #f8f9fa;
+            border: 2px solid transparent;
+        }
+
+        .calendar-day:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .calendar-day.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .calendar-day.available {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-color: #667eea;
+        }
+
+        .calendar-day.available:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+        }
+
+        .calendar-day.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .calendar-day.booked {
+            background: #fee;
+            color: #c33;
+            cursor: not-allowed;
+        }
+
+        .day-number {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .day-status {
+            font-size: 9px;
+            margin-top: 2px;
+            opacity: 0.8;
+        }
+
+        /* Booking Panel */
+        .booking-panel {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            position: sticky;
+            top: 20px;
+        }
+
+        .price-calculator {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            color: white;
+        }
+
+        .price-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .price-value {
+            font-size: 48px;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .price-detail {
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        /* Guest Counter */
+        .guest-counter {
+            margin-bottom: 24px;
+        }
+
+        .counter-label {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1a1a1a;
+        }
+
+        .counter-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 12px 20px;
+        }
+
+        .counter-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .counter-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .counter-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        .counter-value {
+            font-size: 32px;
+            font-weight: 900;
+            color: #667eea;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        /* Pricing Tiers */
+        .pricing-tiers {
+            margin-bottom: 24px;
+        }
+
+        .tier {
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tier.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-color: #667eea;
+        }
+
+        .tier-range {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .tier-price {
+            font-size: 16px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        /* Selected Date Info */
+        .selected-date-info {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .selected-date-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .selected-date-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        /* Reserve Button */
+        .reserve-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .reserve-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+        }
+
+        .reserve-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Info Cards */
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .info-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .info-value {
+            font-size: 24px;
+            font-weight: 900;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        /* Legend */
+        .calendar-legend {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+        }
+
+        .legend-available {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            border: 2px solid #667eea;
+        }
+
+        .legend-booked {
+            background: #fee;
+            border: 2px solid #c33;
+        }
+
+        .legend-selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .booking-panel {
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .info-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .calendar-day-header {
+                font-size: 10px;
+            }
+
+            .day-number {
+                font-size: 14px;
+            }
+
+            .business-name {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="business-logo">🏡</div>
+            <h1 class="business-name">Quincho El Paraíso</h1>
+            <div class="business-location">
+                <span>📍</span>
+                <span>Av. Circunvalación 1234, La Rioja</span>
+            </div>
+        </div>
+
+        <!-- Info Cards -->
+        <div class="info-cards">
+            <div class="info-card">
+                <div class="info-icon">👥</div>
+                <div class="info-value">1-100</div>
+                <div class="info-label">Capacidad</div>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">🕐</div>
+                <div class="info-value">4-12h</div>
+                <div class="info-label">Duración</div>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">💰</div>
+                <div class="info-value">Desde $3,000</div>
+                <div class="info-label">Precio Base</div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Calendar Section -->
+            <div class="calendar-section">
+                <h2 class="section-title">
+                    <span>📅</span>
+                    <span>Selecciona una Fecha</span>
+                </h2>
+
+                <!-- Calendar -->
+                <div class="calendar-header">
+                    <button class="calendar-nav" onclick="previousMonth()">‹</button>
+                    <div class="calendar-month" id="currentMonth">Enero 2026</div>
+                    <button class="calendar-nav" onclick="nextMonth()">›</button>
+                </div>
+
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Day headers -->
+                    <div class="calendar-day-header">Dom</div>
+                    <div class="calendar-day-header">Lun</div>
+                    <div class="calendar-day-header">Mar</div>
+                    <div class="calendar-day-header">Mié</div>
+                    <div class="calendar-day-header">Jue</div>
+                    <div class="calendar-day-header">Vie</div>
+                    <div class="calendar-day-header">Sáb</div>
+                </div>
+
+                <!-- Legend -->
+                <div class="calendar-legend">
+                    <div class="legend-item">
+                        <div class="legend-color legend-available"></div>
+                        <span>Disponible</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-booked"></div>
+                        <span>Reservado</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-selected"></div>
+                        <span>Seleccionado</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Panel -->
+            <div class="booking-panel">
+                <h2 class="section-title">
+                    <span>🎯</span>
+                    <span>Tu Reserva</span>
+                </h2>
+
+                <!-- Selected Date -->
+                <div class="selected-date-info" id="selectedDateInfo" style="display: none;">
+                    <div class="selected-date-label">Fecha Seleccionada</div>
+                    <div class="selected-date-value" id="selectedDateValue">-</div>
+                </div>
+
+                <!-- Guest Counter -->
+                <div class="guest-counter">
+                    <div class="counter-label">👥 Cantidad de Invitados</div>
+                    <div class="counter-controls">
+                        <button class="counter-btn" onclick="decrementGuests()">−</button>
+                        <div class="counter-value" id="guestCount">30</div>
+                        <button class="counter-btn" onclick="incrementGuests()">+</button>
+                    </div>
+                </div>
+
+                <!-- Pricing Tiers -->
+                <div class="pricing-tiers">
+                    <div class="tier active" id="tier1">
+                        <span class="tier-range">1-30 personas</span>
+                        <span class="tier-price">$3,000/hora</span>
+                    </div>
+                    <div class="tier" id="tier2">
+                        <span class="tier-range">31-60 personas</span>
+                        <span class="tier-price">$4,500/hora</span>
+                    </div>
+                    <div class="tier" id="tier3">
+                        <span class="tier-range">61-100 personas</span>
+                        <span class="tier-price">$6,000/hora</span>
+                    </div>
+                </div>
+
+                <!-- Price Calculator -->
+                <div class="price-calculator">
+                    <div class="price-label">Precio Estimado (4 horas)</div>
+                    <div class="price-value" id="totalPrice">$12,000</div>
+                    <div class="price-detail" id="priceDetail">30 personas × $3,000/hora × 4 horas</div>
+                </div>
+
+                <!-- Reserve Button -->
+                <button class="reserve-btn" id="reserveBtn" disabled onclick="makeReservation()">
+                    Selecciona una fecha para continuar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentDate = new Date();
+        let selectedDate = null;
+        let guestCount = 30;
+        const minGuests = 1;
+        const maxGuests = 100;
+        const defaultHours = 4;
+
+        // Pricing tiers
+        const pricingTiers = [
+            { min: 1, max: 30, price: 3000 },
+            { min: 31, max: 60, price: 4500 },
+            { min: 61, max: 100, price: 6000 }
+        ];
+
+        // Simulated booked dates (format: YYYY-MM-DD)
+        const bookedDates = [
+            '2026-01-15',
+            '2026-01-22',
+            '2026-01-29',
+            '2026-02-14',
+            '2026-02-21'
+        ];
+
+        // Initialize
+        renderCalendar();
+        updatePrice();
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            // Update month display
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            document.getElementById('currentMonth').textContent = `${monthNames[month]} ${year}`;
+
+            // Get first day of month and number of days
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Clear existing days
+            const grid = document.getElementById('calendarGrid');
+            const headers = grid.querySelectorAll('.calendar-day-header');
+            grid.innerHTML = '';
+            headers.forEach(header => grid.appendChild(header));
+
+            // Add empty cells for days before month starts
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day disabled';
+                grid.appendChild(emptyDay);
+            }
+
+            // Add days of month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDate = new Date(year, month, day);
+                dayDate.setHours(0, 0, 0, 0);
+                const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+
+                // Check if date is in the past
+                if (dayDate < today) {
+                    dayElement.classList.add('disabled');
+                }
+                // Check if date is booked
+                else if (bookedDates.includes(dateString)) {
+                    dayElement.classList.add('booked');
+                    dayElement.innerHTML = `
+                        <span class="day-number">${day}</span>
+                        <span class="day-status">Reservado</span>
+                    `;
+                }
+                // Available date
+                else {
+                    dayElement.classList.add('available');
+                    dayElement.innerHTML = `
+                        <span class="day-number">${day}</span>
+                        <span class="day-status">Disponible</span>
+                    `;
+                    dayElement.onclick = () => selectDate(dayDate, dateString);
+                }
+
+                // Check if this is the selected date
+                if (selectedDate && selectedDate === dateString) {
+                    dayElement.classList.add('selected');
+                }
+
+                if (!dayElement.classList.contains('booked') && !dayElement.classList.contains('disabled')) {
+                    dayElement.innerHTML = `
+                        <span class="day-number">${day}</span>
+                        <span class="day-status">Disponible</span>
+                    `;
+                }
+
+                grid.appendChild(dayElement);
+            }
+        }
+
+        function selectDate(date, dateString) {
+            selectedDate = dateString;
+            renderCalendar();
+
+            // Update selected date display
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = date.toLocaleDateString('es-ES', options);
+            document.getElementById('selectedDateValue').textContent = formattedDate;
+            document.getElementById('selectedDateInfo').style.display = 'block';
+
+            // Enable reserve button
+            const btn = document.getElementById('reserveBtn');
+            btn.disabled = false;
+            btn.textContent = 'Reservar Ahora';
+        }
+
+        function previousMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        }
+
+        function incrementGuests() {
+            if (guestCount < maxGuests) {
+                guestCount += 5;
+                if (guestCount > maxGuests) guestCount = maxGuests;
+                updateGuestDisplay();
+            }
+        }
+
+        function decrementGuests() {
+            if (guestCount > minGuests) {
+                guestCount -= 5;
+                if (guestCount < minGuests) guestCount = minGuests;
+                updateGuestDisplay();
+            }
+        }
+
+        function updateGuestDisplay() {
+            document.getElementById('guestCount').textContent = guestCount;
+            updatePrice();
+            updateActiveTier();
+        }
+
+        function updateActiveTier() {
+            // Remove active class from all tiers
+            document.querySelectorAll('.tier').forEach(tier => tier.classList.remove('active'));
+
+            // Add active class to current tier
+            if (guestCount <= 30) {
+                document.getElementById('tier1').classList.add('active');
+            } else if (guestCount <= 60) {
+                document.getElementById('tier2').classList.add('active');
+            } else {
+                document.getElementById('tier3').classList.add('active');
+            }
+        }
+
+        function getCurrentPrice() {
+            for (let tier of pricingTiers) {
+                if (guestCount >= tier.min && guestCount <= tier.max) {
+                    return tier.price;
+                }
+            }
+            return pricingTiers[0].price;
+        }
+
+        function updatePrice() {
+            const pricePerHour = getCurrentPrice();
+            const totalPrice = pricePerHour * defaultHours;
+
+            document.getElementById('totalPrice').textContent = `$${totalPrice.toLocaleString('es-AR')}`;
+            document.getElementById('priceDetail').textContent =
+                `${guestCount} personas × $${pricePerHour.toLocaleString('es-AR')}/hora × ${defaultHours} horas`;
+        }
+
+        function makeReservation() {
+            if (!selectedDate) {
+                alert('Por favor selecciona una fecha');
+                return;
+            }
+
+            const pricePerHour = getCurrentPrice();
+            const totalPrice = pricePerHour * defaultHours;
+
+            alert(`¡Reserva confirmada!\n\nFecha: ${document.getElementById('selectedDateValue').textContent}\nInvitados: ${guestCount} personas\nPrecio: $${totalPrice.toLocaleString('es-AR')}\n\n¡Nos vemos pronto!`);
+        }
+    </script>
+</body>
+
+</html>

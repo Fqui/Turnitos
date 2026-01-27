@@ -179,7 +179,6 @@ export default function BusinessPortal() {
                 // --- Solicitar permiso y token de notificaciones (Desactivado para desarrollo local sin HTTPS) ---
                 /*
                 try {
-                    console.log('Solicitando permisos de notificación para:', business.id);
                     await pushService.requestPermissionAndGetToken(business.id);
                 } catch (pushError) {
                     console.warn('No se pudieron activar las notificaciones push:', pushError);
