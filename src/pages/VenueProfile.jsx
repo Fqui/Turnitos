@@ -32,6 +32,13 @@ export default function VenueProfile() {
     const [lightboxIndex, setLightboxIndex] = useState(0);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [showServicesExpanded, setShowServicesExpanded] = useState(false);
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         fetchBusiness();
@@ -149,8 +156,7 @@ export default function VenueProfile() {
             showAlert('Fecha requerida', 'Por favor selecciona una fecha para continuar con tu reserva.', 'warning', 'Entendido');
             return;
         }
-        // If no additional services, skip to step 2 (summary)
-        setBookingStep(additionalServices.length > 0 ? 1 : 2);
+        setBookingStep(1);
         setShowBookingModal(true);
     };
 
@@ -226,6 +232,7 @@ export default function VenueProfile() {
     const amenities = business.amenities || [];
     const additionalServices = business.additional_services || [];
     const daysInMonth = getDaysInMonth(currentMonth);
+    const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 
     return (
         <div style={{ background: '#F8F9FA', minHeight: '100vh' }}>
@@ -260,30 +267,45 @@ export default function VenueProfile() {
                     bottom: 0,
                     background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%)'
                 }} />
+                {/* Content Container */}
                 <div style={{
                     position: 'relative',
-                    zIndex: 10,
-                    height: '100%',
+                    zIndex: 2,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-end',
-                    padding: window.innerWidth < 768 ? '20px' : '32px',
+                    padding: windowWidth < 768 ? '16px' : '32px',
                     color: 'white',
                     maxWidth: '1400px',
+                    width: '100%',
                     margin: '0 auto'
                 }}>
+                    <div style={{ marginBottom: '16px' }}>
+                        <span style={{
+                            background: 'rgba(255,255,255,0.2)',
+                            backdropFilter: 'blur(4px)',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                        }}>
+                            {business.category || 'Venue'}
+                        </span>
+                    </div>
                     <h1 style={{
-                        fontSize: '42px',
+                        fontSize: windowWidth < 768 ? '36px' : '56px',
                         fontWeight: '900',
-                        marginBottom: '8px',
-                        lineHeight: 1.1,
+                        marginBottom: '16px',
+                        lineHeight: '1.1',
                         textShadow: '0 4px 12px rgba(0,0,0,0.3)'
                     }}>
                         {business.name}
                     </h1>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', opacity: 0.95 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: '500', opacity: 0.9 }}>
                         <span>📍</span>
-                        <span>{business.location || 'Ubicación no especificada'}</span>
+                        <span>{business.address}, {business.city}</span>
                     </div>
                 </div>
             </div>
@@ -291,270 +313,124 @@ export default function VenueProfile() {
             {/* Main Content */}
             <div style={{
                 maxWidth: '1400px',
+                width: '100%',
                 margin: '0 auto',
-                padding: window.innerWidth < 768 ? '20px' : '32px',
-                paddingBottom: window.innerWidth < 768 ? '100px' : '32px'
+                padding: windowWidth < 768 ? '16px' : '32px',
+                paddingBottom: '100px',
+                display: 'grid',
+                gridTemplateColumns: windowWidth > 1200 ? '1fr 450px' : '1fr',
+                gap: windowWidth < 768 ? '16px' : '32px',
+                position: 'relative',
+                zIndex: 10,
+                marginTop: '-60px'
             }}>
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: window.innerWidth > 1200 ? '1fr 450px' : '1fr',
-                    gap: window.innerWidth < 768 ? '24px' : '32px'
-                }}>
-                    {/* Left Column */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {/* Gallery Section */}
-                        {galleryImages.length > 0 && (
-                            <div style={{
-                                background: 'white',
-                                borderRadius: '24px',
-                                padding: '32px',
-                                boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
-                            }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                    <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a' }}>Galería</h2>
-                                    <button
-                                        onClick={() => { setLightboxIndex(0); setShowLightbox(true); }}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            color: '#84CC16',
-                                            fontSize: '14px',
-                                            fontWeight: '600',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        Ver todas →
-                                    </button>
-                                </div>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '2fr 1fr',
-                                    gap: '12px',
-                                    height: '400px'
-                                }}>
-                                    <div
-                                        onClick={() => { setLightboxIndex(0); setShowLightbox(true); }}
-                                        style={{
-                                            position: 'relative',
-                                            borderRadius: '20px',
-                                            overflow: 'hidden',
-                                            cursor: 'pointer',
-                                            transition: 'transform 0.3s ease'
-                                        }}
-                                    >
-                                        <img
-                                            src={galleryImages[0].url}
-                                            alt={galleryImages[0].caption || 'Imagen principal'}
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                        />
-                                        {galleryImages[0].caption && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: '16px',
-                                                left: '16px',
-                                                background: 'rgba(0,0,0,0.6)',
-                                                backdropFilter: 'blur(10px)',
-                                                color: 'white',
-                                                padding: '8px 16px',
-                                                borderRadius: '12px',
-                                                fontSize: '13px',
-                                                fontWeight: '600'
-                                            }}>
-                                                {galleryImages[0].caption}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: '12px' }}>
-                                        {galleryImages.slice(1, 3).map((img, idx) => (
-                                            <div
-                                                key={idx}
-                                                onClick={() => { setLightboxIndex(idx + 1); setShowLightbox(true); }}
-                                                style={{
-                                                    position: 'relative',
-                                                    borderRadius: '16px',
-                                                    overflow: 'hidden',
-                                                    cursor: 'pointer',
-                                                    transition: 'transform 0.3s ease'
-                                                }}
-                                            >
-                                                <img
-                                                    src={img.url}
-                                                    alt={img.caption || `Imagen ${idx + 2}`}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                />
-                                                {idx === 1 && galleryImages.length > 3 && (
-                                                    <div style={{
-                                                        position: 'absolute',
-                                                        inset: 0,
-                                                        background: 'rgba(0,0,0,0.5)',
-                                                        backdropFilter: 'blur(4px)',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: 'white',
-                                                        fontSize: '18px',
-                                                        fontWeight: '700'
-                                                    }}>
-                                                        +{galleryImages.length - 3} fotos
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                {/* Left Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {/* Gallery Section */}
+                    {galleryImages.length > 0 && (
+                        <div style={{
+                            background: 'white',
+                            borderRadius: '24px',
+                            padding: '32px',
+                            boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a' }}>Galería</h2>
+                                <button
+                                    onClick={() => { setLightboxIndex(0); setShowLightbox(true); }}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#84CC16',
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Ver todas →
+                                </button>
                             </div>
-                        )}
-
-                        {/* Amenities Section */}
-                        {amenities.length > 0 && (
                             <div style={{
-                                background: 'white',
-                                borderRadius: '24px',
-                                padding: '32px',
-                                boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                                display: 'grid',
+                                gridTemplateColumns: '2fr 1fr',
+                                gap: '12px',
+                                height: '400px'
                             }}>
-                                <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>
-                                    Comodidades Destacadas
-                                </h2>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                                    gap: '16px'
-                                }}>
-                                    {amenities.map((amenity, idx) => (
+                                <div
+                                    onClick={() => { setLightboxIndex(0); setShowLightbox(true); }}
+                                    style={{
+                                        position: 'relative',
+                                        borderRadius: '20px',
+                                        overflow: 'hidden',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.3s ease'
+                                    }}
+                                >
+                                    <img
+                                        src={galleryImages[0].url}
+                                        alt={galleryImages[0].caption || 'Imagen principal'}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                    {galleryImages[0].caption && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '16px',
+                                            left: '16px',
+                                            background: 'rgba(0,0,0,0.6)',
+                                            backdropFilter: 'blur(10px)',
+                                            color: 'white',
+                                            padding: '8px 16px',
+                                            borderRadius: '12px',
+                                            fontSize: '13px',
+                                            fontWeight: '600'
+                                        }}>
+                                            {galleryImages[0].caption}
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: '12px' }}>
+                                    {galleryImages.slice(1, 3).map((img, idx) => (
                                         <div
                                             key={idx}
+                                            onClick={() => { setLightboxIndex(idx + 1); setShowLightbox(true); }}
                                             style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '12px',
-                                                padding: '20px',
-                                                background: '#F8F9FA',
+                                                position: 'relative',
                                                 borderRadius: '16px',
-                                                transition: 'all 0.3s ease',
-                                                cursor: 'pointer'
+                                                overflow: 'hidden',
+                                                cursor: 'pointer',
+                                                transition: 'transform 0.3s ease'
                                             }}
                                         >
-                                            <div style={{
-                                                width: '48px',
-                                                height: '48px',
-                                                background: 'white',
-                                                borderRadius: '12px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '24px'
-                                            }}>
-                                                {getAmenityIcon(amenity)}
-                                            </div>
-                                            <div style={{
-                                                fontSize: '13px',
-                                                fontWeight: '600',
-                                                color: '#4A5568',
-                                                textAlign: 'center'
-                                            }}>
-                                                {amenity}
-                                            </div>
+                                            <img
+                                                src={img.url}
+                                                alt={img.caption || `Imagen ${idx + 2}`}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
+                                            {idx === 1 && galleryImages.length > 3 && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    inset: 0,
+                                                    background: 'rgba(0,0,0,0.5)',
+                                                    backdropFilter: 'blur(4px)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: 'white',
+                                                    fontSize: '18px',
+                                                    fontWeight: '700'
+                                                }}>
+                                                    +{galleryImages.length - 3} fotos
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        )}
+                        </div>
+                    )}
 
-                        {/* Additional Services Section */}
-                        {additionalServices.length > 0 && (
-                            <div style={{
-                                background: 'white',
-                                borderRadius: '24px',
-                                overflow: 'hidden',
-                                boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
-                            }}>
-                                <div
-                                    onClick={() => setShowServicesExpanded(!showServicesExpanded)}
-                                    style={{
-                                        padding: '32px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        transition: 'background 0.2s'
-                                    }}
-                                >
-                                    <div>
-                                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a' }}>
-                                            Servicios Adicionales
-                                        </h2>
-                                        <p style={{ fontSize: '13px', color: '#64748B', fontWeight: '500', marginTop: '4px' }}>
-                                            Personaliza tu experiencia
-                                        </p>
-                                    </div>
-                                    <div style={{
-                                        fontSize: '24px',
-                                        color: '#84CC16',
-                                        transition: 'transform 0.3s',
-                                        transform: showServicesExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
-                                    }}>
-                                        ▼
-                                    </div>
-                                </div>
-                                <div style={{
-                                    maxHeight: showServicesExpanded ? '1000px' : '0',
-                                    overflow: 'hidden',
-                                    transition: 'max-height 0.4s ease'
-                                }}>
-                                    <div style={{ padding: '0 32px 32px 32px', display: 'grid', gap: '12px' }}>
-                                        {additionalServices.map((service, idx) => (
-                                            <div
-                                                key={idx}
-                                                style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    padding: '20px',
-                                                    background: '#F8F9FA',
-                                                    borderRadius: '16px',
-                                                    transition: 'all 0.3s ease',
-                                                    cursor: 'pointer',
-                                                    border: '2px solid transparent'
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                    <div style={{
-                                                        width: '56px',
-                                                        height: '56px',
-                                                        background: 'white',
-                                                        borderRadius: '14px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: '28px',
-                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                                                    }}>
-                                                        {service.icon || '✨'}
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a1a' }}>
-                                                            {service.name}
-                                                        </div>
-                                                        {service.description && (
-                                                            <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
-                                                                {service.description}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div style={{ fontSize: '16px', fontWeight: '800', color: '#84CC16' }}>
-                                                    +${service.price}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Calendar Section */}
+                    {/* Amenities Section */}
+                    {amenities.length > 0 && (
                         <div style={{
                             background: 'white',
                             borderRadius: '24px',
@@ -562,184 +438,361 @@ export default function VenueProfile() {
                             boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
                         }}>
                             <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>
-                                Disponibilidad
+                                Comodidades Destacadas
                             </h2>
                             <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '16px'
-                            }}>
-                                <button
-                                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                                    style={{
-                                        background: '#F8F9FA',
-                                        border: 'none',
-                                        width: '40px',
-                                        height: '40px',
-                                        borderRadius: '12px',
-                                        cursor: 'pointer',
-                                        fontSize: '20px',
-                                        fontWeight: '700',
-                                        color: '#1a1a1a'
-                                    }}
-                                >
-                                    ‹
-                                </button>
-                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a1a' }}>
-                                    {currentMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
-                                </div>
-                                <button
-                                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                                    style={{
-                                        background: '#F8F9FA',
-                                        border: 'none',
-                                        width: '40px',
-                                        height: '40px',
-                                        borderRadius: '12px',
-                                        cursor: 'pointer',
-                                        fontSize: '20px',
-                                        fontWeight: '700',
-                                        color: '#1a1a1a'
-                                    }}
-                                >
-                                    ›
-                                </button>
-                            </div>
-                            <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'repeat(7, 1fr)',
-                                gap: '8px'
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                                gap: '16px'
                             }}>
-                                {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
-                                    <div key={day} style={{
-                                        textAlign: 'center',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        color: '#64748B',
-                                        padding: '8px'
-                                    }}>
-                                        {day}
-                                    </div>
-                                ))}
-                                {daysInMonth.map((date, idx) => {
-                                    if (!date) {
-                                        return <div key={`empty-${idx}`} />;
-                                    }
-
-                                    const isBlocked = isDateBlocked(date);
-                                    const isPast = isDatePast(date);
-                                    const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
-                                    const isDisabled = isBlocked || isPast;
-
-                                    return (
-                                        <button
-                                            key={idx}
-                                            onClick={() => handleDateSelect(date)}
-                                            disabled={isDisabled}
-                                            style={{
-                                                padding: '12px',
-                                                borderRadius: '12px',
-                                                border: 'none',
-                                                background: isSelected ? '#84CC16' : isBlocked ? '#FEE2E2' : isPast ? '#F8F9FA' : 'white',
-                                                color: isSelected ? 'white' : isDisabled ? '#CBD5E1' : '#1a1a1a',
-                                                fontSize: '14px',
-                                                fontWeight: isSelected ? '700' : '500',
-                                                cursor: isDisabled ? 'not-allowed' : 'pointer',
-                                                transition: 'all 0.2s',
-                                                border: isSelected ? 'none' : '1px solid #E5E7EB'
-                                            }}
-                                        >
-                                            {date.getDate()}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Description Section */}
-                        {business.description && (
-                            <div style={{
-                                background: 'white',
-                                borderRadius: '24px',
-                                padding: '32px',
-                                boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
-                            }}>
-                                <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '16px' }}>
-                                    Sobre el Espacio
-                                </h2>
-                                <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: '1.7' }}>
-                                    {business.description}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Map Section */}
-                        {business.latitude && business.longitude && (
-                            <div style={{
-                                background: 'white',
-                                borderRadius: '24px',
-                                padding: '32px',
-                                boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
-                            }}>
-                                <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '16px' }}>
-                                    Ubicación
-                                </h2>
-
-                                {business.address && (
-                                    <div style={{ fontSize: '15px', color: '#4A5568', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ fontSize: '18px' }}>🏠</span> {business.address}
-                                    </div>
-                                )}
-
-                                <div style={{ height: '300px', borderRadius: '16px', overflow: 'hidden', position: 'relative' }}>
-                                    <MapContainer
-                                        center={[business.latitude, business.longitude]}
-                                        zoom={15}
-                                        style={{ height: '100%', width: '100%' }}
-                                    >
-                                        <TileLayer
-                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                        />
-                                        <Marker position={[business.latitude, business.longitude]}>
-                                        </Marker>
-                                    </MapContainer>
-
-                                    {/* Floating Directions Button */}
-                                    <a
-                                        href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                {amenities.map((amenity, idx) => (
+                                    <div
+                                        key={idx}
                                         style={{
-                                            position: 'absolute',
-                                            bottom: '20px',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            zIndex: 1000,
                                             display: 'flex',
+                                            flexDirection: 'column',
                                             alignItems: 'center',
-                                            gap: '8px',
-                                            color: 'white', // Texto blanco para mejor contraste
-                                            textDecoration: 'none',
-                                            fontWeight: '700',
-                                            fontSize: '14px',
-                                            padding: '10px 20px',
-                                            background: '#84CC16', // Fondo verde primario
-                                            borderRadius: '50px', // Bordes redondeados estilo "pill"
-                                            boxShadow: '0 4px 12px rgba(0,0,0,0.2)', // Sombra para profundidad
-                                            border: '2px solid white' // Borde blanco para resaltar sobre el mapa
+                                            gap: '12px',
+                                            padding: '20px',
+                                            background: '#F8F9FA',
+                                            borderRadius: '16px',
+                                            transition: 'all 0.3s ease',
+                                            cursor: 'pointer'
                                         }}
                                     >
-                                        <span>📍</span> <span>Cómo llegar</span>
-                                    </a>
+                                        <div style={{
+                                            width: '48px',
+                                            height: '48px',
+                                            background: 'white',
+                                            borderRadius: '12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '24px'
+                                        }}>
+                                            {getAmenityIcon(amenity)}
+                                        </div>
+                                        <div style={{
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            color: '#4A5568',
+                                            textAlign: 'center'
+                                        }}>
+                                            {amenity}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Additional Services Section */}
+                    {additionalServices.length > 0 && (
+                        <div style={{
+                            background: 'white',
+                            borderRadius: '24px',
+                            overflow: 'hidden',
+                            boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                        }}>
+                            <div
+                                onClick={() => setShowServicesExpanded(!showServicesExpanded)}
+                                style={{
+                                    padding: '32px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    transition: 'background 0.2s'
+                                }}
+                            >
+                                <div>
+                                    <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a' }}>
+                                        Servicios Adicionales
+                                    </h2>
+                                    <p style={{ fontSize: '13px', color: '#64748B', fontWeight: '500', marginTop: '4px' }}>
+                                        Personaliza tu experiencia
+                                    </p>
                                 </div>
+                                <div style={{
+                                    fontSize: '24px',
+                                    color: '#84CC16',
+                                    transition: 'transform 0.3s',
+                                    transform: showServicesExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                                }}>
+                                    ▼
+                                </div>
+                            </div>
+                            <div style={{
+                                maxHeight: showServicesExpanded ? '1000px' : '0',
+                                overflow: 'hidden',
+                                transition: 'max-height 0.4s ease'
+                            }}>
+                                <div style={{ padding: '0 32px 32px 32px', display: 'grid', gap: '12px' }}>
+                                    {additionalServices.map((service, idx) => (
+                                        <div
+                                            key={idx}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '20px',
+                                                background: '#F8F9FA',
+                                                borderRadius: '16px',
+                                                transition: 'all 0.3s ease',
+                                                cursor: 'pointer',
+                                                border: '2px solid transparent'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                <div style={{
+                                                    width: '56px',
+                                                    height: '56px',
+                                                    background: 'white',
+                                                    borderRadius: '14px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '28px',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                                                }}>
+                                                    {service.icon || '✨'}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a1a' }}>
+                                                        {service.name}
+                                                    </div>
+                                                    {service.description && (
+                                                        <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+                                                            {service.description}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: '16px', fontWeight: '800', color: '#84CC16' }}>
+                                                +${service.price}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Calendar Section */}
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '24px',
+                        padding: '32px',
+                        boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                    }}>
+                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>
+                            Disponibilidad
+                        </h2>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '16px'
+                        }}>
+                            <button
+                                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                                style={{
+                                    background: '#F8F9FA',
+                                    border: 'none',
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    fontSize: '20px',
+                                    fontWeight: '700',
+                                    color: '#1a1a1a'
+                                }}
+                            >
+                                ‹
+                            </button>
+                            <div style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a1a' }}>
+                                {currentMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+                            </div>
+                            <button
+                                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                                style={{
+                                    background: '#F8F9FA',
+                                    border: 'none',
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    fontSize: '20px',
+                                    fontWeight: '700',
+                                    color: '#1a1a1a'
+                                }}
+                            >
+                                ›
+                            </button>
+                        </div>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(7, 1fr)',
+                            gap: '8px'
+                        }}>
+                            {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
+                                <div key={day} style={{
+                                    textAlign: 'center',
+                                    fontSize: '12px',
+                                    fontWeight: '700',
+                                    color: '#64748B',
+                                    padding: '8px'
+                                }}>
+                                    {day}
+                                </div>
+                            ))}
+                            {daysInMonth.map((date, idx) => {
+                                if (!date) {
+                                    return <div key={`empty-${idx}`} />;
+                                }
+
+                                const isBlocked = isDateBlocked(date);
+                                const isPast = isDatePast(date);
+                                const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+                                const isDisabled = isBlocked || isPast;
+
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleDateSelect(date)}
+                                        disabled={isDisabled}
+                                        style={{
+                                            padding: '12px',
+                                            borderRadius: '12px',
+                                            background: isSelected ? '#84CC16' : isBlocked ? '#FEE2E2' : isPast ? '#F8F9FA' : 'white',
+
+                                            color: isSelected ? 'white' : isDisabled ? '#CBD5E1' : '#1a1a1a',
+                                            fontSize: '14px',
+                                            fontWeight: isSelected ? '700' : '500',
+                                            cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                            transition: 'all 0.2s',
+                                            border: isSelected ? 'none' : '1px solid #E5E7EB'
+                                        }}
+                                    >
+                                        {date.getDate()}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {selectedDate && (
+                            <div style={{ marginTop: '24px', animation: 'fadeIn 0.3s ease' }}>
+                                <button
+                                    onClick={handleContinue}
+                                    style={{
+                                        width: '100%',
+                                        padding: '16px',
+                                        background: '#84CC16',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '16px',
+                                        fontSize: '16px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(132, 204, 22, 0.3)',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <span>Continuar reserva</span>
+                                    <span>→</span>
+                                </button>
                             </div>
                         )}
                     </div>
 
-                    {/* Right Column - Booking Panel (Desktop only) */}
-                    {window.innerWidth > 1200 && (
+                    {/* Description Section */}
+                    {business.description && (
+                        <div style={{
+                            background: 'white',
+                            borderRadius: '24px',
+                            padding: '32px',
+                            boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                        }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '16px' }}>
+                                Sobre el Espacio
+                            </h2>
+                            <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: '1.7' }}>
+                                {business.description}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Map Section */}
+                    {business.latitude && business.longitude && (
+                        <div style={{
+                            background: 'white',
+                            borderRadius: '24px',
+                            padding: '32px',
+                            boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                        }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '16px' }}>
+                                Ubicación
+                            </h2>
+
+                            {business.address && (
+                                <div style={{ fontSize: '15px', color: '#4A5568', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '18px' }}>🏠</span> {business.address}
+                                </div>
+                            )}
+
+                            <div style={{ height: '300px', borderRadius: '16px', overflow: 'hidden', position: 'relative' }}>
+                                <MapContainer
+                                    center={[business.latitude, business.longitude]}
+                                    zoom={15}
+                                    style={{ height: '100%', width: '100%' }}
+                                >
+                                    <TileLayer
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                    />
+                                    <Marker position={[business.latitude, business.longitude]}>
+                                    </Marker>
+                                </MapContainer>
+
+                                {/* Floating Directions Button */}
+                                <a
+                                    href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        position: 'absolute',
+                                        bottom: '20px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        zIndex: 1000,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        color: 'white', // Texto blanco para mejor contraste
+                                        textDecoration: 'none',
+                                        fontWeight: '700',
+                                        fontSize: '14px',
+                                        padding: '10px 20px',
+                                        background: '#84CC16', // Fondo verde primario
+                                        borderRadius: '50px', // Bordes redondeados estilo "pill"
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)', // Sombra para profundidad
+                                        border: '2px solid white' // Borde blanco para resaltar sobre el mapa
+                                    }}
+                                >
+                                    <span>📍</span> <span>Cómo llegar</span>
+                                </a>
+                            </div>
+                        </div>
+                    )}
+
+
+                </div>
+
+                {/* Right Column - Booking Panel (Desktop only) */}
+                {
+                    windowWidth > 1200 && (
                         <div style={{
                             position: 'sticky',
                             top: '32px',
@@ -757,40 +810,12 @@ export default function VenueProfile() {
                                 business={business}
                             />
                         </div>
-                    )}
-                </div>
-            </div>
+                    )
+                }
+            </div >
 
-            {/* Mobile Floating Button */}
-            {
-                window.innerWidth <= 1200 && selectedDate && (
-                    <div style={{
-                        position: 'fixed',
-                        bottom: '20px',
-                        left: '20px',
-                        right: '20px',
-                        zIndex: 100
-                    }}>
-                        <button
-                            onClick={handleContinue}
-                            style={{
-                                width: '100%',
-                                padding: '18px',
-                                background: '#84CC16',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '16px',
-                                fontSize: '16px',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                boxShadow: '0 8px 24px rgba(132, 204, 22, 0.4)'
-                            }}
-                        >
-                            Continuar - ${totalPrice.toLocaleString()}
-                        </button>
-                    </div>
-                )
-            }
+
+
 
             {/* Booking Modal */}
             {/* Booking Modal Wizard */}
@@ -834,9 +859,10 @@ export default function VenueProfile() {
                             <div style={{ marginBottom: '24px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                     <h2 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>
-                                        {bookingStep === 1 && 'Servicios Extra'}
-                                        {bookingStep === 2 && 'Resumen'}
-                                        {bookingStep === 3 && 'Tus Datos'}
+                                        {bookingStep === 1 && 'Configuración'}
+                                        {bookingStep === 2 && 'Servicios Extra'}
+                                        {bookingStep === 3 && 'Resumen'}
+                                        {bookingStep === 4 && 'Tus Datos'}
                                     </h2>
                                     <button
                                         onClick={() => setShowBookingModal(false)}
@@ -848,7 +874,7 @@ export default function VenueProfile() {
 
                                 {/* Progress Bar */}
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                    {[1, 2, 3].map(step => (
+                                    {[1, 2, 3, 4].map(step => (
                                         <div key={step} style={{
                                             flex: 1,
                                             height: '4px',
@@ -860,8 +886,149 @@ export default function VenueProfile() {
                                 </div>
                             </div>
 
-                            {/* STEP 1: Additional Services */}
+                            {/* STEP 1: Configuration (Guests & Duration) */}
                             {bookingStep === 1 && (
+                                <div style={{ flex: 1 }}>
+                                    <p style={{ fontSize: '14px', color: '#64748B', marginBottom: '24px' }}>
+                                        Configura los detalles básicos de tu evento.
+                                    </p>
+
+                                    <div style={{ display: 'grid', gap: '24px' }}>
+                                        {/* Guest Counter */}
+                                        <div>
+                                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', marginBottom: '12px' }}>
+                                                Cantidad de Invitados
+                                            </div>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                background: '#F8F9FA',
+                                                borderRadius: '16px',
+                                                padding: '16px'
+                                            }}>
+                                                <button
+                                                    onClick={() => setGuestCount(Math.max(1, guestCount - 5))}
+                                                    style={{
+                                                        background: 'white',
+                                                        border: '1px solid #E2E8F0',
+                                                        width: '44px',
+                                                        height: '44px',
+                                                        borderRadius: '12px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '20px',
+                                                        fontWeight: '700',
+                                                        color: '#1a1a1a',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}
+                                                >
+                                                    −
+                                                </button>
+                                                <div style={{ textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: '#1a1a1a' }}>
+                                                        {guestCount}
+                                                    </div>
+                                                    <div style={{ fontSize: '13px', color: '#64748B' }}>personas</div>
+                                                </div>
+                                                <button
+                                                    onClick={() => setGuestCount(guestCount + 5)}
+                                                    style={{
+                                                        background: 'white',
+                                                        border: '1px solid #E2E8F0',
+                                                        width: '44px',
+                                                        height: '44px',
+                                                        borderRadius: '12px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '20px',
+                                                        fontWeight: '700',
+                                                        color: '#1a1a1a',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Duration Selector */}
+                                        <div>
+                                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', marginBottom: '12px' }}>
+                                                Duración del Evento
+                                            </div>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                background: '#F8F9FA',
+                                                borderRadius: '16px',
+                                                padding: '16px'
+                                            }}>
+                                                <button
+                                                    onClick={() => {
+                                                        const currentIdx = durationOptions.indexOf(duration);
+                                                        if (currentIdx > 0) setDuration(durationOptions[currentIdx - 1]);
+                                                    }}
+                                                    disabled={durationOptions.indexOf(duration) === 0}
+                                                    style={{
+                                                        background: 'white',
+                                                        border: '1px solid #E2E8F0',
+                                                        width: '44px',
+                                                        height: '44px',
+                                                        borderRadius: '12px',
+                                                        cursor: durationOptions.indexOf(duration) === 0 ? 'not-allowed' : 'pointer',
+                                                        fontSize: '20px',
+                                                        fontWeight: '700',
+                                                        color: '#1a1a1a',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        opacity: durationOptions.indexOf(duration) === 0 ? 0.3 : 1
+                                                    }}
+                                                >
+                                                    −
+                                                </button>
+                                                <div style={{ textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: '#1a1a1a' }}>
+                                                        {duration}
+                                                    </div>
+                                                    <div style={{ fontSize: '13px', color: '#64748B' }}>horas</div>
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        const currentIdx = durationOptions.indexOf(duration);
+                                                        if (currentIdx < durationOptions.length - 1) setDuration(durationOptions[currentIdx + 1]);
+                                                    }}
+                                                    disabled={durationOptions.indexOf(duration) === durationOptions.length - 1}
+                                                    style={{
+                                                        background: 'white',
+                                                        border: '1px solid #E2E8F0',
+                                                        width: '44px',
+                                                        height: '44px',
+                                                        borderRadius: '12px',
+                                                        cursor: durationOptions.indexOf(duration) === durationOptions.length - 1 ? 'not-allowed' : 'pointer',
+                                                        fontSize: '20px',
+                                                        fontWeight: '700',
+                                                        color: '#1a1a1a',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        opacity: durationOptions.indexOf(duration) === durationOptions.length - 1 ? 0.3 : 1
+                                                    }}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* STEP 2: Additional Services */}
+                            {bookingStep === 2 && (
                                 <div style={{ flex: 1 }}>
                                     <p style={{ fontSize: '14px', color: '#64748B', marginBottom: '20px' }}>
                                         Personaliza tu experiencia agregando servicios adicionales (opcional).
@@ -923,8 +1090,8 @@ export default function VenueProfile() {
                                 </div>
                             )}
 
-                            {/* STEP 2: Summary */}
-                            {bookingStep === 2 && (
+                            {/* STEP 3: Summary */}
+                            {bookingStep === 3 && (
                                 <div style={{ flex: 1 }}>
                                     <div style={{ background: '#F8F9FA', borderRadius: '16px', padding: '24px' }}>
                                         {/* Date & Guests */}
@@ -966,8 +1133,8 @@ export default function VenueProfile() {
                                 </div>
                             )}
 
-                            {/* STEP 3: Customer Form */}
-                            {bookingStep === 3 && (
+                            {/* STEP 4: Customer Form */}
+                            {bookingStep === 4 && (
                                 <div style={{ flex: 1 }}>
                                     <p style={{ fontSize: '14px', color: '#64748B', marginBottom: '20px' }}>
                                         Ingresa tus datos de contacto para enviarte la confirmación.
@@ -998,11 +1165,7 @@ export default function VenueProfile() {
                                 {bookingStep > 1 && (
                                     <button
                                         onClick={() => {
-                                            if (bookingStep === 2 && additionalServices.length === 0) {
-                                                setShowBookingModal(false); // If no services, back means close or maybe just can't go back to 1
-                                            } else {
-                                                setBookingStep(prev => prev - 1)
-                                            }
+                                            setBookingStep(prev => prev - 1)
                                         }}
                                         style={{
                                             padding: '16px 24px',
@@ -1021,9 +1184,7 @@ export default function VenueProfile() {
 
                                 <button
                                     onClick={() => {
-                                        if (bookingStep < 3) {
-                                            setBookingStep(prev => prev + 1);
-                                        } else {
+                                        if (bookingStep === 4) {
                                             // Handle Submit
                                             const firstName = document.getElementById('customerFirstName')?.value;
                                             const lastName = document.getElementById('customerLastName')?.value;
@@ -1040,6 +1201,11 @@ export default function VenueProfile() {
                                                 customerPhone: phone,
                                                 customerEmail: email
                                             });
+                                        } else if (bookingStep === 2 && additionalServices.length === 0) {
+                                            // Check logic for skipping services if needed, but linear flow is better for wizard
+                                            setBookingStep(prev => prev + 1);
+                                        } else {
+                                            setBookingStep(prev => prev + 1);
                                         }
                                     }}
                                     style={{
@@ -1055,7 +1221,7 @@ export default function VenueProfile() {
                                         boxShadow: '0 4px 12px rgba(132, 204, 22, 0.3)'
                                     }}
                                 >
-                                    {bookingStep === 3 ? 'Confirmar Reserva' : 'Siguiente'}
+                                    {bookingStep === 4 ? 'Confirmar Reserva' : 'Siguiente'}
                                 </button>
                             </div>
                         </motion.div>
