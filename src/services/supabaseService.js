@@ -1110,10 +1110,16 @@ class SupabaseService {
                 time: bookingData.time,
                 customer_name: bookingData.customerName ? bookingData.customerName.toUpperCase() : bookingData.customerName,
                 customer_phone: bookingData.customerPhone,
+                customer_email: bookingData.customerEmail || null,
                 status: bookingData.status || 'confirmed',
                 price: bookingData.price,
                 duration: bookingData.duration,
-                metadata: bookingData.metadata
+                metadata: bookingData.metadata,
+                // Venue-specific fields
+                guest_count: bookingData.guestCount || null,
+                selected_services: bookingData.selectedServices || [],
+                services_total: bookingData.servicesTotal || 0,
+                base_price: bookingData.basePrice || null
             }])
             .select()
             .single();

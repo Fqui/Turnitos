@@ -67,11 +67,12 @@ export default function PeriodCalendar({
                 dateRangeText={getDateRangeText()}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
-                availableViews={['month', 'year']}
+                availableViews={['month']} // Solo vista mensual para alquileres
                 onPrevious={handlePrevious}
                 onToday={handleToday}
                 onNext={handleNext}
                 isMobile={isMobile}
+                showTitle={false} // Ocultar título del negocio
             />
 
             {/* Vista del calendario */}

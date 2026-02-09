@@ -11,6 +11,8 @@ import Footer from './components/Footer';
 // Lazy load pages for code splitting
 const Home = lazy(() => import('./pages/Home'));
 const BusinessProfile = lazy(() => import('./pages/BusinessProfile'));
+const VenueProfile = lazy(() => import('./pages/VenueProfile'));
+const BusinessProfileRouter = lazy(() => import('./pages/BusinessProfileRouter'));
 const LinkBio = lazy(() => import('./pages/LinkBio'));
 const Admin = lazy(() => import('./pages/Admin'));
 const BusinessPortal = lazy(() => import('./pages/BusinessPortal'));
@@ -79,7 +81,7 @@ function AppContent() {
               <Route path="/colaboradores" element={<Colaboradores />} />
               {/* Keep old routes temporarily for compatibility if needed, or remove them */}
               <Route path="/:businessSlug" element={<LinkBio />} />
-              <Route path="/:businessSlug/turnos" element={<BusinessProfile />} />
+              <Route path="/:businessSlug/turnos" element={<BusinessProfileRouter />} />
               <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
               <Route path="/portal" element={<BusinessPortal />} />
               <Route path="/business-portal" element={<BusinessPortal />} />

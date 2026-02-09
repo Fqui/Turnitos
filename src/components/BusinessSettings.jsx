@@ -91,7 +91,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 };
             });
         }
-    }, [business.id]); // Only re-run if business ID changes
+    }, [business?.id]); // Only re-run if business ID changes
 
     // Load subscription
     useEffect(() => {
@@ -776,6 +776,199 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
                                         Selecciona las duraciones que los clientes pueden elegir.
                                     </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 1.5 Capacity Settings */}
+                        <div style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>Capacidad</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                        Capacidad Máxima de Invitados
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.max_capacity || 100}
+                                        onChange={(e) => handleInputChange('max_capacity', parseInt(e.target.value))}
+                                        placeholder="100"
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--bg-main)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '16px',
+                                            fontWeight: '600'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 1.6 Pricing Tiers */}
+                        {!isDaily && (
+                            <div style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                    <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'var(--text-primary)' }}>Escalones de Precio por Invitados</h3>
+                                    <button
+                                        onClick={() => {
+                                            const tiers = [...(formData.pricing_tiers || [])];
+                                            const lastTier = tiers[tiers.length - 1];
+                                            const newMin = lastTier ? lastTier.max + 1 : 1;
+                                            tiers.push({ min: newMin, max: newMin + 29, price: formData.price_per_hour || 0, label: `${newMin}-${newMin + 29} personas` });
+                                            handleInputChange('pricing_tiers', tiers);
+                                        }}
+                                        style={{
+                                            background: 'rgba(var(--primary-rgb), 0.1)',
+                                            color: 'var(--primary-paddle)',
+                                            border: 'none',
+                                            padding: '8px 16px',
+                                            borderRadius: '8px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        + Agregar Escalón
+                                    </button>
+                                </div>
+
+                                {(formData.pricing_tiers || []).length === 0 ? (
+                                    <div style={{ padding: '20px', background: 'var(--bg-main)', borderRadius: '12px', textAlign: 'center' }}>
+                                        <p style={{ color: 'var(--text-muted)', margin: 0 }}>Sin escalones configurados. Se usará el precio base para todos.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'grid', gap: '12px' }}>
+                                        {(formData.pricing_tiers || []).map((tier, index) => (
+                                            <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '12px', alignItems: 'center', padding: '12px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                                                <div>
+                                                    <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Mínimo</label>
+                                                    <input
+                                                        type="number"
+                                                        value={tier.min || 1}
+                                                        onChange={(e) => {
+                                                            const tiers = [...formData.pricing_tiers];
+                                                            tiers[index] = { ...tier, min: parseInt(e.target.value), label: `${e.target.value}-${tier.max} personas` };
+                                                            handleInputChange('pricing_tiers', tiers);
+                                                        }}
+                                                        style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Máximo</label>
+                                                    <input
+                                                        type="number"
+                                                        value={tier.max || 30}
+                                                        onChange={(e) => {
+                                                            const tiers = [...formData.pricing_tiers];
+                                                            tiers[index] = { ...tier, max: parseInt(e.target.value), label: `${tier.min}-${e.target.value} personas` };
+                                                            handleInputChange('pricing_tiers', tiers);
+                                                        }}
+                                                        style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Precio/hora</label>
+                                                    <input
+                                                        type="number"
+                                                        value={tier.price || 0}
+                                                        onChange={(e) => {
+                                                            const tiers = [...formData.pricing_tiers];
+                                                            tiers[index] = { ...tier, price: parseFloat(e.target.value) };
+                                                            handleInputChange('pricing_tiers', tiers);
+                                                        }}
+                                                        style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        const tiers = formData.pricing_tiers.filter((_, i) => i !== index);
+                                                        handleInputChange('pricing_tiers', tiers);
+                                                    }}
+                                                    style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', marginTop: '16px' }}
+                                                    title="Eliminar"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '12px' }}>
+                                    💡 Configura precios diferentes según la cantidad de invitados. Ej: 1-30 personas = $3000/hora, 31-60 = $4500/hora
+                                </p>
+                            </div>
+                        )}
+
+                        {/* 1.7 Blocked Dates */}
+                        <div style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'var(--text-primary)' }}>Fechas Bloqueadas</h3>
+                                <button
+                                    onClick={() => {
+                                        const dates = [...(formData.blocked_dates || [])];
+                                        const tomorrow = new Date();
+                                        tomorrow.setDate(tomorrow.getDate() + 1);
+                                        dates.push({ date: tomorrow.toISOString().split('T')[0], reason: '' });
+                                        handleInputChange('blocked_dates', dates);
+                                    }}
+                                    style={{
+                                        background: 'rgba(var(--primary-rgb), 0.1)',
+                                        color: 'var(--primary-paddle)',
+                                        border: 'none',
+                                        padding: '8px 16px',
+                                        borderRadius: '8px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    + Bloquear Fecha
+                                </button>
+                            </div>
+
+                            {(formData.blocked_dates || []).length === 0 ? (
+                                <div style={{ padding: '20px', background: 'var(--bg-main)', borderRadius: '12px', textAlign: 'center' }}>
+                                    <p style={{ color: 'var(--text-muted)', margin: 0 }}>No hay fechas bloqueadas. Todas las fechas están disponibles.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gap: '12px' }}>
+                                    {(formData.blocked_dates || []).map((blocked, index) => (
+                                        <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: '12px', alignItems: 'center', padding: '12px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                                            <input
+                                                type="date"
+                                                value={blocked.date || ''}
+                                                onChange={(e) => {
+                                                    const dates = [...formData.blocked_dates];
+                                                    dates[index] = { ...blocked, date: e.target.value };
+                                                    handleInputChange('blocked_dates', dates);
+                                                }}
+                                                style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Motivo (ej: Evento privado)"
+                                                value={blocked.reason || ''}
+                                                onChange={(e) => {
+                                                    const dates = [...formData.blocked_dates];
+                                                    dates[index] = { ...blocked, reason: e.target.value };
+                                                    handleInputChange('blocked_dates', dates);
+                                                }}
+                                                style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    const dates = formData.blocked_dates.filter((_, i) => i !== index);
+                                                    handleInputChange('blocked_dates', dates);
+                                                }}
+                                                style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px' }}
+                                                title="Eliminar"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>

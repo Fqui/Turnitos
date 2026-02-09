@@ -759,9 +759,17 @@
             color: #1a1a1a;
         }
 
+        /* Selectors Row - Compact Layout */
+        .selectors-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
         /* Guest Counter */
         .guest-section {
-            margin-bottom: 24px;
+            margin-bottom: 0;
         }
 
         .guest-label {
@@ -777,7 +785,8 @@
             justify-content: space-between;
             background: #F8F9FA;
             border-radius: 16px;
-            padding: 16px 20px;
+            padding: 12px 16px;
+            min-height: 80px;
         }
 
         .guest-btn {
@@ -795,6 +804,7 @@
             justify-content: center;
             transition: all 0.2s;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-shrink: 0;
         }
 
         .guest-btn:hover {
@@ -813,18 +823,24 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 0 12px;
         }
 
         .guest-count {
             font-size: 28px;
             font-weight: 900;
             color: #1a1a1a;
+            line-height: 1;
         }
 
         .guest-tier {
             font-size: 12px;
             color: #64748B;
             font-weight: 500;
+            margin-top: 4px;
+            white-space: nowrap;
         }
 
         /* Price Breakdown */
@@ -900,6 +916,376 @@
             margin-top: 12px;
         }
 
+        /* Confirmation Modal */
+        .confirmation-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .confirmation-modal.active {
+            display: flex;
+        }
+
+        .confirmation-content {
+            background: white;
+            border-radius: 24px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .confirmation-header {
+            padding: 24px;
+            border-bottom: 2px solid #F1F5F9;
+        }
+
+        .confirmation-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .confirmation-body {
+            padding: 24px;
+        }
+
+        .confirmation-section {
+            margin-bottom: 24px;
+        }
+
+        .confirmation-section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+        }
+
+        .confirmation-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .confirmation-detail:last-child {
+            border-bottom: none;
+        }
+
+        .confirmation-label {
+            color: #64748B;
+            font-size: 14px;
+        }
+
+        .confirmation-value {
+            color: #1a1a1a;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Additional Services in Modal */
+        .service-checkbox-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: #F8F9FA;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .service-checkbox-card:hover {
+            background: #F1F5F9;
+        }
+
+        .service-checkbox-card.selected {
+            background: #F0FDF4;
+            border-color: #84CC16;
+        }
+
+        .service-checkbox {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 2px solid #CBD5E1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .service-checkbox-card.selected .service-checkbox {
+            background: #84CC16;
+            border-color: #84CC16;
+        }
+
+        .service-checkbox-card.selected .service-checkbox::after {
+            content: '✓';
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .service-info-modal {
+            flex: 1;
+        }
+
+        .service-name-modal {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .service-description-modal {
+            font-size: 13px;
+            color: #64748B;
+        }
+
+        .service-price-modal {
+            font-size: 16px;
+            font-weight: 700;
+            color: #84CC16;
+            flex-shrink: 0;
+        }
+
+        .confirmation-footer {
+            padding: 24px;
+            border-top: 2px solid #F1F5F9;
+        }
+
+        .confirmation-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 16px;
+            background: #F8F9FA;
+            border-radius: 12px;
+        }
+
+        .confirmation-total-label {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .confirmation-total-value {
+            font-size: 28px;
+            font-weight: 900;
+            color: #84CC16;
+        }
+
+        .confirmation-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn-cancel {
+            padding: 16px;
+            background: #F1F5F9;
+            color: #64748B;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #E2E8F0;
+        }
+
+        .btn-confirm {
+            padding: 16px;
+            background: #84CC16;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 16px rgba(132, 204, 22, 0.3);
+        }
+
+        .btn-confirm:hover {
+            background: #65A30D;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(132, 204, 22, 0.4);
+        }
+
+        /* Lightbox Gallery */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 20000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 20001;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .lightbox-content {
+            max-width: 90vw;
+            max-height: 85vh;
+            position: relative;
+        }
+
+        .lightbox-image {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .lightbox-nav:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .lightbox-prev {
+            left: 20px;
+        }
+
+        .lightbox-next {
+            right: 20px;
+        }
+
+        .lightbox-counter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+        }
+
+        .lightbox-caption {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox-thumbnails {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            max-width: 90vw;
+            overflow-x: auto;
+            padding: 8px;
+        }
+
+        .lightbox-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .lightbox-thumb:hover {
+            opacity: 0.8;
+        }
+
+        .lightbox-thumb.active {
+            opacity: 1;
+            border-color: #84CC16;
+        }
+
+        /* Gallery clickable state */
+        .gallery-main,
+        .gallery-item {
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .gallery-main:hover,
+        .gallery-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
             .main-content {
@@ -932,6 +1318,102 @@
                 grid-template-columns: repeat(3, 1fr);
             }
         }
+
+        /* Lightbox Mobile Styles */
+        @media (max-width: 600px) {
+            .lightbox-nav {
+                width: 44px;
+                height: 44px;
+                font-size: 20px;
+                background: rgba(0, 0, 0, 0.6);
+            }
+
+            .lightbox-prev {
+                left: 10px;
+            }
+
+            .lightbox-next {
+                right: 10px;
+            }
+
+            .lightbox-close {
+                top: 10px;
+                right: 10px;
+                width: 44px;
+                height: 44px;
+                font-size: 24px;
+                background: rgba(0, 0, 0, 0.6);
+            }
+
+            .lightbox-content {
+                max-width: 95vw;
+                padding: 0 50px;
+            }
+
+            .lightbox-image {
+                max-height: 70vh;
+            }
+
+            .lightbox-caption {
+                font-size: 14px;
+                bottom: 80px;
+                padding: 0 20px;
+                text-align: center;
+            }
+
+            .lightbox-counter {
+                bottom: 50px;
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
+
+        /* Modal Mobile Styles */
+        @media (max-width: 500px) {
+            .modal-body {
+                padding: 16px !important;
+            }
+
+            .selectors-row {
+                gap: 12px;
+            }
+
+            .guest-section {
+                min-width: 0;
+            }
+
+            .guest-counter {
+                padding: 10px 12px;
+                min-height: 70px;
+            }
+
+            .guest-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+
+            .guest-count {
+                font-size: 24px;
+            }
+
+            .guest-tier {
+                font-size: 11px;
+            }
+
+            .guest-label {
+                font-size: 13px;
+            }
+
+            .confirmation-content {
+                margin: 10px;
+                max-height: 95vh;
+            }
+
+            .confirmation-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 
@@ -959,22 +1441,22 @@
                 <div class="gallery-section">
                     <div class="section-header">
                         <h2 class="section-title">Galería</h2>
-                        <a href="#" class="see-all">Ver todas →</a>
+                        <a href="#" class="see-all" onclick="openLightbox(0); return false;">Ver todas →</a>
                     </div>
                     <div class="gallery-grid">
-                        <div class="gallery-main">
+                        <div class="gallery-main" onclick="openLightbox(0)">
                             <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop"
-                                alt="Piscina">
+                                alt="Piscina Principal">
                             <div class="gallery-badge">Piscina Principal</div>
                         </div>
                         <div class="gallery-side">
-                            <div class="gallery-item">
+                            <div class="gallery-item" onclick="openLightbox(1)">
                                 <img src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop"
-                                    alt="Parrilla">
+                                    alt="Parrilla Profesional">
                             </div>
-                            <div class="gallery-item">
+                            <div class="gallery-item" onclick="openLightbox(2)">
                                 <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop"
-                                    alt="Interior">
+                                    alt="Salón Interior">
                                 <div class="gallery-more">+12 fotos</div>
                             </div>
                         </div>
@@ -1142,22 +1624,34 @@
                             <span class="price-unit">/hora</span>
                         </div>
                     </div>
-                    <div class="rating-badge">
-                        <span class="rating-star">★</span>
-                        <span class="rating-value">4.9</span>
-                    </div>
                 </div>
 
-                <!-- Guest Counter -->
-                <div class="guest-section">
-                    <div class="guest-label">Cantidad de invitados</div>
-                    <div class="guest-counter">
-                        <button class="guest-btn" onclick="decrementGuests()">−</button>
-                        <div class="guest-display">
-                            <div class="guest-count" id="guestCount">30</div>
-                            <div class="guest-tier" id="guestTier">1-30 personas</div>
+                <!-- Selectors Row - Compact Layout -->
+                <div class="selectors-row">
+                    <!-- Guest Counter -->
+                    <div class="guest-section">
+                        <div class="guest-label">Invitados</div>
+                        <div class="guest-counter">
+                            <button class="guest-btn" onclick="decrementGuests()">−</button>
+                            <div class="guest-display">
+                                <div class="guest-count" id="guestCount">30</div>
+                                <div class="guest-tier">personas</div>
+                            </div>
+                            <button class="guest-btn" onclick="incrementGuests()">+</button>
                         </div>
-                        <button class="guest-btn" onclick="incrementGuests()">+</button>
+                    </div>
+
+                    <!-- Duration Selector -->
+                    <div class="guest-section">
+                        <div class="guest-label">Duración</div>
+                        <div class="guest-counter">
+                            <button class="guest-btn" onclick="decrementDuration()">−</button>
+                            <div class="guest-display">
+                                <div class="guest-count" id="durationCount">4</div>
+                                <div class="guest-tier">horas</div>
+                            </div>
+                            <button class="guest-btn" onclick="incrementDuration()">+</button>
+                        </div>
                     </div>
                 </div>
 
@@ -1168,8 +1662,8 @@
                         <span class="breakdown-value" id="pricePerHour">$3,000</span>
                     </div>
                     <div class="breakdown-row">
-                        <span class="breakdown-label">Duración (4 horas)</span>
-                        <span class="breakdown-value">×4</span>
+                        <span class="breakdown-label">Duración (<span id="durationHours">4</span> horas)</span>
+                        <span class="breakdown-value">×<span id="durationMultiplier">4</span></span>
                     </div>
                     <div class="breakdown-row">
                         <span class="breakdown-label">Total</span>
@@ -1179,7 +1673,7 @@
 
                 <!-- Reserve Button -->
                 <button class="reserve-btn" onclick="makeReservation()">
-                    Reservar Ahora
+                    Continuar
                 </button>
                 <div class="reserve-note">No se realizará ningún cargo todavía</div>
             </div>
@@ -1209,22 +1703,34 @@
                             <span class="price-unit">/hora</span>
                         </div>
                     </div>
-                    <div class="rating-badge">
-                        <span class="rating-star">★</span>
-                        <span class="rating-value">4.9</span>
-                    </div>
                 </div>
 
-                <!-- Guest Counter -->
-                <div class="guest-section">
-                    <div class="guest-label">Cantidad de invitados</div>
-                    <div class="guest-counter">
-                        <button class="guest-btn" onclick="decrementGuests()">−</button>
-                        <div class="guest-display">
-                            <div class="guest-count" id="guestCountModal">30</div>
-                            <div class="guest-tier" id="guestTierModal">1-30 personas</div>
+                <!-- Selectors Row - Compact Layout -->
+                <div class="selectors-row">
+                    <!-- Guest Counter -->
+                    <div class="guest-section">
+                        <div class="guest-label">Invitados</div>
+                        <div class="guest-counter">
+                            <button class="guest-btn" onclick="decrementGuests()">−</button>
+                            <div class="guest-display">
+                                <div class="guest-count" id="guestCountModal">30</div>
+                                <div class="guest-tier">personas</div>
+                            </div>
+                            <button class="guest-btn" onclick="incrementGuests()">+</button>
                         </div>
-                        <button class="guest-btn" onclick="incrementGuests()">+</button>
+                    </div>
+
+                    <!-- Duration Selector -->
+                    <div class="guest-section">
+                        <div class="guest-label">Duración</div>
+                        <div class="guest-counter">
+                            <button class="guest-btn" onclick="decrementDuration()">−</button>
+                            <div class="guest-display">
+                                <div class="guest-count" id="durationCountModal">4</div>
+                                <div class="guest-tier">horas</div>
+                            </div>
+                            <button class="guest-btn" onclick="incrementDuration()">+</button>
+                        </div>
                     </div>
                 </div>
 
@@ -1235,8 +1741,8 @@
                         <span class="breakdown-value" id="pricePerHourModal">$3,000</span>
                     </div>
                     <div class="breakdown-row">
-                        <span class="breakdown-label">Duración (4 horas)</span>
-                        <span class="breakdown-value">×4</span>
+                        <span class="breakdown-label">Duración (<span id="durationHoursModal">4</span> horas)</span>
+                        <span class="breakdown-value">×<span id="durationMultiplierModal">4</span></span>
                     </div>
                     <div class="breakdown-row">
                         <span class="breakdown-label">Total</span>
@@ -1246,11 +1752,113 @@
 
                 <!-- Reserve Button -->
                 <button class="reserve-btn" onclick="makeReservation()">
-                    Reservar Ahora
+                    Continuar
                 </button>
                 <div class="reserve-note">No se realizará ningún cargo todavía</div>
             </div>
         </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="confirmation-modal" id="confirmationModal" onclick="closeConfirmationModal(event)">
+        <div class="confirmation-content" onclick="event.stopPropagation()">
+            <div class="confirmation-header">
+                <h2 class="confirmation-title">Confirmar Reserva</h2>
+            </div>
+
+            <div class="confirmation-body">
+                <!-- Booking Details -->
+                <div class="confirmation-section">
+                    <h3 class="confirmation-section-title">Detalles de la Reserva</h3>
+                    <div class="confirmation-detail">
+                        <span class="confirmation-label">Fecha</span>
+                        <span class="confirmation-value" id="confirmDate">-</span>
+                    </div>
+                    <div class="confirmation-detail">
+                        <span class="confirmation-label">Invitados</span>
+                        <span class="confirmation-value" id="confirmGuests">-</span>
+                    </div>
+                    <div class="confirmation-detail">
+                        <span class="confirmation-label">Duración</span>
+                        <span class="confirmation-value" id="confirmDuration">-</span>
+                    </div>
+                    <div class="confirmation-detail">
+                        <span class="confirmation-label">Precio base</span>
+                        <span class="confirmation-value" id="confirmBasePrice">-</span>
+                    </div>
+                </div>
+
+                <!-- Additional Services -->
+                <div class="confirmation-section">
+                    <h3 class="confirmation-section-title">Servicios Adicionales (Opcional)</h3>
+                    <div id="servicesContainer">
+                        <div class="service-checkbox-card" onclick="toggleService(0)">
+                            <div class="service-checkbox"></div>
+                            <div class="service-info-modal">
+                                <div class="service-name-modal">🎨 Decoración Temática</div>
+                                <div class="service-description-modal">Personaliza tu evento</div>
+                            </div>
+                            <div class="service-price-modal">+$800</div>
+                        </div>
+                        <div class="service-checkbox-card" onclick="toggleService(1)">
+                            <div class="service-checkbox"></div>
+                            <div class="service-info-modal">
+                                <div class="service-name-modal">🍽️ Servicio de Catering</div>
+                                <div class="service-description-modal">Menú completo para tus invitados</div>
+                            </div>
+                            <div class="service-price-modal">+$1,500</div>
+                        </div>
+                        <div class="service-checkbox-card" onclick="toggleService(2)">
+                            <div class="service-checkbox"></div>
+                            <div class="service-info-modal">
+                                <div class="service-name-modal">🎧 DJ Profesional</div>
+                                <div class="service-description-modal">Música y animación</div>
+                            </div>
+                            <div class="service-price-modal">+$2,000</div>
+                        </div>
+                        <div class="service-checkbox-card" onclick="toggleService(3)">
+                            <div class="service-checkbox"></div>
+                            <div class="service-info-modal">
+                                <div class="service-name-modal">📸 Fotografía</div>
+                                <div class="service-description-modal">Captura cada momento</div>
+                            </div>
+                            <div class="service-price-modal">+$1,200</div>
+                        </div>
+                        <div class="service-checkbox-card" onclick="toggleService(4)">
+                            <div class="service-checkbox"></div>
+                            <div class="service-info-modal">
+                                <div class="service-name-modal">🎂 Torta Personalizada</div>
+                                <div class="service-description-modal">Diseño a medida</div>
+                            </div>
+                            <div class="service-price-modal">+$600</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="confirmation-footer">
+                <div class="confirmation-total">
+                    <span class="confirmation-total-label">Total</span>
+                    <span class="confirmation-total-value" id="confirmTotal">$12,000</span>
+                </div>
+                <div class="confirmation-buttons">
+                    <button class="btn-cancel" onclick="closeConfirmationModal()">Cancelar</button>
+                    <button class="btn-confirm" onclick="confirmReservation()">Confirmar Reserva</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox Gallery -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+        <button class="lightbox-close" onclick="closeLightbox()">×</button>
+        <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">❮</button>
+        <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">❯</button>
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <img class="lightbox-image" id="lightboxImage" src="" alt="">
+            <div class="lightbox-caption" id="lightboxCaption"></div>
+        </div>
+        <div class="lightbox-counter" id="lightboxCounter">1 / 15</div>
     </div>
 
     <script>
@@ -1258,8 +1866,11 @@
         let currentDate = new Date();
         let selectedDate = null;
         let guestCount = 30;
+        let duration = 4; // Duration in hours
         const minGuests = 1;
         const maxGuests = 100;
+        const minDuration = 1;
+        const maxDuration = 12;
         const defaultHours = 4;
 
         // Pricing tiers
@@ -1268,6 +1879,36 @@
             { min: 31, max: 60, price: 4500, label: '31-60 personas' },
             { min: 61, max: 100, price: 6000, label: '61-100 personas' }
         ];
+
+        // Additional Services
+        const additionalServices = [
+            { id: 0, name: 'Decoración Temática', price: 800 },
+            { id: 1, name: 'Servicio de Catering', price: 1500 },
+            { id: 2, name: 'DJ Profesional', price: 2000 },
+            { id: 3, name: 'Fotografía', price: 1200 },
+            { id: 4, name: 'Torta Personalizada', price: 600 }
+        ];
+        let selectedServices = [];
+
+        // Gallery Images
+        const galleryImages = [
+            { src: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=800&fit=crop', caption: 'Piscina Principal' },
+            { src: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200&h=800&fit=crop', caption: 'Parrilla Profesional' },
+            { src: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=800&fit=crop', caption: 'Salón Interior' },
+            { src: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&h=800&fit=crop', caption: 'Vista del Jardín' },
+            { src: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1200&h=800&fit=crop', caption: 'Área de Descanso' },
+            { src: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200&h=800&fit=crop', caption: 'Cocina Equipada' },
+            { src: 'https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=1200&h=800&fit=crop', caption: 'Comedor Principal' },
+            { src: 'https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=1200&h=800&fit=crop', caption: 'Terraza con Vista' },
+            { src: 'https://images.unsplash.com/photo-1613977257592-4871e5fcd7c4?w=1200&h=800&fit=crop', caption: 'Zona de Juegos' },
+            { src: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=800&fit=crop', caption: 'Vestidor y Baños' },
+            { src: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=1200&h=800&fit=crop', caption: 'Estacionamiento' },
+            { src: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=800&fit=crop', caption: 'Fachada Principal' },
+            { src: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1200&h=800&fit=crop', caption: 'Quincho Techado' },
+            { src: 'https://images.unsplash.com/photo-1600210492493-0946911123ea?w=1200&h=800&fit=crop', caption: 'Área de Bar' },
+            { src: 'https://images.unsplash.com/photo-1600607688969-a5bfcd646154?w=1200&h=800&fit=crop', caption: 'Vista Nocturna' }
+        ];
+        let currentImageIndex = 0;
 
         // Simulated booked dates
         const bookedDates = [
@@ -1398,6 +2039,43 @@
             }
         }
 
+        // Duration Functions
+        function incrementDuration() {
+            if (duration < maxDuration) {
+                duration++;
+                updateDurationDisplay();
+            }
+        }
+
+        function decrementDuration() {
+            if (duration > minDuration) {
+                duration--;
+                updateDurationDisplay();
+            }
+        }
+
+        function updateDurationDisplay() {
+            // Update desktop
+            const desktopCount = document.getElementById('durationCount');
+            if (desktopCount) desktopCount.textContent = duration;
+
+            // Update breakdown
+            const durationHours = document.getElementById('durationHours');
+            const durationMultiplier = document.getElementById('durationMultiplier');
+            if (durationHours) durationHours.textContent = duration;
+            if (durationMultiplier) durationMultiplier.textContent = duration;
+
+            // Update modal
+            const modalCount = document.getElementById('durationCountModal');
+            const modalHours = document.getElementById('durationHoursModal');
+            const modalMultiplier = document.getElementById('durationMultiplierModal');
+            if (modalCount) modalCount.textContent = duration;
+            if (modalHours) modalHours.textContent = duration;
+            if (modalMultiplier) modalMultiplier.textContent = duration;
+
+            updatePrice();
+        }
+
         function updateGuestDisplay() {
             const tier = pricingTiers.find(t => guestCount >= t.min && guestCount <= t.max);
 
@@ -1423,7 +2101,7 @@
 
         function updatePrice() {
             const pricePerHour = getCurrentPrice();
-            const totalPrice = pricePerHour * defaultHours;
+            const totalPrice = pricePerHour * duration;
 
             // Actualizar desktop
             const desktopPricePerHour = document.getElementById('pricePerHour');
@@ -1438,17 +2116,112 @@
             if (modalTotalPrice) modalTotalPrice.textContent = `$${totalPrice.toLocaleString('es-AR')}`;
         }
 
-        // Reservation
+        // Reservation - Open Confirmation Modal
         function makeReservation() {
+            if (!selectedDate) {
+                alert('Por favor selecciona una fecha primero');
+                return;
+            }
+
             const pricePerHour = getCurrentPrice();
-            const totalPrice = pricePerHour * defaultHours;
+            const basePrice = pricePerHour * duration;
 
-            alert(`¡Reserva confirmada!\n\nInvitados: ${guestCount} personas\nPrecio: $${totalPrice.toLocaleString('es-AR')}\n\n¡Nos vemos pronto!`);
+            // Update confirmation modal details
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const dateObj = new Date(selectedDate);
+            const dateStr = `${dateObj.getDate()} de ${monthNames[dateObj.getMonth()]}, ${dateObj.getFullYear()}`;
 
-            // Cerrar modal si está abierto
+            document.getElementById('confirmDate').textContent = dateStr;
+            document.getElementById('confirmGuests').textContent = `${guestCount} personas`;
+            document.getElementById('confirmDuration').textContent = `${duration} horas`;
+            document.getElementById('confirmBasePrice').textContent = `$${basePrice.toLocaleString('es-AR')}`;
+
+            // Reset selected services
+            selectedServices = [];
+            updateConfirmationTotal();
+
+            // Reset service checkboxes
+            const serviceCards = document.querySelectorAll('.service-checkbox-card');
+            serviceCards.forEach(card => card.classList.remove('selected'));
+
+            // Open confirmation modal
+            document.getElementById('confirmationModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // Close mobile modal if open
             if (window.innerWidth <= 1200) {
                 closeModal();
             }
+        }
+
+        // Toggle Service Selection
+        function toggleService(serviceId) {
+            const index = selectedServices.indexOf(serviceId);
+            const serviceCard = document.querySelectorAll('.service-checkbox-card')[serviceId];
+
+            if (index > -1) {
+                selectedServices.splice(index, 1);
+                serviceCard.classList.remove('selected');
+            } else {
+                selectedServices.push(serviceId);
+                serviceCard.classList.add('selected');
+            }
+
+            updateConfirmationTotal();
+        }
+
+        // Update Confirmation Total
+        function updateConfirmationTotal() {
+            const pricePerHour = getCurrentPrice();
+            const basePrice = pricePerHour * duration;
+
+            let servicesTotal = 0;
+            selectedServices.forEach(serviceId => {
+                const service = additionalServices.find(s => s.id === serviceId);
+                if (service) servicesTotal += service.price;
+            });
+
+            const total = basePrice + servicesTotal;
+            document.getElementById('confirmTotal').textContent = `$${total.toLocaleString('es-AR')}`;
+        }
+
+        // Close Confirmation Modal
+        function closeConfirmationModal(event) {
+            if (event && event.target.id !== 'confirmationModal') return;
+            document.getElementById('confirmationModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Confirm Reservation
+        function confirmReservation() {
+            const pricePerHour = getCurrentPrice();
+            const basePrice = pricePerHour * duration;
+
+            let servicesTotal = 0;
+            let servicesText = '';
+            selectedServices.forEach(serviceId => {
+                const service = additionalServices.find(s => s.id === serviceId);
+                if (service) {
+                    servicesTotal += service.price;
+                    servicesText += `\n  - ${service.name}: $${service.price.toLocaleString('es-AR')}`;
+                }
+            });
+
+            const total = basePrice + servicesTotal;
+
+            let message = `¡Reserva confirmada!\n\nInvitados: ${guestCount} personas\nDuración: ${duration} horas\nPrecio base: $${basePrice.toLocaleString('es-AR')}`;
+
+            if (servicesText) {
+                message += `\n\nServicios adicionales:${servicesText}\n\nTotal: $${total.toLocaleString('es-AR')}`;
+            } else {
+                message += `\n\nTotal: $${total.toLocaleString('es-AR')}`;
+            }
+
+            message += '\n\n¡Nos vemos pronto!';
+
+            alert(message);
+            closeConfirmationModal();
         }
 
         // Directions
@@ -1457,6 +2230,55 @@
             const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
             window.open(url, '_blank');
         }
+
+        // Lightbox Gallery Functions
+        function openLightbox(index) {
+            currentImageIndex = index;
+            updateLightboxImage();
+            document.getElementById('lightbox').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox(event) {
+            if (event && event.target.id !== 'lightbox' && !event.target.classList.contains('lightbox-close')) return;
+            document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function updateLightboxImage() {
+            const image = galleryImages[currentImageIndex];
+            document.getElementById('lightboxImage').src = image.src;
+            document.getElementById('lightboxImage').alt = image.caption;
+            document.getElementById('lightboxCaption').textContent = image.caption;
+            document.getElementById('lightboxCounter').textContent = `${currentImageIndex + 1} / ${galleryImages.length}`;
+        }
+
+        function prevImage(event) {
+            event.stopPropagation();
+            currentImageIndex = (currentImageIndex - 1 + galleryImages.length) % galleryImages.length;
+            updateLightboxImage();
+        }
+
+        function nextImage(event) {
+            event.stopPropagation();
+            currentImageIndex = (currentImageIndex + 1) % galleryImages.length;
+            updateLightboxImage();
+        }
+
+        // Keyboard navigation for lightbox
+        document.addEventListener('keydown', function (e) {
+            if (!document.getElementById('lightbox').classList.contains('active')) return;
+
+            if (e.key === 'Escape') {
+                closeLightbox();
+            } else if (e.key === 'ArrowLeft') {
+                currentImageIndex = (currentImageIndex - 1 + galleryImages.length) % galleryImages.length;
+                updateLightboxImage();
+            } else if (e.key === 'ArrowRight') {
+                currentImageIndex = (currentImageIndex + 1) % galleryImages.length;
+                updateLightboxImage();
+            }
+        });
     </script>
 </body>
 

@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pushService } from '../services/pushService';
 import ClientManagement from '../components/ClientManagement';
 import BusinessSettings from '../components/BusinessSettings';
+import VenueSettings from '../components/venue/VenueSettings';
 import { formatDisplayDate } from '../utils/dateUtils';
 import BusinessLogin from '../components/business/BusinessLogin';
 import BusinessPortalSidebar from '../components/business/BusinessPortalSidebar';
@@ -1182,14 +1183,26 @@ export default function BusinessPortal() {
                                 </div>
                             </div>
                         ) : viewMode === 'settings' ? (
-                            <BusinessSettings
-                                business={currentBusiness}
-                                isMobile={isMobile}
-                                onUpdate={(updated) => {
-                                    // Update in the list of businesses too
-                                    setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
-                                }}
-                            />
+                            (currentBusiness?.type === 'venue' || currentBusiness?.type === 'alquiler') ? (
+                                <VenueSettings
+                                    business={currentBusiness}
+                                    isMobile={isMobile}
+                                    onUpdate={(updated) => {
+                                        setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
+                                        // Also update currentBusiness to reflect changes immediately
+                                        // This is handled by React state update in setBusinesses trigger re-render
+                                    }}
+                                />
+                            ) : (
+                                <BusinessSettings
+                                    business={currentBusiness}
+                                    isMobile={isMobile}
+                                    onUpdate={(updated) => {
+                                        // Update in the list of businesses too
+                                        setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
+                                    }}
+                                />
+                            )
                         ) : (
                             <div style={{
                                 background: 'var(--bg-card)',

@@ -175,6 +175,7 @@ export default function SlotCalendar({
                 onToday={handleToday}
                 onNext={handleNext}
                 isMobile={isMobile}
+                showTitle={type !== 'service'} // Hide title for services
             />
 
             {/* Vista del calendario */}
