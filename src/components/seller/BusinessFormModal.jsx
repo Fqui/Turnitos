@@ -78,8 +78,23 @@ const BusinessFormModal = ({ business, categories, subcategories, onClose, onSav
             const cat = categories.find(c => c.id === formData.category_id);
             const derivedType = cat ? (TYPE_BY_CATEGORY_NAME[cat.name] || null) : null;
 
+            // Auto-generate slug from name if missing
+            let slug = formData.slug || '';
+            if (!slug && formData.name) {
+                slug = formData.name
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents
+                    .replace(/[^a-z0-9\s-]/g, '') // strip non-alphanumeric
+                    .trim()
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-');
+                // Ensure uniqueness by appending random suffix
+                slug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
+            }
+
             const dataToSave = {
                 ...formData,
+                slug,
                 type: derivedType || formData.type,
                 seller_id: formData.seller_id || null,
             };
