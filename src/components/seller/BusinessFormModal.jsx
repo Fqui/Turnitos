@@ -16,6 +16,8 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers = [], 
         subscription_plan_id: business?.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb'
     });
     const [loading, setLoading] = useState(false);
+    const [createdCredentials, setCreatedCredentials] = useState(null);
+    const [showCredentials, setShowCredentials] = useState(false);
 
     // Custom dropdown state
     const [categoryOpen, setCategoryOpen] = useState(false);
@@ -104,11 +106,21 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers = [], 
 
             if (business) {
                 await supabaseService.updateBusinessAsSuperAdmin(business.id, dataToSave);
+                onSave();
+                onClose();
             } else {
-                await supabaseService.createBusinessAsSuperAdmin(dataToSave);
+                const result = await supabaseService.createBusinessAsSuperAdmin(dataToSave);
+                onSave();
+                // Show credentials panel instead of closing immediately
+                setCreatedCredentials({
+                    name: dataToSave.name,
+                    email: dataToSave.email,
+                    password: dataToSave.password,
+                    businessId: result?.id,
+                    slug: result?.slug || dataToSave.slug,
+                });
+                setShowCredentials(true);
             }
-            onSave();
-            onClose();
         } catch (err) {
             alert(err.message);
         } finally {
@@ -630,6 +642,204 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers = [], 
                     </div>
                 </form>
             </div>
+
+            {/* Credentials panel — shown after creating a new business */}
+            <AnimatePresence>
+                {showCredentials && createdCredentials && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0,0,0,0.85)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1100,
+                            backdropFilter: 'blur(8px)',
+                            padding: '24px',
+                        }}
+                        onClick={() => {
+                            setShowCredentials(false);
+                            setCreatedCredentials(null);
+                            onClose();
+                        }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ duration: 0.25, ease: 'easeOut' }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                                borderRadius: '24px',
+                                padding: '40px',
+                                maxWidth: '560px',
+                                width: '100%',
+                                border: '1px solid rgba(0, 230, 118, 0.3)',
+                                boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                                color: 'white',
+                            }}
+                        >
+                            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                                <div style={{
+                                    width: '72px',
+                                    height: '72px',
+                                    margin: '0 auto 16px',
+                                    borderRadius: '50%',
+                                    background: 'linear-gradient(135deg, var(--primary-paddle), #059669)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '36px',
+                                }}>✓</div>
+                                <h2 style={{ fontSize: '26px', fontWeight: '800', margin: 0 }}>
+                                    Negocio creado
+                                </h2>
+                                <p style={{ opacity: 0.7, marginTop: '8px', fontSize: '14px' }}>
+                                    Pasale estas credenciales al dueño de <strong>{createdCredentials.name}</strong>
+                                </p>
+                            </div>
+
+                            <CredentialsRow
+                                label="Email del dueño"
+                                value={createdCredentials.email}
+                                placeholder="email"
+                            />
+                            <CredentialsRow
+                                label="Contraseña"
+                                value={createdCredentials.password}
+                                placeholder="password"
+                            />
+                            <CredentialsRow
+                                label="Link de login"
+                                value="https://www.turnitoslr.com/login"
+                                placeholder="url"
+                            />
+
+                            <div style={{
+                                display: 'flex',
+                                gap: '12px',
+                                justifyContent: 'flex-end',
+                                marginTop: '24px',
+                            }}>
+                                <button
+                                    onClick={() => {
+                                        setShowCredentials(false);
+                                        setCreatedCredentials(null);
+                                        onClose();
+                                    }}
+                                    style={{
+                                        padding: '14px 28px',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: '12px',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        fontWeight: '600',
+                                        fontSize: '15px',
+                                    }}
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
+
+                            <p style={{
+                                marginTop: '20px',
+                                padding: '14px',
+                                background: 'rgba(245, 158, 11, 0.1)',
+                                borderRadius: '10px',
+                                border: '1px solid rgba(245, 158, 11, 0.3)',
+                                color: '#fbbf24',
+                                fontSize: '13px',
+                                textAlign: 'center',
+                                margin: '20px 0 0 0',
+                            }}>
+                                ⚠️ Anotá estas credenciales. No se vuelven a mostrar.
+                            </p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+// Helper component for displaying credential rows with copy buttons
+const CredentialsRow = ({ label, value, placeholder }) => {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        } catch (e) {
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = value;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try { document.execCommand('copy'); } catch (_) {}
+            document.body.removeChild(textarea);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        }
+    };
+
+    return (
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 14px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '12px',
+            marginBottom: '12px',
+        }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                    fontSize: '11px',
+                    opacity: 0.6,
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '4px',
+                }}>{label}</div>
+                <div style={{
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    color: 'white',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                }}>{value || '(vacío)'}</div>
+            </div>
+            <button
+                onClick={handleCopy}
+                style={{
+                    padding: '8px 16px',
+                    background: copied ? 'rgba(0, 230, 118, 0.2)' : 'rgba(255,255,255,0.08)',
+                    border: copied ? '1px solid var(--primary-paddle)' : '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    color: copied ? 'var(--primary-paddle)' : 'white',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    minWidth: '90px',
+                    transition: 'all 0.2s',
+                }}
+            >
+                {copied ? '✓ Copiado' : 'Copiar'}
+            </button>
         </div>
     );
 };
