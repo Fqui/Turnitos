@@ -14,7 +14,7 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers, onClo
         facebook: business?.facebook || '',
         type: business?.type || 'venue',
         seller_id: business?.seller_id || '',
-        subscription_plan_id: business?.subscription_plan_id || '1'
+        subscription_plan_id: business?.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb'
     });
     const [loading, setLoading] = useState(false);
 
