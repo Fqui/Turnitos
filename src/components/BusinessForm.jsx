@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import serviceAdapter from '../services/serviceAdapter';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -86,6 +87,42 @@ export default function BusinessForm({ business, onSave, onCancel }) {
     const [uploadingSpecialistImage, setUploadingSpecialistImage] = useState(false);
     const [uploadingServiceImage, setUploadingServiceImage] = useState(false);
     const [serviceCategories, setServiceCategories] = useState(business?.service_categories || []);
+
+    // Categories loaded from DB
+    const [dbCategories, setDbCategories] = useState([]);
+    const [dbSubcategories, setDbSubcategories] = useState([]);
+
+    // Load categories from DB on mount
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const cats = await serviceAdapter.getCategories();
+                if (mounted) setDbCategories(cats || []);
+            } catch (e) {
+                console.warn('No se pudieron cargar categorías:', e);
+            }
+        })();
+        return () => { mounted = false; };
+    }, []);
+
+    // Load subcategories when category changes
+    useEffect(() => {
+        if (!formData.category) {
+            setDbSubcategories([]);
+            return;
+        }
+        let mounted = true;
+        (async () => {
+            try {
+                const subs = await serviceAdapter.getSubcategories(formData.category);
+                if (mounted) setDbSubcategories(subs || []);
+            } catch (e) {
+                console.warn('No se pudieron cargar subcategorías:', e);
+            }
+        })();
+        return () => { mounted = false; };
+    }, [formData.category]);
     const [newCategory, setNewCategory] = useState('');
     const [showHours, setShowHours] = useState(false);
     const [editingServiceIndex, setEditingServiceIndex] = useState(null);
@@ -615,7 +652,7 @@ export default function BusinessForm({ business, onSave, onCancel }) {
                         <select
                             required
                             value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value, subcategory: '' })}
                             style={{
                                 width: '100%',
                                 padding: '12px',
@@ -623,13 +660,32 @@ export default function BusinessForm({ business, onSave, onCancel }) {
                                 border: '1px solid var(--border)',
                                 backgroundColor: 'var(--bg-main)',
                                 color: 'var(--text-primary)',
-                                fontSize: '14px'
+                                fontSize: '14px',
+                                cursor: 'pointer',
+                                appearance: 'none',
+                                WebkitAppearance: 'none',
+                                MozAppearance: 'none',
+                                backgroundImage: "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2399a1b3'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E\")",
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'right 12px center',
+                                backgroundSize: '14px',
+                                paddingRight: '36px'
                             }}
                         >
-                            <option value="padel">Padel</option>
-                            <option value="futbol">Fútbol</option>
-                            <option value="belleza">Belleza</option>
-                            <option value="salud">Salud</option>
+                            <option value="" style={{ background: 'var(--bg-main)', color: 'var(--text-secondary)' }}>Seleccionar categoría...</option>
+                            {dbCategories.length > 0 ? dbCategories.map(cat => (
+                                <option key={cat.id} value={cat.id} style={{ background: 'var(--bg-main)', color: 'var(--text-primary)', padding: '8px' }}>
+                                    {cat.icon || ''} {cat.name}
+                                </option>
+                            )) : (
+                                <>
+                                    <option value="padel">🎾 Padel</option>
+                                    <option value="futbol">⚽ Fútbol</option>
+                                    <option value="belleza">💄 Belleza</option>
+                                    <option value="salud">🏥 Salud</option>
+                                    <option value="alquiler">🏠 Alquiler</option>
+                                </>
+                            )}
                         </select>
                     </div>
 
