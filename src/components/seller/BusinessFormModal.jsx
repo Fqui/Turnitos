@@ -97,9 +97,40 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers = [], 
                 slug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
             }
 
+            // Auto-generate email + password if creating new business (no user input fields for these)
+            let ownerEmail = formData.email || '';
+            let ownerPassword = formData.password || '';
+            if (!business) {
+                if (!ownerEmail) {
+                    const slugBase = (formData.name || 'business')
+                        .toLowerCase()
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^a-z0-9]/g, '')
+                        .substring(0, 20);
+                    ownerEmail = `${slugBase || 'business'}-${Math.random().toString(36).substring(2, 6)}@turnitoslr.com`;
+                }
+                if (!ownerPassword) {
+                    // 8 char password with upper, lower, number
+                    ownerPassword = (() => {
+                        const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+                        const lower = 'abcdefghijkmnpqrstuvwxyz';
+                        const nums = '23456789';
+                        const all = upper + lower + nums;
+                        let pwd = '';
+                        pwd += upper[Math.floor(Math.random() * upper.length)];
+                        pwd += nums[Math.floor(Math.random() * nums.length)];
+                        pwd += lower[Math.floor(Math.random() * lower.length)];
+                        for (let i = 0; i < 5; i++) pwd += all[Math.floor(Math.random() * all.length)];
+                        return pwd.split('').sort(() => Math.random() - 0.5).join('');
+                    })();
+                }
+            }
+
             const dataToSave = {
                 ...formData,
                 slug,
+                email: ownerEmail,
+                password: ownerPassword,
                 type: derivedType || formData.type,
                 seller_id: formData.seller_id || null,
             };
