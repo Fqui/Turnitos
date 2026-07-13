@@ -10,7 +10,7 @@ export default defineConfig({
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'public',
-      filename: 'sw-custom.js',
+      filename: 'sw-v2.js',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       // Force new SW when these files change
