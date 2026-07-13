@@ -1660,7 +1660,7 @@ class SupabaseService {
         let query = supabase
             .from('categories')
             .select('*, subcategories(*)')
-            .order('display_order', { ascending: true });
+            .order('name', { ascending: true });
 
         if (businessType) {
             query = query.eq('business_type', businessType);

@@ -35,27 +35,42 @@ const SuperAdminDashboard = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [analyticsData, sellersData, businessesData, categoriesData, subcategoriesData, bookings, commTrends, bizTrends] = await Promise.all([
-                supabaseService.getGlobalAnalytics(),
-                supabaseService.getAllSellers(),
-                supabaseService.getAllBusinesses(),
-                supabaseService.getCategories(),
-                supabaseService.getSubcategories(),
-                supabaseService.getBookingsAnalytics(),
-                supabaseService.getCommissionTrends(6),
-                supabaseService.getBusinessGrowthTrends(6)
+            // Each fetch has its own try/catch so one failure doesn't break the rest
+            const safe = async (promise, fallback = null) => {
+                try {
+                    const result = await promise;
+                    return result ?? fallback;
+                } catch (err) {
+                    console.warn('Fetch failed:', err.message || err);
+                    return fallback;
+                }
+            };
+
+            const [
+                analyticsData, sellersData, businessesData,
+                categoriesData, subcategoriesData, bookings,
+                commTrends, bizTrends
+            ] = await Promise.all([
+                safe(supabaseService.getGlobalAnalytics(), {}),
+                safe(supabaseService.getAllSellers(), []),
+                safe(supabaseService.getAllBusinesses(), []),
+                safe(supabaseService.getCategories(), []),
+                safe(supabaseService.getSubcategories(), []),
+                safe(supabaseService.getBookingsAnalytics(), {}),
+                safe(supabaseService.getCommissionTrends(6), []),
+                safe(supabaseService.getBusinessGrowthTrends(6), []),
             ]);
 
-            setAnalytics(analyticsData);
-            setSellers(sellersData);
-            setBusinesses(businessesData);
-            setCategories(categoriesData);
-            setSubcategories(subcategoriesData);
-            setBookingsData(bookings);
-            setCommissionTrends(commTrends);
-            setBusinessGrowthTrends(bizTrends);
+            setAnalytics(analyticsData || {});
+            setSellers(sellersData || []);
+            setBusinesses(businessesData || []);
+            setCategories(categoriesData || []);
+            setSubcategories(subcategoriesData || []);
+            setBookingsData(bookings || {});
+            setCommissionTrends(commTrends || []);
+            setBusinessGrowthTrends(bizTrends || []);
         } catch (err) {
-            console.error('Error loading data:', err);
+            console.error('Critical error in loadData:', err);
         } finally {
             setLoading(false);
         }
