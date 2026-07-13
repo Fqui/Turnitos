@@ -272,16 +272,28 @@ class SupabaseService {
             }
         }
 
+        // Normalize seller_id: empty/null/'1' → null
+        let sellerId = businessData.seller_id;
+        if (!sellerId || sellerId === '1' || sellerId === 1) {
+            sellerId = null;
+            businessData.seller_id = null;
+        }
+
+        // Validate category_id: must be a valid UUID or null
+        const categoryId = businessData.category_id && businessData.category_id !== '1'
+            ? businessData.category_id
+            : null;
+
         // 1. Prepare business data
         const businessRecord = {
             name: businessData.name,
-            category_id: businessData.category_id, // UUID reference to categories table
+            category_id: categoryId, // UUID reference to categories table
             // subcategory_id removed as it doesn't exist in businesses table
             subscription_plan_id: planId, // UUID reference to subscription_plans table
             type: businessData.type,
             email: businessData.email, // Auto-generated email
             password: businessData.password, // Default password
-            seller_id: businessData.seller_id, // Link to seller who created it
+            seller_id: sellerId, // Link to seller who created it
             logo_url: businessData.logo_url || businessData.logo || businessData.image, // Use new column name
             banner_url: businessData.banner_url || businessData.banner_image, // Use new column name
             location: businessData.location,
@@ -2717,9 +2729,19 @@ class SupabaseService {
             }
         }
 
+        // Normalize seller_id
+        const sellerId = businessData.seller_id && businessData.seller_id !== '1'
+            ? businessData.seller_id
+            : null;
+
+        // Validate category_id
+        const categoryId = businessData.category_id && businessData.category_id !== '1'
+            ? businessData.category_id
+            : null;
+
         const updateData = {
             name: businessData.name,
-            category_id: businessData.category_id,
+            category_id: categoryId,
             subcategory_id: businessData.subcategory_id,
             location: businessData.location,
             latitude: businessData.latitude,
@@ -2730,7 +2752,7 @@ class SupabaseService {
             facebook: businessData.facebook,
             type: businessData.type,
             subscription_plan_id: planId,
-            seller_id: businessData.seller_id
+            seller_id: sellerId
         };
 
         const { data, error } = await supabase
