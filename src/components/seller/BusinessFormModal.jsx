@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 
 const BusinessFormModal = ({ business, categories, subcategories, sellers, onClose, onSave }) => {
@@ -17,9 +18,50 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers, onClo
     });
     const [loading, setLoading] = useState(false);
 
+    // Custom dropdown state
+    const [categoryOpen, setCategoryOpen] = useState(false);
+    const [subcategoryOpen, setSubcategoryOpen] = useState(false);
+    const categoryRef = useRef(null);
+    const subcategoryRef = useRef(null);
+
+    // Close on click outside
+    useEffect(() => {
+        const handle = (e) => {
+            if (categoryRef.current && !categoryRef.current.contains(e.target)) setCategoryOpen(false);
+            if (subcategoryRef.current && !subcategoryRef.current.contains(e.target)) setSubcategoryOpen(false);
+        };
+        document.addEventListener('mousedown', handle);
+        return () => document.removeEventListener('mousedown', handle);
+    }, []);
+
+    // Close on Escape
+    useEffect(() => {
+        const handle = (e) => {
+            if (e.key === 'Escape') {
+                setCategoryOpen(false);
+                setSubcategoryOpen(false);
+            }
+        };
+        document.addEventListener('keydown', handle);
+        return () => document.removeEventListener('keydown', handle);
+    }, []);
+
     const filteredSubcategories = subcategories.filter(
         sub => sub.category_id === formData.category_id
     );
+    const selectedSubcategory = filteredSubcategories.find(s => s.id === formData.subcategory_id);
+
+    // Base input style
+    const inputStyle = {
+        width: '100%',
+        padding: '14px',
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '12px',
+        color: 'white',
+        fontSize: '15px',
+        outline: 'none'
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -102,60 +144,196 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers, onClo
                     </div>
 
                     {/* Category & Subcategory */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
-                                Categoría *
-                            </label>
-                            <select
-                                required
-                                value={formData.category_id}
-                                onChange={(e) => setFormData({ ...formData, category_id: e.target.value, subcategory_id: '' })}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '12px',
-                                    color: 'white',
-                                    fontSize: '15px',
-                                    outline: 'none'
-                                }}
-                            >
-                                <option value="">Seleccionar...</option>
-                                {categories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                            <div ref={categoryRef} style={{ position: 'relative' }}>
+                                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
+                                                    Categoría *
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setCategoryOpen(o => !o); setSubcategoryOpen(false); }}
+                                                    style={{
+                                                        ...inputStyle,
+                                                        textAlign: 'left',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        gap: '8px'
+                                                    }}
+                                                >
+                                                    <span style={{ color: selectedCategory ? 'white' : 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        {selectedCategory ? (
+                                                            <>
+                                                                <span style={{ fontSize: '18px' }}>{selectedCategory.icon}</span>
+                                                                {selectedCategory.name}
+                                                            </>
+                                                        ) : (
+                                                            'Seleccionar categoría...'
+                                                        )}
+                                                    </span>
+                                                    <motion.svg
+                                                        animate={{ rotate: categoryOpen ? 180 : 0 }}
+                                                        transition={{ duration: 0.2 }}
+                                                        width="16" height="16" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
+                                                    >
+                                                        <path d="M8 11L3 6h10z" />
+                                                    </motion.svg>
+                                                </button>
+                                                <AnimatePresence>
+                                                    {categoryOpen && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                            exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                                            transition={{ duration: 0.18, ease: 'easeOut' }}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: 'calc(100% + 6px)',
+                                                                left: 0,
+                                                                right: 0,
+                                                                zIndex: 1000,
+                                                                backgroundColor: '#1a1a1a',
+                                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                                borderRadius: '12px',
+                                                                boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                                                                maxHeight: '320px',
+                                                                overflowY: 'auto'
+                                                            }}
+                                                        >
+                                                            {categories.map(cat => (
+                                                                <div
+                                                                    key={cat.id}
+                                                                    onClick={() => {
+                                                                        setFormData({ ...formData, category_id: cat.id, subcategory_id: '' });
+                                                                        setCategoryOpen(false);
+                                                                    }}
+                                                                    style={{
+                                                                        padding: '12px 16px',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '12px',
+                                                                        backgroundColor: formData.category_id === cat.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                                                        borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                                                    }}
+                                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = formData.category_id === cat.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
+                                                                >
+                                                                    {cat.icon && (
+                                                                        <span style={{
+                                                                            fontSize: '20px',
+                                                                            width: '36px',
+                                                                            height: '36px',
+                                                                            borderRadius: '50%',
+                                                                            background: cat.color || 'rgba(255,255,255,0.1)',
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            flexShrink: 0
+                                                                        }}>
+                                                                            {cat.icon}
+                                                                        </span>
+                                                                    )}
+                                                                    <span style={{ flex: 1, color: 'white', fontSize: '15px', fontWeight: '500' }}>
+                                                                        {cat.name}
+                                                                    </span>
+                                                                    {formData.category_id === cat.id && (
+                                                                        <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
+                                                                            <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
+                                                                        </svg>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
 
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
-                                Subcategoría
-                            </label>
-                            <select
-                                value={formData.subcategory_id}
-                                onChange={(e) => setFormData({ ...formData, subcategory_id: e.target.value })}
-                                disabled={!formData.category_id}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '12px',
-                                    color: 'white',
-                                    fontSize: '15px',
-                                    outline: 'none',
-                                    opacity: formData.category_id ? 1 : 0.5
-                                }}
-                            >
-                                <option value="">Ninguna</option>
-                                {filteredSubcategories.map(sub => (
-                                    <option key={sub.id} value={sub.id}>{sub.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+                                            <div ref={subcategoryRef} style={{ position: 'relative' }}>
+                                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
+                                                    Subcategoría
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { if (formData.category_id) { setSubcategoryOpen(o => !o); setCategoryOpen(false); } }}
+                                                    disabled={!formData.category_id}
+                                                    style={{
+                                                        ...inputStyle,
+                                                        textAlign: 'left',
+                                                        cursor: formData.category_id ? 'pointer' : 'not-allowed',
+                                                        opacity: formData.category_id ? 1 : 0.5,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        gap: '8px'
+                                                    }}
+                                                >
+                                                    <span style={{ color: selectedSubcategory ? 'white' : 'rgba(255,255,255,0.5)' }}>
+                                                        {selectedSubcategory ? selectedSubcategory.name : 'Seleccionar subcategoría...'}
+                                                    </span>
+                                                    <motion.svg
+                                                        animate={{ rotate: subcategoryOpen ? 180 : 0 }}
+                                                        transition={{ duration: 0.2 }}
+                                                        width="16" height="16" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
+                                                    >
+                                                        <path d="M8 11L3 6h10z" />
+                                                    </motion.svg>
+                                                </button>
+                                                <AnimatePresence>
+                                                    {subcategoryOpen && filteredSubcategories.length > 0 && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                            exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                                            transition={{ duration: 0.18, ease: 'easeOut' }}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: 'calc(100% + 6px)',
+                                                                left: 0,
+                                                                right: 0,
+                                                                zIndex: 1000,
+                                                                backgroundColor: '#1a1a1a',
+                                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                                borderRadius: '12px',
+                                                                boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                                                                maxHeight: '320px',
+                                                                overflowY: 'auto'
+                                                            }}
+                                                        >
+                                                            {filteredSubcategories.map(sub => (
+                                                                <div
+                                                                    key={sub.id}
+                                                                    onClick={() => {
+                                                                        setFormData({ ...formData, subcategory_id: sub.id });
+                                                                        setSubcategoryOpen(false);
+                                                                    }}
+                                                                    style={{
+                                                                        padding: '12px 16px',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'space-between',
+                                                                        gap: '12px',
+                                                                        backgroundColor: formData.subcategory_id === sub.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                                                        borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                                                    }}
+                                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = formData.subcategory_id === sub.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
+                                                                >
+                                                                    <span style={{ flex: 1, color: 'white', fontSize: '15px' }}>{sub.name}</span>
+                                                                    {formData.subcategory_id === sub.id && (
+                                                                        <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
+                                                                            <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
+                                                                        </svg>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        </div>
 
                     {/* Location */}
                     <div>
