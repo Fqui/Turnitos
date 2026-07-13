@@ -8,7 +8,6 @@ const BusinessFormModal = ({ business, categories, subcategories, onClose, onSav
         category_id: business?.category_id || '',
         subcategory_id: business?.subcategory_id || '',
         location: business?.location || '',
-        phone: business?.phone || '',
         whatsapp: business?.whatsapp || '',
         instagram: business?.instagram || '',
         facebook: business?.facebook || '',
@@ -394,28 +393,7 @@ const BusinessFormModal = ({ business, categories, subcategories, onClose, onSav
                     </div>
 
                     {/* Contact Info */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
-                                Teléfono
-                            </label>
-                            <input
-                                type="tel"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '12px',
-                                    color: 'white',
-                                    fontSize: '15px',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-
+                    <div>
                         <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
                                 WhatsApp
