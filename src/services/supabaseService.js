@@ -255,12 +255,29 @@ class SupabaseService {
             businessData.subcategories = [businessData.subcategory_id];
         }
 
+        // Normalize subscription_plan_id: legacy '1' or empty → use first available plan
+        let planId = businessData.subscription_plan_id;
+        if (!planId || planId === '1' || planId === 1) {
+            try {
+                const { data: plans } = await supabase
+                    .from('subscription_plans')
+                    .select('id')
+                    .limit(1);
+                if (plans && plans.length > 0) {
+                    planId = plans[0].id;
+                    businessData.subscription_plan_id = planId;
+                }
+            } catch (e) {
+                console.warn('Could not fetch default plan:', e);
+            }
+        }
+
         // 1. Prepare business data
         const businessRecord = {
             name: businessData.name,
             category_id: businessData.category_id, // UUID reference to categories table
             // subcategory_id removed as it doesn't exist in businesses table
-            subscription_plan_id: businessData.subscription_plan_id, // UUID reference to subscription_plans table
+            subscription_plan_id: planId, // UUID reference to subscription_plans table
             type: businessData.type,
             email: businessData.email, // Auto-generated email
             password: businessData.password, // Default password
@@ -2684,6 +2701,22 @@ class SupabaseService {
      * Update any business as super admin
      */
     async updateBusinessAsSuperAdmin(businessId, businessData) {
+        // Normalize subscription_plan_id
+        let planId = businessData.subscription_plan_id;
+        if (!planId || planId === '1' || planId === 1) {
+            try {
+                const { data: plans } = await supabase
+                    .from('subscription_plans')
+                    .select('id')
+                    .limit(1);
+                if (plans && plans.length > 0) {
+                    planId = plans[0].id;
+                }
+            } catch (e) {
+                console.warn('Could not fetch default plan:', e);
+            }
+        }
+
         const updateData = {
             name: businessData.name,
             category_id: businessData.category_id,
@@ -2696,7 +2729,7 @@ class SupabaseService {
             instagram: businessData.instagram,
             facebook: businessData.facebook,
             type: businessData.type,
-            subscription_plan_id: businessData.subscription_plan_id,
+            subscription_plan_id: planId,
             seller_id: businessData.seller_id
         };
 
