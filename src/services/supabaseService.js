@@ -285,8 +285,23 @@ class SupabaseService {
             : null;
 
         // 1. Prepare business data
+        // Ensure slug is always present (auto-generate from name if missing)
+        let finalSlug = businessData.slug;
+        if (!finalSlug && businessData.name) {
+            const randomSuffix = Math.random().toString(36).substring(2, 6);
+            finalSlug = businessData.name
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s-]/g, '')
+                .trim()
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-') + '-' + randomSuffix;
+        }
+        finalSlug = finalSlug || `business-${Date.now()}`;
+
         const businessRecord = {
             name: businessData.name,
+            slug: finalSlug, // Required NOT NULL field in businesses table
             category_id: categoryId, // UUID reference to categories table
             // subcategory_id removed as it doesn't exist in businesses table
             subscription_plan_id: planId, // UUID reference to subscription_plans table
