@@ -50,7 +50,6 @@ const BusinessFormModal = ({ business, categories, subcategories, onClose, onSav
         sub => sub.category_id === formData.category_id
     );
     const selectedSubcategory = filteredSubcategories.find(s => s.id === formData.subcategory_id);
-
     // Base input style
     const inputStyle = {
         width: '100%',
@@ -179,15 +178,18 @@ const BusinessFormModal = ({ business, categories, subcategories, onClose, onSav
                                                         gap: '8px'
                                                     }}
                                                 >
-                                                    <span style={{ color: selectedCategory ? 'white' : 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        {selectedCategory ? (
-                                                            <>
-                                                                <span style={{ fontSize: '18px' }}>{selectedCategory.icon}</span>
-                                                                {selectedCategory.name}
-                                                            </>
-                                                        ) : (
-                                                            'Seleccionar categoría...'
-                                                        )}
+                                                    <span style={{ color: formData.category_id && categories.find(c => c.id === formData.category_id) ? 'white' : 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        {(() => {
+                                                            const cat = categories.find(c => c.id === formData.category_id);
+                                                            return cat ? (
+                                                                <>
+                                                                    <span style={{ fontSize: '18px' }}>{cat.icon}</span>
+                                                                    {cat.name}
+                                                                </>
+                                                            ) : (
+                                                                'Seleccionar categoría...'
+                                                            );
+                                                        })()}
                                                     </span>
                                                     <motion.svg
                                                         animate={{ rotate: categoryOpen ? 180 : 0 }}
