@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 
-const BusinessFormModal = ({ business, categories, subcategories, sellers, onClose, onSave }) => {
+const BusinessFormModal = ({ business, categories, subcategories, onClose, onSave }) => {
     const [formData, setFormData] = useState({
         name: business?.name || '',
         category_id: business?.category_id || '',
@@ -18,38 +18,17 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers, onClo
     });
     const [loading, setLoading] = useState(false);
 
-    // Derive business 'type' from category_id (canonical mapping).
-    // The DB column 'type' is kept for backward compatibility with existing
-    // queries, but the user only ever picks a category — type is computed.
-    // Deportes -> sport | Belleza/Salud/Mascotas -> service | Alquileres -> venue
-    const TYPE_BY_CATEGORY_NAME = {
-        'Deportes': 'sport',
-        'Belleza': 'service',
-        'Salud': 'service',
-        'Mascotas': 'service',
-        'Alquileres': 'venue',
-    };
-    const deriveType = (catId) => {
-        if (!catId) return null;
-        const cat = categories.find(c => c.id === catId);
-        if (!cat) return null;
-        return TYPE_BY_CATEGORY_NAME[cat.name] || null;
-    };
-
     // Custom dropdown state
     const [categoryOpen, setCategoryOpen] = useState(false);
     const [subcategoryOpen, setSubcategoryOpen] = useState(false);
-    const [sellerOpen, setSellerOpen] = useState(false);
     const categoryRef = useRef(null);
     const subcategoryRef = useRef(null);
-    const sellerRef = useRef(null);
 
     // Close on click outside
     useEffect(() => {
         const handle = (e) => {
             if (categoryRef.current && !categoryRef.current.contains(e.target)) setCategoryOpen(false);
             if (subcategoryRef.current && !subcategoryRef.current.contains(e.target)) setSubcategoryOpen(false);
-            if (sellerRef.current && !sellerRef.current.contains(e.target)) setSellerOpen(false);
         };
         document.addEventListener('mousedown', handle);
         return () => document.removeEventListener('mousedown', handle);
@@ -61,7 +40,6 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers, onClo
             if (e.key === 'Escape') {
                 setCategoryOpen(false);
                 setSubcategoryOpen(false);
-                setSellerOpen(false);
             }
         };
         document.addEventListener('keydown', handle);
@@ -91,10 +69,20 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers, onClo
 
         try {
             // Derive type from category (canonical source is category_id).
-            const derivedType = deriveType(formData.category_id);
+            const TYPE_BY_CATEGORY_NAME = {
+                'Deportes': 'sport',
+                'Belleza': 'service',
+                'Salud': 'service',
+                'Mascotas': 'service',
+                'Alquileres': 'venue',
+            };
+            const cat = categories.find(c => c.id === formData.category_id);
+            const derivedType = cat ? (TYPE_BY_CATEGORY_NAME[cat.name] || null) : null;
+
             const dataToSave = {
                 ...formData,
                 type: derivedType || formData.type,
+                seller_id: formData.seller_id || null,
             };
 
             if (business) {
@@ -476,171 +464,6 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers, onClo
                                     outline: 'none'
                                 }}
                             />
-                        </div>
-                    </div>
-
-                    {/* Type & Seller */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.6)' }}>
-                                Tipo <span style={{ fontWeight: '400', fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>(auto)</span>
-                            </label>
-                            <div
-                                style={{
-                                    ...inputStyle,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    backgroundColor: 'rgba(255,255,255,0.02)',
-                                    color: 'rgba(255,255,255,0.7)',
-                                    cursor: 'default'
-                                }}
-                            >
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {!formData.category_id ? (
-                                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>Selecciona una categoría primero</span>
-                                    ) : (
-                                        <>
-                                            <span style={{ fontSize: '18px' }}>
-                                                {(() => {
-                                                    const t = deriveType(formData.category_id);
-                                                    if (t === 'sport') return '⚽';
-                                                    if (t === 'service') return '💼';
-                                                    if (t === 'venue') return '🏠';
-                                                    if (t === 'alquiler') return '🏠';
-                                                    return '?';
-                                                })()}
-                                            </span>
-                                            <span style={{ color: 'white', fontWeight: '500' }}>
-                                                {(() => {
-                                                    const t = deriveType(formData.category_id);
-                                                    if (t === 'sport') return 'Deporte';
-                                                    if (t === 'service') return 'Servicio';
-                                                    if (t === 'venue') return 'Alquiler';
-                                                    if (t === 'alquiler') return 'Alquiler';
-                                                    return '—';
-                                                })()}
-                                            </span>
-                                        </>
-                                    )}
-                                </span>
-                                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                    Derivado
-                                </span>
-                            </div>
-                        </div>
-
-                        <div ref={sellerRef} style={{ position: 'relative' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
-                                Vendedor
-                            </label>
-                            <button
-                                type="button"
-                                onClick={() => { setCategoryOpen(false); setSubcategoryOpen(false); setSellerOpen(o => !o); }}
-                                style={{
-                                    ...inputStyle,
-                                    textAlign: 'left',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: '8px'
-                                }}
-                            >
-                                <span style={{ color: formData.seller_id ? 'white' : 'rgba(255,255,255,0.5)' }}>
-                                    {(() => {
-                                        if (!formData.seller_id) return 'Sin vendedor';
-                                        const seller = sellers.find(s => s.id === formData.seller_id);
-                                        return seller ? `${seller.first_name || ''} ${seller.last_name || ''}`.trim() || seller.email : 'Sin vendedor';
-                                    })()}
-                                </span>
-                                <motion.svg
-                                    animate={{ rotate: sellerOpen ? 180 : 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    width="16" height="16" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
-                                >
-                                    <path d="M8 11L3 6h10z" />
-                                </motion.svg>
-                            </button>
-                            <AnimatePresence>
-                                {sellerOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                                        transition={{ duration: 0.18, ease: 'easeOut' }}
-                                        style={{
-                                            position: 'absolute',
-                                            top: 'calc(100% + 6px)',
-                                            left: 0,
-                                            right: 0,
-                                            zIndex: 1000,
-                                            backgroundColor: '#1a1a1a',
-                                            border: '1px solid rgba(255,255,255,0.15)',
-                                            borderRadius: '12px',
-                                            boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-                                            maxHeight: '320px',
-                                            overflowY: 'auto'
-                                        }}
-                                    >
-                                        <div
-                                            onClick={() => {
-                                                setFormData({ ...formData, seller_id: '' });
-                                                setSellerOpen(false);
-                                            }}
-                                            style={{
-                                                padding: '12px 16px',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                gap: '12px',
-                                                backgroundColor: !formData.seller_id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
-                                                borderBottom: '1px solid rgba(255,255,255,0.05)'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = !formData.seller_id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
-                                        >
-                                            <span style={{ flex: 1, color: 'rgba(255,255,255,0.7)', fontSize: '15px' }}>Sin vendedor</span>
-                                            {!formData.seller_id && (
-                                                <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
-                                                    <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
-                                                </svg>
-                                            )}
-                                        </div>
-                                        {sellers.map(seller => (
-                                            <div
-                                                key={seller.id}
-                                                onClick={() => {
-                                                    setFormData({ ...formData, seller_id: seller.id });
-                                                    setSellerOpen(false);
-                                                }}
-                                                style={{
-                                                    padding: '12px 16px',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    gap: '12px',
-                                                    backgroundColor: formData.seller_id === seller.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
-                                                    borderBottom: '1px solid rgba(255,255,255,0.05)'
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = formData.seller_id === seller.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
-                                            >
-                                                <span style={{ flex: 1, color: 'white', fontSize: '15px' }}>
-                                                    {seller.first_name} {seller.last_name}
-                                                </span>
-                                                {formData.seller_id === seller.id && (
-                                                    <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
-                                                        <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
-                                                    </svg>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
                         </div>
                     </div>
 

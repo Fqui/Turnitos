@@ -316,7 +316,6 @@ const SuperAdminDashboard = () => {
                     business={editingBusiness}
                     categories={categories}
                     subcategories={subcategories}
-                    sellers={sellers}
                     onClose={() => {
                         setShowBusinessModal(false);
                         setEditingBusiness(null);
