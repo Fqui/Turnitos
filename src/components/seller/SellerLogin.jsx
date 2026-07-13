@@ -113,7 +113,7 @@ const SellerLogin = () => {
                             Portal <span style={{ color: 'var(--primary-paddle)' }}>TurnitosLR</span>
                         </h1>
                         <p style={{ opacity: 0.7, marginTop: '8px', fontSize: '15px', fontWeight: '500' }}>
-                            Ingresa con tu email y contraseña (admin, vendedor o dueño).
+                            Ingresa con tu email y contraseña.
                         </p>
                     </div>
 

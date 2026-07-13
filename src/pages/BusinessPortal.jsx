@@ -39,6 +39,28 @@ export default function BusinessPortal() {
 
     useEffect(() => {
         const checkAutoLogin = async () => {
+            // New format (from the unified /admin/login)
+            const storedBusiness = localStorage.getItem('business');
+            if (storedBusiness) {
+                try {
+                    const biz = JSON.parse(storedBusiness);
+                    if (biz && biz.id) {
+                        const businessesData = await serviceAdapter.getBusinesses();
+                        const fullBiz = businessesData.find(b => b.id === biz.id);
+                        if (fullBiz) {
+                            setSelectedBusinessId(fullBiz.id);
+                            setBusinesses(businessesData);
+                            setIsLoggedIn(true);
+                            setLoginEmail(fullBiz.email);
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    // Auto-login failed silently
+                }
+            }
+
+            // Legacy format (old business login at /portal)
             const storedEmail = localStorage.getItem('turnitos_business_email');
             if (storedEmail) {
                 setLoginEmail(storedEmail);
