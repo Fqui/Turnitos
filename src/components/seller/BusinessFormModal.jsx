@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 
-const BusinessFormModal = ({ business, categories, subcategories, onClose, onSave }) => {
+const BusinessFormModal = ({ business, categories, subcategories, sellers = [], onClose, onSave }) => {
     const [formData, setFormData] = useState({
         name: business?.name || '',
         category_id: business?.category_id || '',
@@ -20,14 +20,17 @@ const BusinessFormModal = ({ business, categories, subcategories, onClose, onSav
     // Custom dropdown state
     const [categoryOpen, setCategoryOpen] = useState(false);
     const [subcategoryOpen, setSubcategoryOpen] = useState(false);
+    const [sellerOpen, setSellerOpen] = useState(false);
     const categoryRef = useRef(null);
     const subcategoryRef = useRef(null);
+    const sellerRef = useRef(null);
 
     // Close on click outside
     useEffect(() => {
         const handle = (e) => {
             if (categoryRef.current && !categoryRef.current.contains(e.target)) setCategoryOpen(false);
             if (subcategoryRef.current && !subcategoryRef.current.contains(e.target)) setSubcategoryOpen(false);
+            if (sellerRef.current && !sellerRef.current.contains(e.target)) setSellerOpen(false);
         };
         document.addEventListener('mousedown', handle);
         return () => document.removeEventListener('mousedown', handle);
@@ -39,6 +42,7 @@ const BusinessFormModal = ({ business, categories, subcategories, onClose, onSav
             if (e.key === 'Escape') {
                 setCategoryOpen(false);
                 setSubcategoryOpen(false);
+                setSellerOpen(false);
             }
         };
         document.addEventListener('keydown', handle);
@@ -460,6 +464,128 @@ const BusinessFormModal = ({ business, categories, subcategories, onClose, onSav
                                 }}
                             />
                         </div>
+                    </div>
+
+                    {/* Vendedor */}
+                    <div ref={sellerRef} style={{ position: 'relative' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
+                            Vendedor
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => { setCategoryOpen(false); setSubcategoryOpen(false); setSellerOpen(o => !o); }}
+                            style={{
+                                ...inputStyle,
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px'
+                            }}
+                        >
+                            <span style={{ color: formData.seller_id ? 'white' : 'rgba(255,255,255,0.5)' }}>
+                                {(() => {
+                                    if (!formData.seller_id) return 'Sin vendedor';
+                                    const seller = sellers.find(s => s.id === formData.seller_id);
+                                    if (!seller) return 'Sin vendedor';
+                                    const name = `${seller.first_name || ''} ${seller.last_name || ''}`.trim();
+                                    return name || seller.email;
+                                })()}
+                            </span>
+                            <motion.svg
+                                animate={{ rotate: sellerOpen ? 180 : 0 }}
+                                transition={{ duration: 0.2 }}
+                                width="16" height="16" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
+                            >
+                                <path d="M8 11L3 6h10z" />
+                            </motion.svg>
+                        </button>
+                        <AnimatePresence>
+                            {sellerOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 'calc(100% + 6px)',
+                                        left: 0,
+                                        right: 0,
+                                        zIndex: 1000,
+                                        backgroundColor: '#1a1a1a',
+                                        border: '1px solid rgba(255,255,255,0.15)',
+                                        borderRadius: '12px',
+                                        boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                                        maxHeight: '320px',
+                                        overflowY: 'auto'
+                                    }}
+                                >
+                                    <div
+                                        onClick={() => {
+                                            setFormData({ ...formData, seller_id: '' });
+                                            setSellerOpen(false);
+                                        }}
+                                        style={{
+                                            padding: '12px 16px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: '12px',
+                                            backgroundColor: !formData.seller_id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                            borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = !formData.seller_id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
+                                    >
+                                        <span style={{ flex: 1, color: 'rgba(255,255,255,0.7)', fontSize: '15px' }}>Sin vendedor</span>
+                                        {!formData.seller_id && (
+                                            <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
+                                                <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                    {sellers.length === 0 ? (
+                                        <div style={{ padding: '20px 16px', color: 'rgba(255,255,255,0.5)', fontSize: '14px', textAlign: 'center' }}>
+                                            No hay vendedores cargados
+                                        </div>
+                                    ) : (
+                                        sellers.map(seller => (
+                                            <div
+                                                key={seller.id}
+                                                onClick={() => {
+                                                    setFormData({ ...formData, seller_id: seller.id });
+                                                    setSellerOpen(false);
+                                                }}
+                                                style={{
+                                                    padding: '12px 16px',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    gap: '12px',
+                                                    backgroundColor: formData.seller_id === seller.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = formData.seller_id === seller.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
+                                            >
+                                                <span style={{ flex: 1, color: 'white', fontSize: '15px' }}>
+                                                    {`${seller.first_name || ''} ${seller.last_name || ''}`.trim() || seller.email}
+                                                </span>
+                                                {formData.seller_id === seller.id && (
+                                                    <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
+                                                        <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
                     {/* Buttons */}
