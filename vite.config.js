@@ -8,8 +8,15 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'sw-custom.js',
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logo.svg', 'logo.png'],
+      injectRegister: 'auto',
+      // Force new SW when these files change
+      globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
+      // Bust cache on new builds by including timestamp
+      buildTimestamp: Date.now(),
       manifest: {
         name: 'Turnitos LR - Gestión',
         short_name: 'TurnitosLR',
