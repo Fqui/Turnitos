@@ -79,15 +79,17 @@ function AppContent() {
               <Route path="/ayuda" element={<Ayuda />} />
               <Route path="/negocios" element={<Negocios />} />
               <Route path="/colaboradores" element={<Colaboradores />} />
+              {/* Static routes must come BEFORE /:businessSlug to take precedence */}
+              <Route path="/login" element={<SellerLogin />} />
+              <Route path="/portal" element={<BusinessPortal />} />
+              <Route path="/business-portal" element={<BusinessPortal />} />
               {/* Keep old routes temporarily for compatibility if needed, or remove them */}
               <Route path="/:businessSlug" element={<LinkBio />} />
               <Route path="/:businessSlug/turnos" element={<BusinessProfileRouter />} />
-              <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
-              <Route path="/portal" element={<BusinessPortal />} />
-              <Route path="/business-portal" element={<BusinessPortal />} />
+              <Route path="/admin" element={<Navigate to="/login" replace />} />
+              <Route path="/admin/login" element={<Navigate to="/login" replace />} />
 
               {/* Admin Portal Routes (Sellers + Super Admin) */}
-              <Route path="/admin/login" element={<SellerLogin />} />
               <Route path="/admin/super" element={<Suspense fallback={<LoadingFallback />}><SuperAdminDashboard /></Suspense>} />
               <Route path="/admin/dashboard" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerDashboard /></ProtectedSellerRoute></Suspense>} />
               <Route path="/admin/businesses" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerBusinessList /></ProtectedSellerRoute></Suspense>} />
