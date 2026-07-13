@@ -41,18 +41,20 @@ const SellerLogin = () => {
                 // Silent fallback to next attempt
             }
 
-            // Try 3: Business owner login (dueño del negocio)
-            try {
-                const business = await supabaseService.login(email, password);
-                if (business) {
-                    localStorage.setItem('business', JSON.stringify(business));
-                    localStorage.setItem('businessId', business.id);
-                    navigate('/portal');
-                    return;
-                }
-            } catch (businessErr) {
-                // Silent fallback to error message below
-            }
+            // Try 3: Business owner login (dueño del business)
+                        try {
+                            const business = await supabaseService.login(email, password);
+                            if (business) {
+                                localStorage.setItem('business', JSON.stringify(business));
+                                localStorage.setItem('businessId', business.id);
+                                navigate('/portal');
+                                return;
+                            }
+                            // RPC returned null (probably the function isn't installed in DB)
+                            console.warn('login_business RPC returned null — credentials may be wrong or RPC is missing');
+                        } catch (businessErr) {
+                            console.warn('Business owner login failed:', businessErr.message);
+                        }
 
             // None worked
             setError('Credenciales inválidas');
