@@ -21,14 +21,18 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers, onClo
     // Custom dropdown state
     const [categoryOpen, setCategoryOpen] = useState(false);
     const [subcategoryOpen, setSubcategoryOpen] = useState(false);
+    const [typeOpen, setTypeOpen] = useState(false);
+    const [sellerOpen, setSellerOpen] = useState(false);
     const categoryRef = useRef(null);
     const subcategoryRef = useRef(null);
+    const sellerRef = useRef(null);
 
     // Close on click outside
     useEffect(() => {
         const handle = (e) => {
             if (categoryRef.current && !categoryRef.current.contains(e.target)) setCategoryOpen(false);
             if (subcategoryRef.current && !subcategoryRef.current.contains(e.target)) setSubcategoryOpen(false);
+            if (sellerRef.current && !sellerRef.current.contains(e.target)) setSellerOpen(false);
         };
         document.addEventListener('mousedown', handle);
         return () => document.removeEventListener('mousedown', handle);
@@ -40,6 +44,8 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers, onClo
             if (e.key === 'Escape') {
                 setCategoryOpen(false);
                 setSubcategoryOpen(false);
+                setTypeOpen(false);
+                setSellerOpen(false);
             }
         };
         document.addEventListener('keydown', handle);
@@ -456,51 +462,200 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers, onClo
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
                                 Tipo *
                             </label>
-                            <select
-                                required
-                                value={formData.type}
-                                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                            <button
+                                type="button"
+                                onClick={() => { setCategoryOpen(false); setSubcategoryOpen(false); setTypeOpen(o => !o); }}
                                 style={{
-                                    width: '100%',
-                                    padding: '14px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '12px',
-                                    color: 'white',
-                                    fontSize: '15px',
-                                    outline: 'none'
+                                    ...inputStyle,
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '8px'
                                 }}
                             >
-                                <option value="venue">Venue (Canchas/Espacios)</option>
-                                <option value="service">Service (Servicios)</option>
-                            </select>
+                                <span style={{ color: formData.type ? 'white' : 'rgba(255,255,255,0.5)' }}>
+                                    {formData.type === 'sport' ? '⚽ Deporte' : formData.type === 'service' ? '💼 Servicio' : formData.type === 'venue' ? '🏠 Alquiler' : 'Seleccionar tipo...'}
+                                </span>
+                                <motion.svg
+                                    animate={{ rotate: typeOpen ? 180 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    width="16" height="16" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
+                                >
+                                    <path d="M8 11L3 6h10z" />
+                                </motion.svg>
+                            </button>
+                            <AnimatePresence>
+                                {typeOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 'calc(100% + 6px)',
+                                            left: 0,
+                                            right: 0,
+                                            zIndex: 1000,
+                                            backgroundColor: '#1a1a1a',
+                                            border: '1px solid rgba(255,255,255,0.15)',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                                            overflow: 'hidden'
+                                        }}
+                                    >
+                                        {[
+                                            { value: 'sport', label: '⚽ Deporte', color: '#00E676' },
+                                            { value: 'service', label: '💼 Servicio', color: '#2196F3' },
+                                            { value: 'venue', label: '🏠 Alquiler', color: '#FF5722' },
+                                        ].map(opt => (
+                                            <div
+                                                key={opt.value}
+                                                onClick={() => {
+                                                    setFormData({ ...formData, type: opt.value });
+                                                    setTypeOpen(false);
+                                                }}
+                                                style={{
+                                                    padding: '12px 16px',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    gap: '12px',
+                                                    backgroundColor: formData.type === opt.value ? `${opt.color}20` : 'transparent',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = formData.type === opt.value ? `${opt.color}20` : 'transparent'}
+                                            >
+                                                <span style={{ flex: 1, color: 'white', fontSize: '15px', fontWeight: '500' }}>
+                                                    {opt.label}
+                                                </span>
+                                                {formData.type === opt.value && (
+                                                    <svg width="18" height="18" viewBox="0 0 18 18" fill={opt.color}>
+                                                        <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
 
-                        <div>
+                        <div ref={sellerRef} style={{ position: 'relative' }}>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
                                 Vendedor
                             </label>
-                            <select
-                                value={formData.seller_id}
-                                onChange={(e) => setFormData({ ...formData, seller_id: e.target.value })}
+                            <button
+                                type="button"
+                                onClick={() => { setCategoryOpen(false); setSubcategoryOpen(false); setTypeOpen(false); setSellerOpen(o => !o); }}
                                 style={{
-                                    width: '100%',
-                                    padding: '14px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '12px',
-                                    color: 'white',
-                                    fontSize: '15px',
-                                    outline: 'none'
+                                    ...inputStyle,
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '8px'
                                 }}
                             >
-                                <option value="">Sin vendedor</option>
-                                {sellers.map(seller => (
-                                    <option key={seller.id} value={seller.id}>
-                                        {seller.first_name} {seller.last_name}
-                                    </option>
-                                ))}
-                            </select>
+                                <span style={{ color: formData.seller_id ? 'white' : 'rgba(255,255,255,0.5)' }}>
+                                    {(() => {
+                                        if (!formData.seller_id) return 'Sin vendedor';
+                                        const seller = sellers.find(s => s.id === formData.seller_id);
+                                        return seller ? `${seller.first_name || ''} ${seller.last_name || ''}`.trim() || seller.email : 'Sin vendedor';
+                                    })()}
+                                </span>
+                                <motion.svg
+                                    animate={{ rotate: sellerOpen ? 180 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    width="16" height="16" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
+                                >
+                                    <path d="M8 11L3 6h10z" />
+                                </motion.svg>
+                            </button>
+                            <AnimatePresence>
+                                {sellerOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 'calc(100% + 6px)',
+                                            left: 0,
+                                            right: 0,
+                                            zIndex: 1000,
+                                            backgroundColor: '#1a1a1a',
+                                            border: '1px solid rgba(255,255,255,0.15)',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                                            maxHeight: '320px',
+                                            overflowY: 'auto'
+                                        }}
+                                    >
+                                        <div
+                                            onClick={() => {
+                                                setFormData({ ...formData, seller_id: '' });
+                                                setSellerOpen(false);
+                                            }}
+                                            style={{
+                                                padding: '12px 16px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                gap: '12px',
+                                                backgroundColor: !formData.seller_id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                                borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = !formData.seller_id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
+                                        >
+                                            <span style={{ flex: 1, color: 'rgba(255,255,255,0.7)', fontSize: '15px' }}>Sin vendedor</span>
+                                            {!formData.seller_id && (
+                                                <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
+                                                    <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                        {sellers.map(seller => (
+                                            <div
+                                                key={seller.id}
+                                                onClick={() => {
+                                                    setFormData({ ...formData, seller_id: seller.id });
+                                                    setSellerOpen(false);
+                                                }}
+                                                style={{
+                                                    padding: '12px 16px',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    gap: '12px',
+                                                    backgroundColor: formData.seller_id === seller.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = formData.seller_id === seller.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
+                                            >
+                                                <span style={{ flex: 1, color: 'white', fontSize: '15px' }}>
+                                                    {seller.first_name} {seller.last_name}
+                                                </span>
+                                                {formData.seller_id === seller.id && (
+                                                    <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
+                                                        <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     </div>
 
