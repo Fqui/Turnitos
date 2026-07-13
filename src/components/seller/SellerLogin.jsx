@@ -137,7 +137,7 @@ const SellerLogin = () => {
                             <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.6 }}>📧</span>
                             <input
                                 type="email"
-                                placeholder="Email del vendedor"
+                                placeholder="Email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
