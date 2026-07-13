@@ -17,26 +17,45 @@ const SellerLogin = () => {
         setLoading(true);
 
         try {
-            // First, try to login as super admin
+            // Try 1: Super admin login (the platform owner)
             try {
                 const superAdmin = await supabaseService.loginSuperAdmin(email, password);
-
-                // If successful, store super admin data and redirect
-                localStorage.setItem('superAdmin', JSON.stringify(superAdmin));
-                navigate('/admin/super');
-                return;
+                if (superAdmin) {
+                    localStorage.setItem('superAdmin', JSON.stringify(superAdmin));
+                    navigate('/admin/super');
+                    return;
+                }
             } catch (superAdminErr) {
-                // If super admin login fails, continue to try seller login
+                // Silent fallback to next attempt
             }
 
-            // Try seller login
-            const seller = await supabaseService.loginSeller(email, password);
+            // Try 2: Seller login (captadores de negocios)
+            try {
+                const seller = await supabaseService.loginSeller(email, password);
+                if (seller) {
+                    localStorage.setItem('seller', JSON.stringify(seller));
+                    navigate('/admin/dashboard');
+                    return;
+                }
+            } catch (sellerErr) {
+                // Silent fallback to next attempt
+            }
 
-            // Store seller data in localStorage
-            localStorage.setItem('seller', JSON.stringify(seller));
+            // Try 3: Business owner login (dueño del negocio)
+            try {
+                const business = await supabaseService.login(email, password);
+                if (business) {
+                    localStorage.setItem('business', JSON.stringify(business));
+                    localStorage.setItem('businessId', business.id);
+                    navigate('/portal');
+                    return;
+                }
+            } catch (businessErr) {
+                // Silent fallback to error message below
+            }
 
-            // Redirect to seller dashboard
-            navigate('/admin/dashboard');
+            // None worked
+            setError('Credenciales inválidas');
         } catch (err) {
             setError(err.message || 'Error al iniciar sesión');
         } finally {
@@ -89,10 +108,10 @@ const SellerLogin = () => {
                             />
                         </div>
                         <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: 'white' }}>
-                            Portal de <span style={{ color: 'var(--primary-paddle)' }}>Vendedores</span>
+                            Portal <span style={{ color: 'var(--primary-paddle)' }}>TurnitosLR</span>
                         </h1>
                         <p style={{ opacity: 0.7, marginTop: '8px', fontSize: '15px', fontWeight: '500' }}>
-                            Gestiona tus clientes y comisiones
+                            Ingresa con tu email y contraseña (admin, vendedor o dueño).
                         </p>
                     </div>
 
