@@ -446,7 +446,7 @@ export default function Home() {
                             }}
                         >
                             <span style={{ fontSize: '32px' }}>⚡</span>
-                            <span style={{ fontSize: '14px', fontWeight: '700' }}>Todos</span>
+                            <span style={{ fontSize: '14px', fontWeight: '700', fontFamily: 'var(--font-title)' }}>Todos</span>
                         </motion.button>
 
                         {/* Use DB categories if available, otherwise fallback to static mock */}
@@ -476,7 +476,7 @@ export default function Home() {
                                 }}
                             >
                                 <span style={{ fontSize: '32px' }}>{cat.icon}</span>
-                                <span style={{ fontSize: '14px', fontWeight: '700' }}>{cat.name}</span>
+                                <span style={{ fontSize: '14px', fontWeight: '700', fontFamily: 'var(--font-title)' }}>{cat.name}</span>
                             </motion.button>
                         ))}
                     </div>
@@ -487,36 +487,33 @@ export default function Home() {
 
                 {/* Sub-Category Filter - DYNAMIC */}
                 {(() => {
-                    // Find the full category object for the selected ID/Slug
-                    // The categoriesData typically comes from the DB with nested subcategories
                     const currentCategory = categoriesData.find(c =>
                         c.id === selectedCategory || c.slug === selectedCategory
                     );
 
-                    // If we have subcategories, show them
                     if (currentCategory && currentCategory.subcategories && currentCategory.subcategories.length > 0) {
-                        // Sort by display_order if available
                         const sortedSubs = [...currentCategory.subcategories].sort((a, b) =>
                             (a.display_order || 0) - (b.display_order || 0)
                         );
 
                         return (
-                            <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                {/* 'Todos' button is always first */}
+                            <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                                 <motion.button
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => setSelectedSubCategory('all')}
                                     style={{
                                         padding: '8px 20px',
                                         borderRadius: '50px',
-                                        border: '1px solid var(--border)',
-                                        backgroundColor: selectedSubCategory === 'all' ? 'var(--primary-paddle)' : 'var(--bg-card)',
-                                        color: selectedSubCategory === 'all' ? '#000' : 'var(--text-primary)',
+                                        border: selectedSubCategory === 'all' ? '1px solid var(--text-primary)' : '1px solid var(--border)',
+                                        backgroundColor: selectedSubCategory === 'all' ? 'var(--text-primary)' : 'var(--bg-card)',
+                                        color: selectedSubCategory === 'all' ? 'var(--bg-card)' : 'var(--text-secondary)',
                                         cursor: 'pointer',
-                                        fontWeight: '600',
+                                        fontWeight: '700',
                                         whiteSpace: 'nowrap',
-                                        fontSize: '14px',
-                                        boxShadow: selectedSubCategory === 'all' ? '0 4px 10px rgba(0, 230, 118, 0.2)' : 'none'
+                                        fontSize: '13px',
+                                        fontFamily: 'var(--font-title)',
+                                        boxShadow: selectedSubCategory === 'all' ? '0 4px 12px rgba(0, 0, 0, 0.08)' : 'none',
+                                        transition: 'all 0.2s'
                                     }}
                                 >
                                     Todos
@@ -530,14 +527,16 @@ export default function Home() {
                                         style={{
                                             padding: '8px 20px',
                                             borderRadius: '50px',
-                                            border: '1px solid var(--border)',
-                                            backgroundColor: selectedSubCategory === sub.slug ? 'var(--primary-paddle)' : 'var(--bg-card)',
-                                            color: selectedSubCategory === sub.slug ? '#000' : 'var(--text-primary)',
+                                            border: selectedSubCategory === sub.slug ? '1px solid var(--text-primary)' : '1px solid var(--border)',
+                                            backgroundColor: selectedSubCategory === sub.slug ? 'var(--text-primary)' : 'var(--bg-card)',
+                                            color: selectedSubCategory === sub.slug ? 'var(--bg-card)' : 'var(--text-secondary)',
                                             cursor: 'pointer',
-                                            fontWeight: '600',
+                                            fontWeight: '700',
                                             whiteSpace: 'nowrap',
-                                            fontSize: '14px',
-                                            boxShadow: selectedSubCategory === sub.slug ? '0 4px 10px rgba(0, 230, 118, 0.2)' : 'none'
+                                            fontSize: '13px',
+                                            fontFamily: 'var(--font-title)',
+                                            boxShadow: selectedSubCategory === sub.slug ? '0 4px 12px rgba(0, 0, 0, 0.08)' : 'none',
+                                            transition: 'all 0.2s'
                                         }}
                                     >
                                         {sub.name}
@@ -547,107 +546,62 @@ export default function Home() {
                         );
                     }
 
-                    // Fallback for hardcoded "Deportes" if DB categories aren't fully set up yet
+                    // Fallback for Deportes
                     if (selectedCategory === 'deportes' || selectedCategory === 'sport') {
                         return (
-                            <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                {['Todos', 'Padel', 'Futbol', 'Tenis', 'Basquet', 'Hockey'].map(sub => (
-                                    <motion.button
-                                        key={sub}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => setSelectedSubCategory(sub === 'Todos' ? 'all' : sub.toLowerCase())}
-                                        style={{
-                                            padding: '8px 20px',
-                                            borderRadius: '50px',
-                                            border: '1px solid var(--border)',
-                                            backgroundColor: (selectedSubCategory === 'all' && sub === 'Todos') || selectedSubCategory === sub.toLowerCase()
-                                                ? 'var(--primary-paddle)'
-                                                : 'var(--bg-card)',
-                                            color: (selectedSubCategory === 'all' && sub === 'Todos') || selectedSubCategory === sub.toLowerCase()
-                                                ? '#000'
-                                                : 'var(--text-primary)',
-                                            cursor: 'pointer',
-                                            fontWeight: '600',
-                                            whiteSpace: 'nowrap',
-                                            fontSize: '14px',
-                                            boxShadow: (selectedSubCategory === 'all' && sub === 'Todos') || selectedSubCategory === sub.toLowerCase()
-                                                ? '0 4px 10px rgba(0, 230, 118, 0.2)'
-                                                : 'none'
-                                        }}
-                                    >
-                                        {sub}
-                                    </motion.button>
-                                ))}
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleNearMeClick}
-                                    style={{
-                                        padding: '8px 20px',
-                                        borderRadius: '50px',
-                                        border: isNearMeActive ? 'none' : '1px solid var(--border)',
-                                        backgroundColor: isNearMeActive ? 'var(--primary-paddle)' : 'var(--bg-card)',
-                                        color: isNearMeActive ? '#000' : 'var(--text-primary)',
-                                        cursor: 'pointer',
-                                        fontWeight: '600',
-                                        whiteSpace: 'nowrap',
-                                        fontSize: '14px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        boxShadow: isNearMeActive ? '0 4px 10px rgba(0, 230, 118, 0.2)' : 'none'
-                                    }}
-                                >
-                                    <span>📍</span> Cerca de mí
-                                </motion.button>
+                            <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                {['Todos', 'Padel', 'Futbol', 'Tenis', 'Basquet', 'Hockey'].map(sub => {
+                                    const isSelected = (selectedSubCategory === 'all' && sub === 'Todos') || selectedSubCategory === sub.toLowerCase();
+                                    return (
+                                        <motion.button
+                                            key={sub}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => setSelectedSubCategory(sub === 'Todos' ? 'all' : sub.toLowerCase())}
+                                            style={{
+                                                padding: '8px 20px',
+                                                borderRadius: '50px',
+                                                border: isSelected ? '1px solid var(--text-primary)' : '1px solid var(--border)',
+                                                backgroundColor: isSelected ? 'var(--text-primary)' : 'var(--bg-card)',
+                                                color: isSelected ? 'var(--bg-card)' : 'var(--text-secondary)',
+                                                cursor: 'pointer',
+                                                fontWeight: '700',
+                                                whiteSpace: 'nowrap',
+                                                fontSize: '13px',
+                                                fontFamily: 'var(--font-title)',
+                                                boxShadow: isSelected ? '0 4px 12px rgba(0, 0, 0, 0.08)' : 'none',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            {sub}
+                                        </motion.button>
+                                    );
+                                })}
                             </div>
                         );
                     }
 
-                    // Fallback: If no subcategories but we want to allow filtering "Near Me" in generic categories
-                    // OR if selectedCategory is 'all' (Home)
-                    if (selectedCategory === 'all' || (currentCategory && (!currentCategory.subcategories || currentCategory.subcategories.length === 0))) {
+                    // Fallback: If no subcategories
+                    if (selectedCategory !== 'all' && currentCategory && (!currentCategory.subcategories || currentCategory.subcategories.length === 0)) {
                         return (
-                            <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                            <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                                 <motion.button
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => setSelectedSubCategory('all')}
                                     style={{
                                         padding: '8px 20px',
                                         borderRadius: '50px',
-                                        border: '1px solid var(--border)',
-                                        backgroundColor: selectedSubCategory === 'all' ? 'var(--primary-paddle)' : 'var(--bg-card)',
-                                        color: selectedSubCategory === 'all' ? '#000' : 'var(--text-primary)',
+                                        border: '1px solid var(--text-primary)',
+                                        backgroundColor: 'var(--text-primary)',
+                                        color: 'var(--bg-card)',
                                         cursor: 'pointer',
-                                        fontWeight: '600',
+                                        fontWeight: '700',
                                         whiteSpace: 'nowrap',
-                                        fontSize: '14px',
-                                        boxShadow: selectedSubCategory === 'all' ? '0 4px 10px rgba(0, 230, 118, 0.2)' : 'none',
-                                        display: selectedCategory === 'all' ? 'none' : 'block' // Hide 'Todos' if in All category as it's redundant? Or maybe show it?
+                                        fontSize: '13px',
+                                        fontFamily: 'var(--font-title)',
+                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
                                     }}
                                 >
                                     Todos
-                                </motion.button>
-
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleNearMeClick}
-                                    style={{
-                                        padding: '8px 20px',
-                                        borderRadius: '50px',
-                                        border: isNearMeActive ? 'none' : '1px solid var(--border)',
-                                        backgroundColor: isNearMeActive ? 'var(--primary-paddle)' : 'var(--bg-card)',
-                                        color: isNearMeActive ? '#000' : 'var(--text-primary)',
-                                        cursor: 'pointer',
-                                        fontWeight: '600',
-                                        whiteSpace: 'nowrap',
-                                        fontSize: '14px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        boxShadow: isNearMeActive ? '0 4px 10px rgba(0, 230, 118, 0.2)' : 'none'
-                                    }}
-                                >
-                                    <span>📍</span> Cerca de mí
                                 </motion.button>
                             </div>
                         );
