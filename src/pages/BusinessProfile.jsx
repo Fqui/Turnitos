@@ -1587,7 +1587,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 )}
 
                 {/* Confirmation Button - Sticky on Mobile (Hidden for Padel since modal opens automatically) */}
-                {selectedTime && !business.courts?.some(c => c.sport === 'padel') && (
+                {selectedTime && (business.type !== 'sport' || selectedTime.courtId !== null) && !business.courts?.some(c => c.sport === 'padel') && (
                     <div ref={confirmRef} style={{
                         textAlign: 'center',
                         marginTop: '40px',
