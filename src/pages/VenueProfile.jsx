@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
@@ -15,13 +15,14 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-export default function VenueProfile() {
+export default function VenueProfile({ business: initialBusiness }) {
     const { businessSlug: slug } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { showAlert } = useNotification();
 
-    const [business, setBusiness] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
+    const [loading, setLoading] = useState(!business);
     const [selectedDate, setSelectedDate] = useState(null);
     const [guestCount, setGuestCount] = useState(30);
     const [duration, setDuration] = useState(4);
@@ -41,8 +42,10 @@ export default function VenueProfile() {
     }, []);
 
     useEffect(() => {
-        fetchBusiness();
-    }, [slug]);
+        if (!business) {
+            fetchBusiness();
+        }
+    }, [slug, business]);
 
     const fetchBusiness = async () => {
         try {

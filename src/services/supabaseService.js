@@ -59,6 +59,26 @@ class SupabaseService {
             business.payment_settings = {};
         }
 
+        // Normalize image field aliases:
+        // DB uses logo_url / banner_url but many components reference logo / image / banner_image.
+        // Keep both so nothing breaks regardless of which name is used.
+        if (business.logo_url && !business.logo) {
+            business.logo = business.logo_url;
+        }
+        if (business.logo && !business.logo_url) {
+            business.logo_url = business.logo;
+        }
+        if (business.banner_url && !business.banner_image) {
+            business.banner_image = business.banner_url;
+        }
+        if (business.banner_image && !business.banner_url) {
+            business.banner_url = business.banner_image;
+        }
+        // Ensure 'image' fallback also works (used in Home cards)
+        if (!business.image) {
+            business.image = business.banner_url || business.logo_url || null;
+        }
+
         return business;
     }
 
@@ -225,22 +245,32 @@ class SupabaseService {
     }
 
     async login(email, password) {
-        // Use the secure RPC function to bypass RLS for login
-        const { data, error } = await supabase.rpc('login_business', {
-            p_email: email,
-            p_password: password
+        // Use Supabase Auth instead of plaintext password matching
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email,
+            password
         });
 
-        if (error) {
-            throw new Error('Error al iniciar sesión');
-        }
-
-        if (!data) {
+        if (authError) {
+            console.error('Supabase Auth error:', authError);
             throw new Error('Credenciales inválidas');
         }
 
-        // Return the business data directly as RPC returns the record
-        // Add flags for first login and subscription status
+        const authId = authData.user.id;
+
+        // Find the business linked to this auth_id
+        const { data, error } = await supabase
+            .from('businesses')
+            .select('*')
+            .eq('auth_id', authId)
+            .single();
+
+        if (error || !data) {
+            // It could be a seller or super admin, but this specific function expects a business
+            throw new Error('No se encontró un negocio asociado a esta cuenta.');
+        }
+
+        // Return the business data
         return {
             ...this._processBusinessData(data),
             requirePasswordChange: !data.password_changed,
@@ -249,22 +279,71 @@ class SupabaseService {
         };
     }
 
+    async logout() {
+        const { error } = await supabase.auth.signOut();
+        if (error) console.error('Error logging out of Supabase:', error);
+    }
+
     async createBusiness(businessData) {
         // Ensure subcategory_id is added to subcategories array for relationship saving
         if (businessData.subcategory_id && (!businessData.subcategories || businessData.subcategories.length === 0)) {
             businessData.subcategories = [businessData.subcategory_id];
         }
 
+        // Normalize subscription_plan_id: legacy '1' or empty → use first available plan
+        let planId = businessData.subscription_plan_id;
+        if (!planId || planId === '1' || planId === 1) {
+            try {
+                const { data: plans } = await supabase
+                    .from('subscription_plans')
+                    .select('id')
+                    .limit(1);
+                if (plans && plans.length > 0) {
+                    planId = plans[0].id;
+                    businessData.subscription_plan_id = planId;
+                }
+            } catch (e) {
+                console.warn('Could not fetch default plan:', e);
+            }
+        }
+
+        // Normalize seller_id: empty/null/'1' → null
+        let sellerId = businessData.seller_id;
+        if (!sellerId || sellerId === '1' || sellerId === 1) {
+            sellerId = null;
+            businessData.seller_id = null;
+        }
+
+        // Validate category_id: must be a valid UUID or null
+        const categoryId = businessData.category_id && businessData.category_id !== '1'
+            ? businessData.category_id
+            : null;
+
         // 1. Prepare business data
+        // Ensure slug is always present (auto-generate from name if missing)
+        let finalSlug = businessData.slug;
+        if (!finalSlug && businessData.name) {
+            const randomSuffix = Math.random().toString(36).substring(2, 6);
+            finalSlug = businessData.name
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s-]/g, '')
+                .trim()
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-') + '-' + randomSuffix;
+        }
+        finalSlug = finalSlug || `business-${Date.now()}`;
+
         const businessRecord = {
             name: businessData.name,
-            category_id: businessData.category_id, // UUID reference to categories table
+            slug: finalSlug, // Required NOT NULL field in businesses table
+            category_id: categoryId, // UUID reference to categories table
             // subcategory_id removed as it doesn't exist in businesses table
-            subscription_plan_id: businessData.subscription_plan_id, // UUID reference to subscription_plans table
+            subscription_plan_id: planId, // UUID reference to subscription_plans table
             type: businessData.type,
             email: businessData.email, // Auto-generated email
             password: businessData.password, // Default password
-            seller_id: businessData.seller_id, // Link to seller who created it
+            seller_id: sellerId, // Link to seller who created it
             logo_url: businessData.logo_url || businessData.logo || businessData.image, // Use new column name
             banner_url: businessData.banner_url || businessData.banner_image, // Use new column name
             location: businessData.location,
@@ -1263,6 +1342,20 @@ class SupabaseService {
         return this._processBusinessData(data);
     }
 
+    async getPromotionById(promoId) {
+        const { data, error } = await supabase
+            .from('promotions')
+            .select(`
+                *,
+                businesses (id, name, slug)
+            `)
+            .eq('id', promoId)
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
     async createPromotion(promotionData) {
         const { data, error } = await supabase
             .from('promotions')
@@ -1631,7 +1724,7 @@ class SupabaseService {
         let query = supabase
             .from('categories')
             .select('*, subcategories(*)')
-            .order('display_order', { ascending: true });
+            .order('name', { ascending: true });
 
         if (businessType) {
             query = query.eq('business_type', businessType);
@@ -1827,16 +1920,27 @@ class SupabaseService {
      * @returns {Promise<Object>} Seller data
      */
     async loginSeller(email, password) {
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (authError) {
+            console.error('Supabase Auth error:', authError);
+            throw new Error('Credenciales inválidas');
+        }
+
+        const authId = authData.user.id;
+
         const { data, error } = await supabase
             .from('sellers')
             .select('*')
-            .eq('email', email)
-            .eq('password', password)
+            .eq('auth_id', authId)
             .eq('is_active', true)
             .single();
 
         if (error || !data) {
-            throw new Error('Credenciales inválidas');
+            throw new Error('No se encontró un vendedor activo asociado a esta cuenta.');
         }
 
         return data;
@@ -2287,11 +2391,19 @@ class SupabaseService {
             throw new Error('La contraseña debe contener al menos una mayúscula, una minúscula y un número');
         }
 
-        // Update password
+        // Update password in Supabase Auth
+        const { error: authError } = await supabase.auth.updateUser({
+            password: newPassword
+        });
+
+        if (authError) {
+            console.error('Error updating auth password:', authError);
+            throw new Error('No se pudo actualizar la contraseña en el sistema.');
+        }
+
         const { error: updateError } = await supabase
             .from('businesses')
             .update({
-                password: newPassword,
                 password_changed: true
             })
             .eq('id', businessId);
@@ -2307,12 +2419,22 @@ class SupabaseService {
      * Super Admin Login
      */
     async loginSuperAdmin(email, password) {
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (authError) {
+            console.error('Supabase Auth error:', authError);
+            throw new Error('Credenciales inválidas');
+        }
+
+        const authId = authData.user.id;
+
         const { data, error } = await supabase
             .from('super_admins')
             .select('*')
-            .eq('email', email)
-            .eq('password', password)
-            .eq('is_active', true)
+            .eq('auth_id', authId)
             .single();
 
         if (error || !data) {
@@ -2684,9 +2806,35 @@ class SupabaseService {
      * Update any business as super admin
      */
     async updateBusinessAsSuperAdmin(businessId, businessData) {
+        // Normalize subscription_plan_id
+        let planId = businessData.subscription_plan_id;
+        if (!planId || planId === '1' || planId === 1) {
+            try {
+                const { data: plans } = await supabase
+                    .from('subscription_plans')
+                    .select('id')
+                    .limit(1);
+                if (plans && plans.length > 0) {
+                    planId = plans[0].id;
+                }
+            } catch (e) {
+                console.warn('Could not fetch default plan:', e);
+            }
+        }
+
+        // Normalize seller_id
+        const sellerId = businessData.seller_id && businessData.seller_id !== '1'
+            ? businessData.seller_id
+            : null;
+
+        // Validate category_id
+        const categoryId = businessData.category_id && businessData.category_id !== '1'
+            ? businessData.category_id
+            : null;
+
         const updateData = {
             name: businessData.name,
-            category_id: businessData.category_id,
+            category_id: categoryId,
             subcategory_id: businessData.subcategory_id,
             location: businessData.location,
             latitude: businessData.latitude,
@@ -2696,8 +2844,8 @@ class SupabaseService {
             instagram: businessData.instagram,
             facebook: businessData.facebook,
             type: businessData.type,
-            subscription_plan_id: businessData.subscription_plan_id,
-            seller_id: businessData.seller_id
+            subscription_plan_id: planId,
+            seller_id: sellerId
         };
 
         const { data, error } = await supabase

@@ -9,7 +9,7 @@ let globalCachedPaymentData = {
     data: null
 };
 
-export default function BookingSummary({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting }) {
+export default function BookingSummary({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting, activePromotion }) {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
@@ -115,6 +115,20 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
         }
     }
 
+    // 🎫 Calculate promo discount
+    let promoDiscount = 0;
+    let promoLabel = '';
+    if (activePromotion && activePromotion.discount_value > 0) {
+        if (activePromotion.discount_type === 'fixed') {
+            promoDiscount = Math.min(activePromotion.discount_value, price);
+            promoLabel = `Cupón -$${promoDiscount.toLocaleString()}`;
+        } else {
+            promoDiscount = Math.round(price * (activePromotion.discount_value / 100));
+            promoLabel = `Cupón ${activePromotion.discount_value}% OFF`;
+        }
+    }
+    const finalPrice = price - promoDiscount;
+
     // Bank details - prioritize payment_settings.bank_details
     const bankDetails = {
         banco: bankDetailsFromSettings.bank_name || business.bank_name || '',
@@ -193,7 +207,10 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                     maxWidth: '500px',
                     width: '100%',
                     boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                    margin: 'auto'
+                    margin: 'auto',
+                    maxHeight: '90vh',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}
                 className="responsive-modal-container"
             >
@@ -269,7 +286,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                 </div>
 
                 {/* Content with AnimatePresence for smooth transitions */}
-                <div className="responsive-modal-content">
+                <div className="responsive-modal-content" style={{ overflowY: 'auto' }}>
                     <AnimatePresence mode="wait">
                         {currentStep === 1 ? (
                             <motion.div
@@ -369,12 +386,53 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                 </div>
                                             )}
 
+                                            {/* Subtotal */}
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Total a pagar</span>
-                                                <span style={{ fontSize: '18px', fontWeight: '900', color: sportColor }}>
+                                                <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                                                    {promoDiscount > 0 ? 'Subtotal' : 'Total a pagar'}
+                                                </span>
+                                                <span style={{
+                                                    fontSize: promoDiscount > 0 ? '14px' : '18px',
+                                                    fontWeight: promoDiscount > 0 ? '600' : '900',
+                                                    color: promoDiscount > 0 ? 'var(--text-secondary)' : sportColor,
+                                                    textDecoration: promoDiscount > 0 ? 'line-through' : 'none'
+                                                }}>
                                                     ${price.toLocaleString()}
                                                 </span>
                                             </div>
+
+                                            {/* 🎫 Promo Discount Row */}
+                                            {promoDiscount > 0 && (
+                                                <>
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        padding: '6px 10px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: '#10b98120',
+                                                        border: '1px dashed #10b981'
+                                                    }}>
+                                                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            🎫 {promoLabel}
+                                                        </span>
+                                                        <span style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
+                                                            -${promoDiscount.toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        paddingTop: '4px'
+                                                    }}>
+                                                        <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>Total con descuento</span>
+                                                        <span style={{ fontSize: '20px', fontWeight: '900', color: sportColor }}>
+                                                            ${finalPrice.toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            )}
 
                                             {/* Deposit Amount */}
                                             <div style={{
@@ -388,7 +446,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                     {depositLabel}
                                                 </span>
                                                 <span style={{ fontSize: '16px', fontWeight: '700', color: sportColor }}>
-                                                    ${depositAmount.toLocaleString()}
+                                                    ${(promoDiscount > 0 ? Math.round(finalPrice * (parseFloat(depositSettings.percentage) || 0) / 100) : depositAmount).toLocaleString()}
                                                 </span>
                                             </div>
                                         </div>

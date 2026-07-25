@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useNotification } from '../../contexts/NotificationContext';
 
 const AlertDialog = () => {
     const { alertDialog } = useNotification();
+    const prefersReducedMotion = useReducedMotion();
 
     useEffect(() => {
         if (!alertDialog) return;
@@ -17,7 +19,29 @@ const AlertDialog = () => {
         return () => document.removeEventListener('keydown', handleEscape);
     }, [alertDialog]);
 
-    if (!alertDialog) return null;
+    const backdropVariants = prefersReducedMotion
+        ? {
+            initial: { opacity: 1 },
+            animate: { opacity: 1 },
+            exit: { opacity: 0, transition: { duration: 0.15 } },
+        }
+        : {
+            initial: { opacity: 0 },
+            animate: { opacity: 1, transition: { duration: 0.2 } },
+            exit: { opacity: 0, transition: { duration: 0.15 } },
+        };
+
+    const dialogVariants = prefersReducedMotion
+        ? {
+            initial: { opacity: 1, scale: 1 },
+            animate: { opacity: 1, scale: 1 },
+            exit: { opacity: 0, scale: 1, transition: { duration: 0.15 } },
+        }
+        : {
+            initial: { opacity: 0, scale: 0.95 },
+            animate: { opacity: 1, scale: 1, transition: { duration: 0.25 } },
+            exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } },
+        };
 
     const getIcon = (type) => {
         switch (type) {
@@ -39,120 +63,121 @@ const AlertDialog = () => {
         }
     };
 
-    const colors = getColors(alertDialog.type);
-
     return (
-        <>
-            {/* Backdrop */}
-            <div
-                onClick={alertDialog.onClose}
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0, 0, 0, 0.5)',
-                    zIndex: 9998,
-                    animation: 'fadeIn 0.2s ease-out'
-                }}
-            />
+        <AnimatePresence>
+            {alertDialog && (
+                <>
+                    <motion.div
+                        key="alert-dialog-backdrop"
+                        onClick={alertDialog.onClose}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        variants={backdropVariants}
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            zIndex: 9998,
+                        }}
+                    />
 
-            {/* Dialog */}
-            <div style={{
-                position: 'fixed',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                background: 'var(--bg-card)',
-                borderRadius: '20px',
-                padding: '32px',
-                maxWidth: '450px',
-                width: '90%',
-                zIndex: 9999,
-                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-                animation: 'scaleIn 0.2s ease-out'
-            }}>
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    marginBottom: '16px'
-                }}>
-                    <div style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '50%',
-                        background: `linear-gradient(135deg, ${colors.bg} 0%, ${colors.text} 100%)`,
-                        color: 'white',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '24px',
-                        fontWeight: '700',
-                        flexShrink: 0
-                    }}>
-                        {getIcon(alertDialog.type)}
-                    </div>
-                    <h3 style={{
-                        margin: 0,
-                        fontSize: '20px',
-                        fontWeight: '800',
-                        color: 'var(--text-primary)'
-                    }}>
-                        {alertDialog.title}
-                    </h3>
-                </div>
-                <p style={{
-                    margin: '0 0 24px 0',
-                    fontSize: '14px',
-                    color: 'var(--text-secondary)',
-                    lineHeight: '1.6'
-                }}>
-                    {alertDialog.message}
-                </p>
-                <button
-                    onClick={alertDialog.onClose}
-                    style={{
-                        width: '100%',
-                        padding: '12px 24px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        background: 'var(--primary-paddle)',
-                        color: '#000',
-                        fontWeight: '700',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={e => {
-                        e.currentTarget.style.transform = 'scale(1.02)';
-                    }}
-                    onMouseLeave={e => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                >
-                    {alertDialog.buttonText}
-                </button>
-            </div>
-
-            <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes scaleIn {
-                    from {
-                        transform: translate(-50%, -50%) scale(0.9);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translate(-50%, -50%) scale(1);
-                        opacity: 1;
-                    }
-                }
-            `}</style>
-        </>
+                    <motion.div
+                        key="alert-dialog-panel"
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        variants={dialogVariants}
+                        style={{
+                            position: 'fixed',
+                            top: '50%',
+                            left: '50%',
+                            x: '-50%',
+                            y: '-50%',
+                            background: 'var(--bg-card)',
+                            borderRadius: '20px',
+                            padding: '32px',
+                            maxWidth: '450px',
+                            width: '90%',
+                            zIndex: 9999,
+                            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                        }}
+                    >
+                        {(() => {
+                            const colors = getColors(alertDialog.type);
+                            return (
+                                <>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '16px',
+                                        marginBottom: '16px'
+                                    }}>
+                                        <div style={{
+                                            width: '48px',
+                                            height: '48px',
+                                            borderRadius: '50%',
+                                            background: `linear-gradient(135deg, ${colors.bg} 0%, ${colors.text} 100%)`,
+                                            color: 'white',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '24px',
+                                            fontWeight: '700',
+                                            flexShrink: 0
+                                        }}>
+                                            {getIcon(alertDialog.type)}
+                                        </div>
+                                        <h3 style={{
+                                            margin: 0,
+                                            fontSize: '20px',
+                                            fontWeight: '800',
+                                            color: 'var(--text-primary)'
+                                        }}>
+                                            {alertDialog.title}
+                                        </h3>
+                                    </div>
+                                    <p style={{
+                                        margin: '0 0 24px 0',
+                                        fontSize: '14px',
+                                        color: 'var(--text-secondary)',
+                                        lineHeight: '1.6'
+                                    }}>
+                                        {alertDialog.message}
+                                    </p>
+                                    <button
+                                        onClick={alertDialog.onClose}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 24px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: 'var(--primary-paddle)',
+                                            color: '#000',
+                                            fontWeight: '700',
+                                            fontSize: '14px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.transform = 'scale(1.02)';
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.transform = 'scale(1)';
+                                        }}
+                                    >
+                                        {alertDialog.buttonText}
+                                    </button>
+                                </>
+                            );
+                        })()}
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
     );
 };
 

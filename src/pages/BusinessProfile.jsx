@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -25,12 +25,13 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-export default function BusinessProfile() {
+export default function BusinessProfile({ business: initialBusiness }) {
     const { businessSlug } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const [business, setBusiness] = useState(location.state?.business || null);
-    const [loading, setLoading] = useState(!location.state?.business);
+    const [searchParams] = useSearchParams();
+    const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
+    const [loading, setLoading] = useState(!business);
 
     const [selectedItem, setSelectedItem] = useState(null); // Sport (string) or Service (object)
     const [selectedDate, setSelectedDate] = useState(null);
@@ -53,6 +54,9 @@ export default function BusinessProfile() {
     // Gallery state
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
     const [selectedHighlight, setSelectedHighlight] = useState(null); // Which highlight category is open
+
+    // 🎫 Promotion linking state
+    const [activePromotion, setActivePromotion] = useState(null);
 
     // Refs for auto-scrolling
     const calendarRef = useRef(null);
@@ -299,6 +303,35 @@ export default function BusinessProfile() {
         }
     }, [business]);
 
+    // 🎫 Detect promoId in URL and fetch promotion details
+    useEffect(() => {
+        const promoId = searchParams.get('promoId');
+        if (promoId && business) {
+            const fetchPromotion = async () => {
+                try {
+                    const promo = await serviceAdapter.getPromotionById(promoId);
+                    if (promo && promo.business_id === business.id) {
+                        setActivePromotion(promo);
+                        // Auto-select sport if promo has sport_type
+                        if (promo.sport_type && business.type === 'sport') {
+                            setSelectedItem(promo.sport_type);
+                        }
+                        // Auto-select service if promo has service_id
+                        if (promo.service_id && business.type === 'service' && business.services) {
+                            const matchingService = business.services.find(s => s.id === promo.service_id);
+                            if (matchingService) {
+                                setSelectedItem(matchingService);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn('⚠️ Could not fetch promotion:', err.message);
+                }
+            };
+            fetchPromotion();
+        }
+    }, [searchParams, business]);
+
 
 
 
@@ -370,6 +403,19 @@ export default function BusinessProfile() {
                 finalSpecialistId = availableSpecialists[0].id;
             }
 
+            // 🎫 Calculate discount from active promotion
+            let finalPrice = finalDetails.price;
+            let discountApplied = 0;
+            if (activePromotion && activePromotion.discount_value > 0) {
+                if (activePromotion.discount_type === 'fixed') {
+                    discountApplied = Math.min(activePromotion.discount_value, finalPrice);
+                } else {
+                    // percentage (default)
+                    discountApplied = Math.round(finalPrice * (activePromotion.discount_value / 100));
+                }
+                finalPrice = finalPrice - discountApplied;
+            }
+
             const bookingData = {
                 businessId: business.id,
                 serviceId: business.type === 'service' ? selectedItem.id : null,
@@ -379,14 +425,14 @@ export default function BusinessProfile() {
                 time: finalDetails.time,
                 customerName: finalDetails.customerName,
                 customerPhone: finalDetails.customerPhone,
-                price: finalDetails.price,
+                price: finalPrice,
                 status: 'pending',
-                // Venue specific fields
                 // Venue specific fields - Prioritize selectedTime.duration for Padel
                 duration: selectedTime?.duration || finalDetails.duration || (business.type === 'venue' ? (selectedDuration * 60) : (business.type === 'service' ? selectedItem.duration : 60)),
                 metadata: business.type === 'venue' ? { additionalServices: selectedAdditionalServices } : null,
-
-
+                // 🎫 Promo tracking
+                promo_id: activePromotion?.id || null,
+                discount_applied: discountApplied,
 
                 history: [
                     {
@@ -938,6 +984,51 @@ export default function BusinessProfile() {
                     </>
                 )}
 
+                {/* 🎫 Active Promotion Banner */}
+                {activePromotion && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{
+                            margin: '0 0 20px 0',
+                            padding: '12px 16px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, #10b98115, #10b98108)',
+                            border: '1px solid #10b98140',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px'
+                        }}
+                    >
+                        <span style={{ fontSize: '22px' }}>🎫</span>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
+                                ¡Cupón activado!
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                {activePromotion.discount_type === 'fixed'
+                                    ? `$${activePromotion.discount_value} de descuento`
+                                    : `${activePromotion.discount_value}% OFF`
+                                } — {activePromotion.title}
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActivePromotion(null)}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                fontSize: '18px',
+                                padding: '4px'
+                            }}
+                            title="Quitar cupón"
+                        >
+                            ✕
+                        </button>
+                    </motion.div>
+                )}
+
                 {/* Step 1: Select Service (Only for Service businesses) */}
                 {business.type === 'service' && (
                     <section id="servicios" style={{ marginBottom: '30px' }}>
@@ -1152,8 +1243,11 @@ export default function BusinessProfile() {
 
                                 // console.log('Business Hours Debug:', { open, close, ranges, date: selectedDate });
 
-                                // Get business capacity directly from business.capacity field
-                                const businessCapacity = business.capacity || 1;
+                                // Get business capacity directly from business.capacity field, falling back to resources sum
+                                const businessCapacity = business.capacity || 
+                                    (resources && resources.length > 0 
+                                        ? resources.reduce((sum, r) => sum + (r.capacity || 1), 0) 
+                                        : 1);
 
                                 // 🆕 Detect if this is a padel business
                                 const hasPadelCourts = business.type === 'sport' && resources.some(r => r.sport === 'padel');
@@ -1584,7 +1678,7 @@ export default function BusinessProfile() {
                 )}
 
                 {/* Confirmation Button - Sticky on Mobile (Hidden for Padel since modal opens automatically) */}
-                {selectedTime && !business.courts?.some(c => c.sport === 'padel') && (
+                {selectedTime && (business.type !== 'sport' || selectedTime.courtId !== null) && !business.courts?.some(c => c.sport === 'padel') && (
                     <div ref={confirmRef} style={{
                         textAlign: 'center',
                         marginTop: '40px',
@@ -1638,6 +1732,7 @@ export default function BusinessProfile() {
                             businessAlias: business.bank_alias,
                             businessCBU: business.cbu
                         }}
+                        activePromotion={activePromotion}
                         sportColor={primaryColor}
                         onClose={() => setShowModal(false)}
                         onConfirm={handleConfirmBooking}
@@ -1916,6 +2011,7 @@ export default function BusinessProfile() {
                             courtId: business.type === 'sport' ? selectedTime.courtId : null,
                             extras: business.type === 'venue' ? selectedAdditionalServices : []
                         }}
+                        activePromotion={activePromotion}
                         onClose={() => setShowModal(false)}
                         onConfirm={handleConfirmBooking}
                         isSubmitting={isSubmitting}

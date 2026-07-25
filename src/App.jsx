@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion'; // Added AnimatePresence import
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -35,7 +35,8 @@ const LoadingFallback = () => (
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    height: '100vh',
+    flex: 1,
+    minHeight: '60vh',
     backgroundColor: 'var(--bg-main)',
     color: 'var(--text-primary)'
   }}>
@@ -71,7 +72,7 @@ function AppContent() {
     <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {!isAdmin && !isLinkBio && !isBusinessPortal && <Header showSearch={isHome} />}
 
-      <main style={{ flex: 1 }}>
+      <main style={{ flex: 1, minHeight: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column' }}>
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
@@ -79,15 +80,17 @@ function AppContent() {
               <Route path="/ayuda" element={<Ayuda />} />
               <Route path="/negocios" element={<Negocios />} />
               <Route path="/colaboradores" element={<Colaboradores />} />
+              {/* Static routes must come BEFORE /:businessSlug to take precedence */}
+              <Route path="/login" element={<SellerLogin />} />
+              <Route path="/portal" element={<BusinessPortal />} />
+              <Route path="/business-portal" element={<BusinessPortal />} />
               {/* Keep old routes temporarily for compatibility if needed, or remove them */}
               <Route path="/:businessSlug" element={<LinkBio />} />
               <Route path="/:businessSlug/turnos" element={<BusinessProfileRouter />} />
-              <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
-              <Route path="/portal" element={<BusinessPortal />} />
-              <Route path="/business-portal" element={<BusinessPortal />} />
+              <Route path="/admin" element={<Navigate to="/login" replace />} />
+              <Route path="/admin/login" element={<Navigate to="/login" replace />} />
 
               {/* Admin Portal Routes (Sellers + Super Admin) */}
-              <Route path="/admin/login" element={<SellerLogin />} />
               <Route path="/admin/super" element={<Suspense fallback={<LoadingFallback />}><SuperAdminDashboard /></Suspense>} />
               <Route path="/admin/dashboard" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerDashboard /></ProtectedSellerRoute></Suspense>} />
               <Route path="/admin/businesses" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerBusinessList /></ProtectedSellerRoute></Suspense>} />
@@ -109,9 +112,20 @@ function AppContent() {
   );
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <Router>
+      <ScrollToTop />
       <NotificationProvider>
         <AppContent />
       </NotificationProvider>

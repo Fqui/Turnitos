@@ -110,6 +110,10 @@ class ServiceAdapter {
         return this.service.getPromotions();
     }
 
+    async getPromotionById(promoId) {
+        return this.service.getPromotionById(promoId);
+    }
+
     async createPromotion(promotionData) {
         if (this.isDemoMode) {
             throw new Error('Creating promotions is not available in demo mode');

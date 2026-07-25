@@ -34,7 +34,8 @@ const SellerDashboard = () => {
         }
     };
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        await supabaseService.logout();
         localStorage.removeItem('seller');
         navigate('/admin/login');
     };

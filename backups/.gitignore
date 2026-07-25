@@ -1,0 +1,3 @@
+# Snapshot backups — datos fake, no se commitean al repo de la app
+*.json
+!README.md

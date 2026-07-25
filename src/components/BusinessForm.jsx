@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import serviceAdapter from '../services/serviceAdapter';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -86,6 +88,79 @@ export default function BusinessForm({ business, onSave, onCancel }) {
     const [uploadingSpecialistImage, setUploadingSpecialistImage] = useState(false);
     const [uploadingServiceImage, setUploadingServiceImage] = useState(false);
     const [serviceCategories, setServiceCategories] = useState(business?.service_categories || []);
+
+    // Categories loaded from DB
+    const [dbCategories, setDbCategories] = useState([]);
+    const [dbSubcategories, setDbSubcategories] = useState([]);
+
+    // Load categories from DB on mount
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const cats = await serviceAdapter.getCategories();
+                if (mounted) setDbCategories(cats || []);
+            } catch (e) {
+                console.warn('No se pudieron cargar categorías:', e);
+            }
+        })();
+        return () => { mounted = false; };
+    }, []);
+
+    // Load subcategories when category changes
+    useEffect(() => {
+        if (!formData.category) {
+            setDbSubcategories([]);
+            return;
+        }
+        let mounted = true;
+        (async () => {
+            try {
+                const subs = await serviceAdapter.getSubcategories(formData.category);
+                if (mounted) setDbSubcategories(subs || []);
+            } catch (e) {
+                console.warn('No se pudieron cargar subcategorías:', e);
+            }
+        })();
+        return () => { mounted = false; };
+    }, [formData.category]);
+
+    // Custom category dropdown state
+    const [categoryOpen, setCategoryOpen] = useState(false);
+    const categoryDropdownRef = useRef(null);
+
+    // Close dropdown on click outside
+    useEffect(() => {
+        if (!categoryOpen) return;
+        const handleClickOutside = (e) => {
+            if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target)) {
+                setCategoryOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [categoryOpen]);
+
+    // Close dropdown on Escape
+    useEffect(() => {
+        if (!categoryOpen) return;
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') setCategoryOpen(false);
+        };
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [categoryOpen]);
+
+    const fallbackCategories = [
+        { id: 'padel', name: 'Padel', icon: '🎾', color: '#00E676' },
+        { id: 'futbol', name: 'Fútbol', icon: '⚽', color: '#00E676' },
+        { id: 'belleza', name: 'Belleza', icon: '💄', color: '#FF4081' },
+        { id: 'salud', name: 'Salud', icon: '🏥', color: '#00B0FF' },
+        { id: 'alquiler', name: 'Alquiler', icon: '🏠', color: '#FF5722' },
+    ];
+
+    const categoryList = dbCategories.length > 0 ? dbCategories : fallbackCategories;
+    const selectedCategory = categoryList.find(c => c.id === formData.category) || null;
     const [newCategory, setNewCategory] = useState('');
     const [showHours, setShowHours] = useState(false);
     const [editingServiceIndex, setEditingServiceIndex] = useState(null);
@@ -608,29 +683,188 @@ export default function BusinessForm({ business, onSave, onCancel }) {
                         />
                     </div>
 
-                    <div>
+                    <div ref={categoryDropdownRef} style={{ position: 'relative' }}>
                         <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>
                             Categoría *
                         </label>
-                        <select
-                            required
-                            value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        <button
+                            type="button"
+                            onClick={() => setCategoryOpen(o => !o)}
+                            aria-haspopup="listbox"
+                            aria-expanded={categoryOpen}
                             style={{
                                 width: '100%',
                                 padding: '12px',
                                 borderRadius: '10px',
                                 border: '1px solid var(--border)',
                                 backgroundColor: 'var(--bg-main)',
-                                color: 'var(--text-primary)',
-                                fontSize: '14px'
+                                color: selectedCategory ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                fontSize: '14px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px',
+                                textAlign: 'left',
+                                fontFamily: 'inherit'
                             }}
                         >
-                            <option value="padel">Padel</option>
-                            <option value="futbol">Fútbol</option>
-                            <option value="belleza">Belleza</option>
-                            <option value="salud">Salud</option>
-                        </select>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                {selectedCategory ? (
+                                    <>
+                                        <span style={{
+                                            fontSize: '18px',
+                                            width: '28px',
+                                            height: '28px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: '8px',
+                                            backgroundColor: selectedCategory.color || 'var(--bg-card)',
+                                            flexShrink: 0
+                                        }}>
+                                            {selectedCategory.icon || ''}
+                                        </span>
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {selectedCategory.name}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span>Seleccionar categoría...</span>
+                                )}
+                            </span>
+                            <motion.svg
+                                animate={{ rotate: categoryOpen ? 180 : 0 }}
+                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                width="14"
+                                height="14"
+                                viewBox="0 0 16 16"
+                                fill="var(--text-secondary)"
+                                style={{ flexShrink: 0 }}
+                            >
+                                <path d="M8 11L3 6h10z" />
+                            </motion.svg>
+                        </button>
+                        <AnimatePresence>
+                            {categoryOpen && (
+                                <motion.div
+                                    role="listbox"
+                                    initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 'calc(100% + 6px)',
+                                        left: 0,
+                                        right: 0,
+                                        zIndex: 1000,
+                                        backgroundColor: 'var(--bg-card)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '10px',
+                                        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                                        maxHeight: '300px',
+                                        overflowY: 'auto',
+                                        padding: '6px'
+                                    }}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setFormData({ ...formData, category: '', subcategory: '' });
+                                            setCategoryOpen(false);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 16px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            background: formData.category === '' ? 'var(--bg-main)' : 'transparent',
+                                            color: 'var(--text-secondary)',
+                                            fontSize: '14px',
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            fontFamily: 'inherit',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '10px',
+                                            transition: 'background 0.15s'
+                                        }}
+                                        onMouseEnter={(e) => { if (formData.category !== '') e.currentTarget.style.background = 'var(--bg-main)'; }}
+                                        onMouseLeave={(e) => { if (formData.category !== '') e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <span style={{
+                                            fontSize: '14px',
+                                            fontStyle: 'italic'
+                                        }}>
+                                            Sin categoría
+                                        </span>
+                                    </button>
+                                    {categoryList.map(cat => {
+                                        const isSelected = formData.category === cat.id;
+                                        return (
+                                            <button
+                                                key={cat.id}
+                                                type="button"
+                                                role="option"
+                                                aria-selected={isSelected}
+                                                onClick={() => {
+                                                    setFormData({ ...formData, category: cat.id, subcategory: '' });
+                                                    setCategoryOpen(false);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px 16px',
+                                                    borderRadius: '8px',
+                                                    border: 'none',
+                                                    background: isSelected ? 'var(--bg-main)' : 'transparent',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '14px',
+                                                    textAlign: 'left',
+                                                    cursor: 'pointer',
+                                                    fontFamily: 'inherit',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '12px',
+                                                    transition: 'background 0.15s'
+                                                }}
+                                                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-main)'; }}
+                                                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+                                            >
+                                                <span style={{
+                                                    fontSize: '18px',
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: cat.color || 'var(--bg-main)',
+                                                    flexShrink: 0
+                                                }}>
+                                                    {cat.icon || ''}
+                                                </span>
+                                                <span style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
+                                                    <span style={{ fontWeight: isSelected ? '700' : '600' }}>
+                                                        {cat.name}
+                                                    </span>
+                                                    {cat.business_type && (
+                                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                                                            {cat.business_type === 'sport' ? 'Deportes' : cat.business_type === 'service' ? 'Servicios' : 'Alquileres'}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                {isSelected && (
+                                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="var(--primary-paddle)" style={{ flexShrink: 0 }}>
+                                                        <path d="M13.5 4.5L6 12L2.5 8.5L3.91 7.09L6 9.17L12.09 3.09L13.5 4.5Z" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
                     <div>

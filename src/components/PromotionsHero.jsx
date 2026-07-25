@@ -16,28 +16,27 @@ export default function PromotionsHero({ promotions, businesses }) {
     }, [promotions]);
 
     if (!promotions || promotions.length === 0) {
-        // Fallback if no promotions: A generic "Welcome" banner styled similarly
         return (
             <div style={{
                 height: '220px',
                 marginBottom: '40px',
                 borderRadius: '24px',
-                background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-main) 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                background: 'var(--bg-card)',
                 border: '1px solid var(--border)',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '24px'
             }}>
-                <div style={{ textAlign: 'center', zIndex: 2 }}>
-                    <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '8px' }}>
-                        Bienvenido a Turnitos
-                    </h2>
-                    <p style={{ color: 'var(--text-secondary)' }}>
-                        Explora los mejores servicios de la ciudad
-                    </p>
-                </div>
+                <div style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '16px',
+                    background: 'linear-gradient(90deg, var(--bg-card) 25%, var(--border) 50%, var(--bg-card) 75%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'pulse 1.5s infinite'
+                }} />
             </div>
         );
     }
@@ -86,8 +85,8 @@ export default function PromotionsHero({ promotions, businesses }) {
                         whileDrag={{ cursor: 'grabbing' }}
                     >
                         <Link
-                            to={`/${generateSlug(business?.name || '')}/turnos`}
-                            state={{ business }}
+                            to={`/${generateSlug(business?.name || '')}/turnos?promoId=${currentPromo.id}`}
+                            state={{ business, activePromo: currentPromo }}
                             style={{ textDecoration: 'none', display: 'block', height: '100%', pointerEvents: 'auto' }}
                         >
                             <div className="promo-card">
@@ -127,21 +126,9 @@ export default function PromotionsHero({ promotions, businesses }) {
                                         }}>
                                             {currentPromo.title}
                                         </h2>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div style={{
-                                                width: '28px',
-                                                height: '28px',
-                                                borderRadius: '50%',
-                                                background: 'var(--primary-paddle)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '14px',
-                                                color: '#000'
-                                            }}>
-                                                📍
-                                            </div>
-                                            <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span style={{ fontSize: '16px' }}>📍</span>
+                                            <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'var(--font-title)' }}>
                                                 {business?.name || 'Ver Negocio'}
                                             </span>
                                         </div>
