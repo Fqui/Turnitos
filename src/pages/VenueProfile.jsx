@@ -68,17 +68,20 @@ export default function VenueProfile({ business: initialBusiness }) {
     const getGalleryImages = () => {
         if (!business) return [];
 
-        // Try to get from metadata.venue_gallery first (with captions)
-        if (business.metadata?.venue_gallery && Array.isArray(business.metadata.venue_gallery)) {
-            return business.metadata.venue_gallery;
+        let images = [];
+        if (business.metadata?.venue_gallery && Array.isArray(business.metadata.venue_gallery) && business.metadata.venue_gallery.length > 0) {
+            images = [...business.metadata.venue_gallery];
+        } else if (business.gallery_images && Array.isArray(business.gallery_images) && business.gallery_images.length > 0) {
+            images = business.gallery_images.map(url => (typeof url === 'string' ? { url, caption: '', category: 'General' } : url));
         }
 
-        // Fallback to gallery_images (simple URLs)
-        if (business.gallery_images && Array.isArray(business.gallery_images)) {
-            return business.gallery_images.map(url => ({ url, caption: '', category: 'General' }));
+        // Add main banner / image / logo to images if not present
+        const coverUrl = business.banner_image || business.banner_url || business.image || business.logo || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200';
+        if (coverUrl && !images.some(img => img.url === coverUrl)) {
+            images.unshift({ url: coverUrl, caption: business.name, category: 'General' });
         }
 
-        return [];
+        return images;
     };
 
     // Calculate price based on guest count and pricing tiers
@@ -247,28 +250,26 @@ export default function VenueProfile({ business: initialBusiness }) {
                 background: 'linear-gradient(135deg, #2D3748 0%, #1A202C 100%)',
                 overflow: 'hidden'
             }}>
-                {galleryImages[0] && (
-                    <img
-                        src={galleryImages[0].url}
-                        alt={business.name}
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            opacity: 0.7
-                        }}
-                    />
-                )}
+                <img
+                    src={business.banner_image || business.banner_url || business.image || galleryImages[0]?.url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200'}
+                    alt={business.name}
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        opacity: 0.8
+                    }}
+                />
                 <div style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%)'
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%)'
                 }} />
                 {/* Content Container */}
                 <div style={{
@@ -294,7 +295,9 @@ export default function VenueProfile({ business: initialBusiness }) {
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px'
                         }}>
-                            {business.category || 'Venue'}
+                            {business.category && business.category.toLowerCase() !== 'venue' && business.category.toLowerCase() !== 'alquiler'
+                                ? business.category
+                                : 'Alquiler de Espacios'}
                         </span>
                     </div>
                     <h1 style={{
@@ -323,6 +326,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                 display: 'grid',
                 gridTemplateColumns: windowWidth > 1200 ? '1fr 450px' : '1fr',
                 gap: windowWidth < 768 ? '16px' : '32px',
+                alignItems: 'start',
                 position: 'relative',
                 zIndex: 10,
                 marginTop: '-60px'
@@ -791,20 +795,6 @@ export default function VenueProfile({ business: initialBusiness }) {
                     )}
 
 
-                    {/* Mobile Booking Panel */}
-                    {windowWidth <= 1200 && (
-                        <BookingPanel
-                            pricePerHour={pricePerHour}
-                            guestCount={guestCount}
-                            setGuestCount={setGuestCount}
-                            duration={duration}
-                            setDuration={setDuration}
-                            basePrice={basePrice}
-                            totalPrice={totalPrice}
-                            onContinue={handleContinue}
-                            business={business}
-                        />
-                    )}
                 </div>
 
                 {/* Right Column - Booking Panel (Desktop only) */}
@@ -812,7 +802,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                     windowWidth > 1200 && (
                         <div style={{
                             position: 'sticky',
-                            top: '32px',
+                            top: '100px',
                             height: 'fit-content'
                         }}>
                             <BookingPanel

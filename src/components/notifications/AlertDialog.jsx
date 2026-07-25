@@ -152,21 +152,22 @@ const AlertDialog = () => {
                                         onClick={alertDialog.onClose}
                                         style={{
                                             width: '100%',
-                                            padding: '12px 24px',
-                                            borderRadius: '12px',
+                                            padding: '14px 24px',
+                                            borderRadius: '14px',
                                             border: 'none',
-                                            background: 'var(--primary-paddle)',
-                                            color: '#000',
+                                            background: '#84CC16',
+                                            color: 'white',
                                             fontWeight: '700',
-                                            fontSize: '14px',
+                                            fontSize: '15px',
                                             cursor: 'pointer',
-                                            transition: 'all 0.2s'
+                                            boxShadow: '0 4px 12px rgba(132, 204, 22, 0.3)',
+                                            transition: 'all 0.2s ease'
                                         }}
                                         onMouseEnter={e => {
-                                            e.currentTarget.style.transform = 'scale(1.02)';
+                                            e.currentTarget.style.transform = 'translateY(-1px)';
                                         }}
                                         onMouseLeave={e => {
-                                            e.currentTarget.style.transform = 'scale(1)';
+                                            e.currentTarget.style.transform = 'translateY(0)';
                                         }}
                                     >
                                         {alertDialog.buttonText}
