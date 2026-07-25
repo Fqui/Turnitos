@@ -208,8 +208,10 @@ const TimeSlotPicker = ({
             endMinutes = closeMinutes < startMinutes ? closeMinutes + 1440 : closeMinutes;
         }
 
-        // Get business total capacity
-        const totalBusinessCapacity = businessCapacity || 1;
+        // Get business total capacity (sum of individual resource capacities, or business capacity as fallback)
+        const totalBusinessCapacity = providedResources && providedResources.length > 0
+            ? providedResources.reduce((sum, r) => sum + (r.capacity || 1), 0)
+            : (businessCapacity || 1);
 
         // Generate all possible time slots
         for (let minutes = startMinutes; minutes < endMinutes; minutes += interval) {
@@ -232,49 +234,25 @@ const TimeSlotPicker = ({
 
             // ✅ FIRST: Check business-level capacity (total concurrent bookings)
             const totalBookingsAtTime = existingBookings?.filter(booking => {
-                // Format booking date using LOCAL timezone
-                const bookingDateObj = new Date(booking.date + 'T00:00:00'); // Force local timezone
+                const bookingDateObj = new Date(booking.date + 'T00:00:00');
                 const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
-                const bookingTime = booking.time?.substring(0, 5);
                 const isActive = booking.status !== 'cancelled';
-                return bookingDate === slotDate && bookingTime === time && isActive;
+                
+                if (bookingDate !== slotDate || !isActive) return false;
+                
+                const bookingStartMinutes = timeToMinutes(booking.time);
+                const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
+                
+                return minutes >= bookingStartMinutes && minutes < bookingEndMinutes;
             }).length || 0;
-
 
             // If business is at full capacity, skip this time slot entirely
             if (totalBookingsAtTime >= totalBusinessCapacity) {
                 continue;
             }
 
-            // 🆕 Check if this time slot falls within any existing booking
-            // (e.g., if there's a booking from 18:00-19:30, hide 18:00, 18:30, 19:00)
-            const isSlotOccupiedByAnyBooking = existingBookings?.some(booking => {
-                const bookingDateObj = new Date(booking.date + 'T00:00:00');
-                const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
-
-                if (bookingDate !== slotDate) return false;
-                if (booking.status === 'cancelled') return false;
-
-                const bookingStartMinutes = timeToMinutes(booking.time);
-                const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
-                const currentSlotMinutes = minutes;
-
-                // Check if current slot falls within this booking's time range
-                // (inclusive of start, exclusive of end)
-                return currentSlotMinutes >= bookingStartMinutes && currentSlotMinutes < bookingEndMinutes;
-            });
-
-            // Skip this slot if it's occupied by any booking
-            if (isSlotOccupiedByAnyBooking) {
-                continue;
-            }
-
             // Find which courts have availability at this time (considering capacity)
             const availableCourts = (providedResources || []).map(court => {
-                // For padel courts, we don't check exact time match anymore
-                // because we already filtered out occupied slots above
-                // Just check if the court itself is available (not at capacity)
-
                 const courtCapacity = court.capacity || 1;
 
                 // Count how many bookings are active at this exact time for this court
@@ -536,27 +514,41 @@ const TimeSlotPicker = ({
 
     return (
         <div style={{ maxWidth: '800px', margin: '20px auto 0', animation: 'slideUp 0.5s ease' }}>
-            {/* Time Slot Grid */}
-            <TimeSlotGrid
-                availableSlots={availableSlots}
-                selectedTimeSlot={selectedTimeSlot}
-                onTimeSlotSelect={handleTimeSlotSelect}
-                sportColor={sportColor}
-            />
+            {availableSlots.length > 0 ? (
+                <>
+                    {/* Time Slot Grid */}
+                    <TimeSlotGrid
+                        availableSlots={availableSlots}
+                        selectedTimeSlot={selectedTimeSlot}
+                        onTimeSlotSelect={handleTimeSlotSelect}
+                        sportColor={sportColor}
+                    />
 
-            {/* Court Selector (shows when time is selected) */}
-            {selectedTimeSlot && (
-                <CourtSelector
-                    availableCourts={getCourtsForSelectedTime()}
-                    selectedCourt={selectedTime?.courtId}
-                    onCourtSelect={handleCourtSelect}
-                    timeSlot={selectedTimeSlot}
-                    sportColor={sportColor}
-                    existingBookings={existingBookings}
-                    selectedDate={selectedDate}
-                    closingTime={closingTime}
-                    getAvailableDurations={getAvailableDurations}
-                />
+                    {/* Court Selector (shows when time is selected) */}
+                    {selectedTimeSlot && (
+                        <CourtSelector
+                            availableCourts={getCourtsForSelectedTime()}
+                            selectedCourt={selectedTime?.courtId}
+                            onCourtSelect={handleCourtSelect}
+                            timeSlot={selectedTimeSlot}
+                            sportColor={sportColor}
+                            existingBookings={existingBookings}
+                            selectedDate={selectedDate}
+                            closingTime={closingTime}
+                            getAvailableDurations={getAvailableDurations}
+                        />
+                    )}
+                </>
+            ) : (
+                <div className="card" style={{ padding: '40px 20px', textAlign: 'center', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.6 }}>📅</div>
+                    <h4 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '8px', fontFamily: 'var(--font-title)' }}>
+                        No hay horarios disponibles
+                    </h4>
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
+                        Todos los turnos de las canchas están reservados para esta fecha.
+                    </p>
+                </div>
             )}
 
             <style>{`

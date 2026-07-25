@@ -25,12 +25,12 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-export default function BusinessProfile() {
+export default function BusinessProfile({ business: initialBusiness }) {
     const { businessSlug } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const [business, setBusiness] = useState(location.state?.business || null);
-    const [loading, setLoading] = useState(!location.state?.business);
+    const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
+    const [loading, setLoading] = useState(!business);
 
     const [selectedItem, setSelectedItem] = useState(null); // Sport (string) or Service (object)
     const [selectedDate, setSelectedDate] = useState(null);
@@ -1152,8 +1152,11 @@ export default function BusinessProfile() {
 
                                 // console.log('Business Hours Debug:', { open, close, ranges, date: selectedDate });
 
-                                // Get business capacity directly from business.capacity field
-                                const businessCapacity = business.capacity || 1;
+                                // Get business capacity directly from business.capacity field, falling back to resources sum
+                                const businessCapacity = business.capacity || 
+                                    (resources && resources.length > 0 
+                                        ? resources.reduce((sum, r) => sum + (r.capacity || 1), 0) 
+                                        : 1);
 
                                 // 🆕 Detect if this is a padel business
                                 const hasPadelCourts = business.type === 'sport' && resources.some(r => r.sport === 'padel');
@@ -1584,7 +1587,7 @@ export default function BusinessProfile() {
                 )}
 
                 {/* Confirmation Button - Sticky on Mobile (Hidden for Padel since modal opens automatically) */}
-                {selectedTime && !business.courts?.some(c => c.sport === 'padel') && (
+                {selectedTime && (business.type !== 'sport' || selectedTime.courtId !== null) && !business.courts?.some(c => c.sport === 'padel') && (
                     <div ref={confirmRef} style={{
                         textAlign: 'center',
                         marginTop: '40px',

@@ -127,21 +127,9 @@ export default function PromotionsHero({ promotions, businesses }) {
                                         }}>
                                             {currentPromo.title}
                                         </h2>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div style={{
-                                                width: '28px',
-                                                height: '28px',
-                                                borderRadius: '50%',
-                                                background: 'var(--primary-paddle)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '14px',
-                                                color: '#000'
-                                            }}>
-                                                📍
-                                            </div>
-                                            <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span style={{ fontSize: '16px' }}>📍</span>
+                                            <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'var(--font-title)' }}>
                                                 {business?.name || 'Ver Negocio'}
                                             </span>
                                         </div>
