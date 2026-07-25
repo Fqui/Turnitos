@@ -32,7 +32,6 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                             style={{
                                 padding: '8px 16px',
                                 borderRadius: '20px',
-                                border: 'none',
                                 backgroundColor: activeCategory === cat ? color : 'var(--bg-card)',
                                 color: activeCategory === cat ? '#fff' : 'var(--text-secondary)',
                                 fontWeight: '600',
