@@ -555,12 +555,12 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                             padding: '16px',
                                             borderRadius: '12px',
                                             border: 'none',
-                                            backgroundColor: (!firstName || !lastName || !customerPhone) ? '#9E9E9E' : sportColor,
-                                            color: '#fff',
+                                            backgroundColor: (!firstName || !lastName || !customerPhone) ? 'var(--border)' : (sportColor || 'var(--primary-paddle)'),
+                                            color: (!firstName || !lastName || !customerPhone) ? 'var(--text-secondary)' : '#ffffff',
                                             fontSize: '16px',
                                             fontWeight: '700',
                                             cursor: (!firstName || !lastName || !customerPhone) ? 'not-allowed' : 'pointer',
-                                            opacity: 1,
+                                            opacity: (!firstName || !lastName || !customerPhone) ? 0.8 : 1,
                                             boxShadow: (!firstName || !lastName || !customerPhone) ? 'none' : `0 8px 20px ${sportColor}40`,
                                             transition: 'all 0.2s'
                                         }}
@@ -842,11 +842,14 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                     display: flex;
                     flex-direction: column;
                     overflow: hidden;
+                    border: 1px solid var(--border);
                 }
 
                 .responsive-modal-content {
                     overflow-y: auto;
                     flex: 1;
+                    max-height: calc(90vh - 100px);
+                    padding-bottom: 24px;
                     -webkit-overflow-scrolling: touch;
                 }
 
