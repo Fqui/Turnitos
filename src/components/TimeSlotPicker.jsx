@@ -208,8 +208,10 @@ const TimeSlotPicker = ({
             endMinutes = closeMinutes < startMinutes ? closeMinutes + 1440 : closeMinutes;
         }
 
-        // Get business total capacity
-        const totalBusinessCapacity = businessCapacity || 1;
+        // Get business total capacity (sum of individual resource capacities, or business capacity as fallback)
+        const totalBusinessCapacity = providedResources && providedResources.length > 0
+            ? providedResources.reduce((sum, r) => sum + (r.capacity || 1), 0)
+            : (businessCapacity || 1);
 
         // Generate all possible time slots
         for (let minutes = startMinutes; minutes < endMinutes; minutes += interval) {
