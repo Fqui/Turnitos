@@ -238,7 +238,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 
     return (
-        <div style={{ background: '#F8F9FA', minHeight: '100vh' }}>
+        <div style={{ background: '#F8F9FA', minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
             {/* Hero Section */}
             <div style={{
                 position: 'relative',
@@ -334,7 +334,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                         <div style={{
                             background: 'white',
                             borderRadius: '24px',
-                            padding: '32px',
+                            padding: windowWidth < 768 ? '16px' : '32px',
                             boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -355,9 +355,9 @@ export default function VenueProfile({ business: initialBusiness }) {
                             </div>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: '2fr 1fr',
+                                gridTemplateColumns: windowWidth < 768 ? '1fr' : '2fr 1fr',
                                 gap: '12px',
-                                height: '400px'
+                                height: windowWidth < 768 ? '240px' : '400px'
                             }}>
                                 <div
                                     onClick={() => { setLightboxIndex(0); setShowLightbox(true); }}
@@ -437,7 +437,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                         <div style={{
                             background: 'white',
                             borderRadius: '24px',
-                            padding: '32px',
+                            padding: windowWidth < 768 ? '16px' : '32px',
                             boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
                         }}>
                             <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>
@@ -445,8 +445,8 @@ export default function VenueProfile({ business: initialBusiness }) {
                             </h2>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                                gap: '16px'
+                                gridTemplateColumns: windowWidth < 768 ? 'repeat(auto-fill, minmax(100px, 1fr))' : 'repeat(auto-fill, minmax(140px, 1fr))',
+                                gap: windowWidth < 768 ? '10px' : '16px'
                             }}>
                                 {amenities.map((amenity, idx) => (
                                     <div
@@ -500,7 +500,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                             <div
                                 onClick={() => setShowServicesExpanded(!showServicesExpanded)}
                                 style={{
-                                    padding: '32px',
+                                    padding: windowWidth < 768 ? '16px' : '32px',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     justifyContent: 'space-between',
@@ -530,7 +530,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                 overflow: 'hidden',
                                 transition: 'max-height 0.4s ease'
                             }}>
-                                <div style={{ padding: '0 32px 32px 32px', display: 'grid', gap: '12px' }}>
+                                <div style={{ padding: windowWidth < 768 ? '0 16px 16px 16px' : '0 32px 32px 32px', display: 'grid', gap: '12px' }}>
                                     {additionalServices.map((service, idx) => (
                                         <div
                                             key={idx}
@@ -585,7 +585,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                     <div style={{
                         background: 'white',
                         borderRadius: '24px',
-                        padding: '32px',
+                        padding: windowWidth < 768 ? '16px' : '32px',
                         boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
                     }}>
                         <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>
@@ -715,7 +715,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                         <div style={{
                             background: 'white',
                             borderRadius: '24px',
-                            padding: '32px',
+                            padding: windowWidth < 768 ? '16px' : '32px',
                             boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
                         }}>
                             <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '16px' }}>
@@ -791,6 +791,20 @@ export default function VenueProfile({ business: initialBusiness }) {
                     )}
 
 
+                    {/* Mobile Booking Panel */}
+                    {windowWidth <= 1200 && (
+                        <BookingPanel
+                            pricePerHour={pricePerHour}
+                            guestCount={guestCount}
+                            setGuestCount={setGuestCount}
+                            duration={duration}
+                            setDuration={setDuration}
+                            basePrice={basePrice}
+                            totalPrice={totalPrice}
+                            onContinue={handleContinue}
+                            business={business}
+                        />
+                    )}
                 </div>
 
                 {/* Right Column - Booking Panel (Desktop only) */}
@@ -816,6 +830,47 @@ export default function VenueProfile({ business: initialBusiness }) {
                     )
                 }
             </div >
+
+            {/* Mobile Sticky Booking Bar */}
+            {windowWidth <= 1200 && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    padding: '12px 20px',
+                    borderTop: '1px solid #E2E8F0',
+                    boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    zIndex: 999
+                }}>
+                    <div>
+                        <div style={{ fontSize: '12px', color: '#64748B', fontWeight: '500' }}>Precio Total Estimado</div>
+                        <div style={{ fontSize: '20px', fontWeight: '900', color: '#84CC16' }}>
+                            ${totalPrice.toLocaleString()}
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleContinue}
+                        style={{
+                            background: '#84CC16',
+                            color: 'white',
+                            border: 'none',
+                            padding: '12px 24px',
+                            borderRadius: '14px',
+                            fontSize: '15px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(132, 204, 22, 0.3)'
+                        }}
+                    >
+                        Reservar Espacio
+                    </button>
+                </div>
+            )}
 
 
 
