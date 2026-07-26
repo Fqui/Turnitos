@@ -85,11 +85,13 @@ function AppContent() {
   if (subdomain && (location.pathname === '/' || location.pathname === '/turnos')) {
     return (
       <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Header showSearch={false} />
         <main style={{ flex: 1, minHeight: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<LoadingFallback />}>
             <BusinessProfileRouter overrideSlug={subdomain} />
           </Suspense>
         </main>
+        <Footer />
         <Toast />
         <ConfirmDialog />
         <AlertDialog />
