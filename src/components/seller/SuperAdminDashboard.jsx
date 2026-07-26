@@ -165,13 +165,16 @@ const SuperAdminDashboard = () => {
     return (
         <div style={{
             minHeight: '100vh',
+            width: '100%',
             background: '#0b0f19',
             color: '#f9fafb',
-            padding: '24px 24px',
-            maxWidth: '1400px',
-            margin: '0 auto',
             fontFamily: "var(--font-sans)"
         }}>
+            <div style={{
+                maxWidth: '1400px',
+                margin: '0 auto',
+                padding: '24px 24px'
+            }}>
             {/* Modern Compact Header */}
             <div style={{
                 display: 'flex',
@@ -352,6 +355,7 @@ const SuperAdminDashboard = () => {
                     }}
                 />
             )}
+            </div>
         </div>
     );
 };
