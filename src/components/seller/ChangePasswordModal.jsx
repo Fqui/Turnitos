@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 
-const ChangePasswordModal = ({ userEmail, onSuccess }) => {
+const ChangePasswordModal = ({ userEmail, businessId, onSuccess }) => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -24,7 +24,7 @@ const ChangePasswordModal = ({ userEmail, onSuccess }) => {
 
         setLoading(true);
         try {
-            await supabaseService.updateCurrentPassword(password, userEmail);
+            await supabaseService.updateCurrentPassword(password, userEmail, businessId);
             onSuccess();
         } catch (err) {
             console.error('Error updating password:', err);

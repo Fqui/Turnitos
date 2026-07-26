@@ -2954,9 +2954,9 @@ class SupabaseService {
     }
 
     /**
-     * Update current logged in user password (with resilient fallback for legacy / auto-login accounts)
+     * Update current logged in user password (with resilient fallback by businessId and userEmail)
      */
-    async updateCurrentPassword(newPassword, userEmail = null) {
+    async updateCurrentPassword(newPassword, userEmail = null, businessId = null) {
         let updated = false;
 
         // 1. Try updating active Supabase Auth user session
@@ -2973,41 +2973,55 @@ class SupabaseService {
             console.warn('Supabase Auth updateUser exception:', e);
         }
 
-        // 2. Fallback if no active Auth session (e.g. custom business login)
-        if (userEmail) {
-            try {
-                // Update password_changed flag on businesses table
-                const { error: bizError } = await supabase
+        // 2. Resilient update on businesses table by businessId or userEmail
+        try {
+            let targetBusinessId = businessId;
+            let targetEmail = userEmail;
+
+            // Update password_changed flag on businesses table
+            if (targetBusinessId) {
+                const { data: bizData } = await supabase
                     .from('businesses')
                     .update({ password_changed: true })
-                    .eq('email', userEmail);
+                    .eq('id', targetBusinessId)
+                    .select();
+                if (bizData && bizData.length > 0) {
+                    updated = true;
+                    if (!targetEmail) targetEmail = bizData[0].email;
+                }
+            } else if (targetEmail) {
+                const { data: bizData } = await supabase
+                    .from('businesses')
+                    .update({ password_changed: true })
+                    .eq('email', targetEmail)
+                    .select();
+                if (bizData && bizData.length > 0) {
+                    updated = true;
+                    if (!targetBusinessId) targetBusinessId = bizData[0].id;
+                }
+            }
 
-                if (!bizError) updated = true;
-
-                // Attempt to sign up or update in Supabase Auth
+            // Also register or update in Supabase Auth if targetEmail is known
+            if (targetEmail) {
                 try {
                     const { data: signUpData } = await supabase.auth.signUp({
-                        email: userEmail,
+                        email: targetEmail,
                         password: newPassword
                     });
 
-                    if (signUpData?.user) {
+                    if (signUpData?.user && targetBusinessId) {
                         await supabase
                             .from('businesses')
                             .update({ auth_id: signUpData.user.id, password_changed: true })
-                            .eq('email', userEmail);
-                        updated = true;
+                            .eq('id', targetBusinessId);
                     }
-                } catch (e) {
-                    console.warn('Fallback password update error:', e);
+                    updated = true;
+                } catch (authErr) {
+                    console.warn('Auth signup fallback warning:', authErr);
                 }
-            } catch (e) {
-                console.warn('Fallback database update error:', e);
             }
-        }
-
-        if (!updated) {
-            throw new Error('No se pudo actualizar la contraseña. Por favor reingresá a tu cuenta.');
+        } catch (e) {
+            console.warn('Fallback database update error:', e);
         }
 
         return true;

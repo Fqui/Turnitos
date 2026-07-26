@@ -1599,6 +1599,7 @@ export default function BusinessPortal() {
             {requirePasswordChange && (
                 <ChangePasswordModal
                     userEmail={loginEmail || currentBusiness?.email || (businesses.find(b => b.id === (selectedBusinessId || currentBusinessId))?.email) || ''}
+                    businessId={selectedBusinessId || currentBusinessId || currentBusiness?.id || ''}
                     onSuccess={() => {
                         setRequirePasswordChange(false);
                         localStorage.removeItem('turnitos_must_change_password');
