@@ -27,8 +27,9 @@ const SuperAdminDashboard = () => {
     const [selectedSeller, setSelectedSeller] = useState(null);
     const [sellerDetails, setSellerDetails] = useState(null);
 
-    // Global Search & Filters
+    // Global Search, Notifications & Filters
     const [showSearchModal, setShowSearchModal] = useState(false);
+    const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [dateRange, setDateRange] = useState('month');
     const [settledSellers, setSettledSellers] = useState({});
@@ -74,6 +75,9 @@ const SuperAdminDashboard = () => {
         link.click();
         document.body.removeChild(link);
     };
+
+    const inactiveOrTrialBusinesses = (businesses || []).filter(b => b.subscription_status === 'trial' || b.subscription_status === 'inactive');
+    const alertCount = inactiveOrTrialBusinesses.length;
 
     useEffect(() => {
         loadData();
@@ -317,6 +321,127 @@ const SuperAdminDashboard = () => {
                         <option value="all">♾️ Todo el Historial</option>
                     </select>
 
+                    {/* Notifications & Alerts Bell Button */}
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => setShowNotificationsDropdown(prev => !prev)}
+                            style={{
+                                position: 'relative',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '7px 12px',
+                                background: alertCount > 0 ? 'rgba(245, 158, 11, 0.12)' : '#1e293b',
+                                border: `1px solid ${alertCount > 0 ? 'rgba(245, 158, 11, 0.4)' : '#334155'}`,
+                                borderRadius: '8px',
+                                color: alertCount > 0 ? '#fbbf24' : '#9ca3af',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
+                        >
+                            <span>🔔 Alertas</span>
+                            {alertCount > 0 && (
+                                <span style={{
+                                    padding: '1px 6px',
+                                    background: '#f59e0b',
+                                    color: '#000',
+                                    borderRadius: '10px',
+                                    fontSize: '10px',
+                                    fontWeight: '900'
+                                }}>
+                                    {alertCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Dropdown Popover Panel */}
+                        {showNotificationsDropdown && (
+                            <div style={{
+                                position: 'absolute',
+                                top: 'calc(100% + 8px)',
+                                right: 0,
+                                width: '320px',
+                                background: '#111827',
+                                border: '1px solid #374151',
+                                borderRadius: '12px',
+                                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+                                padding: '16px',
+                                zIndex: 200
+                            }}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '12px',
+                                    borderBottom: '1px solid #1f2937',
+                                    paddingBottom: '8px'
+                                }}>
+                                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#f9fafb' }}>
+                                        🔔 Alertas del Sistema ({alertCount})
+                                    </h4>
+                                    <button
+                                        onClick={() => setShowNotificationsDropdown(false)}
+                                        style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '14px' }}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {alertCount > 0 ? (
+                                        <div style={{
+                                            padding: '10px 12px',
+                                            background: 'rgba(245, 158, 11, 0.1)',
+                                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                                            borderRadius: '8px'
+                                        }}>
+                                            <div style={{ fontWeight: '700', fontSize: '12px', color: '#fbbf24', marginBottom: '4px' }}>
+                                                ⚠️ {alertCount} negocio(s) en prueba o inactivos
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>
+                                                Requieren asistencia de configuración o renovación de suscripción.
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setActiveTab('businesses');
+                                                    setShowNotificationsDropdown(false);
+                                                }}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    background: '#f59e0b',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    color: '#000',
+                                                    fontSize: '11px',
+                                                    fontWeight: '800',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Ver Negocios ➔
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ textAlign: 'center', padding: '16px 8px', color: '#9ca3af', fontSize: '12px' }}>
+                                            ✓ Todo en orden. No hay alertas activas.
+                                        </div>
+                                    )}
+
+                                    <div style={{
+                                        padding: '8px 10px',
+                                        background: '#1e293b',
+                                        borderRadius: '8px',
+                                        fontSize: '11px',
+                                        color: '#9ca3af'
+                                    }}>
+                                        💡 Tip: Usá <strong style={{ color: '#60a5fa' }}>Ctrl + K</strong> para buscar cualquier negocio o vendedor rápidamente.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Logout Button */}
                     <button
                         onClick={handleLogout}
@@ -484,35 +609,8 @@ const SuperAdminDashboard = () => {
 
 // Overview Tab Component
 const OverviewTab = ({ analytics, sellers, commissionTrends, businessGrowthTrends, businesses }) => {
-    const inactiveOrTrialBusinesses = (businesses || []).filter(b => b.subscription_status === 'trial' || b.subscription_status === 'inactive');
-
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Churn Risk / Setup Alert Banner */}
-            {inactiveOrTrialBusinesses.length > 0 && (
-                <div style={{
-                    padding: '12px 16px',
-                    background: 'rgba(245, 158, 11, 0.08)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '18px' }}>⚠️</span>
-                        <div>
-                            <div style={{ fontWeight: '700', fontSize: '13px', color: '#fbbf24' }}>
-                                Alerta de Asistencia: {inactiveOrTrialBusinesses.length} negocio(s) en prueba o inactivos
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-                                Consultá el listado en la pestaña "Negocios" para dar soporte de configuración o renovar su suscripción.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Key Metrics Grid - 5 columns on desktop */}
             <div style={{
