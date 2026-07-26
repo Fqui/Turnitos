@@ -32,6 +32,7 @@ const SuperAdminDashboard = () => {
     const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [dateRange, setDateRange] = useState('month');
+    const [businessFilter, setBusinessFilter] = useState('all'); // 'all', 'active', 'attention'
     const [settledSellers, setSettledSellers] = useState({});
 
     // Ctrl+K Shortcut Handler
@@ -392,34 +393,66 @@ const SuperAdminDashboard = () => {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {alertCount > 0 ? (
                                         <div style={{
-                                            padding: '10px 12px',
-                                            background: 'rgba(245, 158, 11, 0.1)',
+                                            padding: '12px',
+                                            background: 'rgba(245, 158, 11, 0.08)',
                                             border: '1px solid rgba(245, 158, 11, 0.3)',
-                                            borderRadius: '8px'
+                                            borderRadius: '10px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '8px'
                                         }}>
-                                            <div style={{ fontWeight: '700', fontSize: '12px', color: '#fbbf24', marginBottom: '4px' }}>
-                                                ⚠️ {alertCount} negocio(s) en prueba o inactivos
+                                            <div style={{ fontWeight: '700', fontSize: '12px', color: '#fbbf24' }}>
+                                                ⚠️ {alertCount} negocio(s) requieren atención:
                                             </div>
-                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>
-                                                Requieren asistencia de configuración o renovación de suscripción.
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '160px', overflowY: 'auto' }}>
+                                                {inactiveOrTrialBusinesses.map(b => (
+                                                    <div key={b.id} style={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        padding: '6px 10px',
+                                                        background: '#1e293b',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid rgba(245, 158, 11, 0.25)',
+                                                        fontSize: '11px'
+                                                    }}>
+                                                        <div>
+                                                            <strong style={{ color: '#f9fafb' }}>{b.name}</strong>
+                                                            <div style={{ color: '#9ca3af', fontSize: '10px' }}>{b.categories?.name || 'General'}</div>
+                                                        </div>
+                                                        <span style={{
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '10px',
+                                                            fontWeight: '700',
+                                                            background: b.subscription_status === 'trial' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                                            color: b.subscription_status === 'trial' ? '#fbbf24' : '#f87171'
+                                                        }}>
+                                                            {b.subscription_status === 'trial' ? '⏱ Prueba' : '✗ Inactivo'}
+                                                        </span>
+                                                    </div>
+                                                ))}
                                             </div>
                                             <button
                                                 onClick={() => {
+                                                    setBusinessFilter('attention');
                                                     setActiveTab('businesses');
                                                     setShowNotificationsDropdown(false);
                                                 }}
                                                 style={{
-                                                    padding: '4px 8px',
+                                                    marginTop: '4px',
+                                                    padding: '6px 12px',
                                                     background: '#f59e0b',
                                                     border: 'none',
                                                     borderRadius: '6px',
                                                     color: '#000',
                                                     fontSize: '11px',
                                                     fontWeight: '800',
-                                                    cursor: 'pointer'
+                                                    cursor: 'pointer',
+                                                    textAlign: 'center'
                                                 }}
                                             >
-                                                Ver Negocios ➔
+                                                Filtrar Negocios Afectados ➔
                                             </button>
                                         </div>
                                     ) : (
@@ -552,6 +585,8 @@ const SuperAdminDashboard = () => {
                         setShowBusinessModal(true);
                     }}
                     onExportCSV={handleExportBusinessesCSV}
+                    filter={businessFilter}
+                    setFilter={setBusinessFilter}
                 />
             )}
 
@@ -799,152 +834,237 @@ const SellersTab = ({ sellers, onToggleStatus, onViewDetails, settledSellers, on
 );
 
 // Businesses Tab Component
-const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV }) => (
-    <div style={{
-        background: '#111827',
-        borderRadius: '14px',
-        padding: '20px',
-        border: '1px solid #1f2937',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-    }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
-                <span>🏢</span> Todos los Negocios
-            </h3>
-            <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                    onClick={onExportCSV}
-                    style={{
-                        padding: '8px 14px',
-                        background: 'rgba(59, 130, 246, 0.1)',
-                        border: '1px solid rgba(59, 130, 246, 0.3)',
-                        borderRadius: '8px',
-                        color: '#60a5fa',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                    }}
-                >
-                    📥 Exportar CSV
-                </button>
-                <button
-                    onClick={onCreate}
-                    style={{
-                        padding: '8px 16px',
-                        background: '#2563eb',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: '#ffffff',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        boxShadow: '0 2px 6px rgba(37, 99, 235, 0.4)'
-                    }}
-                >
-                    + Crear Negocio
-                </button>
-            </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
-            {businesses.map(business => (
-                <div key={business.id} style={{
-                    padding: '14px 16px',
-                    background: '#1e293b',
-                    borderRadius: '10px',
-                    border: '1px solid #334155',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                        <div style={{
-                            width: '38px',
-                            height: '38px',
-                            borderRadius: '10px',
-                            background: '#0f172a',
-                            border: '1px solid #334155',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '18px'
-                        }}>
-                            {business.categories?.icon || '🏢'}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: '700', fontSize: '14px', color: '#f9fafb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {business.name}
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                {business.categories?.name}
-                            </div>
-                        </div>
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span>📍</span> {business.location}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span>👤</span> {business.sellers ? `${business.sellers.first_name} ${business.sellers.last_name}` : 'Sin vendedor'}
-                    </div>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '12px' }}>
-                        <div style={{
-                            padding: '3px 8px',
-                            background: business.subscription_status === 'active' ? 'rgba(16, 185, 129, 0.1)' :
-                                business.subscription_status === 'trial' ? 'rgba(59, 130, 246, 0.1)' :
-                                    'rgba(239, 68, 68, 0.1)',
-                            border: `1px solid ${
-                                business.subscription_status === 'active' ? 'rgba(16, 185, 129, 0.3)' :
-                                business.subscription_status === 'trial' ? 'rgba(59, 130, 246, 0.3)' :
-                                'rgba(239, 68, 68, 0.3)'
-                            }`,
-                            borderRadius: '6px',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            color: business.subscription_status === 'active' ? '#34d399' :
-                                business.subscription_status === 'trial' ? '#60a5fa' :
-                                    '#f87171'
-                        }}>
-                            {business.subscription_status === 'active' ? '✓ Activo' :
-                                business.subscription_status === 'trial' ? '⏱ Prueba' :
-                                    '✗ Inactivo'}
-                        </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV, filter = 'all', setFilter }) => {
+    const activeCount = businesses.filter(b => b.subscription_status === 'active').length;
+    const attentionCount = businesses.filter(b => b.subscription_status === 'trial' || b.subscription_status === 'inactive').length;
+
+    const displayedBusinesses = businesses.filter(b => {
+        if (filter === 'active') return b.subscription_status === 'active';
+        if (filter === 'attention') return b.subscription_status === 'trial' || b.subscription_status === 'inactive';
+        return true;
+    });
+
+    return (
+        <div style={{
+            background: '#111827',
+            borderRadius: '14px',
+            padding: '20px',
+            border: '1px solid #1f2937',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+        }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
+                        <span>🏢</span> Negocios ({businesses.length})
+                    </h3>
+
+                    {/* Filter Pills */}
+                    <div style={{ display: 'flex', gap: '6px', background: '#1e293b', padding: '3px', borderRadius: '8px', border: '1px solid #334155' }}>
                         <button
-                            onClick={() => onEdit(business)}
+                            onClick={() => setFilter && setFilter('all')}
                             style={{
-                                flex: 1,
-                                padding: '6px 10px',
-                                background: '#0f172a',
-                                border: '1px solid #334155',
+                                padding: '4px 10px',
+                                background: filter === 'all' ? '#2563eb' : 'transparent',
+                                color: filter === 'all' ? '#fff' : '#9ca3af',
+                                border: 'none',
                                 borderRadius: '6px',
-                                color: '#60a5fa',
+                                fontSize: '11px',
                                 fontWeight: '700',
-                                cursor: 'pointer',
-                                fontSize: '11px'
+                                cursor: 'pointer'
                             }}
                         >
-                            ✏️ Editar
+                            Todos ({businesses.length})
                         </button>
                         <button
-                            onClick={() => onDelete(business.id)}
+                            onClick={() => setFilter && setFilter('active')}
                             style={{
-                                flex: 1,
-                                padding: '6px 10px',
-                                background: 'rgba(239, 68, 68, 0.08)',
-                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                padding: '4px 10px',
+                                background: filter === 'active' ? '#10b981' : 'transparent',
+                                color: filter === 'active' ? '#fff' : '#9ca3af',
+                                border: 'none',
                                 borderRadius: '6px',
-                                color: '#f87171',
+                                fontSize: '11px',
                                 fontWeight: '700',
-                                cursor: 'pointer',
-                                fontSize: '11px'
+                                cursor: 'pointer'
                             }}
                         >
-                            🗑️ Eliminar
+                            ✓ Activos ({activeCount})
+                        </button>
+                        <button
+                            onClick={() => setFilter && setFilter('attention')}
+                            style={{
+                                padding: '4px 10px',
+                                background: filter === 'attention' ? '#f59e0b' : 'transparent',
+                                color: filter === 'attention' ? '#000' : '#fbbf24',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            ⚠️ Requieren Atención ({attentionCount})
                         </button>
                     </div>
                 </div>
-            ))}
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        onClick={onExportCSV}
+                        style={{
+                            padding: '8px 14px',
+                            background: 'rgba(59, 130, 246, 0.1)',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
+                            borderRadius: '8px',
+                            color: '#60a5fa',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                        }}
+                    >
+                        📥 Exportar CSV
+                    </button>
+                    <button
+                        onClick={onCreate}
+                        style={{
+                            padding: '8px 16px',
+                            background: '#2563eb',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#ffffff',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            boxShadow: '0 2px 6px rgba(37, 99, 235, 0.4)'
+                        }}
+                    >
+                        + Crear Negocio
+                    </button>
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                {displayedBusinesses.map(business => {
+                    const needsAttention = business.subscription_status === 'trial' || business.subscription_status === 'inactive';
+
+                    return (
+                        <div key={business.id} style={{
+                            padding: '14px 16px',
+                            background: '#1e293b',
+                            borderRadius: '10px',
+                            border: needsAttention ? '1px solid #f59e0b' : '1px solid #334155',
+                            boxShadow: needsAttention ? '0 0 10px rgba(245, 158, 11, 0.2)' : '0 2px 4px rgba(0,0,0,0.1)',
+                            position: 'relative'
+                        }}>
+                            {needsAttention && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-8px',
+                                    right: '12px',
+                                    padding: '2px 8px',
+                                    background: '#f59e0b',
+                                    color: '#000',
+                                    borderRadius: '10px',
+                                    fontSize: '10px',
+                                    fontWeight: '900',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                }}>
+                                    ⚠️ Requiere Asistencia
+                                </div>
+                            )}
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                                <div style={{
+                                    width: '38px',
+                                    height: '38px',
+                                    borderRadius: '10px',
+                                    background: '#0f172a',
+                                    border: '1px solid #334155',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '18px'
+                                }}>
+                                    {business.categories?.icon || '🏢'}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontWeight: '700', fontSize: '14px', color: '#f9fafb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {business.name}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                        {business.categories?.name}
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span>📍</span> {business.location}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span>👤</span> {business.sellers ? `${business.sellers.first_name} ${business.sellers.last_name}` : 'Sin vendedor'}
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '12px' }}>
+                                <div style={{
+                                    padding: '3px 8px',
+                                    background: business.subscription_status === 'active' ? 'rgba(16, 185, 129, 0.1)' :
+                                        business.subscription_status === 'trial' ? 'rgba(245, 158, 11, 0.15)' :
+                                            'rgba(239, 68, 68, 0.1)',
+                                    border: `1px solid ${
+                                        business.subscription_status === 'active' ? 'rgba(16, 185, 129, 0.3)' :
+                                        business.subscription_status === 'trial' ? 'rgba(245, 158, 11, 0.4)' :
+                                        'rgba(239, 68, 68, 0.3)'
+                                    }`,
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    color: business.subscription_status === 'active' ? '#34d399' :
+                                        business.subscription_status === 'trial' ? '#fbbf24' :
+                                            '#f87171'
+                                }}>
+                                    {business.subscription_status === 'active' ? '✓ Activo' :
+                                        business.subscription_status === 'trial' ? '⏱ En Prueba' :
+                                            '✗ Inactivo'}
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    onClick={() => onEdit(business)}
+                                    style={{
+                                        flex: 1,
+                                        padding: '6px 10px',
+                                        background: '#0f172a',
+                                        border: '1px solid #334155',
+                                        borderRadius: '6px',
+                                        color: '#60a5fa',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        fontSize: '11px'
+                                    }}
+                                >
+                                    ✏️ Editar
+                                </button>
+                                <button
+                                    onClick={() => onDelete(business.id)}
+                                    style={{
+                                        padding: '6px 10px',
+                                        background: 'rgba(239, 68, 68, 0.1)',
+                                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                                        borderRadius: '6px',
+                                        color: '#f87171',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        fontSize: '11px'
+                                    }}
+                                >
+                                    🗑️ Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 // Categories Tab Component (simplified - full implementation in previous version)
 const CategoriesTab = ({ categories, subcategories, onDeleteCategory, onDeleteSubcategory, onReload }) => {
