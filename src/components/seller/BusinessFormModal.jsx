@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 
-const BusinessFormModal = ({ business, categories, subcategories, sellers = [], onClose, onSave }) => {
+const BusinessFormModal = ({ business, categories = [], subcategories = [], sellers = [], onClose, onSave }) => {
     const [formData, setFormData] = useState({
         name: business?.name || '',
-        category_id: business?.category_id || '',
-        subcategory_id: business?.subcategory_id || '',
+        category_id: business?.category_id || business?.categories?.id || '',
+        subcategory_id: business?.subcategory_id || (business?.subcategories?.[0]?.id) || '',
         location: business?.location || '',
         whatsapp: business?.whatsapp || '',
         instagram: business?.instagram || '',
@@ -15,6 +15,24 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers = [], 
         seller_id: business?.seller_id || '',
         subscription_plan_id: business?.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb'
     });
+
+    useEffect(() => {
+        if (business) {
+            setFormData({
+                name: business.name || '',
+                category_id: business.category_id || business.categories?.id || '',
+                subcategory_id: business.subcategory_id || (business.subcategories?.[0]?.id) || '',
+                location: business.location || '',
+                whatsapp: business.whatsapp || '',
+                instagram: business.instagram || '',
+                facebook: business.facebook || '',
+                type: business.type || 'venue',
+                seller_id: business.seller_id || '',
+                subscription_plan_id: business.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb'
+            });
+        }
+    }, [business]);
+
     const [loading, setLoading] = useState(false);
     const [createdCredentials, setCreatedCredentials] = useState(null);
     const [showCredentials, setShowCredentials] = useState(false);
@@ -51,10 +69,29 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers = [], 
         return () => document.removeEventListener('keydown', handle);
     }, []);
 
-    const filteredSubcategories = subcategories.filter(
-        sub => sub.category_id === formData.category_id
+    // Find current category object
+    const currentCategory = (categories || []).find(
+        c => String(c.id) === String(formData.category_id) || c.name === formData.category_id
     );
-    const selectedSubcategory = filteredSubcategories.find(s => s.id === formData.subcategory_id);
+    const resolvedCategoryId = currentCategory ? currentCategory.id : formData.category_id;
+
+    // Combine top-level subcategories + category's nested subcategories
+    const categorySubcategories = currentCategory?.subcategories || [];
+    const rawSubcategories = [
+        ...(subcategories || []).filter(sub =>
+            resolvedCategoryId && (String(sub.category_id) === String(resolvedCategoryId) || String(sub.category_id) === String(formData.category_id))
+        ),
+        ...categorySubcategories
+    ];
+
+    // Deduplicate by ID
+    const filteredSubcategories = Array.from(
+        new Map(rawSubcategories.map(s => [s.id, s])).values()
+    );
+
+    const selectedSubcategory = filteredSubcategories.find(
+        s => String(s.id) === String(formData.subcategory_id)
+    );
     // Base input style
     const inputStyle = {
         width: '100%',

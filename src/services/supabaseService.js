@@ -2850,10 +2850,15 @@ class SupabaseService {
             ? businessData.category_id
             : null;
 
+        // Validate subcategory_id (prevent invalid UUID syntax error when updating)
+        const subcategoryId = businessData.subcategory_id && businessData.subcategory_id !== '' && businessData.subcategory_id !== '1'
+            ? businessData.subcategory_id
+            : null;
+
         const updateData = {
             name: businessData.name,
             category_id: categoryId,
-            subcategory_id: businessData.subcategory_id,
+            subcategory_id: subcategoryId,
             location: businessData.location,
             latitude: businessData.latitude,
             longitude: businessData.longitude,
@@ -2874,6 +2879,20 @@ class SupabaseService {
             .single();
 
         if (error) throw error;
+
+        // Also sync business_subcategories junction table if subcategoryId is provided
+        if (subcategoryId) {
+            try {
+                await supabase.from('business_subcategories').delete().eq('business_id', businessId);
+                await supabase.from('business_subcategories').insert({
+                    business_id: businessId,
+                    subcategory_id: subcategoryId
+                });
+            } catch (e) {
+                console.warn('Could not sync business_subcategories junction table:', e);
+            }
+        }
+
         return data;
     }
 
