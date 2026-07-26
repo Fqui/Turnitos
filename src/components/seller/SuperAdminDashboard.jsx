@@ -16,7 +16,15 @@ const SuperAdminDashboard = () => {
     const [bookingsData, setBookingsData] = useState(null);
     const [commissionTrends, setCommissionTrends] = useState([]);
     const [businessGrowthTrends, setBusinessGrowthTrends] = useState([]);
-    const [activeTab, setActiveTab] = useState('overview');
+    // Modals & Details State
+    const [showBusinessModal, setShowBusinessModal] = useState(false);
+    const [editingBusiness, setEditingBusiness] = useState(null);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
+    const [editingCategory, setEditingCategory] = useState(null);
+    const [editingSubcategory, setEditingSubcategory] = useState(null);
+    const [selectedSeller, setSelectedSeller] = useState(null);
+    const [sellerDetails, setSellerDetails] = useState(null);
 
     // Global Search & Filters
     const [showSearchModal, setShowSearchModal] = useState(false);
