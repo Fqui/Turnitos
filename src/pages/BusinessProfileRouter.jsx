@@ -4,8 +4,9 @@ import serviceAdapter from '../services/serviceAdapter';
 import BusinessProfile from './BusinessProfile';
 import VenueProfile from './VenueProfile';
 
-export default function BusinessProfileRouter() {
-    const { businessSlug } = useParams();
+export default function BusinessProfileRouter({ overrideSlug }) {
+    const { businessSlug: routeSlug } = useParams();
+    const businessSlug = overrideSlug || routeSlug;
     const location = useLocation();
     const [business, setBusiness] = useState(location.state?.business || null);
     const [loading, setLoading] = useState(!location.state?.business);
