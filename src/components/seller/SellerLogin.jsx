@@ -26,7 +26,7 @@ const SellerLogin = () => {
                     return;
                 }
             } catch (superAdminErr) {
-                // Silent fallback to next attempt
+                console.warn('Super admin login failed:', superAdminErr.message);
             }
 
             // Try 2: Seller login (captadores de negocios)
