@@ -432,88 +432,74 @@ const OverviewTab = ({ analytics, sellers, commissionTrends, businessGrowthTrend
 // Sellers Tab Component
 const SellersTab = ({ sellers, onToggleStatus, onViewDetails }) => (
     <div style={{
-        background: 'rgba(255, 255, 255, 0.015)',
-        borderRadius: '24px',
-        padding: '32px',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(20px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+        background: '#111827',
+        borderRadius: '14px',
+        padding: '20px',
+        border: '1px solid #1f2937',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
     }}>
-        <h3 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.95)' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
             <span>👥</span> Gestión de Vendedores
         </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {sellers.map(seller => (
                 <div key={seller.id} style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '20px',
-                    padding: '24px',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    borderRadius: '20px',
-                    border: `1px solid ${seller.is_active ? 'rgba(0, 230, 118, 0.12)' : 'rgba(239, 68, 68, 0.12)'}`,
-                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 15px rgba(0,0,0,0.15)'
+                    gap: '14px',
+                    padding: '12px 16px',
+                    background: '#1e293b',
+                    borderRadius: '10px',
+                    border: `1px solid ${seller.is_active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
                 }}
-                    onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                        e.currentTarget.style.transform = 'translateY(-3px)';
-                        e.currentTarget.style.boxShadow = seller.is_active 
-                            ? '0 8px 24px rgba(0, 230, 118, 0.08)' 
-                            : '0 8px 24px rgba(239, 68, 68, 0.08)';
-                    }}
-                    onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.15)';
-                    }}
                     onClick={() => onViewDetails(seller.id)}
                 >
                     <div style={{
-                        width: '60px',
-                        height: '60px',
-                        borderRadius: '18px',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
                         background: seller.is_active
-                            ? 'linear-gradient(135deg, var(--primary-paddle), #00b0ff)'
+                            ? 'linear-gradient(135deg, #3b82f6, #2563eb)'
                             : 'linear-gradient(135deg, #ef4444, #dc2626)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '20px',
-                        fontWeight: '900',
-                        color: '#000',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                        fontSize: '14px',
+                        fontWeight: '800',
+                        color: '#fff',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                     }}>
-                        {seller.first_name[0]}{seller.last_name[0]}
+                        {seller.first_name?.[0]}{seller.last_name?.[0]}
                     </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: '800', fontSize: '18px', marginBottom: '6px', color: 'rgba(255,255,255,0.95)' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: '700', fontSize: '14px', color: '#f9fafb' }}>
                             {seller.first_name} {seller.last_name}
                         </div>
-                        <div style={{ fontSize: '13px', opacity: 0.5, marginBottom: '10px' }}>
+                        <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '6px' }}>
                             {seller.email}
                         </div>
-                        <div style={{ fontSize: '13px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                            <span style={{ padding: '6px 14px', background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.1)', borderRadius: '10px', color: '#a5b4fc', fontWeight: '700' }}>
+                        <div style={{ fontSize: '11px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ padding: '3px 8px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: '6px', color: '#a5b4fc', fontWeight: '700' }}>
                                 📊 {seller.stats?.totalBusinesses || 0} negocios
                             </span>
-                            <span style={{ padding: '6px 14px', background: 'rgba(245, 158, 11, 0.06)', border: '1px solid rgba(245, 158, 11, 0.1)', borderRadius: '10px', color: '#fde047', fontWeight: '700' }}>
+                            <span style={{ padding: '3px 8px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '6px', color: '#fde047', fontWeight: '700' }}>
                                 💰 ${(seller.stats?.monthlyCommissions || 0).toLocaleString('es-AR')}
                             </span>
-                            <span style={{ padding: '6px 14px', background: 'rgba(236, 72, 153, 0.06)', border: '1px solid rgba(236, 72, 153, 0.1)', borderRadius: '10px', color: '#fbcfe8', fontWeight: '700' }}>
-                                📈 {seller.stats?.conversionRate || 0}% conversión
+                            <span style={{ padding: '3px 8px', background: 'rgba(236, 72, 153, 0.1)', border: '1px solid rgba(236, 72, 153, 0.2)', borderRadius: '6px', color: '#fbcfe8', fontWeight: '700' }}>
+                                📈 {seller.stats?.conversionRate || 0}% conv.
                             </span>
                         </div>
                     </div>
                     <div style={{
-                        padding: '8px 16px',
-                        background: seller.is_active ? 'rgba(0, 230, 118, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                        borderRadius: '10px',
-                        fontSize: '13px',
-                        fontWeight: '800',
-                        color: seller.is_active ? 'var(--primary-paddle)' : '#ef4444',
-                        border: `1px solid ${seller.is_active ? 'rgba(0, 230, 118, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                        padding: '4px 10px',
+                        background: seller.is_active ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        color: seller.is_active ? '#34d399' : '#f87171',
+                        border: `1px solid ${seller.is_active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                     }}>
                         {seller.is_active ? '✓ Activo' : '✗ Inactivo'}
                     </div>
@@ -523,25 +509,14 @@ const SellersTab = ({ sellers, onToggleStatus, onViewDetails }) => (
                             onToggleStatus(seller.id, seller.is_active);
                         }}
                         style={{
-                            padding: '12px 20px',
-                            background: 'rgba(255,255,255,0.03)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: '12px',
-                            color: 'white',
+                            padding: '6px 14px',
+                            background: '#0f172a',
+                            border: '1px solid #334155',
+                            borderRadius: '6px',
+                            color: '#e2e8f0',
                             fontWeight: '700',
                             cursor: 'pointer',
-                            fontSize: '13px',
-                            transition: 'all 0.3s'
-                        }}
-                        onMouseOver={(e) => {
-                            e.target.style.background = 'rgba(255,255,255,0.08)';
-                            e.target.style.border = '1px solid rgba(255,255,255,0.15)';
-                            e.target.style.transform = 'scale(1.02)';
-                        }}
-                        onMouseOut={(e) => {
-                            e.target.style.background = 'rgba(255,255,255,0.03)';
-                            e.target.style.border = '1px solid rgba(255,255,255,0.08)';
-                            e.target.style.transform = 'scale(1)';
+                            fontSize: '11px'
                         }}
                     >
                         {seller.is_active ? 'Desactivar' : 'Activar'}
@@ -555,110 +530,86 @@ const SellersTab = ({ sellers, onToggleStatus, onViewDetails }) => (
 // Businesses Tab Component
 const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate }) => (
     <div style={{
-        background: 'rgba(255, 255, 255, 0.015)',
-        borderRadius: '24px',
-        padding: '32px',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(20px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+        background: '#111827',
+        borderRadius: '14px',
+        padding: '20px',
+        border: '1px solid #1f2937',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
     }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
-            <h3 style={{ fontSize: '22px', fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.95)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
                 <span>🏢</span> Todos los Negocios
             </h3>
             <button
                 onClick={onCreate}
                 style={{
-                    padding: '14px 28px',
-                    background: 'linear-gradient(135deg, var(--primary-paddle), #0288d1)',
+                    padding: '8px 16px',
+                    background: '#2563eb',
                     border: 'none',
-                    borderRadius: '14px',
-                    color: '#000',
-                    fontWeight: '800',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontWeight: '700',
                     cursor: 'pointer',
-                    boxShadow: '0 8px 24px rgba(0, 230, 118, 0.25)',
-                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                    fontSize: '14px'
-                }}
-                onMouseOver={(e) => {
-                    e.target.style.transform = 'translateY(-2px) scale(1.02)';
-                    e.target.style.boxShadow = '0 12px 30px rgba(0, 230, 118, 0.35)';
-                }}
-                onMouseOut={(e) => {
-                    e.target.style.transform = 'translateY(0) scale(1)';
-                    e.target.style.boxShadow = '0 8px 24px rgba(0, 230, 118, 0.25)';
+                    fontSize: '12px',
+                    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.4)'
                 }}
             >
                 + Crear Negocio
             </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
             {businesses.map(business => (
                 <div key={business.id} style={{
-                    padding: '24px',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    borderRadius: '20px',
-                    border: '1px solid rgba(255, 255, 255, 0.04)',
-                    transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
-                }}
-                    onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                        e.currentTarget.style.transform = 'translateY(-5px)';
-                        e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-                        e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.2)';
-                    }}
-                    onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.04)';
-                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                    padding: '14px 16px',
+                    background: '#1e293b',
+                    borderRadius: '10px',
+                    border: '1px solid #334155',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                         <div style={{
-                            width: '52px',
-                            height: '52px',
-                            borderRadius: '14px',
-                            background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '10px',
+                            background: '#0f172a',
+                            border: '1px solid #334155',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '26px',
-                            boxShadow: '0 4px 15px rgba(99, 102, 241, 0.2)'
+                            fontSize: '18px'
                         }}>
                             {business.categories?.icon || '🏢'}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: '800', fontSize: '18px', color: 'rgba(255,255,255,0.95)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: '700', fontSize: '14px', color: '#f9fafb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {business.name}
                             </div>
-                            <div style={{ fontSize: '12px', opacity: 0.5, marginTop: '2px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                 {business.categories?.name}
                             </div>
                         </div>
                     </div>
-                    <div style={{ fontSize: '14px', opacity: 0.75, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span>📍</span> {business.location}
                     </div>
-                    <div style={{ fontSize: '14px', opacity: 0.75, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span>👤</span> {business.sellers ? `${business.sellers.first_name} ${business.sellers.last_name}` : 'Sin vendedor'}
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '12px' }}>
                         <div style={{
-                            padding: '6px 12px',
-                            background: business.subscription_status === 'active' ? 'rgba(0, 230, 118, 0.08)' :
-                                business.subscription_status === 'trial' ? 'rgba(59, 130, 246, 0.08)' :
-                                    'rgba(239, 68, 68, 0.08)',
+                            padding: '3px 8px',
+                            background: business.subscription_status === 'active' ? 'rgba(16, 185, 129, 0.1)' :
+                                business.subscription_status === 'trial' ? 'rgba(59, 130, 246, 0.1)' :
+                                    'rgba(239, 68, 68, 0.1)',
                             border: `1px solid ${
-                                business.subscription_status === 'active' ? 'rgba(0, 230, 118, 0.2)' :
-                                business.subscription_status === 'trial' ? 'rgba(59, 130, 246, 0.2)' :
-                                'rgba(239, 68, 68, 0.2)'
+                                business.subscription_status === 'active' ? 'rgba(16, 185, 129, 0.3)' :
+                                business.subscription_status === 'trial' ? 'rgba(59, 130, 246, 0.3)' :
+                                'rgba(239, 68, 68, 0.3)'
                             }`,
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                            fontWeight: '800',
-                            color: business.subscription_status === 'active' ? 'var(--primary-paddle)' :
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            color: business.subscription_status === 'active' ? '#34d399' :
                                 business.subscription_status === 'trial' ? '#60a5fa' :
                                     '#f87171'
                         }}>
@@ -667,28 +618,19 @@ const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate }) => (
                                     '✗ Inactivo'}
                         </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
                         <button
                             onClick={() => onEdit(business)}
                             style={{
                                 flex: 1,
-                                padding: '12px',
-                                background: 'rgba(59, 130, 246, 0.08)',
-                                border: '1px solid rgba(59, 130, 246, 0.2)',
-                                borderRadius: '10px',
+                                padding: '6px 10px',
+                                background: '#0f172a',
+                                border: '1px solid #334155',
+                                borderRadius: '6px',
                                 color: '#60a5fa',
                                 fontWeight: '700',
                                 cursor: 'pointer',
-                                fontSize: '13px',
-                                transition: 'all 0.3s'
-                            }}
-                            onMouseOver={(e) => {
-                                e.target.style.background = 'rgba(59, 130, 246, 0.16)';
-                                e.target.style.border = '1px solid rgba(59, 130, 246, 0.4)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.target.style.background = 'rgba(59, 130, 246, 0.08)';
-                                e.target.style.border = '1px solid rgba(59, 130, 246, 0.2)';
+                                fontSize: '11px'
                             }}
                         >
                             ✏️ Editar
@@ -697,23 +639,14 @@ const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate }) => (
                             onClick={() => onDelete(business.id)}
                             style={{
                                 flex: 1,
-                                padding: '12px',
+                                padding: '6px 10px',
                                 background: 'rgba(239, 68, 68, 0.08)',
-                                border: '1px solid rgba(239, 68, 68, 0.2)',
-                                borderRadius: '10px',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '6px',
                                 color: '#f87171',
                                 fontWeight: '700',
                                 cursor: 'pointer',
-                                fontSize: '13px',
-                                transition: 'all 0.3s'
-                            }}
-                            onMouseOver={(e) => {
-                                e.target.style.background = 'rgba(239, 68, 68, 0.16)';
-                                e.target.style.border = '1px solid rgba(239, 68, 68, 0.4)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.target.style.background = 'rgba(239, 68, 68, 0.08)';
-                                e.target.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                                fontSize: '11px'
                             }}
                         >
                             🗑️ Eliminar
@@ -770,15 +703,14 @@ const CategoriesTab = ({ categories, subcategories, onDeleteCategory, onDeleteSu
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
             {/* Categories Section */}
             <div style={{
-                background: 'rgba(255, 255, 255, 0.015)',
-                borderRadius: '24px',
-                padding: '32px',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                backdropFilter: 'blur(20px)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+                background: '#111827',
+                borderRadius: '14px',
+                padding: '20px',
+                border: '1px solid #1f2937',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
-                    <h3 style={{ fontSize: '22px', fontWeight: '800', margin: 0, color: 'rgba(255,255,255,0.95)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0, color: '#f9fafb' }}>
                         📁 Categorías
                     </h3>
                     <button
@@ -788,59 +720,44 @@ const CategoriesTab = ({ categories, subcategories, onDeleteCategory, onDeleteSu
                             setShowCategoryModal(true);
                         }}
                         style={{
-                            padding: '12px 20px',
-                            background: 'linear-gradient(135deg, var(--primary-paddle), #0288d1)',
+                            padding: '8px 16px',
+                            background: '#2563eb',
                             border: 'none',
-                            borderRadius: '12px',
-                            color: '#000',
-                            fontWeight: '800',
+                            borderRadius: '8px',
+                            color: '#ffffff',
+                            fontWeight: '700',
                             cursor: 'pointer',
-                            fontSize: '13px',
-                            boxShadow: '0 4px 15px rgba(0, 230, 118, 0.2)',
-                            transition: 'all 0.2s'
+                            fontSize: '12px'
                         }}
-                        onMouseOver={(e) => e.target.style.transform = 'translateY(-1px) scale(1.02)'}
-                        onMouseOut={(e) => e.target.style.transform = 'translateY(0) scale(1)'}
                     >
                         + Nueva
                     </button>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {categories.map(cat => (
                         <div key={cat.id} style={{
-                            padding: '20px',
-                            background: 'rgba(255,255,255,0.02)',
-                            borderRadius: '16px',
-                            border: '1px solid rgba(255,255,255,0.04)',
+                            padding: '10px 14px',
+                            background: '#1e293b',
+                            borderRadius: '8px',
+                            border: '1px solid #334155',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '16px',
-                            transition: 'all 0.3s'
-                        }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                                e.currentTarget.style.border = '1px solid rgba(255,255,255,0.08)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-                                e.currentTarget.style.border = '1px solid rgba(255,255,255,0.04)';
-                            }}
-                        >
+                            gap: '12px'
+                        }}>
                             <div style={{ 
-                                fontSize: '32px',
-                                width: '56px',
-                                height: '56px',
-                                borderRadius: '14px',
-                                background: 'rgba(255,255,255,0.03)',
-                                border: '1px solid rgba(255,255,255,0.08)',
+                                fontSize: '20px',
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '8px',
+                                background: '#0f172a',
+                                border: '1px solid #334155',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                justifyContent: 'center'
                             }}>{cat.icon}</div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: '800', fontSize: '16px', color: 'rgba(255,255,255,0.95)' }}>{cat.name}</div>
-                                <div style={{ fontSize: '12px', opacity: 0.5, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.description}</div>
+                                <div style={{ fontWeight: '700', fontSize: '13px', color: '#f9fafb' }}>{cat.name}</div>
+                                <div style={{ fontSize: '11px', color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.description}</div>
                             </div>
                             <button
                                 onClick={() => {
@@ -849,23 +766,14 @@ const CategoriesTab = ({ categories, subcategories, onDeleteCategory, onDeleteSu
                                     setShowCategoryModal(true);
                                 }}
                                 style={{
-                                    padding: '10px 14px',
-                                    background: 'rgba(59, 130, 246, 0.08)',
-                                    border: '1px solid rgba(59, 130, 246, 0.2)',
-                                    borderRadius: '10px',
+                                    padding: '6px 10px',
+                                    background: '#0f172a',
+                                    border: '1px solid #334155',
+                                    borderRadius: '6px',
                                     color: '#60a5fa',
                                     cursor: 'pointer',
-                                    fontSize: '12px',
-                                    fontWeight: '700',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseOver={(e) => {
-                                    e.target.style.background = 'rgba(59, 130, 246, 0.16)';
-                                    e.target.style.border = '1px solid rgba(59, 130, 246, 0.4)';
-                                }}
-                                onMouseOut={(e) => {
-                                    e.target.style.background = 'rgba(59, 130, 246, 0.08)';
-                                    e.target.style.border = '1px solid rgba(59, 130, 246, 0.2)';
+                                    fontSize: '11px',
+                                    fontWeight: '700'
                                 }}
                             >
                                 ✏️
@@ -873,23 +781,14 @@ const CategoriesTab = ({ categories, subcategories, onDeleteCategory, onDeleteSu
                             <button
                                 onClick={() => onDeleteCategory(cat.id)}
                                 style={{
-                                    padding: '10px 14px',
+                                    padding: '6px 10px',
                                     background: 'rgba(239, 68, 68, 0.08)',
-                                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                                    borderRadius: '10px',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    borderRadius: '6px',
                                     color: '#f87171',
                                     cursor: 'pointer',
-                                    fontSize: '12px',
-                                    fontWeight: '700',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseOver={(e) => {
-                                    e.target.style.background = 'rgba(239, 68, 68, 0.16)';
-                                    e.target.style.border = '1px solid rgba(239, 68, 68, 0.4)';
-                                }}
-                                onMouseOut={(e) => {
-                                    e.target.style.background = 'rgba(239, 68, 68, 0.08)';
-                                    e.target.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                                    fontSize: '11px',
+                                    fontWeight: '700'
                                 }}
                             >
                                 🗑️
@@ -901,15 +800,14 @@ const CategoriesTab = ({ categories, subcategories, onDeleteCategory, onDeleteSu
 
             {/* Subcategories Section */}
             <div style={{
-                background: 'rgba(255, 255, 255, 0.015)',
-                borderRadius: '24px',
-                padding: '32px',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                backdropFilter: 'blur(20px)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+                background: '#111827',
+                borderRadius: '14px',
+                padding: '20px',
+                border: '1px solid #1f2937',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
-                    <h3 style={{ fontSize: '22px', fontWeight: '800', margin: 0, color: 'rgba(255,255,255,0.95)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0, color: '#f9fafb' }}>
                         📂 Subcategorías
                     </h3>
                     <button
@@ -919,80 +817,53 @@ const CategoriesTab = ({ categories, subcategories, onDeleteCategory, onDeleteSu
                             setShowSubcategoryModal(true);
                         }}
                         style={{
-                            padding: '12px 20px',
-                            background: 'linear-gradient(135deg, var(--primary-paddle), #0288d1)',
+                            padding: '8px 16px',
+                            background: '#2563eb',
                             border: 'none',
-                            borderRadius: '12px',
-                            color: '#000',
-                            fontWeight: '800',
+                            borderRadius: '8px',
+                            color: '#ffffff',
+                            fontWeight: '700',
                             cursor: 'pointer',
-                            fontSize: '13px',
-                            boxShadow: '0 4px 15px rgba(0, 230, 118, 0.2)',
-                            transition: 'all 0.2s'
+                            fontSize: '12px'
                         }}
-                        onMouseOver={(e) => e.target.style.transform = 'translateY(-1px) scale(1.02)'}
-                        onMouseOut={(e) => e.target.style.transform = 'translateY(0) scale(1)'}
                     >
                         + Nueva
                     </button>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {subcategories.map(sub => {
                         const parentCat = categories.find(c => c.id === sub.category_id);
                         return (
                             <div key={sub.id} style={{
-                                padding: '20px',
-                                background: 'rgba(255,255,255,0.02)',
-                                borderRadius: '16px',
-                                border: '1px solid rgba(255,255,255,0.04)',
+                                padding: '10px 14px',
+                                background: '#1e293b',
+                                borderRadius: '8px',
+                                border: '1px solid #334155',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '16px',
-                                transition: 'all 0.3s'
-                            }}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                                    e.currentTarget.style.border = '1px solid rgba(255,255,255,0.08)';
-                                }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-                                    e.currentTarget.style.border = '1px solid rgba(255,255,255,0.04)';
-                                }}
-                            >
+                                gap: '12px'
+                            }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontWeight: '800', fontSize: '16px', color: 'rgba(255,255,255,0.95)' }}>{sub.name}</div>
-                                    <div style={{ fontSize: '12px', opacity: 0.5, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <span>{parentCat?.icon || '📁'}</span> {parentCat?.name || 'Sin Categoría'}
+                                    <div style={{ fontWeight: '700', fontSize: '13px', color: '#f9fafb' }}>{sub.name}</div>
+                                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                                        {parentCat ? `${parentCat.icon || ''} ${parentCat.name}` : 'Sin categoría'}
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => {
                                         setEditingSubcategory(sub);
-                                        setSubcategoryForm({
-                                            name: sub.name,
-                                            description: sub.description || '',
-                                            category_id: sub.category_id
-                                        });
+                                        setSubcategoryForm({ name: sub.name, description: sub.description || '', category_id: sub.category_id });
                                         setShowSubcategoryModal(true);
                                     }}
                                     style={{
-                                        padding: '10px 14px',
-                                        background: 'rgba(59, 130, 246, 0.08)',
-                                        border: '1px solid rgba(59, 130, 246, 0.2)',
-                                        borderRadius: '10px',
+                                        padding: '6px 10px',
+                                        background: '#0f172a',
+                                        border: '1px solid #334155',
+                                        borderRadius: '6px',
                                         color: '#60a5fa',
                                         cursor: 'pointer',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => {
-                                        e.target.style.background = 'rgba(59, 130, 246, 0.16)';
-                                        e.target.style.border = '1px solid rgba(59, 130, 246, 0.4)';
-                                    }}
-                                    onMouseOut={(e) => {
-                                        e.target.style.background = 'rgba(59, 130, 246, 0.08)';
-                                        e.target.style.border = '1px solid rgba(59, 130, 246, 0.2)';
+                                        fontSize: '11px',
+                                        fontWeight: '700'
                                     }}
                                 >
                                     ✏️
@@ -1000,23 +871,14 @@ const CategoriesTab = ({ categories, subcategories, onDeleteCategory, onDeleteSu
                                 <button
                                     onClick={() => onDeleteSubcategory(sub.id)}
                                     style={{
-                                        padding: '10px 14px',
+                                        padding: '6px 10px',
                                         background: 'rgba(239, 68, 68, 0.08)',
-                                        border: '1px solid rgba(239, 68, 68, 0.2)',
-                                        borderRadius: '10px',
+                                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                                        borderRadius: '6px',
                                         color: '#f87171',
                                         cursor: 'pointer',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => {
-                                        e.target.style.background = 'rgba(239, 68, 68, 0.16)';
-                                        e.target.style.border = '1px solid rgba(239, 68, 68, 0.4)';
-                                    }}
-                                    onMouseOut={(e) => {
-                                        e.target.style.background = 'rgba(239, 68, 68, 0.08)';
-                                        e.target.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                                        fontSize: '11px',
+                                        fontWeight: '700'
                                     }}
                                 >
                                     🗑️
