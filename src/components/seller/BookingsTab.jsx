@@ -36,6 +36,31 @@ const BookingsTab = ({ bookingsData }) => {
         }
     };
 
+    const handleExportCSV = () => {
+        const bookings = bookingsData.recentBookings || [];
+        if (!bookings.length) return alert('No hay reservas para exportar.');
+        
+        const headers = ['Cliente', 'Teléfono', 'Negocio', 'Fecha', 'Estado', 'Monto'];
+        const rows = bookings.map(b => [
+            `"${(b.customer_name || 'Cliente').replace(/"/g, '""')}"`,
+            `"${(b.customer_phone || '').replace(/"/g, '""')}"`,
+            `"${(b.business_name || '').replace(/"/g, '""')}"`,
+            `"${formatDate(b.created_at)}"`,
+            `"${b.status || ''}"`,
+            b.price || 0
+        ]);
+
+        const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `reporte_reservas_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Metrics Grid */}
@@ -185,9 +210,26 @@ const BookingsTab = ({ bookingsData }) => {
                 border: '1px solid #1f2937',
                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
             }}>
-                <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
-                    <span>📝</span> Últimas Reservas Registradas
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
+                        <span>📝</span> Últimas Reservas Registradas
+                    </h3>
+                    <button
+                        onClick={handleExportCSV}
+                        style={{
+                            padding: '6px 12px',
+                            background: 'rgba(59, 130, 246, 0.1)',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
+                            borderRadius: '6px',
+                            color: '#60a5fa',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        📥 Exportar CSV
+                    </button>
+                </div>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                         <thead>

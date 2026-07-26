@@ -18,15 +18,53 @@ const SuperAdminDashboard = () => {
     const [businessGrowthTrends, setBusinessGrowthTrends] = useState([]);
     const [activeTab, setActiveTab] = useState('overview');
 
-    // Modals
-    const [showBusinessModal, setShowBusinessModal] = useState(false);
-    const [editingBusiness, setEditingBusiness] = useState(null);
-    const [showCategoryModal, setShowCategoryModal] = useState(false);
-    const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
-    const [editingCategory, setEditingCategory] = useState(null);
-    const [editingSubcategory, setEditingSubcategory] = useState(null);
-    const [selectedSeller, setSelectedSeller] = useState(null);
-    const [sellerDetails, setSellerDetails] = useState(null);
+    // Global Search & Filters
+    const [showSearchModal, setShowSearchModal] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [dateRange, setDateRange] = useState('month');
+    const [settledSellers, setSettledSellers] = useState({});
+
+    // Ctrl+K Shortcut Handler
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                setShowSearchModal(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    const toggleSellerSettlement = (sellerId) => {
+        setSettledSellers(prev => ({
+            ...prev,
+            [sellerId]: !prev[sellerId]
+        }));
+    };
+
+    const handleExportBusinessesCSV = () => {
+        if (!businesses.length) return alert('No hay negocios para exportar.');
+        
+        const headers = ['Nombre', 'Categoría', 'Ubicación', 'Vendedor', 'Estado Suscripción'];
+        const rows = businesses.map(b => [
+            `"${(b.name || '').replace(/"/g, '""')}"`,
+            `"${(b.categories?.name || '').replace(/"/g, '""')}"`,
+            `"${(b.location || '').replace(/"/g, '""')}"`,
+            `"${(b.sellers ? `${b.sellers.first_name} ${b.sellers.last_name}` : 'Sin vendedor').replace(/"/g, '""')}"`,
+            `"${b.subscription_status || 'Inactivo'}"`
+        ]);
+
+        const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `reporte_negocios_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     useEffect(() => {
         loadData();
@@ -186,7 +224,9 @@ const SuperAdminDashboard = () => {
                 borderRadius: '14px',
                 border: '1px solid #1f2937',
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                fontFamily: 'var(--font-title)'
+                fontFamily: 'var(--font-title)',
+                flexWrap: 'wrap',
+                gap: '12px'
             }}>
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -214,29 +254,85 @@ const SuperAdminDashboard = () => {
                         </div>
                     </div>
                 </div>
-                <button
-                    onClick={handleLogout}
-                    style={{
-                        padding: '7px 16px',
-                        background: 'rgba(239, 68, 68, 0.08)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        borderRadius: '8px',
-                        color: '#f87171',
-                        fontWeight: '700',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        fontFamily: 'var(--font-title)'
-                    }}
-                    onMouseOver={(e) => {
-                        e.target.style.background = 'rgba(239, 68, 68, 0.2)';
-                    }}
-                    onMouseOut={(e) => {
-                        e.target.style.background = 'rgba(239, 68, 68, 0.08)';
-                    }}
-                >
-                    Cerrar Sesión
-                </button>
+
+                {/* Header Actions & Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    {/* Global Search Button */}
+                    <button
+                        onClick={() => setShowSearchModal(true)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '7px 14px',
+                            background: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: '8px',
+                            color: '#9ca3af',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <span>🔍 Buscar...</span>
+                        <span style={{
+                            padding: '2px 6px',
+                            background: '#0f172a',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            color: '#60a5fa',
+                            border: '1px solid #1e293b'
+                        }}>Ctrl K</span>
+                    </button>
+
+                    {/* Date Range Selector */}
+                    <select
+                        value={dateRange}
+                        onChange={(e) => setDateRange(e.target.value)}
+                        style={{
+                            padding: '7px 12px',
+                            background: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: '8px',
+                            color: '#f9fafb',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            outline: 'none'
+                        }}
+                    >
+                        <option value="month">🗓️ Este Mes</option>
+                        <option value="last_month">📅 Mes Anterior</option>
+                        <option value="30days">📈 Últimos 30 días</option>
+                        <option value="all">♾️ Todo el Historial</option>
+                    </select>
+
+                    {/* Logout Button */}
+                    <button
+                        onClick={handleLogout}
+                        style={{
+                            padding: '7px 16px',
+                            background: 'rgba(239, 68, 68, 0.08)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '8px',
+                            color: '#f87171',
+                            fontWeight: '700',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            fontFamily: 'var(--font-title)'
+                        }}
+                        onMouseOver={(e) => {
+                            e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                        }}
+                        onMouseOut={(e) => {
+                            e.target.style.background = 'rgba(239, 68, 68, 0.08)';
+                        }}
+                    >
+                        Cerrar Sesión
+                    </button>
+                </div>
             </div>
 
             {/* Modern Compact Tabs */}
@@ -291,6 +387,7 @@ const SuperAdminDashboard = () => {
                     sellers={sellers}
                     commissionTrends={commissionTrends}
                     businessGrowthTrends={businessGrowthTrends}
+                    businesses={businesses}
                 />
             )}
 
@@ -303,6 +400,8 @@ const SuperAdminDashboard = () => {
                     sellers={sellers}
                     onToggleStatus={handleToggleSellerStatus}
                     onViewDetails={handleViewSellerDetails}
+                    settledSellers={settledSellers}
+                    onToggleSettlement={toggleSellerSettlement}
                 />
             )}
 
@@ -318,6 +417,7 @@ const SuperAdminDashboard = () => {
                         setEditingBusiness(null);
                         setShowBusinessModal(true);
                     }}
+                    onExportCSV={handleExportBusinessesCSV}
                 />
             )}
 
@@ -355,82 +455,120 @@ const SuperAdminDashboard = () => {
                     }}
                 />
             )}
+
+            {showSearchModal && (
+                <GlobalSearchModal
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    onClose={() => setShowSearchModal(false)}
+                    businesses={businesses}
+                    sellers={sellers}
+                    categories={categories}
+                    bookingsData={bookingsData}
+                    onViewSellerDetails={handleViewSellerDetails}
+                />
+            )}
             </div>
         </div>
     );
 };
 
 // Overview Tab Component
-const OverviewTab = ({ analytics, sellers, commissionTrends, businessGrowthTrends }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {/* Key Metrics Grid - 5 columns on desktop */}
-        <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '12px'
-        }}>
-            <ModernMetricCard
-                icon="👥"
-                title="Total Vendedores"
-                value={analytics?.totalSellers || 0}
-                colorAccent="#6366f1"
-            />
-            <ModernMetricCard
-                icon="🏢"
-                title="Total Negocios"
-                value={analytics?.totalBusinesses || 0}
-                subtitle={`${analytics?.activeBusinesses || 0} activos`}
-                colorAccent="#10b981"
-            />
-            <ModernMetricCard
-                icon="💰"
-                title="Comisiones (Mes)"
-                value={`$${(analytics?.totalCommissions || 0).toLocaleString('es-AR')}`}
-                colorAccent="#f59e0b"
-            />
-            <ModernMetricCard
-                icon="📈"
-                title="Conversión"
-                value={`${analytics?.conversionRate || 0}%`}
-                subtitle="Activos / Total"
-                colorAccent="#ec4899"
-            />
-            <ModernMetricCard
-                icon="💵"
-                title="Ingresos Totales"
-                value={`$${(analytics?.totalRevenue || 0).toLocaleString('es-AR')}`}
-                subtitle={`${analytics?.totalBookings || 0} reservas`}
-                colorAccent="#8b5cf6"
-            />
-        </div>
+const OverviewTab = ({ analytics, sellers, commissionTrends, businessGrowthTrends, businesses }) => {
+    const inactiveOrTrialBusinesses = (businesses || []).filter(b => b.subscription_status === 'trial' || b.subscription_status === 'inactive');
 
-        {/* Charts Section */}
-        <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-            gap: '16px'
-        }}>
-            <ModernChart
-                title="📊 Evolución de Comisiones"
-                data={commissionTrends}
-                type="commission"
-            />
-            <ModernChart
-                title="📈 Crecimiento de Negocios"
-                data={businessGrowthTrends}
-                type="growth"
-            />
-        </div>
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Churn Risk / Setup Alert Banner */}
+            {inactiveOrTrialBusinesses.length > 0 && (
+                <div style={{
+                    padding: '12px 16px',
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '18px' }}>⚠️</span>
+                        <div>
+                            <div style={{ fontWeight: '700', fontSize: '13px', color: '#fbbf24' }}>
+                                Alerta de Asistencia: {inactiveOrTrialBusinesses.length} negocio(s) en prueba o inactivos
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                                Consultá el listado en la pestaña "Negocios" para dar soporte de configuración o renovar su suscripción.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-        {/* Top Sellers */}
-        {analytics?.topSellers && analytics.topSellers.length > 0 && (
-            <TopSellersCard sellers={analytics.topSellers} allSellers={sellers} />
-        )}
-    </div>
-);
+            {/* Key Metrics Grid - 5 columns on desktop */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '12px'
+            }}>
+                <ModernMetricCard
+                    icon="👥"
+                    title="Total Vendedores"
+                    value={analytics?.totalSellers || 0}
+                    colorAccent="#6366f1"
+                />
+                <ModernMetricCard
+                    icon="🏢"
+                    title="Total Negocios"
+                    value={analytics?.totalBusinesses || 0}
+                    subtitle={`${analytics?.activeBusinesses || 0} activos`}
+                    colorAccent="#10b981"
+                />
+                <ModernMetricCard
+                    icon="💰"
+                    title="Comisiones (Mes)"
+                    value={`$${(analytics?.totalCommissions || 0).toLocaleString('es-AR')}`}
+                    colorAccent="#f59e0b"
+                />
+                <ModernMetricCard
+                    icon="📈"
+                    title="Conversión"
+                    value={`${analytics?.conversionRate || 0}%`}
+                    subtitle="Activos / Total"
+                    colorAccent="#ec4899"
+                />
+                <ModernMetricCard
+                    icon="💵"
+                    title="Ingresos Totales"
+                    value={`$${(analytics?.totalRevenue || 0).toLocaleString('es-AR')}`}
+                    subtitle={`${analytics?.totalBookings || 0} reservas`}
+                    colorAccent="#8b5cf6"
+                />
+            </div>
+
+            {/* Charts Section */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+                gap: '16px'
+            }}>
+                <ModernChart
+                    title="📊 Evolución de Comisiones"
+                    data={commissionTrends}
+                    type="commission"
+                />
+                <ModernChart
+                    title="📈 Crecimiento de Negocios"
+                    data={businessGrowthTrends}
+                    type="growth"
+                />
+            </div>
+        </div>
+    );
+};
 
 // Sellers Tab Component
-const SellersTab = ({ sellers, onToggleStatus, onViewDetails }) => (
+const SellersTab = ({ sellers, onToggleStatus, onViewDetails, settledSellers, onToggleSettlement }) => (
     <div style={{
         background: '#111827',
         borderRadius: '14px',
@@ -439,96 +577,122 @@ const SellersTab = ({ sellers, onToggleStatus, onViewDetails }) => (
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
     }}>
         <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
-            <span>👥</span> Gestión de Vendedores
+            <span>👥</span> Gestión y Liquidación de Vendedores
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {sellers.map(seller => (
-                <div key={seller.id} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px',
-                    padding: '12px 16px',
-                    background: '#1e293b',
-                    borderRadius: '10px',
-                    border: `1px solid ${seller.is_active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                }}
-                    onClick={() => onViewDetails(seller.id)}
-                >
-                    <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '10px',
-                        background: seller.is_active
-                            ? 'linear-gradient(135deg, #3b82f6, #2563eb)'
-                            : 'linear-gradient(135deg, #ef4444, #dc2626)',
+            {sellers.map(seller => {
+                const isSettled = settledSellers[seller.id];
+
+                return (
+                    <div key={seller.id} style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '14px',
-                        fontWeight: '800',
-                        color: '#fff',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}>
-                        {seller.first_name?.[0]}{seller.last_name?.[0]}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: '700', fontSize: '14px', color: '#f9fafb' }}>
-                            {seller.first_name} {seller.last_name}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '6px' }}>
-                            {seller.email}
-                        </div>
-                        <div style={{ fontSize: '11px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                            <span style={{ padding: '3px 8px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: '6px', color: '#a5b4fc', fontWeight: '700' }}>
-                                📊 {seller.stats?.totalBusinesses || 0} negocios
-                            </span>
-                            <span style={{ padding: '3px 8px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '6px', color: '#fde047', fontWeight: '700' }}>
-                                💰 ${(seller.stats?.monthlyCommissions || 0).toLocaleString('es-AR')}
-                            </span>
-                            <span style={{ padding: '3px 8px', background: 'rgba(236, 72, 153, 0.1)', border: '1px solid rgba(236, 72, 153, 0.2)', borderRadius: '6px', color: '#fbcfe8', fontWeight: '700' }}>
-                                📈 {seller.stats?.conversionRate || 0}% conv.
-                            </span>
-                        </div>
-                    </div>
-                    <div style={{
-                        padding: '4px 10px',
-                        background: seller.is_active ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                        borderRadius: '6px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        color: seller.is_active ? '#34d399' : '#f87171',
-                        border: `1px solid ${seller.is_active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
-                    }}>
-                        {seller.is_active ? '✓ Activo' : '✗ Inactivo'}
-                    </div>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleStatus(seller.id, seller.is_active);
-                        }}
-                        style={{
-                            padding: '6px 14px',
-                            background: '#0f172a',
-                            border: '1px solid #334155',
-                            borderRadius: '6px',
-                            color: '#e2e8f0',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            fontSize: '11px'
-                        }}
+                        gap: '14px',
+                        padding: '12px 16px',
+                        background: '#1e293b',
+                        borderRadius: '10px',
+                        border: `1px solid ${seller.is_active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer'
+                    }}
+                        onClick={() => onViewDetails(seller.id)}
                     >
-                        {seller.is_active ? 'Desactivar' : 'Activar'}
-                    </button>
-                </div>
-            ))}
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            background: seller.is_active
+                                ? 'linear-gradient(135deg, #3b82f6, #2563eb)'
+                                : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '14px',
+                            fontWeight: '800',
+                            color: '#fff',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}>
+                            {seller.first_name?.[0]}{seller.last_name?.[0]}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: '700', fontSize: '14px', color: '#f9fafb' }}>
+                                {seller.first_name} {seller.last_name}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '6px' }}>
+                                {seller.email}
+                            </div>
+                            <div style={{ fontSize: '11px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                <span style={{ padding: '3px 8px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: '6px', color: '#a5b4fc', fontWeight: '700' }}>
+                                    📊 {seller.stats?.totalBusinesses || 0} negocios
+                                </span>
+                                <span style={{ padding: '3px 8px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '6px', color: '#fde047', fontWeight: '700' }}>
+                                    💰 ${(seller.stats?.monthlyCommissions || 0).toLocaleString('es-AR')}
+                                </span>
+                                <span style={{ padding: '3px 8px', background: 'rgba(236, 72, 153, 0.1)', border: '1px solid rgba(236, 72, 153, 0.2)', borderRadius: '6px', color: '#fbcfe8', fontWeight: '700' }}>
+                                    📈 {seller.stats?.conversionRate || 0}% conv.
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Settlement Action Button */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleSettlement(seller.id);
+                            }}
+                            style={{
+                                padding: '4px 10px',
+                                background: isSettled ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                border: `1px solid ${isSettled ? '#10b981' : '#f59e0b'}`,
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                color: isSettled ? '#34d399' : '#fbbf24',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            {isSettled ? '✓ Liquidado' : '💵 Pendiente'}
+                        </button>
+
+                        <div style={{
+                            padding: '4px 10px',
+                            background: seller.is_active ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            color: seller.is_active ? '#34d399' : '#f87171',
+                            border: `1px solid ${seller.is_active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                        }}>
+                            {seller.is_active ? '✓ Activo' : '✗ Inactivo'}
+                        </div>
+
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleStatus(seller.id, seller.is_active);
+                            }}
+                            style={{
+                                padding: '6px 14px',
+                                background: '#0f172a',
+                                border: '1px solid #334155',
+                                borderRadius: '6px',
+                                color: '#e2e8f0',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                fontSize: '11px'
+                            }}
+                        >
+                            {seller.is_active ? 'Desactivar' : 'Activar'}
+                        </button>
+                    </div>
+                );
+            })}
         </div>
     </div>
 );
 
 // Businesses Tab Component
-const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate }) => (
+const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV }) => (
     <div style={{
         background: '#111827',
         borderRadius: '14px',
@@ -540,22 +704,39 @@ const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate }) => (
             <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
                 <span>🏢</span> Todos los Negocios
             </h3>
-            <button
-                onClick={onCreate}
-                style={{
-                    padding: '8px 16px',
-                    background: '#2563eb',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#ffffff',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.4)'
-                }}
-            >
-                + Crear Negocio
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                    onClick={onExportCSV}
+                    style={{
+                        padding: '8px 14px',
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '8px',
+                        color: '#60a5fa',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                    }}
+                >
+                    📥 Exportar CSV
+                </button>
+                <button
+                    onClick={onCreate}
+                    style={{
+                        padding: '8px 16px',
+                        background: '#2563eb',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#ffffff',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        boxShadow: '0 2px 6px rgba(37, 99, 235, 0.4)'
+                    }}
+                >
+                    + Crear Negocio
+                </button>
+            </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
             {businesses.map(business => (
@@ -1295,5 +1476,93 @@ const Modal = ({ title, children, onClose }) => (
         </div>
     </div>
 );
+
+const GlobalSearchModal = ({ searchQuery, setSearchQuery, onClose, businesses, sellers, categories, bookingsData, onViewSellerDetails }) => {
+    const cleanQuery = searchQuery.trim().toLowerCase();
+    
+    const matchedBusinesses = cleanQuery ? businesses.filter(b => b.name?.toLowerCase().includes(cleanQuery) || b.location?.toLowerCase().includes(cleanQuery)) : [];
+    const matchedSellers = cleanQuery ? sellers.filter(s => s.first_name?.toLowerCase().includes(cleanQuery) || s.last_name?.toLowerCase().includes(cleanQuery) || s.email?.toLowerCase().includes(cleanQuery)) : [];
+    const matchedCategories = cleanQuery ? categories.filter(c => c.name?.toLowerCase().includes(cleanQuery)) : [];
+    const matchedBookings = cleanQuery ? (bookingsData?.recentBookings || []).filter(b => b.customer_name?.toLowerCase().includes(cleanQuery) || b.business_name?.toLowerCase().includes(cleanQuery)) : [];
+
+    return (
+        <Modal title="🔍 Búsqueda Global (Ctrl + K)" onClose={onClose}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <input
+                    type="text"
+                    autoFocus
+                    placeholder="Escribí un nombre de negocio, vendedor, cliente o categoría..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                        width: '100%',
+                        padding: '12px 14px',
+                        background: '#0f172a',
+                        border: '1px solid #3b82f6',
+                        borderRadius: '8px',
+                        color: 'white',
+                        fontSize: '14px',
+                        outline: 'none'
+                    }}
+                />
+                
+                <div style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {!cleanQuery && (
+                        <div style={{ textAlign: 'center', padding: '24px', color: '#6b7280', fontSize: '13px' }}>
+                            Escribí al menos 1 letra para buscar en todo el sistema...
+                        </div>
+                    )}
+
+                    {cleanQuery && matchedBusinesses.length === 0 && matchedSellers.length === 0 && matchedCategories.length === 0 && matchedBookings.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '24px', color: '#9ca3af', fontSize: '13px' }}>
+                            No se encontraron resultados para "{searchQuery}".
+                        </div>
+                    )}
+
+                    {matchedBusinesses.length > 0 && (
+                        <div>
+                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#3b82f6', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                🏢 Negocios ({matchedBusinesses.length})
+                            </div>
+                            {matchedBusinesses.map(b => (
+                                <div key={b.id} style={{ padding: '8px 10px', background: '#1e293b', borderRadius: '6px', marginBottom: '4px', fontSize: '12px', color: '#f9fafb', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span><strong>{b.name}</strong> - {b.location}</span>
+                                    <span style={{ color: '#9ca3af' }}>{b.subscription_status}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {matchedSellers.length > 0 && (
+                        <div>
+                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#10b981', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                👥 Vendedores ({matchedSellers.length})
+                            </div>
+                            {matchedSellers.map(s => (
+                                <div key={s.id} onClick={() => { onViewSellerDetails(s.id); onClose(); }} style={{ padding: '8px 10px', background: '#1e293b', borderRadius: '6px', marginBottom: '4px', fontSize: '12px', color: '#f9fafb', cursor: 'pointer' }}>
+                                    <span><strong>{s.first_name} {s.last_name}</strong> ({s.email})</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {matchedBookings.length > 0 && (
+                        <div>
+                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#f59e0b', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                🎫 Reservas ({matchedBookings.length})
+                            </div>
+                            {matchedBookings.map(bk => (
+                                <div key={bk.id} style={{ padding: '8px 10px', background: '#1e293b', borderRadius: '6px', marginBottom: '4px', fontSize: '12px', color: '#f9fafb', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span><strong>{bk.customer_name}</strong> - {bk.business_name}</span>
+                                    <span style={{ color: '#10b981' }}>${bk.price}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </Modal>
+    );
+};
 
 export default SuperAdminDashboard;
