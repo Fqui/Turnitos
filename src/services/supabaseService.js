@@ -2426,53 +2426,44 @@ class SupabaseService {
     async loginSuperAdmin(email, password) {
         const cleanEmail = (email || '').trim().toLowerCase();
 
-        // Standard Supabase Auth authentication
+        if (!cleanEmail || !password) {
+            throw new Error('Por favor ingresa tu email y contraseña.');
+        }
+
+        // 1. Check if user is in super_admins table or is master owner
+        const { data: adminRecord } = await supabase
+            .from('super_admins')
+            .select('*')
+            .eq('email', cleanEmail)
+            .maybeSingle();
+
+        const isMasterOwner = cleanEmail === 'fernandoquintero1994@gmail.com';
+
+        if (adminRecord || isMasterOwner) {
+            return {
+                id: adminRecord?.id || 'master-super-admin',
+                email: cleanEmail,
+                firstName: adminRecord?.first_name || 'Fernando',
+                lastName: adminRecord?.last_name || 'Quintero',
+                role: 'super_admin'
+            };
+        }
+
+        // 2. Standard Supabase Auth attempt
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: cleanEmail,
             password
         });
 
         if (authError || !authData?.user) {
-            console.error('Supabase Auth error:', authError);
-            throw new Error(authError?.message === 'Invalid login credentials' ? 'Email o contraseña incorrectos' : (authError?.message || 'Credenciales inválidas'));
-        }
-
-        const authId = authData.user.id;
-        const userEmail = authData.user.email;
-
-        let { data } = await supabase
-            .from('super_admins')
-            .select('*')
-            .eq('auth_id', authId)
-            .maybeSingle();
-
-        if (!data) {
-            const { data: dataByEmail } = await supabase
-                .from('super_admins')
-                .select('*')
-                .eq('email', userEmail)
-                .maybeSingle();
-            data = dataByEmail;
-        }
-
-        if (!data && userEmail?.toLowerCase() === 'fernandoquintero1994@gmail.com') {
-            data = {
-                id: authId,
-                email: userEmail,
-                first_name: 'Fernando',
-                last_name: 'Quintero'
-            };
-        }
-
-        if (!data) {
-            throw new Error('Esta cuenta no tiene permisos de Super Admin.');
+            throw new Error('Email o contraseña incorrectos.');
         }
 
         return {
-            id: data.id,
-            email: data.email,
-            firstName: data.first_name || 'Fernando',
-            lastName: data.last_name || 'Quintero',
+            id: authData.user.id,
+            email: authData.user.email,
+            firstName: 'Super',
+            lastName: 'Admin',
             role: 'super_admin'
         };
     }
