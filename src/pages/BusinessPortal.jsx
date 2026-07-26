@@ -1604,6 +1604,10 @@ export default function BusinessPortal() {
                         setRequirePasswordChange(false);
                         localStorage.removeItem('turnitos_must_change_password');
                     }}
+                    onPasswordChanged={() => {
+                        setRequirePasswordChange(false);
+                        localStorage.removeItem('turnitos_must_change_password');
+                    }}
                 />
             )}
         </div >
