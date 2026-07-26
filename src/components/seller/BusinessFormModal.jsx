@@ -170,6 +170,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 password: ownerPassword,
                 type: derivedType || formData.type,
                 seller_id: formData.seller_id || null,
+                subcategories: formData.subcategory_id ? [formData.subcategory_id] : []
             };
 
             if (business) {

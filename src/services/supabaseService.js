@@ -2858,7 +2858,6 @@ class SupabaseService {
         const updateData = {
             name: businessData.name,
             category_id: categoryId,
-            subcategory_id: subcategoryId,
             location: businessData.location,
             latitude: businessData.latitude,
             longitude: businessData.longitude,
@@ -2880,7 +2879,7 @@ class SupabaseService {
 
         if (error) throw error;
 
-        // Also sync business_subcategories junction table if subcategoryId is provided
+        // Sync business_subcategories junction table if subcategoryId is provided
         if (subcategoryId) {
             try {
                 await supabase.from('business_subcategories').delete().eq('business_id', businessId);
