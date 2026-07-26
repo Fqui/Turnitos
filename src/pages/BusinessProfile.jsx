@@ -498,7 +498,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
             className="business-profile-page"
-            style={{ paddingBottom: '80px', width: '100%', overflowX: 'hidden' }}
+            style={{ paddingBottom: '80px', width: '100%', overflowX: 'clip' }}
         >
             {/* 1. Immersive Hero Section */}
             {/* Header / Banner */}

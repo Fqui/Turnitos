@@ -241,7 +241,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 
     return (
-        <div style={{ background: '#F8F9FA', minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
+        <div style={{ background: '#F8F9FA', minHeight: '100vh', width: '100%', overflowX: 'clip' }}>
             {/* Hero Section */}
             <div style={{
                 position: 'relative',
@@ -710,15 +710,15 @@ export default function VenueProfile({ business: initialBusiness }) {
                         <div style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(7, 1fr)',
-                            gap: '8px'
+                            gap: windowWidth < 768 ? '4px' : '8px'
                         }}>
                             {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
                                 <div key={day} style={{
                                     textAlign: 'center',
-                                    fontSize: '12px',
+                                    fontSize: windowWidth < 768 ? '11px' : '12px',
                                     fontWeight: '700',
                                     color: '#64748B',
-                                    padding: '8px'
+                                    padding: windowWidth < 768 ? '4px 2px' : '8px'
                                 }}>
                                     {day}
                                 </div>
@@ -739,12 +739,12 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         onClick={() => handleDateSelect(date)}
                                         disabled={isDisabled}
                                         style={{
-                                            padding: '12px',
+                                            padding: windowWidth < 768 ? '8px 2px' : '12px',
                                             borderRadius: '12px',
                                             background: isSelected ? '#84CC16' : isBlocked ? '#FEE2E2' : isPast ? '#F8F9FA' : 'white',
 
                                             color: isSelected ? 'white' : isDisabled ? '#CBD5E1' : '#1a1a1a',
-                                            fontSize: '14px',
+                                            fontSize: windowWidth < 768 ? '13px' : '14px',
                                             fontWeight: isSelected ? '700' : '500',
                                             cursor: isDisabled ? 'not-allowed' : 'pointer',
                                             transition: 'all 0.2s',
@@ -872,7 +872,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                     windowWidth > 1200 && (
                         <div style={{
                             position: 'sticky',
-                            top: '100px',
+                            top: '90px',
                             height: 'fit-content'
                         }}>
                             <BookingPanel
