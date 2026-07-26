@@ -162,7 +162,8 @@ const SuperAdminDashboard = () => {
         );
     }
 
-           <div style={{
+    return (
+        <div style={{
             minHeight: '100vh',
             background: '#0b0f19',
             color: '#f9fafb',
@@ -233,7 +234,7 @@ const SuperAdminDashboard = () => {
                 >
                     Cerrar Sesión
                 </button>
-            </div>        </div>
+            </div>
 
             {/* Modern Compact Tabs */}
             <div style={{
