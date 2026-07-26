@@ -335,6 +335,19 @@ export default function BusinessPortal() {
         return labels[status] || status;
     };
 
+    const getStatusStyle = (status) => {
+        const styles = {
+            pending:      { bg: 'var(--status-pending-bg)',   color: 'var(--status-pending)' },
+            confirmed:    { bg: 'var(--status-confirmed-bg)', color: 'var(--status-confirmed)' },
+            cancelled:    { bg: 'var(--status-cancelled-bg)', color: 'var(--status-cancelled)' },
+            deposit_paid: { bg: 'var(--status-deposit-bg)',   color: 'var(--status-deposit)' },
+            completed:    { bg: 'var(--status-completed-bg)', color: 'var(--status-completed)' },
+            attended:     { bg: 'var(--status-attended-bg)',   color: 'var(--status-attended)' },
+            blocked:      { bg: 'var(--status-blocked-bg)',    color: 'var(--status-blocked)' }
+        };
+        return styles[status] || { bg: 'var(--status-pending-bg)', color: 'var(--status-pending)' };
+    };
+
     const handleMoveBooking = async (bookingId, newDate, newTime, newItemId) => {
         try {
             setLoading(true);
@@ -767,7 +780,7 @@ export default function BusinessPortal() {
             {/* Mobile Header */}
             {isMobile && (
                 <div style={{
-                    padding: '16px 20px',
+                    padding: '12px 20px',
                     background: 'var(--bg-card)',
                     borderBottom: '1px solid var(--border)',
                     display: 'flex',
@@ -775,26 +788,33 @@ export default function BusinessPortal() {
                     alignItems: 'center',
                     position: 'sticky',
                     top: 0,
-                    zIndex: 100
+                    zIndex: 100,
+                    boxShadow: 'var(--shadow-sm)'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         {(currentBusiness?.logo || currentBusiness?.image) && (
                             <img
                                 src={currentBusiness.logo || currentBusiness.image}
                                 alt="Logo"
-                                style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                                style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }}
                             />
                         )}
-                        <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                        <h1 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
                             {currentBusiness?.name || 'Portal Socios'}
                         </h1>
                     </div>
                     <button
                         onClick={() => setShowSidebar(!showSidebar)}
                         style={{
-                            background: 'transparent',
-                            border: 'none',
-                            fontSize: '24px',
+                            background: 'var(--bg-main)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                            width: '36px',
+                            height: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '18px',
                             cursor: 'pointer',
                             color: 'var(--text-primary)'
                         }}
@@ -815,6 +835,8 @@ export default function BusinessPortal() {
                 toggleTheme={toggleTheme}
                 theme={theme}
                 currentBusiness={currentBusiness}
+                pendingCount={bookings.filter(b => b.status === 'pending').length}
+                onCreateBooking={(e) => handleCreateBooking(e)}
                 onLogout={async () => {
                     await supabaseService.logout();
                     setIsLoggedIn(false);
@@ -835,9 +857,15 @@ export default function BusinessPortal() {
                 minHeight: 0
             }}>
                 {loading ? (
-                    <div style={{ textAlign: 'center', padding: '100px' }}>
-                        <div style={{ fontSize: '40px', marginBottom: '20px', animation: 'spin 2s linear infinite' }}>⏳</div>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '18px' }}>Cargando información...</p>
+                    <div style={{ textAlign: 'center', padding: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                        <div style={{
+                            width: '40px', height: '40px',
+                            border: '3px solid var(--border)',
+                            borderTopColor: 'var(--primary)',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite'
+                        }} />
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '15px', fontWeight: '500' }}>Cargando información...</p>
                     </div>
                 ) : (
                     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
@@ -1138,47 +1166,29 @@ export default function BusinessPortal() {
                                 <div style={{
                                     display: 'flex',
                                     flexWrap: 'wrap',
-                                    gap: '16px',
-                                    marginBottom: '20px',
-                                    padding: '12px 16px',
+                                    gap: '12px',
+                                    marginBottom: '16px',
+                                    padding: '10px 16px',
                                     background: 'var(--bg-card)',
-                                    borderRadius: '16px',
+                                    borderRadius: 'var(--radius-md)',
                                     border: '1px solid var(--border)',
                                     fontSize: '12px',
                                     fontWeight: '600',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                    boxShadow: 'var(--shadow-sm)'
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#9CA3AF' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Pendiente</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#F59E0B' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Señado</span>
-                                    </div>
-                                    {(currentBusiness?.type === 'sport' || currentBusiness?.type === 'venue') ? (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#059669' }}></div>
-                                            <span style={{ color: 'var(--text-secondary)' }}>Confirmado</span>
+                                    {[
+                                        { label: 'Pendiente', color: 'var(--status-pending)' },
+                                        { label: 'Señado', color: 'var(--status-deposit)' },
+                                        { label: 'Confirmado', color: 'var(--status-confirmed)' },
+                                        { label: 'Finalizado', color: 'var(--status-completed)' },
+                                        { label: 'Cancelado', color: 'var(--status-cancelled)' },
+                                        { label: 'Bloqueado', color: 'var(--status-blocked)' }
+                                    ].map(s => (
+                                        <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: s.color }} />
+                                            <span style={{ color: 'var(--text-secondary)' }}>{s.label}</span>
                                         </div>
-                                    ) : (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#2563EB' }}></div>
-                                            <span style={{ color: 'var(--text-secondary)' }}>Confirmado</span>
-                                        </div>
-                                    )}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#10B981' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Finalizado</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#DC2626' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Cancelado</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#374151' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Bloqueado</span>
-                                    </div>
+                                    ))}
                                 </div>
                                 {reschedulingBooking && (
                                     <div style={{
@@ -1403,16 +1413,13 @@ export default function BusinessPortal() {
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                                                                 <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{booking.time} hs</span>
                                                                 <span style={{
-                                                                    padding: '4px 8px',
-                                                                    borderRadius: '6px',
-                                                                    fontSize: '11px',
+                                                                    padding: '4px 10px',
+                                                                    borderRadius: 'var(--radius-full)',
+                                                                    fontSize: '10px',
                                                                     fontWeight: '700',
-                                                                    background: booking.status === 'confirmed' ? 'rgba(0,230,118,0.1)' :
-                                                                        (booking.status === 'cancelled' ? 'rgba(255,68,68,0.1)' :
-                                                                            (booking.status === 'deposit_paid' ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.05)')),
-                                                                    color: booking.status === 'confirmed' ? '#00E676' :
-                                                                        (booking.status === 'cancelled' ? '#ff4444' :
-                                                                            (booking.status === 'deposit_paid' ? '#F59E0B' : 'var(--text-secondary)'))
+                                                                    letterSpacing: '0.03em',
+                                                                    background: getStatusStyle(booking.status).bg,
+                                                                    color: getStatusStyle(booking.status).color
                                                                 }}>
                                                                     {getStatusLabel(booking.status).toUpperCase()}
                                                                 </span>
@@ -1470,15 +1477,13 @@ export default function BusinessPortal() {
                                                                 </td>
                                                                 <td style={{ padding: '16px' }}>
                                                                     <span style={{
-                                                                        padding: '4px 8px',
-                                                                        borderRadius: '4px',
-                                                                        fontSize: '12px',
-                                                                        background: booking.status === 'confirmed' ? 'rgba(0,230,118,0.1)' :
-                                                                            (booking.status === 'cancelled' ? 'rgba(255,68,68,0.1)' :
-                                                                                (booking.status === 'deposit_paid' ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.05)')),
-                                                                        color: booking.status === 'confirmed' ? '#00E676' :
-                                                                            (booking.status === 'cancelled' ? '#ff4444' :
-                                                                                (booking.status === 'deposit_paid' ? '#F59E0B' : 'var(--text-secondary)'))
+                                                                        padding: '4px 10px',
+                                                                        borderRadius: 'var(--radius-full)',
+                                                                        fontSize: '10px',
+                                                                        fontWeight: '700',
+                                                                        letterSpacing: '0.03em',
+                                                                        background: getStatusStyle(booking.status).bg,
+                                                                        color: getStatusStyle(booking.status).color
                                                                     }}>
                                                                         {getStatusLabel(booking.status).toUpperCase()}
                                                                     </span>
