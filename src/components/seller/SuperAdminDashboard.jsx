@@ -17,6 +17,9 @@ const SuperAdminDashboard = () => {
     const [commissionTrends, setCommissionTrends] = useState([]);
     const [businessGrowthTrends, setBusinessGrowthTrends] = useState([]);
     const [activeTab, setActiveTab] = useState('overview');
+    const [initialLoading, setInitialLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
     // Modals & Details State
     const [showBusinessModal, setShowBusinessModal] = useState(false);
     const [editingBusiness, setEditingBusiness] = useState(null);
@@ -81,11 +84,14 @@ const SuperAdminDashboard = () => {
     const alertCount = inactiveOrTrialBusinesses.length;
 
     useEffect(() => {
-        loadData();
+        loadData(true);
     }, []);
 
-    const loadData = async () => {
-        setLoading(true);
+    const loadData = async (isInitial = false) => {
+        if (isInitial && !businesses.length) {
+            setInitialLoading(true);
+        }
+        setIsRefreshing(true);
         try {
             // Each fetch has its own try/catch so one failure doesn't break the rest
             const safe = async (promise, fallback = null) => {
@@ -124,6 +130,8 @@ const SuperAdminDashboard = () => {
         } catch (err) {
             console.error('Critical error in loadData:', err);
         } finally {
+            setInitialLoading(false);
+            setIsRefreshing(false);
             setLoading(false);
         }
     };
@@ -188,27 +196,27 @@ const SuperAdminDashboard = () => {
         }
     };
 
-    if (loading) {
+    if (initialLoading && !businesses.length) {
         return (
             <div style={{
                 minHeight: '100vh',
-                background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%)',
+                background: '#0b0f19',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'white'
+                color: '#f9fafb'
             }}>
                 <div style={{ textAlign: 'center' }}>
                     <div style={{
-                        width: '60px',
-                        height: '60px',
-                        border: '4px solid var(--primary-paddle)',
+                        width: '48px',
+                        height: '48px',
+                        border: '3px solid #2563eb',
                         borderTopColor: 'transparent',
                         borderRadius: '50%',
-                        animation: 'spin 1s linear infinite',
+                        animation: 'spin 0.8s linear infinite',
                         margin: '0 auto 16px'
                     }} />
-                    <p style={{ fontSize: '16px', fontWeight: '600' }}>Cargando analíticas...</p>
+                    <p style={{ fontSize: '14px', fontWeight: '700', color: '#9ca3af' }}>Cargando Panel SuperAdmin...</p>
                 </div>
             </div>
         );
@@ -298,6 +306,34 @@ const SuperAdminDashboard = () => {
                             color: '#60a5fa',
                             border: '1px solid #1e293b'
                         }}>Ctrl K</span>
+                    </button>
+
+                    {/* Live Refresh Button */}
+                    <button
+                        onClick={() => loadData(false)}
+                        disabled={isRefreshing}
+                        style={{
+                            padding: '7px 12px',
+                            background: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: '8px',
+                            color: '#9ca3af',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            opacity: isRefreshing ? 0.6 : 1
+                        }}
+                    >
+                        <span style={{
+                            display: 'inline-block',
+                            animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
+                        }}>
+                            🔄
+                        </span>
+                        {isRefreshing ? 'Actualizando...' : 'Actualizar'}
                     </button>
 
                     {/* Date Range Selector */}
