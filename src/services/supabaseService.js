@@ -2977,26 +2977,32 @@ class SupabaseService {
         if (userEmail) {
             try {
                 // Update password_changed flag on businesses table
-                await supabase
+                const { error: bizError } = await supabase
                     .from('businesses')
                     .update({ password_changed: true })
                     .eq('email', userEmail);
 
-                // Attempt to sign up or update in Supabase Auth
-                const { data: signUpData } = await supabase.auth.signUp({
-                    email: userEmail,
-                    password: newPassword
-                });
+                if (!bizError) updated = true;
 
-                if (signUpData?.user) {
-                    await supabase
-                        .from('businesses')
-                        .update({ auth_id: signUpData.user.id, password_changed: true })
-                        .eq('email', userEmail);
+                // Attempt to sign up or update in Supabase Auth
+                try {
+                    const { data: signUpData } = await supabase.auth.signUp({
+                        email: userEmail,
+                        password: newPassword
+                    });
+
+                    if (signUpData?.user) {
+                        await supabase
+                            .from('businesses')
+                            .update({ auth_id: signUpData.user.id, password_changed: true })
+                            .eq('email', userEmail);
+                        updated = true;
+                    }
+                } catch (e) {
+                    console.warn('Fallback password update error:', e);
                 }
-                updated = true;
             } catch (e) {
-                console.warn('Fallback password update error:', e);
+                console.warn('Fallback database update error:', e);
             }
         }
 
