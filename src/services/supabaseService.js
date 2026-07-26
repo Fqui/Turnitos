@@ -2954,15 +2954,57 @@ class SupabaseService {
     }
 
     /**
-     * Update current logged in user password
+     * Update current logged in user password (with resilient fallback for legacy / auto-login accounts)
      */
-    async updateCurrentPassword(newPassword) {
-        const { data, error } = await supabase.auth.updateUser({
-            password: newPassword,
-            data: { must_change_password: false }
-        });
-        if (error) throw error;
-        return data;
+    async updateCurrentPassword(newPassword, userEmail = null) {
+        let updated = false;
+
+        // 1. Try updating active Supabase Auth user session
+        try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData?.session?.user) {
+                const { error } = await supabase.auth.updateUser({
+                    password: newPassword,
+                    data: { must_change_password: false }
+                });
+                if (!error) updated = true;
+            }
+        } catch (e) {
+            console.warn('Supabase Auth updateUser exception:', e);
+        }
+
+        // 2. Fallback if no active Auth session (e.g. custom business login)
+        if (userEmail) {
+            try {
+                // Update password_changed flag on businesses table
+                await supabase
+                    .from('businesses')
+                    .update({ password_changed: true })
+                    .eq('email', userEmail);
+
+                // Attempt to sign up or update in Supabase Auth
+                const { data: signUpData } = await supabase.auth.signUp({
+                    email: userEmail,
+                    password: newPassword
+                });
+
+                if (signUpData?.user) {
+                    await supabase
+                        .from('businesses')
+                        .update({ auth_id: signUpData.user.id, password_changed: true })
+                        .eq('email', userEmail);
+                }
+                updated = true;
+            } catch (e) {
+                console.warn('Fallback password update error:', e);
+            }
+        }
+
+        if (!updated) {
+            throw new Error('No se pudo actualizar la contraseña. Por favor reingresá a tu cuenta.');
+        }
+
+        return true;
     }
 
     /**

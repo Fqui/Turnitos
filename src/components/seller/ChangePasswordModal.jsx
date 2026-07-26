@@ -24,7 +24,7 @@ const ChangePasswordModal = ({ userEmail, onSuccess }) => {
 
         setLoading(true);
         try {
-            await supabaseService.updateCurrentPassword(password);
+            await supabaseService.updateCurrentPassword(password, userEmail);
             onSuccess();
         } catch (err) {
             console.error('Error updating password:', err);
