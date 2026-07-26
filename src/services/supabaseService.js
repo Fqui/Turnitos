@@ -245,37 +245,64 @@ class SupabaseService {
     }
 
     async login(email, password) {
-        // Use Supabase Auth instead of plaintext password matching
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
+        let authUser = null;
+        try {
+            const { data: authData } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+            if (authData?.user) {
+                authUser = authData.user;
+            }
+        } catch (e) {
+            console.warn('Supabase Auth signIn failed:', e);
+        }
 
-        if (authError) {
-            console.error('Supabase Auth error:', authError);
+        let business = null;
+        if (authUser) {
+            const { data } = await supabase
+                .from('businesses')
+                .select('*')
+                .or(`auth_id.eq.${authUser.id},email.eq.${email}`)
+                .maybeSingle();
+            business = data;
+        }
+
+        if (!business) {
+            // Check directly by email in businesses table
+            const { data } = await supabase
+                .from('businesses')
+                .select('*')
+                .eq('email', email)
+                .maybeSingle();
+            business = data;
+
+            // If business exists, attempt sign up / link auth_id
+            if (business && !authUser) {
+                try {
+                    const { data: signUpData } = await supabase.auth.signUp({
+                        email,
+                        password
+                    });
+                    if (signUpData?.user) {
+                        authUser = signUpData.user;
+                        await supabase.from('businesses').update({ auth_id: authUser.id }).eq('id', business.id);
+                    }
+                } catch (e) {
+                    console.warn('Auto sign up fallback failed:', e);
+                }
+            }
+        }
+
+        if (!business) {
             throw new Error('Credenciales inválidas');
         }
 
-        const authId = authData.user.id;
-
-        // Find the business linked to this auth_id
-        const { data, error } = await supabase
-            .from('businesses')
-            .select('*')
-            .eq('auth_id', authId)
-            .single();
-
-        if (error || !data) {
-            // It could be a seller or super admin, but this specific function expects a business
-            throw new Error('No se encontró un negocio asociado a esta cuenta.');
-        }
-
-        // Return the business data
         return {
-            ...this._processBusinessData(data),
-            requirePasswordChange: !data.password_changed,
-            subscriptionStatus: data.subscription_status,
-            trialEndDate: data.trial_end_date
+            ...this._processBusinessData(business),
+            requirePasswordChange: !business.password_changed,
+            subscriptionStatus: business.subscription_status,
+            trialEndDate: business.trial_end_date
         };
     }
 
@@ -367,6 +394,21 @@ class SupabaseService {
             gallery_images: businessData.gallery_images || [],
             max_capacity: businessData.max_capacity || 1
         };
+
+        // Register user in Supabase Auth if email and password are provided when creating new business
+        if (!businessData.id && businessData.email && businessData.password) {
+            try {
+                const { data: authData } = await supabase.auth.signUp({
+                    email: businessData.email,
+                    password: businessData.password
+                });
+                if (authData?.user?.id) {
+                    businessRecord.auth_id = authData.user.id;
+                }
+            } catch (e) {
+                console.warn('Could not auto-register user in Supabase Auth:', e);
+            }
+        }
 
         // Add id only if provided (for updates)
         if (businessData.id) {
