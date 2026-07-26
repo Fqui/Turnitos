@@ -2426,43 +2426,19 @@ class SupabaseService {
     async loginSuperAdmin(email, password) {
         const cleanEmail = (email || '').trim().toLowerCase();
 
-        // 1. Try Supabase Auth signInWithPassword
-        let authUser = null;
-        try {
-            const { data: authData } = await supabase.auth.signInWithPassword({
-                email: cleanEmail,
-                password
-            });
-            if (authData?.user) {
-                authUser = authData.user;
-            }
-        } catch (e) {
-            console.warn('Supabase auth signIn error:', e);
+        // Standard Supabase Auth authentication
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: cleanEmail,
+            password
+        });
+
+        if (authError || !authData?.user) {
+            console.error('Supabase Auth error:', authError);
+            throw new Error(authError?.message === 'Invalid login credentials' ? 'Email o contraseña incorrectos' : (authError?.message || 'Credenciales inválidas'));
         }
 
-        // 2. Master Owner account fallback for platform owner email
-        if (!authUser && cleanEmail === 'fernandoquintero1994@gmail.com') {
-            const { data: adminRecord } = await supabase
-                .from('super_admins')
-                .select('*')
-                .eq('email', cleanEmail)
-                .maybeSingle();
-
-            return {
-                id: adminRecord?.id || 'master-super-admin',
-                email: cleanEmail,
-                firstName: adminRecord?.first_name || 'Fernando',
-                lastName: adminRecord?.last_name || 'Quintero',
-                role: 'super_admin'
-            };
-        }
-
-        if (!authUser) {
-            throw new Error('Email o contraseña incorrectos');
-        }
-
-        const authId = authUser.id;
-        const userEmail = authUser.email;
+        const authId = authData.user.id;
+        const userEmail = authData.user.email;
 
         let { data } = await supabase
             .from('super_admins')
