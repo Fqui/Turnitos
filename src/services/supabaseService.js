@@ -491,6 +491,24 @@ class SupabaseService {
             }
         }
 
+        // Auto-generate courts or specialists if count is specified or default to 2
+        const requestedCount = parseInt(businessData.resources_count || businessData.initial_resources_count || 2);
+        if (requestedCount > 0 && (!businessData.courts || businessData.courts.length === 0) && (!businessData.specialists || businessData.specialists.length === 0)) {
+            const isService = businessData.type === 'service';
+            if (isService) {
+                businessData.specialists = Array.from({ length: requestedCount }, (_, i) => ({
+                    name: `Especialista ${i + 1}`,
+                    role: 'General'
+                }));
+            } else {
+                businessData.courts = Array.from({ length: requestedCount }, (_, i) => ({
+                    name: `Cancha ${i + 1}`,
+                    sport: 'General',
+                    price: businessData.price_per_hour || 10000
+                }));
+            }
+        }
+
         // 3. Insert or Update courts
         if (businessData.courts && businessData.courts.length > 0) {
             // Delete old courts to prevent ID conflicts (safer for overwrite logic)

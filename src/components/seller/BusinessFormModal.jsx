@@ -13,7 +13,8 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
         facebook: business?.facebook || '',
         type: business?.type || 'venue',
         seller_id: business?.seller_id || '',
-        subscription_plan_id: business?.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb'
+        subscription_plan_id: business?.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb',
+        resources_count: business?.courts?.length || business?.specialists?.length || 2
     });
 
     useEffect(() => {
@@ -28,7 +29,8 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 facebook: business.facebook || '',
                 type: business.type || 'venue',
                 seller_id: business.seller_id || '',
-                subscription_plan_id: business.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb'
+                subscription_plan_id: business.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb',
+                resources_count: business.courts?.length || business.specialists?.length || 2
             });
         }
     }, [business]);
@@ -546,6 +548,36 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             />
                         </div>
                     </div>
+
+                    {/* Cantidad Inicial de Canchas / Especialistas */}
+                    {!business && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
+                                ⚙️ Cantidad Inicial de Canchas / Especialistas
+                            </label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={formData.resources_count || 2}
+                                onChange={(e) => setFormData({ ...formData, resources_count: parseInt(e.target.value) || 1 })}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px',
+                                    background: 'rgba(0, 230, 118, 0.05)',
+                                    border: '1px solid rgba(0, 230, 118, 0.4)',
+                                    borderRadius: '12px',
+                                    color: '#00E676',
+                                    fontWeight: '700',
+                                    fontSize: '16px',
+                                    outline: 'none'
+                                }}
+                            />
+                            <small style={{ display: 'block', marginTop: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+                                Se generarán automáticamente al crear el negocio (ej: Cancha 1, Cancha 2, etc.)
+                            </small>
+                        </div>
+                    )}
 
                     {/* Vendedor */}
                     <div ref={sellerRef} style={{ position: 'relative' }}>
