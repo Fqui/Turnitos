@@ -169,17 +169,27 @@ export default function VenueProfile({ business: initialBusiness }) {
     const handleConfirmBooking = async (bookingDetails) => {
         try {
             const bookingData = {
+                businessId: business.id,
                 business_id: business.id,
-                date: selectedDate.toISOString().split('T')[0],
-                time: '00:00', // Venue bookings are all-day or custom
-                duration: duration,
+                date: selectedDate,
+                time: '00:00',
+                duration: duration * 60, // Venue duration in minutes
+                price: totalPrice,
+                guestCount: guestCount,
                 guest_count: guestCount,
+                selectedServices: selectedServices,
                 selected_services: selectedServices,
+                servicesTotal: servicesTotal,
                 services_total: servicesTotal,
+                basePrice: basePrice,
                 base_price: basePrice,
+                totalPrice: totalPrice,
                 total_price: totalPrice,
+                customerName: bookingDetails.customerName,
                 customer_name: bookingDetails.customerName,
+                customerPhone: bookingDetails.customerPhone,
                 customer_phone: bookingDetails.customerPhone,
+                customerEmail: bookingDetails.customerEmail,
                 customer_email: bookingDetails.customerEmail,
                 notes: bookingDetails.notes,
                 status: 'pending'

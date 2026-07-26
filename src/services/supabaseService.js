@@ -1088,7 +1088,7 @@ class SupabaseService {
                 const { data: resources } = await supabase
                     .from('resources')
                     .select('id, metadata')
-                    .eq('business_id', bookingData.businessId)
+                    .eq('business_id', bookingData.businessId || bookingData.business_id)
                     .eq('type', type);
 
                 if (resources && resources.length > 0) {
@@ -1160,7 +1160,7 @@ class SupabaseService {
         // ✅ 2. VALIDATE BUSINESS-LEVEL CAPACITY (Total concurrency)
         try {
             const availability = await this.validateBookingAvailability(
-                bookingData.businessId,
+                bookingData.businessId || bookingData.business_id,
                 startTime,
                 endTime
             );
@@ -1177,28 +1177,33 @@ class SupabaseService {
             throw validationError;
         }
 
+        const targetBusinessId = bookingData.businessId || bookingData.business_id;
+        const targetCustomerName = bookingData.customerName || bookingData.customer_name;
+        const targetCustomerPhone = bookingData.customerPhone || bookingData.customer_phone;
+        const targetCustomerEmail = bookingData.customerEmail || bookingData.customer_email;
+
         const { data, error } = await supabase
             .from('bookings')
             .insert([{
-                business_id: bookingData.businessId,
-                service_id: bookingData.serviceId,
-                court_id: bookingData.courtId,
-                specialist_id: bookingData.specialistId || null,
-                resource_id: finalResourceId,
+                business_id: targetBusinessId,
+                service_id: bookingData.serviceId || bookingData.service_id || null,
+                court_id: bookingData.courtId || bookingData.court_id || null,
+                specialist_id: bookingData.specialistId || bookingData.specialist_id || null,
+                resource_id: finalResourceId || null,
                 date: formatDateLocal(bookingData.date),
-                time: bookingData.time,
-                customer_name: bookingData.customerName ? bookingData.customerName.toUpperCase() : bookingData.customerName,
-                customer_phone: bookingData.customerPhone,
-                customer_email: bookingData.customerEmail || null,
-                status: bookingData.status || 'confirmed',
-                price: bookingData.price,
+                time: bookingData.time || '00:00',
+                customer_name: targetCustomerName ? targetCustomerName.toUpperCase() : '',
+                customer_phone: targetCustomerPhone || '',
+                customer_email: targetCustomerEmail || null,
+                status: bookingData.status || 'pending',
+                price: bookingData.price || bookingData.total_price || bookingData.totalPrice || 0,
                 duration: bookingData.duration,
                 metadata: bookingData.metadata,
                 // Venue-specific fields
-                guest_count: bookingData.guestCount || null,
-                selected_services: bookingData.selectedServices || [],
-                services_total: bookingData.servicesTotal || 0,
-                base_price: bookingData.basePrice || null
+                guest_count: bookingData.guestCount || bookingData.guest_count || null,
+                selected_services: bookingData.selectedServices || bookingData.selected_services || [],
+                services_total: bookingData.servicesTotal || bookingData.services_total || 0,
+                base_price: bookingData.basePrice || bookingData.base_price || null
             }])
             .select()
             .single();
