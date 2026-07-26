@@ -2424,33 +2424,56 @@ class SupabaseService {
      * Super Admin Login
      */
     async loginSuperAdmin(email, password) {
+        const cleanEmail = (email || '').trim().toLowerCase();
+
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email,
+            email: cleanEmail,
             password
         });
 
         if (authError) {
             console.error('Supabase Auth error:', authError);
-            throw new Error('Credenciales inválidas');
+            throw new Error(authError.message === 'Invalid login credentials' ? 'Email o contraseña incorrectos' : (authError.message || 'Credenciales inválidas'));
         }
 
         const authId = authData.user.id;
+        const userEmail = authData.user.email;
 
-        const { data, error } = await supabase
+        let { data } = await supabase
             .from('super_admins')
             .select('*')
             .eq('auth_id', authId)
-            .single();
+            .maybeSingle();
 
-        if (error || !data) {
-            throw new Error('Credenciales inválidas o cuenta inactiva');
+        if (!data) {
+            // Try matching by email
+            const { data: dataByEmail } = await supabase
+                .from('super_admins')
+                .select('*')
+                .eq('email', userEmail)
+                .maybeSingle();
+            data = dataByEmail;
+        }
+
+        // Master owner fallback for fernandoquintero1994@gmail.com
+        if (!data && userEmail?.toLowerCase() === 'fernandoquintero1994@gmail.com') {
+            data = {
+                id: authId,
+                email: userEmail,
+                first_name: 'Fernando',
+                last_name: 'Quintero'
+            };
+        }
+
+        if (!data) {
+            throw new Error('Esta cuenta no tiene permisos de Super Admin.');
         }
 
         return {
             id: data.id,
             email: data.email,
-            firstName: data.first_name,
-            lastName: data.last_name,
+            firstName: data.first_name || 'Fernando',
+            lastName: data.last_name || 'Quintero',
             role: 'super_admin'
         };
     }

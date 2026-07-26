@@ -17,6 +17,7 @@ const SellerLogin = () => {
         setLoading(true);
 
         try {
+            let lastErrorMsg = 'Credenciales inválidas';
             // Try 1: Super admin login (the platform owner)
             try {
                 const superAdmin = await supabaseService.loginSuperAdmin(email, password);
@@ -27,6 +28,7 @@ const SellerLogin = () => {
                 }
             } catch (superAdminErr) {
                 console.warn('Super admin login failed:', superAdminErr.message);
+                if (superAdminErr.message) lastErrorMsg = superAdminErr.message;
             }
 
             // Try 2: Seller login (captadores de negocios)
@@ -42,19 +44,19 @@ const SellerLogin = () => {
             }
 
             // Try 3: Business owner login (dueño del business)
-                        try {
-                            const business = await supabaseService.login(email, password);
-                            if (business) {
-                                localStorage.setItem('business', JSON.stringify(business));
-                                localStorage.setItem('businessId', business.id);
-                                navigate('/portal');
-                                return;
-                            }
-                            // RPC returned null (probably the function isn't installed in DB)
-                            console.warn('login_business RPC returned null — credentials may be wrong or RPC is missing');
-                        } catch (businessErr) {
-                            console.warn('Business owner login failed:', businessErr.message);
-                        }
+            try {
+                const business = await supabaseService.login(email, password);
+                if (business) {
+                    localStorage.setItem('business', JSON.stringify(business));
+                    localStorage.setItem('businessId', business.id);
+                    navigate('/portal');
+                    return;
+                }
+                // RPC returned null (probably the function isn't installed in DB)
+                console.warn('login_business RPC returned null — credentials may be wrong or RPC is missing');
+            } catch (businessErr) {
+                console.warn('Business owner login failed:', businessErr.message);
+            }
 
             // None worked
             setError('Credenciales inválidas');
