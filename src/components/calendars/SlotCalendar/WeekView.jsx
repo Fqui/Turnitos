@@ -22,6 +22,11 @@ export default function WeekView({
 }) {
     const [showSlotMenu, setShowSlotMenu] = useState(null);
     const [showBookingMenu, setShowBookingMenu] = useState(null);
+    const [selectedResourceId, setSelectedResourceId] = useState('all');
+
+    const activeResources = (resources && resources.length > 0)
+        ? (selectedResourceId === 'all' ? resources : resources.filter(r => String(r.id) === String(selectedResourceId)))
+        : [{ id: 'default', name: 'General' }];
 
     const timeSlots = generateTimeSlots(businessHours.start, businessHours.end, config.slotSize);
 
@@ -79,127 +84,211 @@ export default function WeekView({
         return booking.time === currentTime;
     };
 
-    // Calcular número total de columnas: tiempo + (días × canchas)
-    const totalColumns = 1 + (displayDays.length * resources.length);
-
     return (
-        <div style={{
-            display: 'grid',
-            gridTemplateColumns: `70px repeat(${displayDays.length * resources.length}, 1fr)`,
-            gridAutoRows: `${config.gridRowHeight}px`,
-            minWidth: isMobile ? 'auto' : '900px',
-            width: '100%'
-        }}>
-            {/* Empty corner */}
-            <div style={{
-                position: 'sticky',
-                top: 0,
-                zIndex: 20,
-                background: 'var(--bg-card)',
-                borderBottom: '2px solid var(--border)',
-                borderRight: '1px solid var(--border)'
-            }}></div>
-
-            {/* Day Headers - cada día ocupa múltiples columnas (una por cancha) */}
-            {displayDays.map((day, dayIdx) => {
-                const isToday = formatDateKey(day) === formatDateKey(new Date());
-
-                return (
-                    <div
-                        key={dayIdx}
+        <div style={{ width: '100%' }}>
+            {resources && resources.length > 1 && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '12px',
+                    padding: '8px 12px',
+                    background: 'var(--bg-card)',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border)',
+                    flexWrap: 'wrap'
+                }}>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                        🏟️ Canchas en Vista Semanal:
+                    </span>
+                    <button
+                        onClick={() => setSelectedResourceId('all')}
                         style={{
-                            gridColumn: `span ${resources.length}`,
-                            padding: '16px 8px',
-                            textAlign: 'center',
-                            borderBottom: '2px solid var(--border)',
-                            borderRight: dayIdx < displayDays.length - 1 ? '1px solid var(--border)' : 'none',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 20,
-                            background: isToday ? 'rgba(0, 230, 118, 0.05)' : 'var(--bg-card)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center'
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: selectedResourceId === 'all' ? 'var(--primary-paddle)' : 'rgba(255,255,255,0.05)',
+                            color: selectedResourceId === 'all' ? '#000' : 'var(--text-primary)',
+                            fontWeight: '700',
+                            fontSize: '11px',
+                            cursor: 'pointer'
                         }}
                     >
-                        <div style={{
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            color: isToday ? 'var(--primary-paddle)' : 'var(--text-secondary)',
-                            marginBottom: '2px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                        }}>
-                            {day.toLocaleDateString('es-ES', { weekday: 'short' })}
-                        </div>
-                        <div style={{
-                            fontSize: '24px',
-                            fontWeight: '800',
-                            color: isToday ? 'var(--primary-paddle)' : 'var(--text-primary)',
-                            width: '40px',
-                            height: '40px',
-                            lineHeight: '40px',
-                            borderRadius: '50%',
-                            background: isToday ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-                            {day.getDate()}
-                        </div>
-                    </div>
-                );
-            })}
+                        Todas las Canchas ({resources.length})
+                    </button>
+                    {resources.map(r => (
+                        <button
+                            key={r.id}
+                            onClick={() => setSelectedResourceId(r.id)}
+                            style={{
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                background: String(selectedResourceId) === String(r.id) ? 'var(--primary-paddle)' : 'rgba(255,255,255,0.05)',
+                                color: String(selectedResourceId) === String(r.id) ? '#000' : 'var(--text-primary)',
+                                fontWeight: '700',
+                                fontSize: '11px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            {r.name}
+                        </button>
+                    ))}
+                </div>
+            )}
 
-            {/* Time Slots */}
-            {timeSlots.map((time) => (
-                <React.Fragment key={time}>
-                    {/* Time Column */}
+            <div style={{ width: '100%', overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: `70px repeat(${displayDays.length * activeResources.length}, minmax(${activeResources.length > 1 ? '110px' : '1fr'}, 1fr))`,
+                    gridAutoRows: `${config.gridRowHeight}px`,
+                    minWidth: `${Math.max(800, 70 + displayDays.length * activeResources.length * 110)}px`,
+                    width: '100%'
+                }}>
+                    {/* Empty corner */}
                     <div style={{
-                        padding: '10px',
-                        textAlign: 'center',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        color: 'var(--text-secondary)',
-                        borderBottom: '1px solid var(--border)',
-                        borderRight: '1px solid var(--border)',
                         position: 'sticky',
-                        left: 0,
+                        top: 0,
+                        zIndex: 20,
                         background: 'var(--bg-card)',
-                        zIndex: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        {time}
-                    </div>
+                        borderBottom: '2px solid var(--border)',
+                        borderRight: '1px solid var(--border)'
+                    }}></div>
 
-                    {/* Día × Cancha Columns */}
-                    {displayDays.map((day, dayIdx) => (
-                        resources.map((resource, resourceIdx) => {
-                            // Filter bookings for this specific resource
-                            const slotBookings = getBookingsForSlot(
-                                bookings.filter(b => {
-                                    // Match by court_id (for sports)
-                                    if (b.court_id === resource.id) return true;
+                    {/* Day Headers - cada día ocupa múltiples columnas (una por cancha) */}
+                    {displayDays.map((day, dayIdx) => {
+                        const isToday = formatDateKey(day) === formatDateKey(new Date());
 
-                                    // Match by specialist_id (for services with assigned specialist)
-                                    if (b.specialist_id === resource.id) return true;
+                        return (
+                            <div
+                                key={dayIdx}
+                                style={{
+                                    gridColumn: `span ${activeResources.length}`,
+                                    padding: '10px 6px',
+                                    textAlign: 'center',
+                                    borderBottom: '2px solid var(--border)',
+                                    borderRight: dayIdx < displayDays.length - 1 ? '1px solid var(--border)' : 'none',
+                                    position: 'sticky',
+                                    top: 0,
+                                    zIndex: 20,
+                                    background: isToday ? 'rgba(0, 230, 118, 0.05)' : 'var(--bg-card)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <div style={{
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: isToday ? 'var(--primary-paddle)' : 'var(--text-secondary)',
+                                    marginBottom: '2px',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                }}>
+                                    {day.toLocaleDateString('es-ES', { weekday: 'short' })}
+                                </div>
+                                <div style={{
+                                    fontSize: '20px',
+                                    fontWeight: '800',
+                                    color: isToday ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                                    width: '34px',
+                                    height: '34px',
+                                    lineHeight: '34px',
+                                    borderRadius: '50%',
+                                    background: isToday ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    {day.getDate()}
+                                </div>
+                            </div>
+                        );
+                    })}
 
-                                    // Match by resource_id (generic)
-                                    if (b.resource_id === resource.id) return true;
+                    {/* Sub-header row showing court names if multiple resources */}
+                    {activeResources.length > 1 && (
+                        <>
+                            <div style={{
+                                position: 'sticky',
+                                top: 0,
+                                zIndex: 19,
+                                background: 'var(--bg-card)',
+                                borderBottom: '1px solid var(--border)',
+                                borderRight: '1px solid var(--border)'
+                            }} />
+                            {displayDays.map((day, dayIdx) => (
+                                activeResources.map((res, resIdx) => (
+                                    <div
+                                        key={`sub-header-${dayIdx}-${resIdx}`}
+                                        style={{
+                                            position: 'sticky',
+                                            top: 0,
+                                            zIndex: 19,
+                                            background: 'var(--bg-card)',
+                                            borderBottom: '1px solid var(--border)',
+                                            borderRight: (resIdx === activeResources.length - 1 && dayIdx < displayDays.length - 1) ? '1px solid var(--border)' : '0.5px solid rgba(0,0,0,0.05)',
+                                            padding: '4px 2px',
+                                            textAlign: 'center',
+                                            fontSize: '11px',
+                                            fontWeight: '700',
+                                            color: 'var(--primary-paddle)',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}
+                                        title={res.name}
+                                    >
+                                        {res.name}
+                                    </div>
+                                ))
+                            ))}
+                        </>
+                    )}
 
-                                    return false;
-                                }),
-                                day,
-                                time,
-                                config.slotSize
-                            );
+                    {/* Time Slots */}
+                    {timeSlots.map((time) => (
+                        <React.Fragment key={time}>
+                            {/* Time Column */}
+                            <div style={{
+                                padding: '10px',
+                                textAlign: 'center',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                                color: 'var(--text-secondary)',
+                                borderBottom: '1px solid var(--border)',
+                                borderRight: '1px solid var(--border)',
+                                position: 'sticky',
+                                left: 0,
+                                background: 'var(--bg-card)',
+                                zIndex: 10,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                                {time}
+                            </div>
 
-                            const isToday = formatDateKey(day) === formatDateKey(new Date());
-                            const isLastResourceOfDay = resourceIdx === resources.length - 1;
-                            const isLastDay = dayIdx === displayDays.length - 1;
+                            {/* Día × Cancha Columns */}
+                            {displayDays.map((day, dayIdx) => (
+                                activeResources.map((resource, resourceIdx) => {
+                                    // Filter bookings for this specific resource
+                                    const slotBookings = getBookingsForSlot(
+                                        bookings.filter(b => {
+                                            if (b.court_id === resource.id) return true;
+                                            if (b.specialist_id === resource.id) return true;
+                                            if (b.resource_id === resource.id) return true;
+                                            return false;
+                                        }),
+                                        day,
+                                        time,
+                                        config.slotSize
+                                    );
+
+                                    const isToday = formatDateKey(day) === formatDateKey(new Date());
+                                    const isLastResourceOfDay = resourceIdx === activeResources.length - 1;
+                                    const isLastDay = dayIdx === displayDays.length - 1;
 
                             return (
                                 <div
@@ -303,6 +392,7 @@ export default function WeekView({
                     ))}
                 </React.Fragment>
             ))}
+            </div>
 
             {/* Slot Menu */}
             {showSlotMenu && (
@@ -521,6 +611,7 @@ export default function WeekView({
                     </div>
                 </>
             )}
+            </div>
 
             <style>{`
         .slot-add-area:hover {
