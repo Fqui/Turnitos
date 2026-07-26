@@ -162,49 +162,50 @@ const SuperAdminDashboard = () => {
         );
     }
 
-    return (
-        <div style={{
+           <div style={{
             minHeight: '100vh',
             background: '#0b0f19',
-            color: '#f8fafc',
-            padding: '40px 24px',
+            color: '#f9fafb',
+            padding: '24px 24px',
+            maxWidth: '1400px',
+            margin: '0 auto',
             fontFamily: "var(--font-sans)"
         }}>
-            {/* Modern Header */}
+            {/* Modern Compact Header */}
             <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: '32px',
-                padding: '24px 32px',
-                background: '#151c2c',
-                borderRadius: '16px',
-                border: '1px solid #222d44',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                marginBottom: '20px',
+                padding: '14px 20px',
+                background: '#111827',
+                borderRadius: '14px',
+                border: '1px solid #1f2937',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                 fontFamily: 'var(--font-title)'
             }}>
                 <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{
-                            width: '48px',
-                            height: '48px',
+                            width: '38px',
+                            height: '38px',
                             background: '#1e293b',
-                            border: '1px solid #2563eb',
-                            borderRadius: '12px',
+                            border: '1px solid #3b82f6',
+                            borderRadius: '10px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '22px',
+                            fontSize: '18px',
                             boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
                         }}>
                             🔐
                         </div>
                         <div>
-                            <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0, letterSpacing: '-0.5px', color: '#f1f5f9', fontFamily: 'var(--font-title)' }}>
+                            <h1 style={{ fontSize: '18px', fontWeight: '800', margin: 0, letterSpacing: '-0.3px', color: '#f9fafb', fontFamily: 'var(--font-title)' }}>
                                 Super Admin
                             </h1>
-                            <p style={{ opacity: 0.5, margin: '2px 0 0 0', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: '#94a3b8', fontFamily: 'var(--font-title)' }}>
-                                Panel de Control
+                            <p style={{ opacity: 0.6, margin: '1px 0 0 0', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#9ca3af', fontFamily: 'var(--font-title)' }}>
+                                Panel de Control Master
                             </p>
                         </div>
                     </div>
@@ -212,39 +213,37 @@ const SuperAdminDashboard = () => {
                 <button
                     onClick={handleLogout}
                     style={{
-                        padding: '10px 20px',
-                        background: 'transparent',
-                        border: '1px solid #ef4444',
-                        borderRadius: '10px',
+                        padding: '7px 16px',
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '8px',
                         color: '#f87171',
                         fontWeight: '700',
-                        fontSize: '13px',
+                        fontSize: '12px',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
                         fontFamily: 'var(--font-title)'
                     }}
                     onMouseOver={(e) => {
-                        e.target.style.background = 'rgba(239, 68, 68, 0.1)';
-                        e.target.style.transform = 'translateY(-1px)';
+                        e.target.style.background = 'rgba(239, 68, 68, 0.2)';
                     }}
                     onMouseOut={(e) => {
-                        e.target.style.background = 'transparent';
-                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.background = 'rgba(239, 68, 68, 0.08)';
                     }}
                 >
                     Cerrar Sesión
                 </button>
-            </div>
+            </div>        </div>
 
-            {/* Modern Tabs */}
+            {/* Modern Compact Tabs */}
             <div style={{
                 display: 'flex',
-                gap: '8px',
-                marginBottom: '32px',
-                padding: '6px',
-                background: '#151c2c',
-                borderRadius: '12px',
-                border: '1px solid #222d44',
+                gap: '6px',
+                marginBottom: '20px',
+                padding: '4px',
+                background: '#111827',
+                borderRadius: '10px',
+                border: '1px solid #1f2937',
                 flexWrap: 'wrap',
                 fontFamily: 'var(--font-title)'
             }}>
@@ -260,32 +259,20 @@ const SuperAdminDashboard = () => {
                         onClick={() => setActiveTab(tab.id)}
                         style={{
                             flex: 1,
-                            minWidth: '130px',
-                            padding: '12px 18px',
+                            minWidth: '110px',
+                            padding: '8px 14px',
                             background: activeTab === tab.id
                                 ? '#2563eb'
                                 : 'transparent',
-                            color: activeTab === tab.id ? '#ffffff' : '#94a3b8',
+                            color: activeTab === tab.id ? '#ffffff' : '#9ca3af',
                             border: 'none',
-                            borderRadius: '8px',
+                            borderRadius: '7px',
                             fontWeight: '700',
                             cursor: 'pointer',
                             transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                            fontSize: '14px',
-                            boxShadow: activeTab === tab.id ? '0 4px 6px -1px rgba(37, 99, 235, 0.3)' : 'none',
+                            fontSize: '13px',
+                            boxShadow: activeTab === tab.id ? '0 2px 6px rgba(37, 99, 235, 0.4)' : 'none',
                             fontFamily: 'var(--font-title)'
-                        }}
-                        onMouseOver={(e) => {
-                            if (activeTab !== tab.id) {
-                                e.target.style.background = 'rgba(255,255,255,0.02)';
-                                e.target.style.color = '#f1f5f9';
-                            }
-                        }}
-                        onMouseOut={(e) => {
-                            if (activeTab !== tab.id) {
-                                e.target.style.background = 'transparent';
-                                e.target.style.color = '#94a3b8';
-                            }
                         }}
                     >
                         <span style={{ marginRight: '6px' }}>{tab.icon}</span> {tab.label}
@@ -370,12 +357,12 @@ const SuperAdminDashboard = () => {
 
 // Overview Tab Component
 const OverviewTab = ({ analytics, sellers, commissionTrends, businessGrowthTrends }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Key Metrics Grid */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Key Metrics Grid - 5 columns on desktop */}
         <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '16px'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '12px'
         }}>
             <ModernMetricCard
                 icon="👥"
@@ -415,8 +402,8 @@ const OverviewTab = ({ analytics, sellers, commissionTrends, businessGrowthTrend
         {/* Charts Section */}
         <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))',
-            gap: '24px'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+            gap: '16px'
         }}>
             <ModernChart
                 title="📊 Evolución de Comisiones"
@@ -1242,77 +1229,65 @@ const CategoriesTab = ({ categories, subcategories, onDeleteCategory, onDeleteSu
 // Helper Components
 const ModernMetricCard = ({ icon, title, value, subtitle, colorAccent = '#3b82f6' }) => (
     <div style={{
-        padding: '24px',
-        background: '#151c2c',
-        borderRadius: '16px',
-        border: '1px solid #222d44',
+        padding: '14px 16px',
+        background: '#111827',
+        borderRadius: '12px',
+        border: '1px solid #1f2937',
         position: 'relative',
         overflow: 'hidden',
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)'
-    }}
-        onMouseOver={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px)';
-            e.currentTarget.style.border = '1px solid #334155';
-            e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3)';
-        }}
-        onMouseOut={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.border = '1px solid #222d44';
-            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)';
-        }}
-    >
-        <div style={{ position: 'relative', zIndex: 1 }}>
+        transition: 'all 0.2s ease',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+    }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {title}
+            </div>
             <div style={{ 
-                fontSize: '28px', 
-                marginBottom: '14px',
-                width: '48px',
-                height: '48px',
-                background: 'rgba(30, 41, 59, 0.5)',
+                fontSize: '16px', 
+                width: '32px',
+                height: '32px',
+                background: '#1e293b',
                 border: `1px solid rgba(255, 255, 255, 0.05)`,
-                borderRadius: '12px',
+                borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: colorAccent
             }}>{icon}</div>
-            <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {title}
-            </div>
-            <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '4px', color: '#ffffff', letterSpacing: '-0.5px' }}>
-                {value}
-            </div>
-            {subtitle && (
-                <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span>ℹ️</span> {subtitle}
-                </div>
-            )}
         </div>
+        <div style={{ fontSize: '22px', fontWeight: '800', marginBottom: '2px', color: '#ffffff', letterSpacing: '-0.3px' }}>
+            {value}
+        </div>
+        {subtitle && (
+            <div style={{ fontSize: '11px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span>ℹ️</span> {subtitle}
+            </div>
+        )}
     </div>
 );
 
 const ModernChart = ({ title, data, type }) => (
     <div style={{
-        background: '#151c2c',
-        borderRadius: '16px',
-        padding: '24px',
-        border: '1px solid #222d44',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        background: '#111827',
+        borderRadius: '12px',
+        padding: '16px 20px',
+        border: '1px solid #1f2937',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
     }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '20px', color: '#f1f5f9' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '14px', color: '#f9fafb' }}>
             {title}
         </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {data.map((item, idx) => {
                 const maxValue = Math.max(...data.map(d => type === 'commission' ? d.amount : d.count));
-                const percentage = ((type === 'commission' ? item.amount : item.count) / maxValue) * 100;
+                const percentage = ((type === 'commission' ? item.amount : item.count) / (maxValue || 1)) * 100;
 
                 return (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ minWidth: '90px', fontSize: '13px', color: '#94a3b8', fontWeight: '600' }}>
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ minWidth: '75px', fontSize: '12px', color: '#9ca3af', fontWeight: '600' }}>
                             {item.month}
                         </div>
-                        <div style={{ flex: 1, height: '36px', background: '#0f172a', borderRadius: '8px', border: '1px solid #1e293b', overflow: 'hidden', position: 'relative' }}>
+                        <div style={{ flex: 1, height: '26px', background: '#0f172a', borderRadius: '6px', border: '1px solid #1e293b', overflow: 'hidden', position: 'relative' }}>
                             <div style={{
                                 height: '100%',
                                 width: `${percentage}%`,
@@ -1321,12 +1296,12 @@ const ModernChart = ({ title, data, type }) => (
                                     : 'linear-gradient(90deg, #6366f1, #4f46e5)',
                                 display: 'flex',
                                 alignItems: 'center',
-                                paddingLeft: '16px',
-                                fontSize: '12px',
+                                paddingLeft: '10px',
+                                fontSize: '11px',
                                 fontWeight: '700',
                                 color: 'white',
                                 transition: 'width 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
-                                borderRadius: '8px'
+                                borderRadius: '6px'
                             }}>
                                 {type === 'commission'
                                     ? `$${item.amount.toLocaleString('es-AR')}`
