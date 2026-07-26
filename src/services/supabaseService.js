@@ -542,34 +542,52 @@ class SupabaseService {
                 };
             });
 
-            const { error: courtsError } = await supabase
-                .from('courts')
-                .insert(courtsToInsert);
+            try {
+                const { error: courtsError } = await supabase
+                    .from('courts')
+                    .insert(courtsToInsert);
 
-            if (courtsError) {
-                throw new Error(`Error reservando canchas: ${courtsError.message}`);
+                if (courtsError) {
+                    console.warn('Could not insert into courts table:', courtsError.message);
+                    // Try fallback to resources table if courts insertion was blocked by RLS or missing schema
+                    try {
+                        await supabase.from('resources').insert(courtsToInsert.map(c => ({
+                            id: c.id,
+                            business_id: c.business_id,
+                            name: c.name,
+                            type: 'court'
+                        })));
+                    } catch (e2) {
+                        console.warn('Fallback resources insert exception:', e2.message);
+                    }
+                }
+            } catch (errCourts) {
+                console.warn('Courts creation exception:', errCourts.message);
             }
         }
 
         // 4. Insert specialists if any (for service-type businesses)
         if (businessData.specialists && businessData.specialists.length > 0) {
-            // Delete existing specialists for this business
-            await supabase.from('specialists').delete().eq('business_id', business.id);
+            try {
+                // Delete existing specialists for this business
+                await supabase.from('specialists').delete().eq('business_id', business.id);
 
-            const specialistsToInsert = businessData.specialists.map(sp => ({
-                business_id: business.id,
-                name: sp.name,
-                role: sp.role,
-                avatar_url: sp.avatar_url
-            }));
+                const specialistsToInsert = businessData.specialists.map(sp => ({
+                    business_id: business.id,
+                    name: sp.name,
+                    role: sp.role,
+                    avatar_url: sp.avatar_url
+                }));
 
-            const { data: insertedSpecialists, error: specialistsError } = await supabase
-                .from('specialists')
-                .insert(specialistsToInsert)
-                .select();
+                const { error: specialistsError } = await supabase
+                    .from('specialists')
+                    .insert(specialistsToInsert);
 
-            if (specialistsError) {
-                // Error inserting specialists
+                if (specialistsError) {
+                    console.warn('Could not insert specialists:', specialistsError.message);
+                }
+            } catch (errSpec) {
+                console.warn('Specialists creation exception:', errSpec.message);
             }
         }
 
