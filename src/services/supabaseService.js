@@ -2579,11 +2579,28 @@ class SupabaseService {
                     id,
                     name,
                     icon
+                ),
+                business_subcategories (
+                    subcategories (
+                        id,
+                        name,
+                        slug,
+                        icon,
+                        category_id
+                    )
                 )
             `)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
+
+        if (data) {
+            data.forEach(b => {
+                const subs = b.business_subcategories?.map(bs => bs.subcategories).filter(Boolean) || [];
+                b.subcategories = subs;
+                b.subcategory_id = subs[0]?.id || null;
+            });
+        }
 
         return data;
     }
@@ -2879,17 +2896,17 @@ class SupabaseService {
 
         if (error) throw error;
 
-        // Sync business_subcategories junction table if subcategoryId is provided
-        if (subcategoryId) {
-            try {
-                await supabase.from('business_subcategories').delete().eq('business_id', businessId);
+        // Sync business_subcategories junction table
+        try {
+            await supabase.from('business_subcategories').delete().eq('business_id', businessId);
+            if (subcategoryId) {
                 await supabase.from('business_subcategories').insert({
                     business_id: businessId,
                     subcategory_id: subcategoryId
                 });
-            } catch (e) {
-                console.warn('Could not sync business_subcategories junction table:', e);
             }
+        } catch (e) {
+            console.warn('Could not sync business_subcategories junction table:', e);
         }
 
         return data;
