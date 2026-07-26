@@ -39,6 +39,8 @@ export default function BusinessPortal() {
 
     useEffect(() => {
         const checkAutoLogin = async () => {
+            const mustChangePassword = localStorage.getItem('turnitos_must_change_password') === 'true';
+
             // New format (from the unified /admin/login)
             const storedBusiness = localStorage.getItem('business');
             if (storedBusiness) {
@@ -48,6 +50,14 @@ export default function BusinessPortal() {
                         const businessesData = await serviceAdapter.getBusinesses();
                         const fullBiz = businessesData.find(b => b.id === biz.id);
                         if (fullBiz) {
+                            if (mustChangePassword || fullBiz.password_changed === false) {
+                                setRequirePasswordChange(true);
+                                setCurrentBusinessId(fullBiz.id);
+                                setSelectedBusinessId(fullBiz.id);
+                                setBusinesses(businessesData);
+                                setLoginEmail(fullBiz.email);
+                                return;
+                            }
                             setSelectedBusinessId(fullBiz.id);
                             setBusinesses(businessesData);
                             setIsLoggedIn(true);
@@ -69,6 +79,13 @@ export default function BusinessPortal() {
                     const businessesData = await serviceAdapter.getBusinesses();
                     const biz = businessesData.find(b => b.email === storedEmail);
                     if (biz) {
+                        if (mustChangePassword || biz.password_changed === false) {
+                            setRequirePasswordChange(true);
+                            setCurrentBusinessId(biz.id);
+                            setSelectedBusinessId(biz.id);
+                            setBusinesses(businessesData);
+                            return;
+                        }
                         setSelectedBusinessId(biz.id);
                         setBusinesses(businessesData);
                         setIsLoggedIn(true);
@@ -683,6 +700,32 @@ export default function BusinessPortal() {
 
     // Check for forced password change FIRST
     if (requirePasswordChange) {
+        const targetBusinessId = currentBusinessId || selectedBusinessId;
+        const targetEmail = loginEmail || (businesses.find(b => b.id === targetBusinessId)?.email) || '';
+
+        const handlePasswordSuccess = async () => {
+            localStorage.removeItem('turnitos_must_change_password');
+            setRequirePasswordChange(false);
+            setLoading(true);
+            try {
+                if (targetBusinessId) {
+                    const fullBusiness = await serviceAdapter.getBusinessById(targetBusinessId);
+                    setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
+                    setSelectedBusinessId(targetBusinessId);
+                }
+                setIsLoggedIn(true);
+
+                if (rememberMe && targetEmail) {
+                    localStorage.setItem('turnitos_business_email', targetEmail);
+                }
+            } catch (err) {
+                console.error("Error finalizing login:", err);
+                setIsLoggedIn(true);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         return (
             <div style={{
                 display: 'flex',
@@ -693,26 +736,10 @@ export default function BusinessPortal() {
                 padding: '20px'
             }}>
                 <ChangePasswordModal
-                    businessId={currentBusinessId}
-                    onPasswordChanged={async () => {
-                        setRequirePasswordChange(false);
-                        setLoading(true);
-                        try {
-                            const fullBusiness = await serviceAdapter.getBusinessById(currentBusinessId);
-                            setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
-                            setSelectedBusinessId(currentBusinessId);
-                            setIsLoggedIn(true);
-
-                            if (rememberMe) {
-                                localStorage.setItem('turnitos_business_email', loginEmail);
-                            }
-                        } catch (err) {
-                            console.error("Error finalizing login:", err);
-                            alert("Error al finalizar el inicio de sesión");
-                        } finally {
-                            setLoading(false);
-                        }
-                    }}
+                    businessId={targetBusinessId}
+                    userEmail={targetEmail}
+                    onSuccess={handlePasswordSuccess}
+                    onPasswordChanged={handlePasswordSuccess}
                 />
             </div>
         );

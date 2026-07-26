@@ -47,6 +47,11 @@ const SellerLogin = () => {
             try {
                 const business = await supabaseService.login(email, password);
                 if (business) {
+                    if (business.requirePasswordChange) {
+                        localStorage.setItem('turnitos_must_change_password', 'true');
+                    } else {
+                        localStorage.removeItem('turnitos_must_change_password');
+                    }
                     localStorage.setItem('business', JSON.stringify(business));
                     localStorage.setItem('businessId', business.id);
                     navigate('/portal');
