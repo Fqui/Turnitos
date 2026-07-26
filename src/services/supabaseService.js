@@ -342,7 +342,6 @@ class SupabaseService {
             subscription_plan_id: planId, // UUID reference to subscription_plans table
             type: businessData.type,
             email: businessData.email, // Auto-generated email
-            password: businessData.password, // Default password
             seller_id: sellerId, // Link to seller who created it
             logo_url: businessData.logo_url || businessData.logo || businessData.image, // Use new column name
             banner_url: businessData.banner_url || businessData.banner_image, // Use new column name
