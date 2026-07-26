@@ -2912,6 +2912,50 @@ class SupabaseService {
     }
 
     /**
+     * Update current logged in user password
+     */
+    async updateCurrentPassword(newPassword) {
+        const { data, error } = await supabase.auth.updateUser({
+            password: newPassword,
+            data: { must_change_password: false }
+        });
+        if (error) throw error;
+        return data;
+    }
+
+    /**
+     * Reset business password as super admin (generates new temporary password)
+     */
+    async resetBusinessPasswordAsSuperAdmin(businessId, businessName) {
+        // Generate secure 8 char temp password
+        const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        const lower = 'abcdefghijkmnpqrstuvwxyz';
+        const nums = '23456789';
+        const all = upper + lower + nums;
+        let tempPassword = '';
+        tempPassword += upper[Math.floor(Math.random() * upper.length)];
+        tempPassword += nums[Math.floor(Math.random() * nums.length)];
+        tempPassword += lower[Math.floor(Math.random() * lower.length)];
+        for (let i = 0; i < 5; i++) tempPassword += all[Math.floor(Math.random() * all.length)];
+        tempPassword = tempPassword.split('').sort(() => Math.random() - 0.5).join('');
+
+        // Get business owner email
+        const { data: business } = await supabase
+            .from('businesses')
+            .select('email, name')
+            .eq('id', businessId)
+            .single();
+
+        const email = business?.email || `${(businessName || 'business').toLowerCase().replace(/[^a-z0-9]/g, '')}@turnitoslr.com`;
+
+        return {
+            email,
+            tempPassword,
+            businessName: business?.name || businessName
+        };
+    }
+
+    /**
      * Delete business as super admin
      */
     async deleteBusinessAsSuperAdmin(businessId) {

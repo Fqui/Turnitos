@@ -20,7 +20,7 @@ import BusinessPortalSidebar from '../components/business/BusinessPortalSidebar'
 import BookingDetailsModal from '../components/business/BookingDetailsModal';
 import NewBookingModal from '../components/business/NewBookingModal';
 import BlockSlotModal from '../components/business/BlockSlotModal';
-import ChangePasswordModal from '../components/ChangePasswordModal';
+import ChangePasswordModal from '../components/seller/ChangePasswordModal';
 
 export default function BusinessPortal() {
     const [businesses, setBusinesses] = useState([]);
@@ -1598,18 +1598,10 @@ export default function BusinessPortal() {
             {/* Change Password Modal (First Login) */}
             {requirePasswordChange && (
                 <ChangePasswordModal
-                    businessId={currentBusinessId}
-                    onPasswordChanged={async () => {
+                    userEmail={loginEmail}
+                    onSuccess={() => {
                         setRequirePasswordChange(false);
-                        // Reload business data and proceed with login
-                        const fullBusiness = await serviceAdapter.getBusinessById(currentBusinessId);
-                        setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
-                        setSelectedBusinessId(currentBusinessId);
-                        setIsLoggedIn(true);
-
-                        if (rememberMe) {
-                            localStorage.setItem('turnitos_business_email', loginEmail);
-                        }
+                        localStorage.removeItem('turnitos_must_change_password');
                     }}
                 />
             )}

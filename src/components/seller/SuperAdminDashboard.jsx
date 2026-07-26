@@ -185,6 +185,20 @@ const SuperAdminDashboard = () => {
         }
     };
 
+    const [resetCredentialsModal, setResetCredentialsModal] = useState(null);
+
+    const handleResetBusinessPassword = async (business) => {
+        if (!confirm(`¿Restablecer la contraseña para "${business.name}"? Se generará una nueva clave provisoria.`)) return;
+
+        try {
+            const creds = await supabaseService.resetBusinessPasswordAsSuperAdmin(business.id, business.name);
+            setResetCredentialsModal(creds);
+        } catch (err) {
+            console.error('Error resetting password:', err);
+            alert('Error al restablecer la contraseña: ' + err.message);
+        }
+    };
+
     const handleViewSellerDetails = async (sellerId) => {
         try {
             const details = await supabaseService.getSellerDetails(sellerId);
@@ -623,6 +637,7 @@ const SuperAdminDashboard = () => {
                     onExportCSV={handleExportBusinessesCSV}
                     filter={businessFilter}
                     setFilter={setBusinessFilter}
+                    onResetPassword={handleResetBusinessPassword}
                 />
             )}
 
@@ -672,6 +687,104 @@ const SuperAdminDashboard = () => {
                     bookingsData={bookingsData}
                     onViewSellerDetails={handleViewSellerDetails}
                 />
+            )}
+
+            {/* Reset Credentials Modal */}
+            {resetCredentialsModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    backdropFilter: 'blur(6px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 99999,
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        width: '100%',
+                        maxWidth: '420px',
+                        background: '#111827',
+                        border: '1px solid #374151',
+                        borderRadius: '16px',
+                        padding: '24px',
+                        color: '#f9fafb',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
+                    }}>
+                        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                            <span style={{ fontSize: '36px' }}>🔑</span>
+                            <h3 style={{ margin: '8px 0 4px', fontSize: '17px', fontWeight: '800', color: '#f9fafb' }}>
+                                Clave Restablecida Exitosamente
+                            </h3>
+                            <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>
+                                Negocio: <strong style={{ color: '#f3f4f6' }}>{resetCredentialsModal.businessName}</strong>
+                            </p>
+                        </div>
+
+                        <div style={{
+                            background: '#1e293b',
+                            border: '1px solid #334155',
+                            borderRadius: '10px',
+                            padding: '14px',
+                            marginBottom: '16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '10px',
+                            fontSize: '13px'
+                        }}>
+                            <div>
+                                <span style={{ color: '#9ca3af', fontSize: '11px', display: 'block', marginBottom: '2px' }}>Email de Acceso:</span>
+                                <strong style={{ color: '#60a5fa', wordBreak: 'break-all' }}>{resetCredentialsModal.email}</strong>
+                            </div>
+                            <div>
+                                <span style={{ color: '#9ca3af', fontSize: '11px', display: 'block', marginBottom: '2px' }}>Nueva Clave Provisoria:</span>
+                                <strong style={{ color: '#fbbf24', fontSize: '16px', letterSpacing: '1px', fontFamily: 'monospace' }}>{resetCredentialsModal.tempPassword}</strong>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button
+                                onClick={() => {
+                                    const text = `Hola! Tus nuevos datos de acceso para el portal de ${resetCredentialsModal.businessName} son:\n\n📧 Email: ${resetCredentialsModal.email}\n🔑 Clave Provisoria: ${resetCredentialsModal.tempPassword}\n\nIngresá en https://www.turnitoslr.com/seller/login para acceder a tu panel. Se te pedirá elegir tu clave propia al ingresar.`;
+                                    navigator.clipboard.writeText(text);
+                                    alert('¡Accesos copiados al portapapeles! Ya podés pegarlos en WhatsApp.');
+                                }}
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 14px',
+                                    background: '#10b981',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    color: '#000',
+                                    fontWeight: '800',
+                                    fontSize: '12px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                📋 Copiar para WhatsApp
+                            </button>
+                            <button
+                                onClick={() => setResetCredentialsModal(null)}
+                                style={{
+                                    padding: '10px 16px',
+                                    background: '#374151',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    color: '#fff',
+                                    fontWeight: '700',
+                                    fontSize: '12px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
             </div>
         </div>
@@ -870,7 +983,7 @@ const SellersTab = ({ sellers, onToggleStatus, onViewDetails, settledSellers, on
 );
 
 // Businesses Tab Component
-const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV, filter = 'all', setFilter }) => {
+const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV, filter = 'all', setFilter, onResetPassword }) => {
     const activeCount = businesses.filter(b => b.subscription_status === 'active').length;
     const attentionCount = businesses.filter(b => b.subscription_status === 'trial' || b.subscription_status === 'inactive').length;
 
@@ -1061,12 +1174,12 @@ const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV, fi
                                             '✗ Inactivo'}
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
+                            <div style={{ display: 'flex', gap: '6px' }}>
                                 <button
                                     onClick={() => onEdit(business)}
                                     style={{
                                         flex: 1,
-                                        padding: '6px 10px',
+                                        padding: '6px 8px',
                                         background: '#0f172a',
                                         border: '1px solid #334155',
                                         borderRadius: '6px',
@@ -1079,9 +1192,25 @@ const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV, fi
                                     ✏️ Editar
                                 </button>
                                 <button
+                                    onClick={() => onResetPassword && onResetPassword(business)}
+                                    style={{
+                                        padding: '6px 8px',
+                                        background: 'rgba(245, 158, 11, 0.1)',
+                                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                                        borderRadius: '6px',
+                                        color: '#fbbf24',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        fontSize: '11px'
+                                    }}
+                                    title="Restablecer clave provisoria"
+                                >
+                                    🔑 Clave
+                                </button>
+                                <button
                                     onClick={() => onDelete(business.id)}
                                     style={{
-                                        padding: '6px 10px',
+                                        padding: '6px 8px',
                                         background: 'rgba(239, 68, 68, 0.1)',
                                         border: '1px solid rgba(239, 68, 68, 0.3)',
                                         borderRadius: '6px',
@@ -1091,7 +1220,7 @@ const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV, fi
                                         fontSize: '11px'
                                     }}
                                 >
-                                    🗑️ Eliminar
+                                    🗑️
                                 </button>
                             </div>
                         </div>
