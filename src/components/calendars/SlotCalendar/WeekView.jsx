@@ -84,65 +84,85 @@ export default function WeekView({
         return booking.time === currentTime;
     };
 
+    const COURT_COLORS = [
+        { bg: 'rgba(0, 230, 118, 0.12)', text: '#00e676', border: 'rgba(0, 230, 118, 0.3)' },
+        { bg: 'rgba(0, 229, 255, 0.12)', text: '#00e5ff', border: 'rgba(0, 229, 255, 0.3)' },
+        { bg: 'rgba(168, 85, 247, 0.12)', text: '#c084fc', border: 'rgba(168, 85, 247, 0.3)' },
+        { bg: 'rgba(245, 158, 11, 0.12)', text: '#fbbf24', border: 'rgba(245, 158, 11, 0.3)' },
+        { bg: 'rgba(236, 72, 153, 0.12)', text: '#f472b6', border: 'rgba(236, 72, 153, 0.3)' }
+    ];
+
+    const getResourceColor = (index) => {
+        return COURT_COLORS[index % COURT_COLORS.length];
+    };
+
     return (
         <div style={{ width: '100%' }}>
             {resources && resources.length > 1 && (
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    marginBottom: '12px',
-                    padding: '8px 12px',
-                    background: 'var(--bg-card)',
-                    borderRadius: '10px',
+                    gap: '10px',
+                    marginBottom: '16px',
+                    padding: '10px 16px',
+                    background: 'rgba(0, 0, 0, 0.25)',
+                    backdropFilter: 'blur(12px)',
+                    borderRadius: '14px',
                     border: '1px solid var(--border)',
                     flexWrap: 'wrap'
                 }}>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-                        🏟️ Canchas en Vista Semanal:
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        🏟️ Vista Semanal:
                     </span>
                     <button
                         onClick={() => setSelectedResourceId('all')}
                         style={{
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            border: 'none',
+                            padding: '6px 14px',
+                            borderRadius: '8px',
+                            border: selectedResourceId === 'all' ? '1px solid var(--primary-paddle)' : '1px solid transparent',
                             background: selectedResourceId === 'all' ? 'var(--primary-paddle)' : 'rgba(255,255,255,0.05)',
-                            color: selectedResourceId === 'all' ? '#000' : 'var(--text-primary)',
+                            color: selectedResourceId === 'all' ? '#000000' : 'var(--text-primary)',
                             fontWeight: '700',
-                            fontSize: '11px',
-                            cursor: 'pointer'
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            boxShadow: selectedResourceId === 'all' ? '0 2px 10px rgba(0, 230, 118, 0.3)' : 'none'
                         }}
                     >
                         Todas las Canchas ({resources.length})
                     </button>
-                    {resources.map(r => (
-                        <button
-                            key={r.id}
-                            onClick={() => setSelectedResourceId(r.id)}
-                            style={{
-                                padding: '4px 10px',
-                                borderRadius: '6px',
-                                border: 'none',
-                                background: String(selectedResourceId) === String(r.id) ? 'var(--primary-paddle)' : 'rgba(255,255,255,0.05)',
-                                color: String(selectedResourceId) === String(r.id) ? '#000' : 'var(--text-primary)',
-                                fontWeight: '700',
-                                fontSize: '11px',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            {r.name}
-                        </button>
-                    ))}
+                    {resources.map((r, idx) => {
+                        const colorInfo = getResourceColor(idx);
+                        const isSelected = String(selectedResourceId) === String(r.id);
+                        return (
+                            <button
+                                key={r.id}
+                                onClick={() => setSelectedResourceId(r.id)}
+                                style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '8px',
+                                    border: `1px solid ${isSelected ? colorInfo.text : 'rgba(255,255,255,0.08)'}`,
+                                    background: isSelected ? colorInfo.text : 'rgba(255,255,255,0.04)',
+                                    color: isSelected ? '#000000' : 'var(--text-primary)',
+                                    fontWeight: '700',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease'
+                                }}
+                            >
+                                ⚽ {r.name}
+                            </button>
+                        );
+                    })}
                 </div>
             )}
 
-            <div style={{ width: '100%', overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <div style={{ width: '100%', overflowX: 'auto', borderRadius: '14px', border: '1px solid var(--border)', boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}>
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: `70px repeat(${displayDays.length * activeResources.length}, minmax(${activeResources.length > 1 ? '110px' : '100px'}, 1fr))`,
+                    gridTemplateColumns: `70px repeat(${displayDays.length * activeResources.length}, minmax(${activeResources.length > 1 ? '120px' : '100px'}, 1fr))`,
                     gridAutoRows: `${config.gridRowHeight}px`,
-                    minWidth: `${Math.max(800, 70 + displayDays.length * activeResources.length * 110)}px`,
+                    minWidth: `${Math.max(800, 70 + displayDays.length * activeResources.length * 120)}px`,
                     width: '100%'
                 }}>
                     {/* Empty corner (Top-Left) */}
@@ -166,14 +186,14 @@ export default function WeekView({
                                 key={dayIdx}
                                 style={{
                                     gridColumn: `span ${activeResources.length}`,
-                                    padding: '6px 4px',
+                                    padding: '8px 4px',
                                     textAlign: 'center',
                                     borderBottom: '1px solid var(--border)',
-                                    borderRight: dayIdx < displayDays.length - 1 ? '1px solid var(--border)' : 'none',
+                                    borderRight: dayIdx < displayDays.length - 1 ? '2px solid var(--border)' : 'none',
                                     position: 'sticky',
                                     top: 0,
                                     zIndex: 25,
-                                    background: isToday ? 'rgba(0, 230, 118, 0.05)' : 'var(--bg-card)',
+                                    background: isToday ? 'rgba(0, 230, 118, 0.06)' : 'var(--bg-card)',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
@@ -183,11 +203,11 @@ export default function WeekView({
                             >
                                 <div style={{
                                     fontSize: '11px',
-                                    fontWeight: '600',
+                                    fontWeight: '700',
                                     color: isToday ? 'var(--primary-paddle)' : 'var(--text-secondary)',
-                                    marginBottom: '1px',
+                                    marginBottom: '2px',
                                     textTransform: 'uppercase',
-                                    letterSpacing: '0.5px'
+                                    letterSpacing: '0.8px'
                                 }}>
                                     {day.toLocaleDateString('es-ES', { weekday: 'short' })}
                                 </div>
@@ -195,14 +215,15 @@ export default function WeekView({
                                     fontSize: '16px',
                                     fontWeight: '800',
                                     color: isToday ? 'var(--primary-paddle)' : 'var(--text-primary)',
-                                    width: '28px',
-                                    height: '28px',
-                                    lineHeight: '28px',
+                                    width: '30px',
+                                    height: '30px',
+                                    lineHeight: '30px',
                                     borderRadius: '50%',
-                                    background: isToday ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                    background: isToday ? 'rgba(0, 230, 118, 0.15)' : 'transparent',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center'
+                                    justifyContent: 'center',
+                                    boxShadow: isToday ? '0 0 12px rgba(0, 230, 118, 0.3)' : 'none'
                                 }}>
                                     {day.getDate()}
                                 </div>
@@ -221,11 +242,14 @@ export default function WeekView({
                                 background: 'var(--bg-card)',
                                 borderBottom: '2px solid var(--border)',
                                 borderRight: '1px solid var(--border)',
-                                height: '28px'
+                                height: '34px'
                             }} />
                             {displayDays.map((day, dayIdx) => (
                                 activeResources.map((res, resIdx) => {
+                                    const resourceIndexInFull = resources.findIndex(r => String(r.id) === String(res.id));
+                                    const colorInfo = getResourceColor(resourceIndexInFull >= 0 ? resourceIndexInFull : resIdx);
                                     const shortName = (res.name || '').split('(')[0].trim() || res.name;
+
                                     return (
                                         <div
                                             key={`sub-header-${dayIdx}-${resIdx}`}
@@ -235,21 +259,34 @@ export default function WeekView({
                                                 zIndex: 24,
                                                 background: 'var(--bg-card)',
                                                 borderBottom: '2px solid var(--border)',
-                                                borderRight: (resIdx === activeResources.length - 1 && dayIdx < displayDays.length - 1) ? '1px solid var(--border)' : '0.5px solid rgba(0,0,0,0.05)',
-                                                padding: '4px 2px',
-                                                textAlign: 'center',
-                                                fontSize: '11px',
-                                                fontWeight: '700',
-                                                color: 'var(--primary-paddle)',
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                height: '28px',
-                                                lineHeight: '20px'
+                                                borderRight: (resIdx === activeResources.length - 1 && dayIdx < displayDays.length - 1) ? '2px solid var(--border)' : '1px solid rgba(255,255,255,0.06)',
+                                                padding: '4px 6px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: '34px'
                                             }}
                                             title={res.name}
                                         >
-                                            {shortName}
+                                            <span style={{
+                                                padding: '2px 8px',
+                                                borderRadius: '6px',
+                                                background: colorInfo.bg,
+                                                color: colorInfo.text,
+                                                border: `1px solid ${colorInfo.border}`,
+                                                fontSize: '11px',
+                                                fontWeight: '700',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                maxWidth: '100%',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}>
+                                                <span>⚽</span>
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortName}</span>
+                                            </span>
                                         </div>
                                     );
                                 })
