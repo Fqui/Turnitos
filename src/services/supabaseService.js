@@ -515,17 +515,13 @@ class SupabaseService {
             await supabase.from('courts').delete().eq('business_id', business.id);
 
             const courtsToInsert = businessData.courts.map(c => {
-                // Generate a valid UUID if ID is missing or temp
-                // This fixes "null value in column id" error if DB default is missing
                 const isValidUUID = c.id && c.id.toString().length === 36;
-
                 let courtId = isValidUUID ? c.id : null;
 
                 if (!courtId) {
                     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
                         courtId = crypto.randomUUID();
                     } else {
-                        // Fallback UUID v4 generator
                         courtId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                             var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
                             return v.toString(16);
@@ -543,24 +539,17 @@ class SupabaseService {
             });
 
             try {
-                const { error: courtsError } = await supabase
-                    .from('courts')
-                    .insert(courtsToInsert);
-
-                if (courtsError) {
-                    console.warn('Could not insert into courts table:', courtsError.message);
-                    // Try fallback to resources table if courts insertion was blocked by RLS or missing schema
-                    try {
-                        await supabase.from('resources').insert(courtsToInsert.map(c => ({
-                            id: c.id,
-                            business_id: c.business_id,
-                            name: c.name,
-                            type: 'court'
-                        })));
-                    } catch (e2) {
-                        console.warn('Fallback resources insert exception:', e2.message);
-                    }
-                }
+                await supabase.from('courts').insert(courtsToInsert);
+                // ALWAYS insert into resources table as well for table-agnostic queries
+                await supabase.from('resources').insert(courtsToInsert.map(c => ({
+                    id: c.id,
+                    business_id: c.business_id,
+                    name: c.name,
+                    type: 'court',
+                    sport: c.sport,
+                    base_price: c.price,
+                    active: true
+                }))).catch(e2 => console.warn('Resources insert notice:', e2.message));
             } catch (errCourts) {
                 console.warn('Courts creation exception:', errCourts.message);
             }
@@ -569,7 +558,6 @@ class SupabaseService {
         // 4. Insert specialists if any (for service-type businesses)
         if (businessData.specialists && businessData.specialists.length > 0) {
             try {
-                // Delete existing specialists for this business
                 await supabase.from('specialists').delete().eq('business_id', business.id);
 
                 const specialistsToInsert = businessData.specialists.map(sp => ({
@@ -579,19 +567,91 @@ class SupabaseService {
                     avatar_url: sp.avatar_url
                 }));
 
-                const { error: specialistsError } = await supabase
-                    .from('specialists')
-                    .insert(specialistsToInsert);
+                await supabase.from('specialists').insert(specialistsToInsert);
 
-                if (specialistsError) {
-                    console.warn('Could not insert specialists:', specialistsError.message);
-                }
+                // ALWAYS insert into resources table as well
+                await supabase.from('resources').insert(specialistsToInsert.map(sp => ({
+                    business_id: sp.business_id,
+                    name: sp.name,
+                    type: 'service',
+                    active: true
+                }))).catch(e2 => console.warn('Resources insert notice:', e2.message));
             } catch (errSpec) {
                 console.warn('Specialists creation exception:', errSpec.message);
             }
         }
 
         return business;
+    }
+
+    /**
+     * Helper method to ensure requested count of courts/specialists and resources exist for a business
+     */
+    async syncBusinessResources(businessId, businessType, requestedCount, price = 10000) {
+        if (!businessId || !requestedCount || requestedCount <= 0) return;
+
+        const isService = businessType === 'service';
+
+        if (isService) {
+            const { data: existingSpecs } = await supabase
+                .from('specialists')
+                .select('*')
+                .eq('business_id', businessId);
+
+            const currentCount = existingSpecs ? existingSpecs.length : 0;
+            if (currentCount < requestedCount) {
+                const specsToInsert = Array.from({ length: requestedCount - currentCount }, (_, i) => ({
+                    business_id: businessId,
+                    name: `Especialista ${currentCount + i + 1}`,
+                    role: 'General'
+                }));
+                await supabase.from('specialists').insert(specsToInsert).catch(e => console.warn(e.message));
+                await supabase.from('resources').insert(specsToInsert.map(s => ({
+                    business_id: s.business_id,
+                    name: s.name,
+                    type: 'service',
+                    active: true
+                }))).catch(e => console.warn(e.message));
+            }
+        } else {
+            const { data: existingCourts } = await supabase
+                .from('courts')
+                .select('*')
+                .eq('business_id', businessId);
+
+            const currentCount = existingCourts ? existingCourts.length : 0;
+            if (currentCount < requestedCount) {
+                const courtsToInsert = Array.from({ length: requestedCount - currentCount }, (_, i) => {
+                    let courtId;
+                    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+                        courtId = crypto.randomUUID();
+                    } else {
+                        courtId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                            return v.toString(16);
+                        });
+                    }
+                    return {
+                        id: courtId,
+                        business_id: businessId,
+                        name: `Cancha ${currentCount + i + 1}`,
+                        sport: 'General',
+                        price: price || 10000
+                    };
+                });
+
+                await supabase.from('courts').insert(courtsToInsert).catch(e => console.warn(e.message));
+                await supabase.from('resources').insert(courtsToInsert.map(c => ({
+                    id: c.id,
+                    business_id: c.business_id,
+                    name: c.name,
+                    type: 'court',
+                    sport: c.sport,
+                    base_price: c.price,
+                    active: true
+                }))).catch(e => console.warn(e.message));
+            }
+        }
     }
 
     async updateBusiness(businessId, businessData) {
@@ -2984,6 +3044,16 @@ class SupabaseService {
             }
         } catch (e) {
             console.warn('Could not sync business_subcategories junction table:', e);
+        }
+
+        // Sync resources/courts/specialists count if provided
+        const requestedCount = parseInt(businessData.resources_count || 0);
+        if (requestedCount > 0) {
+            try {
+                await this.syncBusinessResources(businessId, businessData.type, requestedCount, businessData.price_per_hour);
+            } catch (e) {
+                console.warn('Could not sync business resources:', e);
+            }
         }
 
         return data;

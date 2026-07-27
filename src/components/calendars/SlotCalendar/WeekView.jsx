@@ -140,7 +140,7 @@ export default function WeekView({
             <div style={{ width: '100%', overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--border)' }}>
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: `70px repeat(${displayDays.length * activeResources.length}, minmax(${activeResources.length > 1 ? '110px' : '1fr'}, 1fr))`,
+                    gridTemplateColumns: `70px repeat(${displayDays.length * activeResources.length}, minmax(${activeResources.length > 1 ? '110px' : '100px'}, 1fr))`,
                     gridAutoRows: `${config.gridRowHeight}px`,
                     minWidth: `${Math.max(800, 70 + displayDays.length * activeResources.length * 110)}px`,
                     width: '100%'
