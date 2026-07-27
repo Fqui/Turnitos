@@ -145,15 +145,17 @@ export default function WeekView({
                     minWidth: `${Math.max(800, 70 + displayDays.length * activeResources.length * 110)}px`,
                     width: '100%'
                 }}>
-                    {/* Empty corner */}
+                    {/* Empty corner (Top-Left) */}
                     <div style={{
                         position: 'sticky',
                         top: 0,
-                        zIndex: 20,
+                        left: 0,
+                        zIndex: 30,
                         background: 'var(--bg-card)',
-                        borderBottom: '2px solid var(--border)',
-                        borderRight: '1px solid var(--border)'
-                    }}></div>
+                        borderBottom: '1px solid var(--border)',
+                        borderRight: '1px solid var(--border)',
+                        height: activeResources.length > 1 ? '56px' : '64px'
+                    }} />
 
                     {/* Day Headers - cada día ocupa múltiples columnas (una por cancha) */}
                     {displayDays.map((day, dayIdx) => {
@@ -164,37 +166,38 @@ export default function WeekView({
                                 key={dayIdx}
                                 style={{
                                     gridColumn: `span ${activeResources.length}`,
-                                    padding: '10px 6px',
+                                    padding: '6px 4px',
                                     textAlign: 'center',
-                                    borderBottom: '2px solid var(--border)',
+                                    borderBottom: '1px solid var(--border)',
                                     borderRight: dayIdx < displayDays.length - 1 ? '1px solid var(--border)' : 'none',
                                     position: 'sticky',
                                     top: 0,
-                                    zIndex: 20,
+                                    zIndex: 25,
                                     background: isToday ? 'rgba(0, 230, 118, 0.05)' : 'var(--bg-card)',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
-                                    justifyContent: 'center'
+                                    justifyContent: 'center',
+                                    height: activeResources.length > 1 ? '56px' : '64px'
                                 }}
                             >
                                 <div style={{
-                                    fontSize: '12px',
+                                    fontSize: '11px',
                                     fontWeight: '600',
                                     color: isToday ? 'var(--primary-paddle)' : 'var(--text-secondary)',
-                                    marginBottom: '2px',
+                                    marginBottom: '1px',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.5px'
                                 }}>
                                     {day.toLocaleDateString('es-ES', { weekday: 'short' })}
                                 </div>
                                 <div style={{
-                                    fontSize: '20px',
+                                    fontSize: '16px',
                                     fontWeight: '800',
                                     color: isToday ? 'var(--primary-paddle)' : 'var(--text-primary)',
-                                    width: '34px',
-                                    height: '34px',
-                                    lineHeight: '34px',
+                                    width: '28px',
+                                    height: '28px',
+                                    lineHeight: '28px',
                                     borderRadius: '50%',
                                     background: isToday ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
                                     display: 'flex',
@@ -212,37 +215,44 @@ export default function WeekView({
                         <>
                             <div style={{
                                 position: 'sticky',
-                                top: 0,
-                                zIndex: 19,
+                                top: '56px',
+                                left: 0,
+                                zIndex: 30,
                                 background: 'var(--bg-card)',
-                                borderBottom: '1px solid var(--border)',
-                                borderRight: '1px solid var(--border)'
+                                borderBottom: '2px solid var(--border)',
+                                borderRight: '1px solid var(--border)',
+                                height: '28px'
                             }} />
                             {displayDays.map((day, dayIdx) => (
-                                activeResources.map((res, resIdx) => (
-                                    <div
-                                        key={`sub-header-${dayIdx}-${resIdx}`}
-                                        style={{
-                                            position: 'sticky',
-                                            top: 0,
-                                            zIndex: 19,
-                                            background: 'var(--bg-card)',
-                                            borderBottom: '1px solid var(--border)',
-                                            borderRight: (resIdx === activeResources.length - 1 && dayIdx < displayDays.length - 1) ? '1px solid var(--border)' : '0.5px solid rgba(0,0,0,0.05)',
-                                            padding: '4px 2px',
-                                            textAlign: 'center',
-                                            fontSize: '11px',
-                                            fontWeight: '700',
-                                            color: 'var(--primary-paddle)',
-                                            whiteSpace: 'nowrap',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis'
-                                        }}
-                                        title={res.name}
-                                    >
-                                        {res.name}
-                                    </div>
-                                ))
+                                activeResources.map((res, resIdx) => {
+                                    const shortName = (res.name || '').split('(')[0].trim() || res.name;
+                                    return (
+                                        <div
+                                            key={`sub-header-${dayIdx}-${resIdx}`}
+                                            style={{
+                                                position: 'sticky',
+                                                top: '56px',
+                                                zIndex: 24,
+                                                background: 'var(--bg-card)',
+                                                borderBottom: '2px solid var(--border)',
+                                                borderRight: (resIdx === activeResources.length - 1 && dayIdx < displayDays.length - 1) ? '1px solid var(--border)' : '0.5px solid rgba(0,0,0,0.05)',
+                                                padding: '4px 2px',
+                                                textAlign: 'center',
+                                                fontSize: '11px',
+                                                fontWeight: '700',
+                                                color: 'var(--primary-paddle)',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                height: '28px',
+                                                lineHeight: '20px'
+                                            }}
+                                            title={res.name}
+                                        >
+                                            {shortName}
+                                        </div>
+                                    );
+                                })
                             ))}
                         </>
                     )}
