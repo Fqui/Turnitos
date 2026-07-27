@@ -160,24 +160,24 @@ export default function WeekView({
             <div style={{ width: '100%', overflowX: 'auto', borderRadius: '14px', border: '1px solid var(--border)', boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}>
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: `70px repeat(${displayDays.length * activeResources.length}, minmax(${activeResources.length > 1 ? '120px' : '100px'}, 1fr))`,
+                    gridTemplateColumns: `70px repeat(${displayDays.length}, 1fr)`,
                     gridAutoRows: `${config.gridRowHeight}px`,
-                    minWidth: `${Math.max(800, 70 + displayDays.length * activeResources.length * 120)}px`,
+                    minWidth: '750px',
                     width: '100%'
                 }}>
-                    {/* Empty corner (Top-Left) */}
+                    {/* Empty corner (Top-Left 70px x 56px) */}
                     <div style={{
                         position: 'sticky',
                         top: 0,
                         left: 0,
                         zIndex: 30,
                         background: 'var(--bg-card)',
-                        borderBottom: '1px solid var(--border)',
+                        borderBottom: '2px solid var(--border)',
                         borderRight: '1px solid var(--border)',
-                        height: activeResources.length > 1 ? '56px' : '64px'
+                        height: '56px'
                     }} />
 
-                    {/* Day Headers - cada día ocupa múltiples columnas (una por cancha) */}
+                    {/* Day Headers - 7 columnas exactas (LUN a DOM) */}
                     {displayDays.map((day, dayIdx) => {
                         const isToday = formatDateKey(day) === formatDateKey(new Date());
 
@@ -185,11 +185,10 @@ export default function WeekView({
                             <div
                                 key={dayIdx}
                                 style={{
-                                    gridColumn: `span ${activeResources.length}`,
                                     padding: '8px 4px',
                                     textAlign: 'center',
-                                    borderBottom: '1px solid var(--border)',
-                                    borderRight: dayIdx < displayDays.length - 1 ? '2px solid var(--border)' : 'none',
+                                    borderBottom: '2px solid var(--border)',
+                                    borderRight: dayIdx < displayDays.length - 1 ? '1px solid var(--border)' : 'none',
                                     position: 'sticky',
                                     top: 0,
                                     zIndex: 25,
@@ -198,7 +197,7 @@ export default function WeekView({
                                     flexDirection: 'column',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    height: activeResources.length > 1 ? '56px' : '64px'
+                                    height: '56px'
                                 }}
                             >
                                 <div style={{
@@ -231,69 +230,6 @@ export default function WeekView({
                         );
                     })}
 
-                    {/* Sub-header row showing court names if multiple resources */}
-                    {activeResources.length > 1 && (
-                        <>
-                            <div style={{
-                                position: 'sticky',
-                                top: '56px',
-                                left: 0,
-                                zIndex: 30,
-                                background: 'var(--bg-card)',
-                                borderBottom: '2px solid var(--border)',
-                                borderRight: '1px solid var(--border)',
-                                height: '34px'
-                            }} />
-                            {displayDays.map((day, dayIdx) => (
-                                activeResources.map((res, resIdx) => {
-                                    const resourceIndexInFull = resources.findIndex(r => String(r.id) === String(res.id));
-                                    const colorInfo = getResourceColor(resourceIndexInFull >= 0 ? resourceIndexInFull : resIdx);
-                                    const shortName = (res.name || '').split('(')[0].trim() || res.name;
-
-                                    return (
-                                        <div
-                                            key={`sub-header-${dayIdx}-${resIdx}`}
-                                            style={{
-                                                position: 'sticky',
-                                                top: '56px',
-                                                zIndex: 24,
-                                                background: 'var(--bg-card)',
-                                                borderBottom: '2px solid var(--border)',
-                                                borderRight: (resIdx === activeResources.length - 1 && dayIdx < displayDays.length - 1) ? '2px solid var(--border)' : '1px solid rgba(255,255,255,0.06)',
-                                                padding: '4px 6px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                height: '34px'
-                                            }}
-                                            title={res.name}
-                                        >
-                                            <span style={{
-                                                padding: '2px 8px',
-                                                borderRadius: '6px',
-                                                background: colorInfo.bg,
-                                                color: colorInfo.text,
-                                                border: `1px solid ${colorInfo.border}`,
-                                                fontSize: '11px',
-                                                fontWeight: '700',
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                maxWidth: '100%',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '4px'
-                                            }}>
-                                                <span>⚽</span>
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortName}</span>
-                                            </span>
-                                        </div>
-                                    );
-                                })
-                            ))}
-                        </>
-                    )}
-
                     {/* Time Slots */}
                     {timeSlots.map((time) => (
                         <React.Fragment key={time}>
@@ -317,126 +253,117 @@ export default function WeekView({
                                 {time}
                             </div>
 
-                            {/* Día × Cancha Columns */}
-                            {displayDays.map((day, dayIdx) => (
-                                activeResources.map((resource, resourceIdx) => {
-                                    // Filter bookings for this specific resource
-                                    const slotBookings = getBookingsForSlot(
-                                        bookings.filter(b => {
-                                            if (b.court_id === resource.id) return true;
-                                            if (b.specialist_id === resource.id) return true;
-                                            if (b.resource_id === resource.id) return true;
-                                            return false;
-                                        }),
-                                        day,
-                                        time,
-                                        config.slotSize
-                                    );
+                            {/* 7 Day Columns */}
+                            {displayDays.map((day, dayIdx) => {
+                                // Filter bookings for this day + selected active resources
+                                const dayBookings = bookings.filter(b => {
+                                    if (selectedResourceId !== 'all') {
+                                        const matchesResource = String(b.court_id) === String(selectedResourceId) ||
+                                            String(b.specialist_id) === String(selectedResourceId) ||
+                                            String(b.resource_id) === String(selectedResourceId);
+                                        if (!matchesResource) return false;
+                                    }
+                                    return true;
+                                });
 
-                                    const isToday = formatDateKey(day) === formatDateKey(new Date());
-                                    const isLastResourceOfDay = resourceIdx === activeResources.length - 1;
-                                    const isLastDay = dayIdx === displayDays.length - 1;
+                                const slotBookings = getBookingsForSlot(
+                                    dayBookings,
+                                    day,
+                                    time,
+                                    config.slotSize
+                                );
 
-                            return (
-                                <div
-                                    key={`${day}-${resource.id}-${time}`}
-                                    style={{
-                                        borderBottom: '1px solid var(--border)',
-                                        borderRight: (isLastResourceOfDay && !isLastDay) ? '1px solid var(--border)' : '0.5px solid rgba(0,0,0,0.05)',
-                                        minHeight: `${config.gridRowHeight}px`,
-                                        padding: '4px',
-                                        position: 'relative',
-                                        background: isToday ? 'rgba(0, 230, 118, 0.02)' : 'transparent',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '4px'
-                                    }}
-                                >
-                                    {slotBookings.length > 0 ? (
-                                        slotBookings.map((booking, idx) => {
-                                            // Solo renderizar en el primer slot
-                                            if (!isFirstSlotOfBooking(booking, time)) {
-                                                return null;
-                                            }
+                                const isToday = formatDateKey(day) === formatDateKey(new Date());
+                                const isLastDay = dayIdx === displayDays.length - 1;
 
-                                            const slotSpan = calculateSlotSpan(booking);
-                                            const cardHeight = (config.gridRowHeight * slotSpan) - 8;
-
-                                            return (
-                                                <div
-                                                    key={idx}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '4px',
-                                                        left: '4px',
-                                                        right: '4px',
-                                                        height: `${cardHeight}px`,
-                                                        zIndex: 2
-                                                    }}
-                                                >
-                                                    <BookingCard
-                                                        booking={booking}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (isRescheduling) return;
-                                                            if (booking.status === 'pending' || booking.status === 'deposit_paid') {
-                                                                const rect = e.currentTarget.getBoundingClientRect();
-                                                                setShowBookingMenu({
-                                                                    booking,
-                                                                    x: rect.left + rect.width / 2,
-                                                                    y: rect.top
-                                                                });
-                                                            } else {
-                                                                onBookingClick && onBookingClick(booking);
-                                                            }
-                                                        }}
-                                                        slotSize={config.slotSize}
-                                                        showDuration={false}
-                                                        showTimeRange={false}
-                                                        isRescheduling={isRescheduling}
-                                                        isSelected={reschedulingBooking?.id === booking.id}
-                                                    />
-                                                </div>
-                                            );
-                                        })
-                                    ) : (
-                                        <div
-                                            onClick={(e) => {
-                                                if (isRescheduling) {
-                                                    onMoveBooking && onMoveBooking(
-                                                        reschedulingBooking.id,
-                                                        formatDateKey(day),
-                                                        time,
-                                                        resource.id
-                                                    );
-                                                } else {
-                                                    handleSlotClick(e, day, time, resource);
+                                return (
+                                    <div
+                                        key={`${day}-${time}`}
+                                        style={{
+                                            borderBottom: '1px solid var(--border)',
+                                            borderRight: !isLastDay ? '1px solid var(--border)' : 'none',
+                                            minHeight: `${config.gridRowHeight}px`,
+                                            padding: '4px',
+                                            position: 'relative',
+                                            background: isToday ? 'rgba(0, 230, 118, 0.02)' : 'transparent',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '4px'
+                                        }}
+                                    >
+                                        {slotBookings.length > 0 ? (
+                                            slotBookings.map((booking, idx) => {
+                                                if (!isFirstSlotOfBooking(booking, time)) {
+                                                    return null;
                                                 }
-                                            }}
-                                            style={{
-                                                flex: 1,
-                                                minHeight: '100%',
-                                                borderRadius: '8px',
-                                                border: '1.5px dashed rgba(0,0,0,0.08)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                cursor: 'pointer',
-                                                color: 'rgba(0,0,0,0.15)',
-                                                fontSize: '20px',
-                                                fontWeight: '300',
-                                                transition: 'all 0.2s',
-                                                background: 'transparent'
-                                            }}
-                                            className="slot-add-area"
-                                        >
-                                            +
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })
-                    ))}
+
+                                                const slotSpan = calculateSlotSpan(booking);
+                                                const cardHeight = (config.gridRowHeight * slotSpan) - 8;
+
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        style={{
+                                                            position: 'relative',
+                                                            minHeight: `${cardHeight}px`,
+                                                            zIndex: 2,
+                                                            marginBottom: '2px'
+                                                        }}
+                                                    >
+                                                        <BookingCard
+                                                            booking={booking}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (isRescheduling) return;
+                                                                if (booking.status === 'pending' || booking.status === 'deposit_paid') {
+                                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                                    setShowBookingMenu({
+                                                                        booking,
+                                                                        x: rect.left + rect.width / 2,
+                                                                        y: rect.top
+                                                                    });
+                                                                } else {
+                                                                    onBookingClick && onBookingClick(booking);
+                                                                }
+                                                            }}
+                                                            slotSize={config.slotSize}
+                                                            showDuration={false}
+                                                            showTimeRange={false}
+                                                            isRescheduling={isRescheduling}
+                                                            isSelected={reschedulingBooking?.id === booking.id}
+                                                        />
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div
+                                                onClick={(e) => {
+                                                    const targetResource = selectedResourceId !== 'all'
+                                                        ? resources.find(r => String(r.id) === String(selectedResourceId)) || resources[0]
+                                                        : resources[0];
+
+                                                    if (isRescheduling) {
+                                                        onMoveBooking && onMoveBooking(
+                                                            reschedulingBooking.id,
+                                                            formatDateKey(day),
+                                                            time,
+                                                            targetResource?.id
+                                                        );
+                                                    } else {
+                                                        handleSlotClick(e, day, time, targetResource);
+                                                    }
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    minHeight: `${config.gridRowHeight - 8}px`,
+                                                    cursor: 'pointer'
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                );
+                            })}
                 </React.Fragment>
             ))}
             </div>
