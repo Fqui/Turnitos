@@ -80,7 +80,7 @@ const SuperAdminDashboard = () => {
         document.body.removeChild(link);
     };
 
-    const inactiveOrTrialBusinesses = (businesses || []).filter(b => b.subscription_status === 'trial' || b.subscription_status === 'inactive');
+    const inactiveOrTrialBusinesses = (businesses || []).filter(b => b.subscription_status === 'trial' || b.subscription_status === 'inactive' || (!b.sellers && !b.seller_id));
     const alertCount = inactiveOrTrialBusinesses.length;
 
     useEffect(() => {
@@ -1094,7 +1094,11 @@ const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV, fi
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
                 {displayedBusinesses.map(business => {
-                    const needsAttention = business.subscription_status === 'trial' || business.subscription_status === 'inactive';
+                    const issues = [];
+                    if (business.subscription_status === 'trial') issues.push('Suscripción en Prueba');
+                    if (business.subscription_status === 'inactive') issues.push('Suscripción Inactiva');
+                    if (!business.sellers && !business.seller_id) issues.push('Sin Vendedor Asignado');
+                    const needsAttention = issues.length > 0;
 
                     return (
                         <div key={business.id} style={{
@@ -1116,9 +1120,13 @@ const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV, fi
                                     borderRadius: '10px',
                                     fontSize: '10px',
                                     fontWeight: '900',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                                    maxWidth: 'calc(100% - 24px)',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
                                 }}>
-                                    ⚠️ Requiere Asistencia
+                                    ⚠️ {issues.join(' · ')}
                                 </div>
                             )}
 
