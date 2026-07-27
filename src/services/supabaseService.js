@@ -581,6 +581,10 @@ class SupabaseService {
             }
         }
 
+        // 5. Ensure requested count of courts/specialists and subscription spaces_included are synced
+        const countToSync = businessData.resources_count || businessData.capacity || 2;
+        await this.syncBusinessResources(business.id, businessData.type || 'sport', countToSync);
+
         return business;
     }
 

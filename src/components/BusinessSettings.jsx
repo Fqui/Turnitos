@@ -323,7 +323,18 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     try {
                         const currentSub = await serviceAdapter.getSubscription(business.id);
 
-                        if (currentSub && resourceCount > currentSub.spaces_included) {
+                        const allowedSpaces = Math.max(
+                            currentSub?.spaces_included || 0,
+                            business?.capacity || 0,
+                            business?.resources_count || 0,
+                            business?.courts?.length || 0,
+                            business?.specialists?.length || 0,
+                            formData?.courts?.length || 0,
+                            formData?.specialists?.length || 0,
+                            2
+                        );
+
+                        if (currentSub && resourceCount > allowedSpaces) {
                             // Calculate suggested plan
                             const plans = await serviceAdapter.getSubscriptionPlans(businessType);
                             const nextPlan = plans.find(p => p.spaces >= resourceCount);
