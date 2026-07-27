@@ -104,36 +104,35 @@ export function getBookingColor(status, isDark = false) {
 export function getCalendarType(business) {
     if (!business) return 'futbol'; // Default
 
-    // Alquileres usan calendario de períodos
-    if (business.type === 'alquiler' || business.type === 'venue') {
-        return 'alquiler';
-    }
+    const categoryName = (business.categories?.name || business.category || '').toLowerCase();
+    const subcatName = (
+        business.subcategories?.[0]?.name || 
+        business.subcategories?.[0]?.slug || 
+        business.subcategory || 
+        ''
+    ).toLowerCase();
+    const bType = (business.type || '').toLowerCase();
 
-    // Servicios usan calendario de slots
-    if (business.type === 'service') {
+    // Check if service
+    if (bType === 'service' || categoryName.includes('belleza') || categoryName.includes('salud') || categoryName.includes('mascota')) {
         return 'service';
     }
 
-    // Para deportes, detectar si es fútbol o pádel
-    if (business.type === 'sport') {
-        const courts = business.courts || [];
-        const hasFutbol = courts.some(c => c.sport === 'futbol' || c.sport === 'football');
-        const hasPadel = courts.some(c => c.sport === 'padel' || c.sport === 'paddle');
-
-        // Si tiene ambos, es mixto
-        if (hasFutbol && hasPadel) {
-            return 'mixed';
-        }
-
-        // Si solo tiene uno
-        if (hasPadel) return 'padel';
-        if (hasFutbol) return 'futbol';
-
-        // Default a pádel si no se puede determinar
-        return 'padel';
+    // Check if rental
+    if (bType === 'alquiler' || bType === 'venue' || categoryName.includes('alquiler')) {
+        return 'alquiler';
     }
 
-    return 'futbol'; // Default
+    // Sport / Courts handling
+    const courts = business.courts || [];
+    const hasFutbol = courts.some(c => c.sport === 'futbol' || c.sport === 'football') || subcatName.includes('futbol');
+    const hasPadel = courts.some(c => c.sport === 'padel' || c.sport === 'paddle') || subcatName.includes('padel');
+
+    if (hasFutbol && hasPadel) return 'mixed';
+    if (hasPadel) return 'padel';
+    if (hasFutbol) return 'futbol';
+
+    return 'futbol'; // Default to futbol for sports
 }
 
 /**
@@ -154,39 +153,44 @@ export function getSlotConfig(type) {
 export function getResourcesByType(business, type) {
     if (!business) return [];
 
+    const expectedCount = Math.max(
+        business.resources_count || 0,
+        business.capacity || 0,
+        business.courts?.length || 0,
+        business.specialists?.length || 0,
+        2
+    );
+
     if (type === 'service') {
-        if (business.specialists && business.specialists.length > 0) {
-            return business.specialists;
+        let specs = (business.specialists && business.specialists.length > 0)
+            ? business.specialists
+            : (business.resources && business.resources.length > 0 ? business.resources : []);
+
+        if (specs.length < expectedCount) {
+            specs = Array.from({ length: expectedCount }, (_, i) => {
+                return specs[i] || { id: `specialist-${i + 1}`, name: `Especialista ${i + 1}` };
+            });
         }
-        if (business.resources && business.resources.length > 0) {
-            return business.resources;
-        }
-        const count = business.resources_count || business.capacity || 1;
-        return Array.from({ length: count }, (_, i) => ({
-            id: `specialist-${i + 1}`,
-            name: `Especialista ${i + 1}`
-        }));
+        return specs;
     }
 
     let courts = (business.courts && business.courts.length > 0)
         ? business.courts
         : (business.resources && business.resources.length > 0 ? business.resources : []);
 
-    if (courts.length === 0) {
-        const count = business.resources_count || business.capacity || 2;
-        return Array.from({ length: count }, (_, i) => ({
-            id: `court-${i + 1}`,
-            name: `Cancha ${i + 1}`
-        }));
+    if (courts.length < expectedCount) {
+        courts = Array.from({ length: expectedCount }, (_, i) => {
+            return courts[i] || { id: `court-${i + 1}`, name: `Cancha ${i + 1}` };
+        });
     }
 
     if (type === 'futbol') {
-        const futbolCourts = courts.filter(c => c.sport === 'futbol' || c.sport === 'football');
+        const futbolCourts = courts.filter(c => !c.sport || c.sport === 'General' || c.sport === 'futbol' || c.sport === 'football');
         return futbolCourts.length > 0 ? futbolCourts : courts;
     }
 
     if (type === 'padel') {
-        const padelCourts = courts.filter(c => c.sport === 'padel' || c.sport === 'paddle');
+        const padelCourts = courts.filter(c => !c.sport || c.sport === 'General' || c.sport === 'padel' || c.sport === 'paddle');
         return padelCourts.length > 0 ? padelCourts : courts;
     }
 

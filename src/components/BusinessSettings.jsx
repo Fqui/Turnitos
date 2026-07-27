@@ -393,25 +393,28 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         }
     };
 
+    const categoryName = (formData.categories?.name || formData.category || business.categories?.name || '').toLowerCase();
+    const subcatName = (formData.subcategories?.[0]?.name || formData.subcategories?.[0]?.slug || '').toLowerCase();
+    const bType = (formData.type || business.type || '').toLowerCase();
+
+    const isSport = bType === 'sport' || categoryName.includes('deporte') || subcatName.includes('futbol') || subcatName.includes('padel') || (formData.courts?.length > 0);
+    const isServiceBusiness = bType === 'service' || categoryName.includes('belleza') || categoryName.includes('salud') || (formData.specialists?.length > 0);
+    const isRentalBusiness = (bType === 'venue' || bType === 'alquiler' || categoryName.includes('alquiler')) && !isSport && !isServiceBusiness;
+
     const getResourceLabel = () => {
-        const type = formData.type || business.type;
-        if (type === 'sport') return 'Canchas / Espacios';
+        if (isSport) return 'Canchas / Espacios';
         return 'Profesionales / Staff';
     };
-
-    const isServiceBusiness = (formData.type || business.type) === 'service';
-    const isRentalBusiness = (formData.type || business.type) === 'venue' || (formData.type || business.type) === 'alquiler';
 
     const tabs = [
         { id: 'general', label: 'General', icon: '🏢' },
         { id: 'design', label: 'Diseño', icon: '🎨' },
         { id: 'subscription', label: 'Suscripción', icon: '💳' },
-        ...(!isRentalBusiness ? [{ id: 'resources', label: getResourceLabel(), icon: '👥' }] : []),
+        ...(!isRentalBusiness || isSport ? [{ id: 'resources', label: getResourceLabel(), icon: '👥' }] : []),
         ...(isServiceBusiness ? [{ id: 'services', label: 'Servicios', icon: '💼' }] : []),
         ...(isRentalBusiness ? [{ id: 'rental', label: 'Alquiler', icon: '🔑' }] : []),
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
         { id: 'policies_and_payments', label: 'Políticas y Pagos', icon: '📜' },
-
         { id: 'special_days', label: 'Días Especiales', icon: '📅' },
         { id: 'gallery', label: 'Galería', icon: '📸' }
     ];
@@ -1079,10 +1082,35 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 );
 
             case 'resources':
-                const isSport = (formData.type || business.type) === 'sport' || (formData.type || business.type) === 'venue';
-                const resources = isSport ? (formData.courts || []) : (formData.specialists || []);
-                const resourceLabel = isSport ? 'Cancha' : 'Profesional';
-                const resourceKey = isSport ? 'courts' : 'specialists';
+                const categoryNameRes = (formData.categories?.name || formData.category || business.categories?.name || '').toLowerCase();
+                const subcatNameRes = (formData.subcategories?.[0]?.name || formData.subcategories?.[0]?.slug || '').toLowerCase();
+                const bTypeRes = (formData.type || business.type || '').toLowerCase();
+
+                const isSportRes = bTypeRes === 'sport' || categoryNameRes.includes('deporte') || subcatNameRes.includes('futbol') || subcatNameRes.includes('padel') || (formData.courts?.length > 0);
+                const resourceLabel = isSportRes ? 'Cancha' : 'Profesional';
+                const resourceKey = isSportRes ? 'courts' : 'specialists';
+
+                const expectedCount = Math.max(
+                    formData.resources_count || 0,
+                    formData.capacity_limit || 0,
+                    formData.capacity || 0,
+                    subscription?.spaces_included || 0,
+                    formData.courts?.length || 0,
+                    formData.specialists?.length || 0,
+                    2
+                );
+
+                let rawResources = isSportRes ? (formData.courts || []) : (formData.specialists || []);
+                if (rawResources.length < expectedCount) {
+                    rawResources = Array.from({ length: expectedCount }, (_, i) => {
+                        return rawResources[i] || {
+                            id: `temp-${resourceKey}-${i + 1}`,
+                            name: `${resourceLabel} ${i + 1}`,
+                            active: true
+                        };
+                    });
+                }
+                const resources = rawResources;
 
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
