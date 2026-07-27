@@ -1148,6 +1148,11 @@ const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV, fi
                             <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <span>📍</span> {business.location}
                             </div>
+                            {business.email && (
+                                <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span>📧</span> <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#94a3b8' }}>{business.email}</span>
+                                </div>
+                            )}
                             <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <span>👤</span> {business.sellers ? `${business.sellers.first_name} ${business.sellers.last_name}` : 'Sin vendedor'}
                             </div>
