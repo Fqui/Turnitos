@@ -596,7 +596,8 @@ class SupabaseService {
             const { data: existingSpecs } = await supabase
                 .from('specialists')
                 .select('*')
-                .eq('business_id', businessId);
+                .eq('business_id', businessId)
+                .order('created_at', { ascending: true });
 
             const currentCount = existingSpecs ? existingSpecs.length : 0;
             if (currentCount < requestedCount) {
@@ -612,12 +613,21 @@ class SupabaseService {
                     type: 'service',
                     active: true
                 }))).catch(e => console.warn(e.message));
+            } else if (currentCount > requestedCount) {
+                const specsToRemove = existingSpecs.slice(requestedCount);
+                const idsToRemove = specsToRemove.map(s => s.id);
+                if (idsToRemove.length > 0) {
+                    await supabase.from('service_specialists').delete().in('specialist_id', idsToRemove).catch(() => {});
+                    await supabase.from('specialists').delete().in('id', idsToRemove).catch(() => {});
+                    await supabase.from('resources').delete().in('id', idsToRemove).catch(() => {});
+                }
             }
         } else {
             const { data: existingCourts } = await supabase
                 .from('courts')
                 .select('*')
-                .eq('business_id', businessId);
+                .eq('business_id', businessId)
+                .order('name', { ascending: true });
 
             const currentCount = existingCourts ? existingCourts.length : 0;
             if (currentCount < requestedCount) {
@@ -650,10 +660,17 @@ class SupabaseService {
                     base_price: c.price,
                     active: true
                 }))).catch(e => console.warn(e.message));
+            } else if (currentCount > requestedCount) {
+                const courtsToRemove = existingCourts.slice(requestedCount);
+                const idsToRemove = courtsToRemove.map(c => c.id);
+                if (idsToRemove.length > 0) {
+                    await supabase.from('courts').delete().in('id', idsToRemove).catch(() => {});
+                    await supabase.from('resources').delete().in('id', idsToRemove).catch(() => {});
+                }
             }
         }
 
-        // Sync subscription spaces_included to match or exceed requestedCount
+        // Sync subscription spaces_included to match requestedCount exactly
         try {
             const { data: sub } = await supabase
                 .from('subscriptions')
@@ -661,7 +678,7 @@ class SupabaseService {
                 .eq('business_id', businessId)
                 .single();
 
-            if (sub && sub.spaces_included < requestedCount) {
+            if (sub) {
                 await supabase
                     .from('subscriptions')
                     .update({ spaces_included: requestedCount, updated_at: new Date().toISOString() })
