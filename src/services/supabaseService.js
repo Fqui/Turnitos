@@ -652,6 +652,24 @@ class SupabaseService {
                 }))).catch(e => console.warn(e.message));
             }
         }
+
+        // Sync subscription spaces_included to match or exceed requestedCount
+        try {
+            const { data: sub } = await supabase
+                .from('subscriptions')
+                .select('*')
+                .eq('business_id', businessId)
+                .single();
+
+            if (sub && sub.spaces_included < requestedCount) {
+                await supabase
+                    .from('subscriptions')
+                    .update({ spaces_included: requestedCount, updated_at: new Date().toISOString() })
+                    .eq('business_id', businessId);
+            }
+        } catch (e) {
+            // Subscription update notice
+        }
     }
 
     async updateBusiness(businessId, businessData) {

@@ -446,8 +446,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     };
 
     const getCurrentCapacity = () => {
-        // Use subscription spaces if available, otherwise fallback to business capacity_limit or default to 2
-        return subscription?.spaces_included || business.capacity_limit || 2;
+        const isSport = (formData.type || business.type) === 'sport' || (formData.type || business.type) === 'venue';
+        const activeCount = isSport ? (formData.courts?.length || 0) : (formData.specialists?.length || 0);
+        const subSpaces = subscription?.spaces_included || business.capacity_limit || 2;
+        return Math.max(subSpaces, activeCount, 2);
     };
 
     const handlePlanChange = async (newCapacity) => {
