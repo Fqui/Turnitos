@@ -1088,10 +1088,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     <div style={{ display: 'grid', gap: '24px' }}>
                         <div>
                             <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                                {isSport ? 'Gestionar Canchas' : 'Gestionar Profesionales'}
+                                {isSport ? 'Canchas Asignadas' : 'Profesionales Asignados'}
                             </h3>
                             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-                                Agrega o elimina {isSport ? 'canchas' : 'profesionales'} para definir tu capacidad máxima por horario.
+                                Podés personalizar los nombres y habilitar o deshabilitar cada espacio. La cantidad total de espacios es administrada por la plataforma (SuperAdmin).
                             </p>
 
                             <div style={{ display: 'grid', gap: '12px' }}>
@@ -1103,7 +1103,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         padding: '12px 16px',
                                         background: 'var(--bg-main)',
                                         borderRadius: '12px',
-                                        border: '1px solid var(--border)'
+                                        border: '1px solid var(--border)',
+                                        opacity: resource.active === false ? 0.7 : 1
                                     }}>
                                         {/* Specialist Photo Upload */}
                                         {!isSport && (
@@ -1184,7 +1185,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                 justifyContent: 'center',
                                                 fontSize: '16px'
                                             }}>
-                                                {isSport ? '🏟️' : '👤'}
+                                                🏟️
                                             </div>
                                         )}
                                         <div style={{ flex: 1, display: 'grid', gap: '8px' }}>
@@ -1196,7 +1197,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                     newResources[index] = { ...resource, name: e.target.value };
                                                     handleInputChange(resourceKey, newResources);
                                                 }}
-                                                placeholder="Nombre del profesional"
+                                                placeholder={`Nombre de ${resourceLabel.toLowerCase()}`}
                                                 style={{
                                                     ...inputStyle,
                                                     border: 'none',
@@ -1226,103 +1227,56 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                 />
                                             )}
                                         </div>
+
+                                        {/* State Toggle: Habilitar / Deshabilitar */}
                                         <button
-                                            onClick={async () => {
-                                                if (resources.length <= 1) {
-                                                    showToast(`Debe haber al menos un ${resourceLabel.toLowerCase()}`, 'warning');
-                                                    return;
-                                                }
-                                                const confirmed = await showConfirm(
-                                                    '¿Eliminar recurso?',
-                                                    `¿Estás seguro de que deseas eliminar "${resource.name}"?`,
-                                                    'Eliminar',
-                                                    'Cancelar'
-                                                );
-                                                if (confirmed) {
-                                                    const newResources = resources.filter((_, i) => i !== index);
-                                                    handleInputChange(resourceKey, newResources);
-                                                }
+                                            onClick={() => {
+                                                const newResources = [...resources];
+                                                const newActive = resource.active === false ? true : false;
+                                                newResources[index] = { ...resource, active: newActive };
+                                                handleInputChange(resourceKey, newResources);
+                                                showToast(`${resourceLabel} ${resource.name} ${newActive ? 'habilitado' : 'deshabilitado'}`, newActive ? 'success' : 'info');
                                             }}
-                                            disabled={resources.length <= 1}
                                             style={{
-                                                background: 'transparent',
-                                                border: 'none',
-                                                color: resources.length <= 1 ? '#9ca3af' : '#ef4444',
-                                                cursor: resources.length <= 1 ? 'not-allowed' : 'pointer',
-                                                padding: '8px',
+                                                padding: '6px 12px',
                                                 borderRadius: '8px',
+                                                border: 'none',
+                                                background: resource.active === false ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                                color: resource.active === false ? '#ef4444' : '#10b981',
+                                                fontWeight: '700',
+                                                fontSize: '12px',
+                                                cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                justifyContent: 'center',
-                                                opacity: resources.length <= 1 ? 0.5 : 1
+                                                gap: '4px',
+                                                whiteSpace: 'nowrap'
                                             }}
-                                            title={resources.length <= 1 ? `Debe haber al menos un ${resourceLabel.toLowerCase()}` : "Eliminar"}
+                                            title={resource.active === false ? "Haz clic para habilitar espacio" : "Haz clic para deshabilitar espacio temporalmente"}
                                         >
-                                            🗑️
+                                            {resource.active === false ? '🔴 Inactivo' : '🟢 Activo'}
                                         </button>
                                     </div>
                                 ))}
                             </div>
 
-                            <button
-                                onClick={async () => {
-                                    // Check capacity limit
-                                    const currentCapacity = getCurrentCapacity();
-                                    if (resources.length >= currentCapacity) {
-                                        const confirmed = await showConfirm(
-                                            'Límite de plan alcanzado',
-                                            `Has alcanzado el límite de tu plan (${currentCapacity} espacio${currentCapacity > 1 ? 's' : ''}).\n\nPara agregar más ${isSport ? 'canchas' : 'profesionales'}, actualiza tu plan en la pestaña "Suscripción".`,
-                                            'Ir a Suscripción',
-                                            'Cancelar'
-                                        );
-                                        if (confirmed) {
-                                            setActiveTab('subscription');
-                                        }
-                                        return;
-                                    }
-
-                                    // Generate a proper UUID v4 to satisfy database constraints
-                                    const generateUUID = () => {
-                                        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                                            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                                            return v.toString(16);
-                                        });
-                                    };
-
-                                    const newResource = {
-                                        id: generateUUID(),
-                                        name: `${resourceLabel} ${resources.length + 1}`,
-                                        type: isSport ? 'court' : 'specialist',
-                                        ...(isSport ? { sport: 'Fútbol', price: 0 } : { role: '', avatar_url: null })
-                                    };
-                                    const updatedResources = [...resources, newResource];
-                                    handleInputChange(resourceKey, updatedResources);
-                                }}
-                                style={{
-                                    marginTop: '16px',
-                                    padding: '12px',
-                                    width: '100%',
-                                    borderRadius: '12px',
-                                    border: '1px dashed var(--border)',
-                                    background: 'transparent',
-                                    color: 'var(--text-secondary)',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={e => {
-                                    e.currentTarget.style.background = 'rgba(0,0,0,0.02)';
-                                    e.currentTarget.style.borderColor = 'var(--text-primary)';
-                                    e.currentTarget.style.color = 'var(--text-primary)';
-                                }}
-                                onMouseLeave={e => {
-                                    e.currentTarget.style.background = 'transparent';
-                                    e.currentTarget.style.borderColor = 'var(--border)';
-                                    e.currentTarget.style.color = 'var(--text-secondary)';
-                                }}
-                            >
-                                + Agregar {resourceLabel}
-                            </button>
+                            {/* Informational banner explaining SuperAdmin quantity control */}
+                            <div style={{
+                                marginTop: '16px',
+                                padding: '14px 16px',
+                                background: 'rgba(99, 102, 241, 0.08)',
+                                border: '1px solid rgba(99, 102, 241, 0.2)',
+                                borderRadius: '12px',
+                                color: 'var(--text-secondary)',
+                                fontSize: '13px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                            }}>
+                                <span style={{ fontSize: '18px' }}>ℹ️</span>
+                                <span>
+                                    La cantidad total de {isSport ? 'canchas' : 'especialistas'} (<strong>{resources.length} espacio{resources.length !== 1 ? 's' : ''}</strong>) es administrada desde la plataforma SuperAdmin. Para sumar o reducir espacios, solicitá la modificación a soporte.
+                                </span>
+                            </div>
                         </div>
 
                         <button
@@ -1330,7 +1284,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             style={saveButtonStyle}
                             disabled={saving}
                         >
-                            {saving ? 'Guardando...' : `Guardar ${isSport ? 'Canchas' : 'Profesionales'}`}
+                            {saving ? 'Guardando...' : `Guardar Nombres de ${isSport ? 'Canchas' : 'Profesionales'}`}
                         </button>
                     </div>
                 );
