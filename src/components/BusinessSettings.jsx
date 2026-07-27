@@ -3655,42 +3655,48 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 </div>
             ) : (
                 // Desktop: Sidebar + Content
-                <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+                <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
                     {/* Desktop Sidebar */}
                     <div style={{
                         width: '240px',
+                        flexShrink: 0,
                         borderRight: '1px solid var(--border)',
-                        padding: '12px',
+                        padding: '16px 12px',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '4px',
-                        backgroundColor: 'rgba(0,0,0,0.01)'
+                        gap: '6px',
+                        backgroundColor: 'rgba(0,0,0,0.02)',
+                        overflowY: 'auto'
                     }}>
-                        {tabs.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    padding: '12px 16px',
-                                    borderRadius: '12px',
-                                    border: 'none',
-                                    background: activeTab === tab.id ? 'rgba(0,0,0,0.05)' : 'transparent',
-                                    color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                    cursor: 'pointer',
-                                    fontWeight: activeTab === tab.id ? '700' : '600',
-                                    fontSize: '14px',
-                                    textAlign: 'left',
-                                    whiteSpace: 'nowrap',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                <span style={{ fontSize: '18px' }}>{tab.icon}</span>
-                                {tab.label}
-                            </button>
-                        ))}
+                        {tabs.map(tab => {
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        padding: '12px 16px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        background: isActive ? 'var(--primary-paddle)' : 'transparent',
+                                        color: isActive ? '#000000' : 'var(--text-primary)',
+                                        cursor: 'pointer',
+                                        fontWeight: isActive ? '800' : '600',
+                                        fontSize: '14px',
+                                        textAlign: 'left',
+                                        whiteSpace: 'nowrap',
+                                        transition: 'all 0.15s ease',
+                                        boxShadow: isActive ? '0 4px 12px rgba(0,230,118,0.25)' : 'none'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '18px' }}>{tab.icon}</span>
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* Desktop Content Panel */}
