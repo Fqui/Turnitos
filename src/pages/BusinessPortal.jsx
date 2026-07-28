@@ -21,6 +21,7 @@ import BookingDetailsModal from '../components/business/BookingDetailsModal';
 import NewBookingModal from '../components/business/NewBookingModal';
 import BlockSlotModal from '../components/business/BlockSlotModal';
 import ChangePasswordModal from '../components/seller/ChangePasswordModal';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 export default function BusinessPortal() {
     const [businesses, setBusinesses] = useState([]);
@@ -126,6 +127,7 @@ export default function BusinessPortal() {
     });
 
     const [reschedulingBooking, setReschedulingBooking] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Calendar state (lifted for stats synchronization)
     const [calendarViewMode, setCalendarViewMode] = useState('day');
@@ -597,18 +599,22 @@ export default function BusinessPortal() {
     };
 
     const handleUnblockSlot = async (booking) => {
-        if (!window.confirm('¿Estás seguro de que deseas desbloquear este horario?')) {
-            return;
-        }
-
-        try {
-            await serviceAdapter.deleteBooking(booking.id);
-            // Refresh bookings
-            fetchBookings();
-        } catch (error) {
-            console.error('Error unblocking slot:', error);
-            alert('Error al desbloquear horario. Por favor intenta nuevamente.');
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: 'Desbloquear Horario',
+            message: '¿Estás seguro de que deseas desbloquear este horario?',
+            confirmText: 'Desbloquear',
+            isDanger: true,
+            onConfirm: async () => {
+                try {
+                    await serviceAdapter.deleteBooking(booking.id);
+                    fetchBookings();
+                } catch (error) {
+                    console.error('Error unblocking slot:', error);
+                    alert('Error al desbloquear horario. Por favor intenta nuevamente.');
+                }
+            }
+        });
     };
 
     const handleBookingClick = (booking) => {
@@ -1641,6 +1647,17 @@ export default function BusinessPortal() {
                     }}
                 />
             )}
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                isDanger={confirmModal.isDanger}
+                onConfirm={() => confirmModal.onConfirm && confirmModal.onConfirm()}
+                onClose={() => setConfirmModal({ isOpen: false })}
+            />
         </div >
     );
 }
