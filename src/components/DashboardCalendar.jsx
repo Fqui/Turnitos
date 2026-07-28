@@ -168,11 +168,11 @@ export default function DashboardCalendar({
         const slots = [];
         // console.log('🕐 Generating time slots:', { start: businessHours.start, end: businessHours.end });
 
-        for (let i = businessHours.start; i <= businessHours.end; i++) {
+        for (let i = businessHours.start; i < businessHours.end; i++) {
             // Convert hours > 24 to display format (25 → "01", 26 → "02", etc.)
             const displayHour = i % 24;
             slots.push(`${displayHour.toString().padStart(2, '0')}:00`);
-            if (i < businessHours.end) {
+            if (i < businessHours.end - 1) {
                 slots.push(`${displayHour.toString().padStart(2, '0')}:30`);
             }
         }
