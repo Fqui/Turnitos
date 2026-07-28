@@ -974,22 +974,14 @@ export default function DashboardCalendar({
                                     </div>
 
                                     {/* Summary text if space allowed */}
-                                    {!isMobile && (activeBookings.length > 0 || blockedSlots.length > 0) && (
+                                    {!isMobile && activeBookings.length > 0 && (
                                         <div style={{
                                             fontSize: '11px',
                                             color: 'var(--text-secondary)',
                                             marginTop: 'auto',
-                                            fontWeight: '500',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '2px'
+                                            fontWeight: '500'
                                         }}>
-                                            {activeBookings.length > 0 && (
-                                                <span>{activeBookings.length} {activeBookings.length === 1 ? 'reserva' : 'reservas'}</span>
-                                            )}
-                                            {blockedSlots.length > 0 && (
-                                                <span style={{ fontSize: '10px', color: '#9CA3AF' }}>🔒 {blockedSlots.length} bloqueado{blockedSlots.length > 1 ? 's' : ''}</span>
-                                            )}
+                                            {activeBookings.length} {activeBookings.length === 1 ? 'reserva' : 'reservas'}
                                         </div>
                                     )}
                                 </div>
