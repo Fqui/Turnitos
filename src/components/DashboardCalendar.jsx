@@ -886,15 +886,6 @@ export default function DashboardCalendar({
                                 return bDateKey === dateKey && b.status !== 'cancelled' && b.status !== 'blocked';
                             });
 
-                            const blockedSlots = bookings.filter(b => {
-                                let bDateKey = b.date;
-                                if (b.date.includes('/')) {
-                                    const [d, m, y] = b.date.split('/');
-                                    bDateKey = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-                                }
-                                return bDateKey === dateKey && b.status === 'blocked';
-                            });
-
                             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                             const isToday = dateKey === formatDateKey(new Date());
 
@@ -941,9 +932,9 @@ export default function DashboardCalendar({
                                         {day.getDate()}
                                     </div>
 
-                                    {/* Booking & Blocked Indicators */}
+                                    {/* Booking Indicators (Only Active Customer Bookings) */}
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', marginTop: '4px' }}>
-                                        {activeBookings.slice(0, 4).map((b, idx) => (
+                                        {activeBookings.slice(0, 5).map((b, idx) => (
                                             <div
                                                 key={`b-${idx}`}
                                                 style={{
@@ -955,25 +946,14 @@ export default function DashboardCalendar({
                                                 title="Reserva cliente"
                                             />
                                         ))}
-                                        {blockedSlots.length > 0 && (
-                                            <div
-                                                style={{
-                                                    width: '6px',
-                                                    height: '6px',
-                                                    borderRadius: '50%',
-                                                    backgroundColor: '#6B7280'
-                                                }}
-                                                title="Horario bloqueado"
-                                            />
-                                        )}
-                                        {activeBookings.length > 4 && (
+                                        {activeBookings.length > 5 && (
                                             <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                                                +{activeBookings.length - 4}
+                                                +{activeBookings.length - 5}
                                             </span>
                                         )}
                                     </div>
 
-                                    {/* Summary text if space allowed */}
+                                    {/* Summary text if space allowed (ONLY IF ACTIVE BOOKINGS > 0) */}
                                     {!isMobile && activeBookings.length > 0 && (
                                         <div style={{
                                             fontSize: '11px',
