@@ -702,7 +702,7 @@ export default function DashboardCalendar({
                                                 opacity: !isOpen ? 0.6 : 1,
                                                 cursor: !isOpen ? 'not-allowed' : 'default',
                                                 display: 'flex',
-                                                flexDirection: (viewMode === 'day' && !isMobile) ? 'row' : 'column', // Horizontal for Day (Desktop), Vertical otherwise
+                                                flexDirection: (viewMode === 'day' || (hasPadelCourts && padelCourts.length > 1)) ? 'row' : 'column',
                                                 gap: '4px'
                                             }}
                                             className="calendar-slot"
