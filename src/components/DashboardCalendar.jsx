@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { formatLongDate } from '../utils/dateUtils';
 import BookingListModal from './business/BookingListModal';
+import ConfirmModal from './common/ConfirmModal';
 
 export default function DashboardCalendar({
     bookings,
@@ -23,6 +24,7 @@ export default function DashboardCalendar({
     const [showSlotMenu, setShowSlotMenu] = useState(null); // { date, time, x, y }
     const [showBookingMenu, setShowBookingMenu] = useState(null); // { booking, x, y }
     const [slotSummaryData, setSlotSummaryData] = useState(null); // { bookings, title }
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Close menus when clicking outside
     useEffect(() => {
@@ -562,9 +564,14 @@ export default function DashboardCalendar({
                                 {/* Time Column */}
                                 <div
                                     onClick={() => {
-                                        if (window.confirm(`¿Deseas bloquear TODAS las canchas para las ${time} hs?`)) {
-                                            onBlockSlot && onBlockSlot(currentDate, time, null);
-                                        }
+                                        setConfirmModal({
+                                            isOpen: true,
+                                            title: 'Bloquear Horario Global',
+                                            message: `¿Deseas bloquear TODAS las canchas para las ${time} hs?`,
+                                            confirmText: 'Sí, bloquear todas',
+                                            isDanger: true,
+                                            onConfirm: () => onBlockSlot && onBlockSlot(currentDate, time, null)
+                                        });
                                     }}
                                     title="Click para bloquear todas las canchas a esta hora"
                                     style={{
@@ -1241,6 +1248,16 @@ export default function DashboardCalendar({
                     setSlotSummaryData(null);
                     onUnblockSlot && onUnblockSlot(booking);
                 }}
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                isDanger={confirmModal.isDanger}
+                onConfirm={() => confirmModal.onConfirm && confirmModal.onConfirm()}
+                onClose={() => setConfirmModal({ isOpen: false })}
             />
         </div >
     );
