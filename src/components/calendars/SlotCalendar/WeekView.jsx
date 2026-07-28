@@ -107,8 +107,7 @@ export default function WeekView({
                     gap: '10px',
                     marginBottom: '16px',
                     padding: '10px 16px',
-                    background: 'rgba(0, 0, 0, 0.25)',
-                    backdropFilter: 'blur(12px)',
+                    background: 'var(--bg-card)',
                     borderRadius: '14px',
                     border: '1px solid var(--border)',
                     flexWrap: 'wrap'
