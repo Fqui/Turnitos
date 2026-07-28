@@ -465,7 +465,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                 type="text"
                                                 value={firstName}
                                                 onChange={(e) => setFirstName(e.target.value)}
-                                                placeholder="Ej: Juan"
+                                                placeholder="Tu nombre"
                                                 style={{
                                                     width: '100%',
                                                     padding: '12px 16px',
@@ -486,7 +486,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                 type="text"
                                                 value={lastName}
                                                 onChange={(e) => setLastName(e.target.value)}
-                                                placeholder="Ej: Pérez"
+                                                placeholder="Tu apellido"
                                                 style={{
                                                     width: '100%',
                                                     padding: '12px 16px',
