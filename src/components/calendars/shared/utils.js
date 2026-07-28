@@ -57,7 +57,7 @@ export function generateTimeSlots(startHour, endHour, slotSize = 30) {
     const startMinutes = startHour * 60;
     const endMinutes = endHour * 60;
 
-    for (let minutes = startMinutes; minutes <= endMinutes; minutes += slotSize) {
+    for (let minutes = startMinutes; minutes < endMinutes; minutes += slotSize) {
         slots.push(minutesToTime(minutes));
     }
 
