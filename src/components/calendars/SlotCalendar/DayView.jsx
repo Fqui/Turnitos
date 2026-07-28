@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
 import { generateTimeSlots, formatDateKey, getBookingsForSlot } from '../shared/utils';
+import ConfirmModal from '../../common/ConfirmModal';
 
 export default function DayView({
     type,
@@ -22,6 +23,7 @@ export default function DayView({
 }) {
     const [showSlotMenu, setShowSlotMenu] = useState(null);
     const [showBookingMenu, setShowBookingMenu] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Generar slots de tiempo
     const timeSlots = generateTimeSlots(businessHours.start, businessHours.end, config.slotSize);
@@ -223,9 +225,14 @@ export default function DayView({
                         {/* Time Column */}
                         <div
                             onClick={() => {
-                                if (window.confirm(`¿Deseas bloquear TODAS las canchas/especialistas para las ${time} hs de hoy?`)) {
-                                    onBlockSlot && onBlockSlot(currentDate, time, null);
-                                }
+                                setConfirmModal({
+                                    isOpen: true,
+                                    title: 'Bloquear Horario Global',
+                                    message: `¿Deseas bloquear TODAS las canchas/especialistas para las ${time} hs de hoy?`,
+                                    confirmText: 'Sí, bloquear todos',
+                                    isDanger: true,
+                                    onConfirm: () => onBlockSlot && onBlockSlot(currentDate, time, null)
+                                });
                             }}
                             title="Click para bloquear todos los recursos a esta hora"
                             style={{
@@ -720,10 +727,19 @@ export default function DayView({
         .slot-add-area:hover {
           background-color: rgba(0, 230, 118, 0.04) !important;
           border-color: rgba(0, 230, 118, 0.3) !important;
-          border-style: solid !important;
-          color: rgba(0, 230, 118, 0.6) !important;
         }
       `}</style>
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                isDanger={confirmModal.isDanger}
+                onConfirm={() => confirmModal.onConfirm && confirmModal.onConfirm()}
+                onClose={() => setConfirmModal({ isOpen: false })}
+            />
         </div>
     );
 }
