@@ -513,9 +513,19 @@ class SupabaseService {
                     role: 'General'
                 }));
             } else {
+                // Determine default sport from subcategory/category
+                const subcatLower = (businessData.subcategory_slug || businessData.subcategory || '').toLowerCase();
+                const catLower = (businessData.category || '').toLowerCase();
+                let defaultSport = 'futbol';
+                if (subcatLower.includes('padel') || catLower.includes('padel')) {
+                    defaultSport = 'padel';
+                } else if (subcatLower.includes('futbol') || catLower.includes('futbol')) {
+                    defaultSport = 'futbol';
+                }
+
                 businessData.courts = Array.from({ length: requestedCount }, (_, i) => ({
                     name: `Cancha ${i + 1}`,
-                    sport: 'General',
+                    sport: defaultSport,
                     price: businessData.price_per_hour || 10000
                 }));
             }
