@@ -234,22 +234,34 @@ export default function WeekView({
                     {timeSlots.map((time) => (
                         <React.Fragment key={time}>
                             {/* Time Column */}
-                            <div style={{
-                                padding: '10px',
-                                textAlign: 'center',
-                                fontSize: '12px',
-                                fontWeight: '500',
-                                color: 'var(--text-secondary)',
-                                borderBottom: '1px solid var(--border)',
-                                borderRight: '1px solid var(--border)',
-                                position: 'sticky',
-                                left: 0,
-                                background: 'var(--bg-card)',
-                                zIndex: 10,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}>
+                            <div
+                                onClick={() => {
+                                    if (window.confirm(`¿Deseas bloquear TODAS las canchas para las ${time} hs en este día?`)) {
+                                        onBlockSlot && onBlockSlot(currentDate, time, null);
+                                    }
+                                }}
+                                title="Click para bloquear todas las canchas a esta hora"
+                                style={{
+                                    padding: '10px',
+                                    textAlign: 'center',
+                                    fontSize: '12px',
+                                    fontWeight: '500',
+                                    color: 'var(--text-secondary)',
+                                    borderBottom: '1px solid var(--border)',
+                                    borderRight: '1px solid var(--border)',
+                                    position: 'sticky',
+                                    left: 0,
+                                    background: 'var(--bg-card)',
+                                    zIndex: 10,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-main)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-card)'}
+                            >
                                 {time}
                             </div>
 
