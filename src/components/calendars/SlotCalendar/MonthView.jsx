@@ -51,7 +51,7 @@ export default function MonthView({
                         const [d, m, y] = b.date.split('/');
                         bDateKey = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                     }
-                    return bDateKey === dateKey && b.status !== 'cancelled';
+                    return bDateKey === dateKey && b.status !== 'cancelled' && b.status !== 'blocked';
                 });
 
                 const isCurrentMonth = isInCurrentMonth(day, currentDate);
