@@ -491,8 +491,20 @@ class SupabaseService {
             }
         }
 
-        // Auto-generate courts or specialists if count is specified or default to 2
-        const requestedCount = parseInt(businessData.resources_count || businessData.initial_resources_count || 2);
+        // Auto-generate courts or specialists based on subscription plan capacity or default to 2
+        let planSpaces = 2;
+        if (planId) {
+            try {
+                const { data: planData } = await supabase
+                    .from('subscription_plans')
+                    .select('spaces_included')
+                    .eq('id', planId)
+                    .single();
+                if (planData?.spaces_included) planSpaces = planData.spaces_included;
+            } catch (e) { /* ignore */ }
+        }
+
+        const requestedCount = parseInt(businessData.resources_count || businessData.initial_resources_count || planSpaces || 2);
         if (requestedCount > 0 && (!businessData.courts || businessData.courts.length === 0) && (!businessData.specialists || businessData.specialists.length === 0)) {
             const isService = businessData.type === 'service';
             if (isService) {
@@ -541,15 +553,19 @@ class SupabaseService {
             try {
                 await supabase.from('courts').insert(courtsToInsert);
                 // ALWAYS insert into resources table as well for table-agnostic queries
-                await supabase.from('resources').insert(courtsToInsert.map(c => ({
-                    id: c.id,
-                    business_id: c.business_id,
-                    name: c.name,
-                    type: 'court',
-                    sport: c.sport,
-                    base_price: c.price,
-                    active: true
-                }))).catch(e2 => console.warn('Resources insert notice:', e2.message));
+                try {
+                    await supabase.from('resources').insert(courtsToInsert.map(c => ({
+                        id: c.id,
+                        business_id: c.business_id,
+                        name: c.name,
+                        type: 'court',
+                        sport: c.sport,
+                        base_price: c.price,
+                        active: true
+                    })));
+                } catch (e2) {
+                    console.warn('Resources insert notice:', e2.message);
+                }
             } catch (errCourts) {
                 console.warn('Courts creation exception:', errCourts.message);
             }
@@ -570,12 +586,16 @@ class SupabaseService {
                 await supabase.from('specialists').insert(specialistsToInsert);
 
                 // ALWAYS insert into resources table as well
-                await supabase.from('resources').insert(specialistsToInsert.map(sp => ({
-                    business_id: sp.business_id,
-                    name: sp.name,
-                    type: 'service',
-                    active: true
-                }))).catch(e2 => console.warn('Resources insert notice:', e2.message));
+                try {
+                    await supabase.from('resources').insert(specialistsToInsert.map(sp => ({
+                        business_id: sp.business_id,
+                        name: sp.name,
+                        type: 'service',
+                        active: true
+                    })));
+                } catch (e2) {
+                    console.warn('Resources insert notice:', e2.message);
+                }
             } catch (errSpec) {
                 console.warn('Specialists creation exception:', errSpec.message);
             }
@@ -589,14 +609,12 @@ class SupabaseService {
     }
 
     /**
-     * Helper method to ensure requested count of courts/specialists and resources exist for a business
+     * Helper to sync default courts/specialists and resource records for a business to match capacity count.
      */
-    async syncBusinessResources(businessId, businessType, requestedCount, price = 10000) {
-        if (!businessId || !requestedCount || requestedCount <= 0) return;
+    async syncBusinessResources(businessId, businessType, requestedCount, price = null) {
+        if (!businessId || requestedCount <= 0) return;
 
-        const isService = businessType === 'service';
-
-        if (isService) {
+        if (businessType === 'service') {
             const { data: existingSpecs } = await supabase
                 .from('specialists')
                 .select('*')
@@ -610,20 +628,22 @@ class SupabaseService {
                     name: `Especialista ${currentCount + i + 1}`,
                     role: 'General'
                 }));
-                await supabase.from('specialists').insert(specsToInsert).catch(e => console.warn(e.message));
-                await supabase.from('resources').insert(specsToInsert.map(s => ({
-                    business_id: s.business_id,
-                    name: s.name,
-                    type: 'service',
-                    active: true
-                }))).catch(e => console.warn(e.message));
+                try { await supabase.from('specialists').insert(specsToInsert); } catch (e) { console.warn(e.message); }
+                try {
+                    await supabase.from('resources').insert(specsToInsert.map(s => ({
+                        business_id: s.business_id,
+                        name: s.name,
+                        type: 'service',
+                        active: true
+                    })));
+                } catch (e) { console.warn(e.message); }
             } else if (currentCount > requestedCount) {
                 const specsToRemove = existingSpecs.slice(requestedCount);
                 const idsToRemove = specsToRemove.map(s => s.id);
                 if (idsToRemove.length > 0) {
-                    await supabase.from('service_specialists').delete().in('specialist_id', idsToRemove).catch(() => {});
-                    await supabase.from('specialists').delete().in('id', idsToRemove).catch(() => {});
-                    await supabase.from('resources').delete().in('id', idsToRemove).catch(() => {});
+                    try { await supabase.from('service_specialists').delete().in('specialist_id', idsToRemove); } catch (e) {}
+                    try { await supabase.from('specialists').delete().in('id', idsToRemove); } catch (e) {}
+                    try { await supabase.from('resources').delete().in('id', idsToRemove); } catch (e) {}
                 }
             }
         } else {
@@ -654,22 +674,24 @@ class SupabaseService {
                     };
                 });
 
-                await supabase.from('courts').insert(courtsToInsert).catch(e => console.warn(e.message));
-                await supabase.from('resources').insert(courtsToInsert.map(c => ({
-                    id: c.id,
-                    business_id: c.business_id,
-                    name: c.name,
-                    type: 'court',
-                    sport: c.sport,
-                    base_price: c.price,
-                    active: true
-                }))).catch(e => console.warn(e.message));
+                try { await supabase.from('courts').insert(courtsToInsert); } catch (e) { console.warn(e.message); }
+                try {
+                    await supabase.from('resources').insert(courtsToInsert.map(c => ({
+                        id: c.id,
+                        business_id: c.business_id,
+                        name: c.name,
+                        type: 'court',
+                        sport: c.sport,
+                        base_price: c.price,
+                        active: true
+                    })));
+                } catch (e) { console.warn(e.message); }
             } else if (currentCount > requestedCount) {
                 const courtsToRemove = existingCourts.slice(requestedCount);
                 const idsToRemove = courtsToRemove.map(c => c.id);
                 if (idsToRemove.length > 0) {
-                    await supabase.from('courts').delete().in('id', idsToRemove).catch(() => {});
-                    await supabase.from('resources').delete().in('id', idsToRemove).catch(() => {});
+                    try { await supabase.from('courts').delete().in('id', idsToRemove); } catch (e) {}
+                    try { await supabase.from('resources').delete().in('id', idsToRemove); } catch (e) {}
                 }
             }
         }
@@ -700,10 +722,11 @@ class SupabaseService {
             .update({
                 name: businessData.name,
                 category: businessData.category,
-                type: businessData.type,
-                image: businessData.image || businessData.logo,
-                logo: businessData.logo,
-                banner_image: businessData.banner_image,
+                image: businessData.image || businessData.logo || businessData.logo_url,
+                logo: businessData.logo || businessData.logo_url,
+                logo_url: businessData.logo_url || businessData.logo,
+                banner_image: businessData.banner_image || businessData.banner_url,
+                banner_url: businessData.banner_url || businessData.banner_image,
                 location: businessData.location,
                 latitude: businessData.latitude,
                 longitude: businessData.longitude,
@@ -2181,20 +2204,25 @@ class SupabaseService {
      * @returns {Promise<Object>} Created business
      */
     async createBusinessBySeller(sellerId, businessData) {
-        // Fix for legacy default "1" or missing plan
-        let planId = businessData.subscription_plan_id;
-        if (!planId || planId === '1') {
-            try {
-                const { data: plans } = await supabase
-                    .from('subscription_plans')
-                    .select('id')
-                    .limit(1);
+        // Fix for legacy default "1" or missing plan: match plan by requested resources count and business type
+        const requestedCount = parseInt(businessData.resources_count || businessData.initial_resources_count || 1);
+        const bType = businessData.type || 'sport';
 
-                if (plans && plans.length > 0) {
-                    planId = plans[0].id;
+        let planId = businessData.subscription_plan_id;
+        if (!planId || planId === '1' || planId.length !== 36) {
+            try {
+                const { data: matchedPlans } = await supabase
+                    .from('subscription_plans')
+                    .select('id, spaces_included')
+                    .eq('business_type', bType)
+                    .order('spaces_included', { ascending: true });
+
+                if (matchedPlans && matchedPlans.length > 0) {
+                    const exactPlan = matchedPlans.find(p => p.spaces_included === requestedCount);
+                    planId = exactPlan ? exactPlan.id : (matchedPlans.find(p => p.spaces_included >= requestedCount)?.id || matchedPlans[matchedPlans.length - 1].id);
                 }
             } catch (err) {
-                // Error fetching default plan
+                console.warn('Error matching subscription plan:', err);
             }
         }
 
