@@ -152,8 +152,8 @@ export default function DayView({
         <div style={{
             display: 'grid',
             gridTemplateColumns: config.showResourceColumns
-                ? `70px repeat(${resources.length}, 1fr)`
-                : '70px 1fr',
+                ? `70px repeat(${resources.length}, minmax(0, 1fr))`
+                : '70px minmax(0, 1fr)',
             gridAutoRows: `${config.gridRowHeight}px`,
             minWidth: isMobile ? 'auto' : '900px',
             width: '100%'
