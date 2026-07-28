@@ -115,6 +115,7 @@ export default function WeekView({
                 }}>
                     <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         🏟️ Vista Semanal:
+                    </span>
                     {resources.map((r, idx) => {
                         const colorInfo = getResourceColor(idx);
                         const isSelected = String(selectedResourceId) === String(r.id);
