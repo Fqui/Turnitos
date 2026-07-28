@@ -29,6 +29,11 @@ function LocationPicker({ position, onLocationSelect }) {
 export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const { showToast, showConfirm, showAlert } = useNotification();
     const [activeTab, setActiveTab] = useState('general');
+
+    // Scroll to top of settings page whenever changing active settings tab
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [activeTab]);
     const [formData, setFormData] = useState(() => ({ ...business }));
     const [saving, setSaving] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -87,7 +92,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 return {
                     ...business,
                     // Initialize gallery_highlights if it doesn't exist
-                    gallery_highlights: business.gallery_highlights || []
+                    gallery_highlights: business?.gallery_highlights || []
                 };
             });
         }
@@ -316,10 +321,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
             // Validate subscription limits for specialists or courts
             if (dataToSave.specialists || dataToSave.courts) {
-                const businessType = formData.type || business.type;
+                const businessType = formData?.type || business?.type;
                 const resourceCount = dataToSave.specialists?.length || dataToSave.courts?.length || 0;
 
-                if (resourceCount > 0) {
+                if (resourceCount > 0 && business?.id) {
                     try {
                         const currentSub = await serviceAdapter.getSubscription(business.id);
 
@@ -404,12 +409,12 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         }
     };
 
-    const categoryName = (formData.categories?.name || formData.category || business.categories?.name || '').toLowerCase();
-    const subcatName = (formData.subcategories?.[0]?.name || formData.subcategories?.[0]?.slug || '').toLowerCase();
-    const bType = (formData.type || business.type || '').toLowerCase();
+    const categoryName = (formData?.categories?.name || formData?.category || business?.categories?.name || '').toLowerCase();
+    const subcatName = (formData?.subcategories?.[0]?.name || formData?.subcategories?.[0]?.slug || '').toLowerCase();
+    const bType = (formData?.type || business?.type || '').toLowerCase();
 
-    const isSport = bType === 'sport' || categoryName.includes('deporte') || subcatName.includes('futbol') || subcatName.includes('padel') || (formData.courts?.length > 0);
-    const isServiceBusiness = bType === 'service' || categoryName.includes('belleza') || categoryName.includes('salud') || (formData.specialists?.length > 0);
+    const isSport = bType === 'sport' || categoryName.includes('deporte') || subcatName.includes('futbol') || subcatName.includes('padel') || ((formData?.courts?.length || 0) > 0);
+    const isServiceBusiness = bType === 'service' || categoryName.includes('belleza') || categoryName.includes('salud') || ((formData?.specialists?.length || 0) > 0);
     const isRentalBusiness = (bType === 'venue' || bType === 'alquiler' || categoryName.includes('alquiler')) && !isSport && !isServiceBusiness;
 
     const getResourceLabel = () => {
@@ -420,8 +425,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const tabs = [
         { id: 'general', label: 'General', icon: '🏢' },
         { id: 'design', label: 'Diseño', icon: '🎨' },
-        { id: 'subscription', label: 'Suscripción', icon: '💳' },
-        ...(!isRentalBusiness || isSport ? [{ id: 'resources', label: getResourceLabel(), icon: '👥' }] : []),
+        { id: 'subscription', label: isSport ? 'Plan y Canchas' : (isServiceBusiness ? 'Plan y Especialistas' : 'Suscripción'), icon: '💳' },
         ...(isServiceBusiness ? [{ id: 'services', label: 'Servicios', icon: '💼' }] : []),
         ...(isRentalBusiness ? [{ id: 'rental', label: 'Alquiler', icon: '🔑' }] : []),
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
@@ -460,9 +464,9 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     };
 
     const getCurrentCapacity = () => {
-        const isSport = (formData.type || business.type) === 'sport' || (formData.type || business.type) === 'venue';
-        const activeCount = isSport ? (formData.courts?.length || 0) : (formData.specialists?.length || 0);
-        const subSpaces = subscription?.spaces_included || business.capacity_limit || 2;
+        const isSport = (formData?.type || business?.type) === 'sport' || (formData?.type || business?.type) === 'venue';
+        const activeCount = isSport ? (formData?.courts?.length || 0) : (formData?.specialists?.length || 0);
+        const subSpaces = subscription?.spaces_included || business?.capacity_limit || 2;
         return Math.max(subSpaces, activeCount, 2);
     };
 
@@ -1092,23 +1096,23 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     </div>
                 );
 
-            case 'resources':
-                const categoryNameRes = (formData.categories?.name || formData.category || business.categories?.name || '').toLowerCase();
-                const subcatNameRes = (formData.subcategories?.[0]?.name || formData.subcategories?.[0]?.slug || '').toLowerCase();
-                const bTypeRes = (formData.type || business.type || '').toLowerCase();
+            /* resources tab removed — merged into subscription */
+            case '__removed_resources__':
+                const categoryNameRes = (formData?.categories?.name || formData?.category || business?.categories?.name || '').toLowerCase();
+                const subcatNameRes = (formData?.subcategories?.[0]?.name || formData?.subcategories?.[0]?.slug || '').toLowerCase();
+                const bTypeRes = (formData?.type || business?.type || '').toLowerCase();
 
-                const isSportRes = bTypeRes === 'sport' || categoryNameRes.includes('deporte') || subcatNameRes.includes('futbol') || subcatNameRes.includes('padel') || (formData.courts?.length > 0);
+                const isSportRes = bTypeRes === 'sport' || categoryNameRes.includes('deporte') || subcatNameRes.includes('futbol') || subcatNameRes.includes('padel') || ((formData?.courts?.length || 0) > 0);
                 const resourceLabel = isSportRes ? 'Cancha' : 'Profesional';
                 const resourceKey = isSportRes ? 'courts' : 'specialists';
 
                 const expectedCount = Math.max(
-                    formData.resources_count || 0,
+                    subscription?.spaces_included || 0,
                     formData.capacity_limit || 0,
                     formData.capacity || 0,
-                    subscription?.spaces_included || 0,
                     formData.courts?.length || 0,
                     formData.specialists?.length || 0,
-                    2
+                    1
                 );
 
                 let rawResources = isSportRes ? (formData.courts || []) : (formData.specialists || []);
@@ -1426,7 +1430,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             <div style={{ marginTop: '16px' }}>
                                 <label style={{ ...labelStyle, fontSize: '13px', color: 'var(--text-secondary)' }}>Ubicación en el Mapa (Click para marcar)</label>
                                 <div style={{ height: '300px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px', border: '1px solid var(--border)', zIndex: 0 }}>
-                                    <MapContainer key={`${mapCenter[0]}-${mapCenter[1]}`} center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+                                    <MapContainer key={`${mapCenter[0]}-${mapCenter[1]}`} center={mapCenter} zoom={13} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
                                         <TileLayer
                                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -1545,9 +1549,15 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
             case 'subscription':
                 return (
                     <SubscriptionManager
-                        businessId={business.id}
-                        businessType={business.type}
+                        businessId={business?.id}
+                        businessType={business?.type}
                         business={business}
+                        formData={formData}
+                        onResourcesChange={handleInputChange}
+                        onSave={handleSave}
+                        saving={saving}
+                        serviceAdapter={serviceAdapter}
+                        showToast={showToast}
                     />
                 );
 
@@ -1622,7 +1632,9 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         <button
                             onClick={() => handleSave({
                                 logo: formData.logo,
-                                banner_image: formData.banner_image
+                                logo_url: formData.logo || formData.logo_url,
+                                banner_image: formData.banner_image,
+                                banner_url: formData.banner_image || formData.banner_url
                             })}
                             style={saveButtonStyle}
                             disabled={saving}
@@ -1661,8 +1673,13 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                     checked={isOpen}
                                                     onChange={(e) => {
                                                         const newHours = { ...formData.hours };
-                                                        if (!newHours[day]) newHours[day] = { open: '08:00', close: '23:00' };
-                                                        newHours[day] = { ...newHours[day], isOpen: e.target.checked };
+                                                        if (!newHours[day]) newHours[day] = {};
+                                                        newHours[day] = {
+                                                            open: newHours[day].open || '08:00',
+                                                            close: newHours[day].close || '23:00',
+                                                            ...newHours[day],
+                                                            isOpen: e.target.checked
+                                                        };
                                                         handleInputChange('hours', newHours);
                                                     }}
                                                     style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary-paddle)' }}
@@ -3755,26 +3772,29 @@ const hintStyle = {
 const saveButtonStyle = {
     marginTop: '20px',
     padding: '12px 24px',
-    borderRadius: '12px',
+    borderRadius: '6px',
     border: 'none',
-    background: 'var(--primary-paddle)',
-    color: '#000',
-    fontWeight: '700',
-    fontSize: '15px',
+    background: '#3ECF8E',
+    color: '#121212',
+    fontWeight: '600',
+    fontSize: '14px',
     cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(0,230,118,0.2)',
+    boxShadow: 'none',
     width: '100%',
-    textAlign: 'center'
+    textAlign: 'center',
+    transition: 'all 0.15s ease'
 };
 
 const buttonSecondaryStyle = {
     display: 'inline-block',
     padding: '8px 16px',
-    borderRadius: '10px',
-    border: '1px solid var(--border)',
-    background: 'var(--bg-main)',
-    color: 'var(--text-primary)',
+    borderRadius: '6px',
+    border: '1px solid #2E2E2E',
+    background: '#242424',
+    color: '#EDEDED',
     fontSize: '13px',
-    fontWeight: '700',
-    cursor: 'pointer'
+    fontWeight: '600',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.15s ease'
 };
