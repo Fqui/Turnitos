@@ -877,13 +877,22 @@ export default function DashboardCalendar({
                         {/* Month Days */}
                         {displayDays.map((day, i) => {
                             const dateKey = formatDateKey(day);
-                            const dayBookings = bookings.filter(b => {
+                            const activeBookings = bookings.filter(b => {
                                 let bDateKey = b.date;
                                 if (b.date.includes('/')) {
                                     const [d, m, y] = b.date.split('/');
                                     bDateKey = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                                 }
-                                return bDateKey === dateKey && b.status !== 'cancelled';
+                                return bDateKey === dateKey && b.status !== 'cancelled' && b.status !== 'blocked';
+                            });
+
+                            const blockedSlots = bookings.filter(b => {
+                                let bDateKey = b.date;
+                                if (b.date.includes('/')) {
+                                    const [d, m, y] = b.date.split('/');
+                                    bDateKey = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                                }
+                                return bDateKey === dateKey && b.status === 'blocked';
                             });
 
                             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
@@ -932,35 +941,55 @@ export default function DashboardCalendar({
                                         {day.getDate()}
                                     </div>
 
-                                    {/* Booking Indicators */}
+                                    {/* Booking & Blocked Indicators */}
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', marginTop: '4px' }}>
-                                        {dayBookings.slice(0, 5).map((b, idx) => (
+                                        {activeBookings.slice(0, 4).map((b, idx) => (
                                             <div
-                                                key={idx}
+                                                key={`b-${idx}`}
                                                 style={{
                                                     width: '6px',
                                                     height: '6px',
                                                     borderRadius: '50%',
                                                     backgroundColor: getStatusColor(b)
                                                 }}
+                                                title="Reserva cliente"
                                             />
                                         ))}
-                                        {dayBookings.length > 5 && (
+                                        {blockedSlots.length > 0 && (
+                                            <div
+                                                style={{
+                                                    width: '6px',
+                                                    height: '6px',
+                                                    borderRadius: '50%',
+                                                    backgroundColor: '#6B7280'
+                                                }}
+                                                title="Horario bloqueado"
+                                            />
+                                        )}
+                                        {activeBookings.length > 4 && (
                                             <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                                                +{dayBookings.length - 5}
+                                                +{activeBookings.length - 4}
                                             </span>
                                         )}
                                     </div>
 
                                     {/* Summary text if space allowed */}
-                                    {!isMobile && dayBookings.length > 0 && (
+                                    {!isMobile && (activeBookings.length > 0 || blockedSlots.length > 0) && (
                                         <div style={{
                                             fontSize: '11px',
                                             color: 'var(--text-secondary)',
                                             marginTop: 'auto',
-                                            fontWeight: '500'
+                                            fontWeight: '500',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '2px'
                                         }}>
-                                            {dayBookings.length} {dayBookings.length === 1 ? 'reserva' : 'reservas'}
+                                            {activeBookings.length > 0 && (
+                                                <span>{activeBookings.length} {activeBookings.length === 1 ? 'reserva' : 'reservas'}</span>
+                                            )}
+                                            {blockedSlots.length > 0 && (
+                                                <span style={{ fontSize: '10px', color: '#9CA3AF' }}>🔒 {blockedSlots.length} bloqueado{blockedSlots.length > 1 ? 's' : ''}</span>
+                                            )}
                                         </div>
                                     )}
                                 </div>
