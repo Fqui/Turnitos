@@ -299,11 +299,8 @@ export default function DayView({
                                             minHeight: `${config.gridRowHeight}px`,
                                             padding: '4px',
                                             position: 'relative',
-                                            background: !isOpen
-                                                ? 'repeating-linear-gradient(45deg, var(--bg-main), var(--bg-main) 10px, var(--border) 10px, var(--border) 11px)'
-                                                : isCurrentSlot ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
-                                            opacity: !isOpen ? 0.6 : 1,
-                                            cursor: !isOpen ? 'not-allowed' : 'default',
+                                            background: isCurrentSlot ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
+                                            cursor: 'default',
                                             display: 'flex',
                                             flexDirection: 'column',
                                             gap: '4px'
