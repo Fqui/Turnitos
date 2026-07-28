@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
 import { generateTimeSlots, formatDateKey, getBookingsForSlot } from '../shared/utils';
+import ConfirmModal from '../../common/ConfirmModal';
 
 export default function WeekView({
     type,
@@ -23,6 +24,7 @@ export default function WeekView({
     const [showSlotMenu, setShowSlotMenu] = useState(null);
     const [showBookingMenu, setShowBookingMenu] = useState(null);
     const [selectedResourceId, setSelectedResourceId] = useState('all');
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     const activeResources = (resources && resources.length > 0)
         ? (selectedResourceId === 'all' ? resources : resources.filter(r => String(r.id) === String(selectedResourceId)))
@@ -236,9 +238,14 @@ export default function WeekView({
                             {/* Time Column */}
                             <div
                                 onClick={() => {
-                                    if (window.confirm(`¿Deseas bloquear TODAS las canchas para las ${time} hs en este día?`)) {
-                                        onBlockSlot && onBlockSlot(currentDate, time, null);
-                                    }
+                                    setConfirmModal({
+                                        isOpen: true,
+                                        title: 'Bloquear Horario Global',
+                                        message: `¿Deseas bloquear TODAS las canchas para las ${time} hs en este día?`,
+                                        confirmText: 'Sí, bloquear todas',
+                                        isDanger: true,
+                                        onConfirm: () => onBlockSlot && onBlockSlot(currentDate, time, null)
+                                    });
                                 }}
                                 title="Click para bloquear todas las canchas a esta hora"
                                 style={{
@@ -607,6 +614,17 @@ export default function WeekView({
           color: rgba(0, 230, 118, 0.6) !important;
         }
       `}</style>
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                isDanger={confirmModal.isDanger}
+                onConfirm={() => confirmModal.onConfirm && confirmModal.onConfirm()}
+                onClose={() => setConfirmModal({ isOpen: false })}
+            />
         </div>
     );
 }
