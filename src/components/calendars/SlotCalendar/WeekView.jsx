@@ -162,7 +162,7 @@ export default function WeekView({
             <div style={{ width: '100%', overflowX: 'auto', borderRadius: '14px', border: '1px solid var(--border)', boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}>
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: `70px repeat(${displayDays.length}, 1fr)`,
+                    gridTemplateColumns: `70px repeat(${displayDays.length}, minmax(0, 1fr))`,
                     gridAutoRows: `${config.gridRowHeight}px`,
                     minWidth: '750px',
                     width: '100%'
@@ -323,10 +323,12 @@ export default function WeekView({
                                                     <div
                                                         key={idx}
                                                         style={{
-                                                            position: 'relative',
-                                                            minHeight: `${cardHeight}px`,
-                                                            zIndex: 2,
-                                                            marginBottom: '2px'
+                                                            position: 'absolute',
+                                                            top: '4px',
+                                                            left: '4px',
+                                                            right: '4px',
+                                                            height: `${cardHeight}px`,
+                                                            zIndex: 2
                                                         }}
                                                     >
                                                         <BookingCard
