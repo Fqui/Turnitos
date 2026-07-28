@@ -100,6 +100,11 @@ export default function BusinessPortal() {
 
     const [viewMode, setViewMode] = useState('calendar'); // 'calendar', 'list', 'analytics', 'settings'
 
+    // Scroll to top of page whenever switching view modes (e.g. entering settings)
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [viewMode]);
+
     // Analytics state
     const [metrics, setMetrics] = useState(null);
     const [trends, setTrends] = useState([]);
@@ -522,7 +527,7 @@ export default function BusinessPortal() {
         }
     };
 
-    const handleBlockSlot = async (date, time) => {
+    const handleBlockSlot = async (date, time, resource = null) => {
         let dateStr, timeStr;
 
         if (date && time) {
@@ -538,27 +543,34 @@ export default function BusinessPortal() {
             dateStr = now.toISOString().split('T')[0];
         }
 
-        setPendingBlockData({ date: dateStr, time: timeStr });
+        // resource can be a court object or specialist object
+        const resourceId = resource ? (resource.id || resource) : null;
+        const resourceName = resource ? (resource.name || null) : null;
+
+        setPendingBlockData({ date: dateStr, time: timeStr, resourceId, resourceName });
         setShowBlockModal(true);
     };
 
     const confirmBlockSlot = async (reason) => {
         if (!pendingBlockData) return;
 
-        const { date, time } = pendingBlockData;
+        const { date, time, resourceId, resourceName } = pendingBlockData;
 
         const calendarType = getCalendarType(currentBusiness);
         const slotConfig = getSlotConfig(calendarType);
         const blockDuration = slotConfig.slotSize || 60;
 
+        const isSport = calendarType === 'futbol' || calendarType === 'padel' || calendarType === 'tenis';
+
         const bookingData = {
             businessId: selectedBusinessId,
             serviceId: null,
-            courtId: null,
+            courtId: isSport ? resourceId : null,
+            specialistId: !isSport ? resourceId : null,
             date: date,
             time: time,
             duration: blockDuration,
-            customerName: reason || 'BLOQUEADO POR ADMIN', // Use reason as name/label
+            customerName: reason ? `BLOQUEADO: ${reason}` : (resourceName ? `BLOQUEADO (${resourceName})` : 'BLOQUEADO POR ADMIN'),
             customerEmail: '-',
             customerPhone: '-',
             status: 'blocked',
