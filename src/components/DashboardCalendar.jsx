@@ -454,8 +454,8 @@ export default function DashboardCalendar({
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: (hasPadelCourts && viewMode === 'day')
-                            ? `70px repeat(${padelCourts.length}, 1fr)` // Court columns for Padel
-                            : `70px repeat(${displayDays.length}, 1fr)`, // Day columns for others
+                            ? `70px repeat(${padelCourts.length}, minmax(0, 1fr))` // Uniform court columns
+                            : `70px repeat(${displayDays.length}, minmax(0, 1fr))`, // Uniform day columns
                         gridAutoRows: '60px', // Fixed row height for consistency
                         minWidth: viewMode === 'day' ? 'auto' : '900px',
                         width: '100%'
