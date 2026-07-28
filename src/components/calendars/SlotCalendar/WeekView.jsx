@@ -23,7 +23,7 @@ export default function WeekView({
 }) {
     const [showSlotMenu, setShowSlotMenu] = useState(null);
     const [showBookingMenu, setShowBookingMenu] = useState(null);
-    const [selectedResourceId, setSelectedResourceId] = useState('all');
+    const [selectedResourceId, setSelectedResourceId] = useState(() => (resources && resources.length > 0) ? resources[0].id : '');
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     const activeResources = (resources && resources.length > 0)
@@ -115,24 +115,6 @@ export default function WeekView({
                 }}>
                     <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         🏟️ Vista Semanal:
-                    </span>
-                    <button
-                        onClick={() => setSelectedResourceId('all')}
-                        style={{
-                            padding: '6px 14px',
-                            borderRadius: '8px',
-                            border: selectedResourceId === 'all' ? '1px solid var(--primary-paddle)' : '1px solid transparent',
-                            background: selectedResourceId === 'all' ? 'var(--primary-paddle)' : 'rgba(255,255,255,0.05)',
-                            color: selectedResourceId === 'all' ? '#000000' : 'var(--text-primary)',
-                            fontWeight: '700',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                            boxShadow: selectedResourceId === 'all' ? '0 2px 10px rgba(0, 230, 118, 0.3)' : 'none'
-                        }}
-                    >
-                        Todas las Canchas ({resources.length})
-                    </button>
                     {resources.map((r, idx) => {
                         const colorInfo = getResourceColor(idx);
                         const isSelected = String(selectedResourceId) === String(r.id);
@@ -311,51 +293,46 @@ export default function WeekView({
                                         }}
                                     >
                                         {slotBookings.length > 0 ? (
-                                            slotBookings.map((booking, idx) => {
-                                                if (!isFirstSlotOfBooking(booking, time)) {
-                                                    return null;
-                                                }
+                                            <div style={{ display: 'flex', gap: '4px', width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, padding: '4px', boxSizing: 'border-box' }}>
+                                                {slotBookings.map((booking, idx) => {
+                                                    if (!isFirstSlotOfBooking(booking, time)) {
+                                                        return null;
+                                                    }
 
-                                                const slotSpan = calculateSlotSpan(booking);
-                                                const cardHeight = (config.gridRowHeight * slotSpan) - 8;
+                                                    const slotSpan = calculateSlotSpan(booking);
+                                                    const cardHeight = (config.gridRowHeight * slotSpan) - 8;
 
-                                                return (
-                                                    <div
-                                                        key={idx}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: '4px',
-                                                            left: '4px',
-                                                            right: '4px',
-                                                            height: `${cardHeight}px`,
-                                                            zIndex: 2
-                                                        }}
-                                                    >
-                                                        <BookingCard
-                                                            booking={booking}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                if (isRescheduling) return;
-                                                                if (booking.status === 'pending' || booking.status === 'deposit_paid') {
-                                                                    const rect = e.currentTarget.getBoundingClientRect();
-                                                                    setShowBookingMenu({
-                                                                        booking,
-                                                                        x: rect.left + rect.width / 2,
-                                                                        y: rect.top
-                                                                    });
-                                                                } else {
-                                                                    onBookingClick && onBookingClick(booking);
-                                                                }
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            style={{
+                                                                flex: 1,
+                                                                minWidth: 0,
+                                                                height: `${cardHeight}px`,
+                                                                zIndex: 2
                                                             }}
-                                                            slotSize={config.slotSize}
-                                                            showDuration={false}
-                                                            showTimeRange={false}
-                                                            isRescheduling={isRescheduling}
-                                                            isSelected={reschedulingBooking?.id === booking.id}
-                                                        />
-                                                    </div>
-                                                );
-                                            })
+                                                        >
+                                                            <BookingCard
+                                                                booking={booking}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (isRescheduling) return;
+                                                                    if (booking.status === 'pending' || booking.status === 'deposit_paid') {
+                                                                        const rect = e.currentTarget.getBoundingClientRect();
+                                                                        setShowBookingMenu({
+                                                                            booking,
+                                                                            x: rect.left + rect.width / 2,
+                                                                            y: rect.top
+                                                                        });
+                                                                    } else {
+                                                                        onBookingClick && onBookingClick(booking);
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         ) : (
                                             <div
                                                 onClick={(e) => {
