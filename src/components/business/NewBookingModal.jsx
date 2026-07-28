@@ -285,7 +285,7 @@ const NewBookingModal = ({
                             value={newBookingData.customerName}
                             onChange={(e) => setNewBookingData({ ...newBookingData, customerName: e.target.value })}
                             required
-                            placeholder="Ej: Juan Pérez"
+                            placeholder="Nombre y apellido del cliente"
                             style={{
                                 width: '100%',
                                 padding: '12px',
