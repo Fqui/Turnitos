@@ -1812,7 +1812,22 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             })}
                         </div>
                         <button
-                            onClick={() => handleSave({ hours: formData.hours })}
+                            onClick={() => {
+                                const normalizedHours = {};
+                                orderedDays.forEach(day => {
+                                    const current = formData.hours?.[day] || {};
+                                    normalizedHours[day] = {
+                                        isOpen: current.isOpen !== false,
+                                        isSplit: !!current.isSplit,
+                                        open: current.open || '18:00',
+                                        close: current.close || '23:00',
+                                        breakStart: current.breakStart || null,
+                                        breakEnd: current.breakEnd || null
+                                    };
+                                });
+                                handleInputChange('hours', normalizedHours);
+                                handleSave({ hours: normalizedHours });
+                            }}
                             style={saveButtonStyle}
                             disabled={saving}
                         >
