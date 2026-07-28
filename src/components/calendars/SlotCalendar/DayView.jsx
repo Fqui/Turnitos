@@ -221,22 +221,37 @@ export default function DayView({
                 return (
                     <React.Fragment key={time}>
                         {/* Time Column */}
-                        <div style={{
-                            padding: '10px',
-                            textAlign: 'center',
-                            fontSize: '12px',
-                            borderBottom: '1px solid var(--border)',
-                            borderRight: '1px solid var(--border)',
-                            position: 'sticky',
-                            left: 0,
-                            background: isCurrentSlot ? 'var(--primary-paddle)' : 'var(--bg-card)',
-                            color: isCurrentSlot ? '#ffffff' : 'var(--text-secondary)',
-                            fontWeight: isCurrentSlot ? '700' : '500',
-                            zIndex: 10,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
+                        <div
+                            onClick={() => {
+                                if (window.confirm(`¿Deseas bloquear TODAS las canchas/especialistas para las ${time} hs de hoy?`)) {
+                                    onBlockSlot && onBlockSlot(currentDate, time, null);
+                                }
+                            }}
+                            title="Click para bloquear todos los recursos a esta hora"
+                            style={{
+                                padding: '10px',
+                                textAlign: 'center',
+                                fontSize: '12px',
+                                borderBottom: isCurrentSlot ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                borderRight: '1px solid var(--border)',
+                                position: 'sticky',
+                                left: 0,
+                                background: isCurrentSlot ? 'var(--primary-paddle)' : 'var(--bg-card)',
+                                color: isCurrentSlot ? '#ffffff' : 'var(--text-secondary)',
+                                fontWeight: isCurrentSlot ? '700' : '500',
+                                zIndex: 10,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!isCurrentSlot) e.currentTarget.style.background = 'var(--bg-main)';
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!isCurrentSlot) e.currentTarget.style.background = 'var(--bg-card)';
+                            }}
                             id={`time-slot-${time}`}
                         >
                             {time}
