@@ -132,8 +132,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
             // });
 
             // Treat schedule as open if either isOpen is true OR if isSplit is true (defensive)
-            // Treat schedule as open if either isOpen is true OR if isSplit is true (defensive)
-            // This handles legacy data where isSplit exists but isOpen might be undefined
+            if (!schedule) return { open: '00:00', close: '00:00' };
+
             const isValidTime = (t) => t && t !== '00:00';
             const isScheduleOpen = schedule.isOpen === true ||
                 (schedule.isSplit && schedule.isOpen !== false) ||
