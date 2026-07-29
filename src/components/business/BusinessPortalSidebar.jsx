@@ -306,6 +306,53 @@ const BusinessPortalSidebar = ({
                 </button>
 
                 <button
+                    onClick={async () => {
+                        try {
+                            if (!('Notification' in window)) {
+                                alert('Tu navegador no soporta notificaciones push');
+                                return;
+                            }
+                            const perm = await Notification.requestPermission();
+                            if (perm === 'granted') {
+                                alert('🔔 ¡Notificaciones activadas correctamente! Recibirás una alerta cada vez que entre una reserva.');
+                            } else {
+                                alert('⚠️ No se otorgaron los permisos de notificación en el navegador');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    }}
+                    title={!isVisible ? 'Activar Notificaciones' : ''}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: isVisible ? 'flex-start' : 'center',
+                        gap: '10px',
+                        padding: isVisible ? '10px 14px' : '10px',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-main)',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        width: '100%',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--primary-border)';
+                        e.currentTarget.style.background = 'var(--primary-bg)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.background = 'var(--bg-main)';
+                    }}
+                >
+                    <span style={{ fontSize: '16px' }}>🔔</span>
+                    {isVisible && <span>Notificaciones PWA</span>}
+                </button>
+
+                <button
                     onClick={onLogout}
                     title={!isVisible ? 'Cerrar Sesión' : ''}
                     style={{
