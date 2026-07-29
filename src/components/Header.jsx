@@ -21,25 +21,7 @@ export default function Header() {
                         )}
                     </div>
                 </Link>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Link
-                        to="/portal"
-                        style={{
-                            padding: '8px 16px',
-                            borderRadius: '10px',
-                            background: 'var(--primary-paddle)',
-                            color: '#000',
-                            fontSize: '13px',
-                            fontWeight: '800',
-                            textDecoration: 'none',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 2px 8px rgba(0, 230, 118, 0.2)'
-                        }}
-                    >
-                        Iniciar Sesión
-                    </Link>
-                    {isHome && <ThemeToggle />}
-                </div>
+                {isHome && <ThemeToggle />}
             </div>
         </header>
     );
