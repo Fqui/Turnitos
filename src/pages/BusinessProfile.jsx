@@ -132,16 +132,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
             // });
 
             if (!schedule) {
-                // If this day is not explicitly configured in hours object, fallback to open default
                 return { open: '08:00', close: '23:00' };
             }
 
-            const isValidTime = (t) => t && t !== '00:00';
-            const isScheduleOpen = schedule.isOpen === true ||
-                (schedule.isSplit && schedule.isOpen !== false) ||
-                (schedule.isOpen !== false && isValidTime(schedule.open) && isValidTime(schedule.close));
-
-            if (schedule && isScheduleOpen) {
+            // If day explicitly marked as closed
+            if (schedule.isOpen === false) {
+                return { open: '00:00', close: '00:00' };
+            }
                 // console.log('✅ Schedule is OPEN for', dayName);
 
                 // Check if split schedule is enabled in the new format (from BusinessSettings)
@@ -186,14 +183,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
                 // console.log('➡️ Continuous shift for', dayName);
 
-                // Fallback to explicit ranges if they exist (old logic)
                 return {
-                    open: schedule.open,
-                    close: schedule.close,
+                    open: schedule.open || '08:00',
+                    close: schedule.close || '23:00',
                     ranges: (schedule.ranges && schedule.ranges.length > 0) ? schedule.ranges : undefined
                 };
-            }
-            return { open: '00:00', close: '00:00' }; // Closed
         }
 
         // Handle legacy object format (weekday/weekend)
