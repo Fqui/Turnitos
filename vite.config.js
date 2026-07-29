@@ -23,6 +23,7 @@ export default defineConfig({
         description: 'Gestión de reservas en tiempo real',
         theme_color: '#059669',
         background_color: '#ffffff',
+        start_url: '/portal',
         display: 'standalone',
         icons: [
           {
