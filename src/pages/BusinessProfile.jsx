@@ -131,8 +131,10 @@ export default function BusinessProfile({ business: initialBusiness }) {
             //     breakEnd: schedule?.breakEnd
             // });
 
-            // Treat schedule as open if either isOpen is true OR if isSplit is true (defensive)
-            if (!schedule) return { open: '00:00', close: '00:00' };
+            if (!schedule) {
+                // If this day is not explicitly configured in hours object, fallback to open default
+                return { open: '08:00', close: '23:00' };
+            }
 
             const isValidTime = (t) => t && t !== '00:00';
             const isScheduleOpen = schedule.isOpen === true ||
