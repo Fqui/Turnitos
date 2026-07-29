@@ -3286,20 +3286,64 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     </div>
                                     <div>
                                         <label style={{ ...labelStyle, marginBottom: '4px' }}>Tipo</label>
-                                        <select id="new-special-day-type" style={inputStyle}>
-                                            <option value="closed">Cerrado</option>
-                                            <option value="holiday">Feriado</option>
-                                            <option value="special_hours">Horario Especial</option>
-                                            <option value="special_price">Precio Especial</option>
+                                        <select
+                                            id="new-special-day-type"
+                                            style={inputStyle}
+                                            onChange={(e) => {
+                                                const type = e.target.value;
+                                                const hoursContainer = document.getElementById('special-hours-fields');
+                                                const priceContainer = document.getElementById('special-price-fields');
+                                                if (hoursContainer) hoursContainer.style.display = (type === 'special_hours') ? 'grid' : 'none';
+                                                if (priceContainer) priceContainer.style.display = (type === 'special_price') ? 'grid' : 'none';
+                                            }}
+                                        >
+                                            <option value="closed">🚫 Cerrado (No se aceptan reservas)</option>
+                                            <option value="holiday">🎉 Feriado</option>
+                                            <option value="special_hours">🕐 Horario Especial</option>
+                                            <option value="special_price">💰 Precio Especial / Recargo</option>
                                         </select>
                                     </div>
                                 </div>
+
+                                {/* Dynamic Fields: Horario Especial */}
+                                <div
+                                    id="special-hours-fields"
+                                    style={{ display: 'none', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                >
+                                    <div>
+                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Apertura Especial</label>
+                                        <input type="time" id="new-special-day-open" defaultValue="09:00" style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Cierre Especial</label>
+                                        <input type="time" id="new-special-day-close" defaultValue="18:00" style={inputStyle} />
+                                    </div>
+                                </div>
+
+                                {/* Dynamic Fields: Precio Especial */}
+                                <div
+                                    id="special-price-fields"
+                                    style={{ display: 'none', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                >
+                                    <div>
+                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Variación de Precio</label>
+                                        <select id="new-special-day-price-mode" style={inputStyle}>
+                                            <option value="fixed">Precio Fijo ($)</option>
+                                            <option value="multiplier">Porcentaje Extra (%)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Valor</label>
+                                        <input type="number" id="new-special-day-price-val" placeholder="Ej: 15000 o 20" style={inputStyle} />
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <label style={{ ...labelStyle, marginBottom: '4px' }}>Descripción</label>
+                                    <label style={{ ...labelStyle, marginBottom: '4px' }}>Descripción / Motivo</label>
                                     <input
                                         type="text"
                                         id="new-special-day-description"
-                                        placeholder="Ej: Navidad, Año Nuevo, Promoción Especial"
+                                        placeholder="Ej: Navidad, Año Nuevo, Promoción Feriado"
                                         style={inputStyle}
                                     />
                                 </div>
@@ -3314,11 +3358,21 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                             return;
                                         }
 
+                                        const type = typeInput.value;
+                                        const openInput = document.getElementById('new-special-day-open');
+                                        const closeInput = document.getElementById('new-special-day-close');
+                                        const priceModeInput = document.getElementById('new-special-day-price-mode');
+                                        const priceValInput = document.getElementById('new-special-day-price-val');
+
                                         const newSpecialDay = {
                                             id: `special_${Date.now()}`,
                                             date: dateInput.value,
-                                            type: typeInput.value,
-                                            description: descInput.value || typeInput.options[typeInput.selectedIndex].text
+                                            type: type,
+                                            description: descInput.value || typeInput.options[typeInput.selectedIndex].text,
+                                            open: type === 'special_hours' ? openInput?.value : null,
+                                            close: type === 'special_hours' ? closeInput?.value : null,
+                                            priceMode: type === 'special_price' ? priceModeInput?.value : null,
+                                            priceVal: type === 'special_price' ? parseFloat(priceValInput?.value) || 0 : null
                                         };
 
                                         const updatedDays = [...specialDays, newSpecialDay];
@@ -3328,6 +3382,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         dateInput.value = '';
                                         typeInput.value = 'closed';
                                         descInput.value = '';
+                                        const hoursContainer = document.getElementById('special-hours-fields');
+                                        const priceContainer = document.getElementById('special-price-fields');
+                                        if (hoursContainer) hoursContainer.style.display = 'none';
+                                        if (priceContainer) priceContainer.style.display = 'none';
 
                                         showToast('Día especial agregado', 'success');
                                     }}
@@ -3342,7 +3400,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         fontSize: '14px'
                                     }}
                                 >
-                                    + Agregar
+                                    + Agregar Día Especial
                                 </button>
                             </div>
                         </div>
@@ -3395,9 +3453,19 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                         }}>
                                                             {typeInfo.label}
                                                         </span>
+                                                        {day.type === 'special_hours' && day.open && day.close && (
+                                                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#3b82f6' }}>
+                                                                {day.open} - {day.close} hs
+                                                            </span>
+                                                        )}
+                                                        {day.type === 'special_price' && day.priceVal !== undefined && (
+                                                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>
+                                                                {day.priceMode === 'multiplier' ? `+${day.priceVal}%` : `$${day.priceVal.toLocaleString('es-AR')}`}
+                                                            </span>
+                                                        )}
                                                         {day.description && (
                                                             <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                                                {day.description}
+                                                                ({day.description})
                                                             </span>
                                                         )}
                                                     </div>
