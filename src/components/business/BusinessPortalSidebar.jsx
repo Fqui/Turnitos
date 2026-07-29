@@ -1,4 +1,5 @@
 import React from 'react';
+import { pushService } from '../../services/pushService';
 
 const BusinessPortalSidebar = ({
     isVisible,
@@ -312,11 +313,11 @@ const BusinessPortalSidebar = ({
                                 alert('Tu navegador no soporta notificaciones push');
                                 return;
                             }
-                            const perm = await Notification.requestPermission();
-                            if (perm === 'granted') {
-                                alert('🔔 ¡Notificaciones activadas correctamente! Recibirás una alerta cada vez que entre una reserva.');
+                            const token = await pushService.requestPermissionAndGetToken(currentBusiness?.id);
+                            if (token) {
+                                alert('🔔 ¡Notificaciones Push activadas y vinculadas correctamente! Recibirás alertas flotantes de turnos nuevos.');
                             } else {
-                                alert('⚠️ No se otorgaron los permisos de notificación en el navegador');
+                                alert('⚠️ No se pudo obtener el token o no se otorgaron permisos de notificación.');
                             }
                         } catch (e) {
                             console.error(e);
