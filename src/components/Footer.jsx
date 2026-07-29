@@ -23,7 +23,7 @@ export default function Footer() {
                             TurnitosLR
                         </h3>
                         <p style={{ color: '#A0A0A0', fontSize: '14px', lineHeight: '1.6' }}>
-                            La plataforma líder en La Rioja para reservar tus canchas, turnos de belleza y salud en un solo lugar.
+                            Simplificamos tus reservas de canchas, belleza y salud en La Rioja. Todo en un solo lugar.
                         </p>
                     </div>
 
@@ -32,9 +32,10 @@ export default function Footer() {
                         <h4 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px' }}>Explorar</h4>
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <li><Link to="/" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Inicio</Link></li>
-                            <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Deportes</span></li>
-                            <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Belleza</span></li>
-                            <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Salud</span></li>
+                            <li><Link to="/?category=deportes" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Deportes</Link></li>
+                            <li><Link to="/?category=belleza" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Belleza</Link></li>
+                            <li><Link to="/?category=quinchos" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Quinchos</Link></li>
+                            <li><Link to="/?category=salud" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Salud</Link></li>
                         </ul>
                     </div>
 
@@ -42,8 +43,9 @@ export default function Footer() {
                     <div style={{ flex: '1 1 150px' }}>
                         <h4 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px' }}>Soporte</h4>
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Centro de Ayuda</span></li>
-                            <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Para Negocios</span></li>
+                            <li><Link to="/ayuda" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Centro de Ayuda</Link></li>
+                            <li><Link to="/negocios" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Para Negocios</Link></li>
+                            <li><Link to="/portal" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Iniciar Sesión</Link></li>
                             <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Términos y Condiciones</span></li>
                             <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Política de Privacidad</span></li>
                         </ul>
