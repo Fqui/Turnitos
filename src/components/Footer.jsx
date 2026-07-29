@@ -45,7 +45,7 @@ export default function Footer() {
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <li><Link to="/ayuda" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Centro de Ayuda</Link></li>
                             <li><Link to="/negocios" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Para Negocios</Link></li>
-                            <li><Link to="/portal" style={{ color: '#00E676', textDecoration: 'none', fontSize: '14px', fontWeight: '700' }}>🔐 Acceso a Mi Portal / Login</Link></li>
+                            <li><Link to="/portal" style={{ color: '#00E676', textDecoration: 'none', fontSize: '14px', fontWeight: '700' }}>Iniciar Sesión</Link></li>
                             <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Términos y Condiciones</span></li>
                             <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Política de Privacidad</span></li>
                         </ul>
