@@ -313,11 +313,15 @@ const BusinessPortalSidebar = ({
                                 alert('Tu navegador no soporta notificaciones push');
                                 return;
                             }
-                            const token = await pushService.requestPermissionAndGetToken(currentBusiness?.id);
-                            if (token) {
+                            if (Notification.permission === 'denied') {
+                                alert('⚠️ Los permisos de notificación fueron Bloqueados previamente en tu navegador.\n\nPara activarlos:\n1. Tocá el ícono del Candado 🔒 al lado de la dirección de la web arriba (turnitoslr.com).\n2. En "Notificaciones", seleccioná "Permitir".\n3. Recargá la página e intentá de nuevo.');
+                                return;
+                            }
+                            const result = await pushService.requestPermissionAndGetTokenDetailed(currentBusiness?.id);
+                            if (result.success && result.token) {
                                 alert('🔔 ¡Notificaciones Push activadas y vinculadas correctamente! Recibirás alertas flotantes de turnos nuevos.');
                             } else {
-                                alert('⚠️ No se pudo obtener el token o no se otorgaron permisos de notificación.');
+                                alert(`⚠️ No se pudo activar la notificación:\n${result.error || 'Permiso denegado por el usuario'}`);
                             }
                         } catch (e) {
                             console.error(e);
