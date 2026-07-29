@@ -55,8 +55,14 @@ class SupabaseService {
         }
         // If payment_settings is already an object (from JSONB), keep it as is
         // If it's null or undefined, set to empty object
-        if (!business.payment_settings || typeof business.payment_settings !== 'object') {
-            business.payment_settings = {};
+        // Extract special_days if stored inside business.hours JSON
+        if (!business.special_days && business.hours) {
+            try {
+                const hoursObj = typeof business.hours === 'string' ? JSON.parse(business.hours) : business.hours;
+                if (hoursObj && hoursObj.special_days) {
+                    business.special_days = hoursObj.special_days;
+                }
+            } catch (e) { /* ignore */ }
         }
 
         // Normalize image field aliases:
@@ -1048,7 +1054,18 @@ class SupabaseService {
         const blockedFields = ['id', 'created_at', 'courts', 'bookings', 'customers', 'specialists', 'services'];
         blockedFields.forEach(field => delete safeUpdates[field]);
 
-        // Stringify complex objects for TEXT columns if necessary
+        // If special_days is provided, save it inside hours JSON to ensure compatibility if column special_days is not in DB schema
+        if (safeUpdates.special_days) {
+            let hoursObj = {};
+            if (safeUpdates.hours) {
+                hoursObj = typeof safeUpdates.hours === 'string' ? JSON.parse(safeUpdates.hours) : { ...safeUpdates.hours };
+            }
+            hoursObj.special_days = safeUpdates.special_days;
+            safeUpdates.hours = JSON.stringify(hoursObj);
+            // Delete special_days from root updates to avoid 'Could not find special_days column' error
+            delete safeUpdates.special_days;
+        }
+
         if (safeUpdates.hours && typeof safeUpdates.hours === 'object') {
             safeUpdates.hours = JSON.stringify(safeUpdates.hours);
         }
