@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { categories, promotions as initialPromotions, businesses as initialBusinesses } from '../data/mockData';
 import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
-import PwaInstallBanner from '../components/PwaInstallBanner';
 import { generateSlug } from '../utils/utils';
 
 export default function Home() {
@@ -381,9 +380,6 @@ export default function Home() {
 
                 {/* 1. Hero / Promotions */}
                 <PromotionsHero promotions={promotions} businesses={businesses} />
-
-                {/* 1.5 PWA Installation Banner */}
-                <PwaInstallBanner />
 
                 {/* 2. Search Bar with Autocomplete */}
                 <section style={{ marginBottom: '30px', display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 50 }}>
