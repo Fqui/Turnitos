@@ -16,14 +16,14 @@ const BusinessLogin = ({ onLogin, loading }) => {
     const inputStyle = (field) => ({
         width: '100%',
         padding: '14px 14px 14px 46px',
-        borderRadius: '12px',
-        border: `1.5px solid ${focusedField === field ? 'rgba(99, 102, 241, 0.6)' : 'rgba(255,255,255,0.08)'}`,
-        background: focusedField === field ? 'rgba(99, 102, 241, 0.06)' : 'rgba(255,255,255,0.04)',
+        borderRadius: '8px',
+        border: `1.5px solid ${focusedField === field ? '#3ECF8E' : '#2E2E2E'}`,
+        background: focusedField === field ? 'rgba(62, 207, 142, 0.05)' : '#171717',
         color: 'white',
         fontSize: '15px',
         outline: 'none',
-        transition: 'all 0.25s ease',
-        boxShadow: focusedField === field ? '0 0 0 3px rgba(99, 102, 241, 0.15)' : 'none'
+        transition: 'all 0.2s ease',
+        boxShadow: focusedField === field ? '0 0 0 3px rgba(62, 207, 142, 0.15)' : 'none'
     });
 
     return (
@@ -32,7 +32,7 @@ const BusinessLogin = ({ onLogin, loading }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, #0F0F23 0%, #1a1a2e 40%, #16213e 100%)',
+            background: '#121212',
             position: 'relative',
             overflow: 'hidden'
         }}>
@@ -40,7 +40,7 @@ const BusinessLogin = ({ onLogin, loading }) => {
             <div style={{
                 position: 'absolute',
                 inset: 0,
-                backgroundImage: 'radial-gradient(rgba(99, 102, 241, 0.08) 1px, transparent 1px)',
+                backgroundImage: 'radial-gradient(rgba(62, 207, 142, 0.05) 1px, transparent 1px)',
                 backgroundSize: '32px 32px',
                 pointerEvents: 'none'
             }} />
@@ -53,7 +53,7 @@ const BusinessLogin = ({ onLogin, loading }) => {
                 transform: 'translateX(-50%)',
                 width: '600px',
                 height: '600px',
-                background: 'radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%)',
+                background: 'radial-gradient(circle, rgba(62, 207, 142, 0.10) 0%, transparent 70%)',
                 pointerEvents: 'none'
             }} />
 
@@ -71,13 +71,11 @@ const BusinessLogin = ({ onLogin, loading }) => {
             >
                 {/* Card */}
                 <div style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    backdropFilter: 'blur(24px)',
-                    WebkitBackdropFilter: 'blur(24px)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
-                    borderRadius: '20px',
+                    background: '#1C1C1C',
+                    border: '1px solid #2E2E2E',
+                    borderRadius: '12px',
                     padding: '40px 32px',
-                    boxShadow: '0 24px 80px rgba(0, 0, 0, 0.4)'
+                    boxShadow: '0 24px 80px rgba(0, 0, 0, 0.6)'
                 }}>
                     {/* Logo & Title */}
                     <div style={{ textAlign: 'center', marginBottom: '36px' }}>
@@ -96,7 +94,7 @@ const BusinessLogin = ({ onLogin, loading }) => {
                                     width: '100%',
                                     height: 'auto',
                                     objectFit: 'contain',
-                                    filter: 'drop-shadow(0 0 20px rgba(99, 102, 241, 0.3))'
+                                    filter: 'drop-shadow(0 0 20px rgba(62, 207, 142, 0.3))'
                                 }}
                             />
                         </div>
@@ -107,7 +105,7 @@ const BusinessLogin = ({ onLogin, loading }) => {
                             color: 'white',
                             letterSpacing: '-0.02em'
                         }}>
-                            Bienvenidos a Turnitos<span style={{ color: '#818CF8' }}>LR</span>
+                            Bienvenidos a Turnitos<span style={{ color: '#3ECF8E' }}>LR</span>
                         </h1>
                         <p style={{
                             color: 'rgba(255,255,255,0.5)',
@@ -208,8 +206,8 @@ const BusinessLogin = ({ onLogin, loading }) => {
                                     width: '18px',
                                     height: '18px',
                                     borderRadius: '5px',
-                                    border: `1.5px solid ${rememberMe ? '#6366F1' : 'rgba(255,255,255,0.15)'}`,
-                                    background: rememberMe ? '#6366F1' : 'transparent',
+                                    border: `1.5px solid ${rememberMe ? '#3ECF8E' : 'rgba(255,255,255,0.15)'}`,
+                                    background: rememberMe ? '#3ECF8E' : 'transparent',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -218,7 +216,7 @@ const BusinessLogin = ({ onLogin, loading }) => {
                                     flexShrink: 0
                                 }}
                             >
-                                {rememberMe && <span style={{ color: 'white', fontSize: '11px', fontWeight: 'bold' }}>✓</span>}
+                                {rememberMe && <span style={{ color: '#121212', fontSize: '11px', fontWeight: 'bold' }}>✓</span>}
                             </div>
                             Recordar mi cuenta
                         </label>
@@ -230,29 +228,31 @@ const BusinessLogin = ({ onLogin, loading }) => {
                             style={{
                                 width: '100%',
                                 padding: '14px',
-                                borderRadius: '12px',
+                                borderRadius: '8px',
                                 border: 'none',
                                 background: loading
-                                    ? 'rgba(99, 102, 241, 0.4)'
-                                    : 'linear-gradient(135deg, #6366F1, #4F46E5)',
-                                color: 'white',
+                                    ? 'rgba(62, 207, 142, 0.4)'
+                                    : '#3ECF8E',
+                                color: '#121212',
                                 fontSize: '15px',
                                 fontWeight: '700',
                                 cursor: loading ? 'wait' : 'pointer',
                                 transition: 'all 0.25s ease',
-                                boxShadow: loading ? 'none' : '0 4px 14px rgba(99, 102, 241, 0.35)',
+                                boxShadow: loading ? 'none' : '0 4px 14px rgba(62, 207, 142, 0.25)',
                                 marginTop: '4px',
                                 letterSpacing: '0.02em'
                             }}
                             onMouseEnter={(e) => {
                                 if (!loading) {
+                                    e.currentTarget.style.background = '#34B37A';
                                     e.currentTarget.style.transform = 'translateY(-1px)';
-                                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.45)';
+                                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(62, 207, 142, 0.4)';
                                 }
                             }}
                             onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#3ECF8E';
                                 e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = loading ? 'none' : '0 4px 14px rgba(99, 102, 241, 0.35)';
+                                e.currentTarget.style.boxShadow = loading ? 'none' : '0 4px 14px rgba(62, 207, 142, 0.25)';
                             }}
                         >
                             {loading ? (
