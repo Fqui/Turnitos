@@ -83,6 +83,28 @@ export default function BusinessProfile({ business: initialBusiness }) {
             }
         }
 
+        // Check special_days override first
+        const specialDays = business?.special_days || [];
+        if (specialDays.length > 0 && date) {
+            const dateObj = date instanceof Date
+                ? date
+                : new Date(date.includes('T') ? date : date + 'T00:00:00');
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+
+            const matchedSpecialDay = specialDays.find(sd => sd.date === dateStr);
+            if (matchedSpecialDay) {
+                if (matchedSpecialDay.type === 'closed' || matchedSpecialDay.type === 'holiday') {
+                    return { open: '00:00', close: '00:00' }; // Closed all day
+                }
+                if (matchedSpecialDay.type === 'special_hours' && matchedSpecialDay.open && matchedSpecialDay.close) {
+                    return { open: matchedSpecialDay.open, close: matchedSpecialDay.close };
+                }
+            }
+        }
+
         // Handle new object format (Detailed Schedule)
         if (typeof hours === 'object' && !hours.weekday) {
             if (!date) return { open: '08:00', close: '22:00' };
