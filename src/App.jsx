@@ -19,6 +19,7 @@ const BusinessPortal = lazy(() => import('./pages/BusinessPortal'));
 const Ayuda = lazy(() => import('./pages/Ayuda'));
 const Negocios = lazy(() => import('./pages/Negocios'));
 const Colaboradores = lazy(() => import('./pages/Colaboradores'));
+const BusinessStore = lazy(() => import('./pages/BusinessStore'));
 
 // Seller Portal Components
 const SellerLogin = lazy(() => import('./components/seller/SellerLogin'));
@@ -68,11 +69,11 @@ function AppContent() {
   const isHome = location.pathname === '/';
   const isBusinessPortal = location.pathname.startsWith('/portal');
   const isAdmin = location.pathname.startsWith('/admin');
-  const isPublicRoute = ['/', '/ayuda', '/negocios', '/colaboradores', '/for-business', '/help'].includes(location.pathname) || location.pathname.endsWith('/turnos');
+  const isPublicRoute = ['/', '/ayuda', '/negocios', '/colaboradores', '/for-business', '/help'].includes(location.pathname) || location.pathname.endsWith('/turnos') || location.pathname.endsWith('/tienda');
   const isLinkBio = (!isAdmin && !isBusinessPortal && !isPublicRoute) || (subdomain && location.pathname === '/');
   const isBusinessPage = isLinkBio || location.pathname.endsWith('/turnos') || (subdomain && (location.pathname === '/' || location.pathname === '/turnos'));
 
-  if (subdomain && (location.pathname === '/' || location.pathname === '/turnos')) {
+  if (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda')) {
     const isMainSubdomainPage = location.pathname === '/';
     return (
       <div className="app-container" style={{ 
@@ -92,7 +93,9 @@ function AppContent() {
           overflow: isMainSubdomainPage ? 'hidden' : 'visible'
         }}>
           <Suspense fallback={<LoadingFallback />}>
-            {isMainSubdomainPage ? (
+            {location.pathname === '/tienda' ? (
+              <BusinessStore overrideSlug={subdomain} />
+            ) : isMainSubdomainPage ? (
               <LinkBio overrideSlug={subdomain} />
             ) : (
               <BusinessProfileRouter overrideSlug={subdomain} />
@@ -139,6 +142,7 @@ function AppContent() {
               {/* Keep old routes temporarily for compatibility if needed, or remove them */}
               <Route path="/:businessSlug" element={<LinkBio />} />
               <Route path="/:businessSlug/turnos" element={<BusinessProfileRouter />} />
+              <Route path="/:businessSlug/tienda" element={<BusinessStore />} />
               <Route path="/admin" element={<Navigate to="/login" replace />} />
               <Route path="/admin/login" element={<Navigate to="/login" replace />} />
 

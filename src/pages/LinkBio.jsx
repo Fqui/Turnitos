@@ -32,6 +32,13 @@ export default function LinkBio({ overrideSlug }) {
         return `/${businessSlug}/turnos${hash}`;
     };
 
+    const getStorePath = () => {
+        if (overrideSlug) {
+            return '/tienda';
+        }
+        return `/${businessSlug}/tienda`;
+    };
+
     useEffect(() => {
         const fetchBusiness = async () => {
             try {
@@ -107,7 +114,7 @@ export default function LinkBio({ overrideSlug }) {
         return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
     }
 
-    const primaryColor = business.primaryColor || business.button_color || business.buttonColor ||
+    const primaryColor = business.primary_color || business.button_color || business.buttonColor ||
         (business.category === 'beauty' ? '#FF4081' :
             business.category === 'health' ? '#2979FF' : '#00E676');
 
@@ -132,6 +139,13 @@ export default function LinkBio({ overrideSlug }) {
             icon: '📅',
             action: () => navigate(getBookingPath('#servicios')),
             highlight: true
+        },
+        {
+            title: 'Ver Tienda / Productos',
+            subtitle: 'Paletas, grips, bebidas y más',
+            icon: '🛒',
+            action: () => navigate(getStorePath()),
+            highlight: false
         }
     ];
 
@@ -145,7 +159,7 @@ export default function LinkBio({ overrideSlug }) {
             {/* Banner Section */}
             <div className="linkbio-banner" style={{
                 width: '100%',
-                height: '140px',
+                height: '240px',
                 backgroundImage: `url(${business.banner_image || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&q=80'})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
@@ -178,6 +192,8 @@ export default function LinkBio({ overrideSlug }) {
                 }}
             >
                 <div className="linkbio-logo" style={{
+                    width: '120px',
+                    height: '120px',
                     borderRadius: '50%',
                     margin: '0 auto 16px',
                     border: '4px solid var(--bg-main)',
