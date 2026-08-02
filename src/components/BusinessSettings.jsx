@@ -240,6 +240,24 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         setEditingHighlight(newHighlight);
     };
 
+    const createStory = () => {
+        const highlights = formData.gallery_highlights || [];
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const newStory = {
+            id: `story_${Date.now()}`,
+            title: 'Historia',
+            cover_image: null,
+            images: [],
+            is_story: true,
+            created_at: now.toISOString(),
+            expires_at: expiresAt.toISOString(),
+            order: 0
+        };
+
+        setEditingHighlight(newStory);
+    };
+
     const saveHighlight = async (highlight) => {
         const highlights = formData.gallery_highlights || [];
         const existingIndex = highlights.findIndex(h => h.id === highlight.id);
@@ -2037,150 +2055,226 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
             case 'gallery':
                 const highlights = formData.gallery_highlights || [];
+                const stories24h = highlights.filter(h => h.is_story);
+                const permanentHighlightsList = highlights.filter(h => !h.is_story);
+
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
                         {/* Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                             <div>
                                 <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '4px', color: 'var(--text-primary)' }}>
-                                    Destacadas ({highlights.length}/10)
+                                    Historias y Destacadas ({highlights.length}/20)
                                 </h3>
-                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                                    Crea categorías de fotos estilo Instagram
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                    Publica historias de 24hs o álbumes destacados tipo Instagram.
                                 </p>
                             </div>
-                            <button
-                                onClick={createHighlight}
-                                disabled={highlights.length >= 10}
-                                style={{
-                                    ...saveButtonStyle,
-                                    width: 'auto',
-                                    margin: 0,
-                                    padding: '8px 16px',
-                                    fontSize: '13px',
-                                    opacity: highlights.length >= 10 ? 0.5 : 1,
-                                    cursor: highlights.length >= 10 ? 'not-allowed' : 'pointer'
-                                }}
-                            >
-                                ＋ Nueva Destacada
-                            </button>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={createStory}
+                                    style={{
+                                        padding: '10px 16px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                                        color: '#fff',
+                                        fontWeight: '700',
+                                        fontSize: '13px',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(220, 39, 67, 0.3)'
+                                    }}
+                                >
+                                    ⚡ Publicar Historia (24hs)
+                                </button>
+                                <button
+                                    onClick={createHighlight}
+                                    disabled={highlights.length >= 20}
+                                    style={{
+                                        padding: '10px 16px',
+                                        borderRadius: '12px',
+                                        border: '1px solid var(--border)',
+                                        background: 'var(--bg-main)',
+                                        color: 'var(--text-primary)',
+                                        fontWeight: '700',
+                                        fontSize: '13px',
+                                        opacity: highlights.length >= 20 ? 0.5 : 1,
+                                        cursor: highlights.length >= 20 ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    ⭐ Nueva Destacada
+                                </button>
+                            </div>
                         </div>
 
-                        {/* Highlights List */}
-                        {highlights.length === 0 ? (
-                            <div style={{
-                                padding: '40px',
-                                border: '2px dashed var(--border)',
-                                borderRadius: '16px',
-                                textAlign: 'center',
-                                background: 'var(--bg-main)'
-                            }}>
-                                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📸</div>
-                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                    Aún no has creado destacadas
-                                </p>
-                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                    Crea categorías como "Manicura", "Pedicura", etc.
-                                </p>
+                        {/* Section 1: Historias de 24 Horas */}
+                        <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                <div>
+                                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                        ⚡ Historias de 24 Horas ({stories24h.length})
+                                    </h4>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                                        Activan el anillo de color en la foto de perfil del negocio y expiran automáticamente.
+                                    </p>
+                                </div>
                             </div>
-                        ) : (
-                            <div style={{ display: 'grid', gap: '12px' }}>
-                                {highlights.map((highlight, index) => (
-                                    <div
-                                        key={highlight.id}
-                                        style={{
-                                            background: 'var(--bg-main)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: '12px',
-                                            padding: '16px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '16px'
-                                        }}
-                                    >
-                                        {/* Thumbnail */}
-                                        <div style={{
-                                            width: '60px',
-                                            height: '60px',
-                                            borderRadius: '50%',
-                                            overflow: 'hidden',
-                                            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                                            padding: '3px',
-                                            flexShrink: 0
-                                        }}>
-                                            <div style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                borderRadius: '50%',
+
+                            {stories24h.length === 0 ? (
+                                <div style={{ padding: '24px', border: '1px dashed var(--border)', borderRadius: '12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                    <p style={{ margin: 0, fontSize: '13px' }}>No hay historias de 24hs activas actualmente.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gap: '10px' }}>
+                                    {stories24h.map((story) => {
+                                        const now = new Date();
+                                        const expDate = story.expires_at ? new Date(story.expires_at) : null;
+                                        const diffHours = expDate ? Math.max(0, Math.round((expDate - now) / (1000 * 60 * 60))) : 24;
+
+                                        return (
+                                            <div
+                                                key={story.id}
+                                                style={{
+                                                    background: 'var(--bg-card)',
+                                                    border: '1px solid var(--border)',
+                                                    borderRadius: '12px',
+                                                    padding: '12px 16px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '14px'
+                                                }}
+                                            >
+                                                {/* Thumbnail with Instagram ring */}
+                                                <div style={{
+                                                    width: '50px',
+                                                    height: '50px',
+                                                    borderRadius: '50%',
+                                                    background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                                                    padding: '2px',
+                                                    flexShrink: 0
+                                                }}>
+                                                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--bg-main)', padding: '2px' }}>
+                                                        <img
+                                                            src={story.cover_image || story.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
+                                                            alt={story.title}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                                        {story.title || 'Historia'}
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--primary-paddle)', fontWeight: '600', marginTop: '2px' }}>
+                                                        ⏱ Expira en ~{diffHours}hs ({story.images?.length || 0} foto{story.images?.length !== 1 ? 's' : ''})
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => setEditingHighlight(story)}
+                                                        style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px' }}
+                                                    >
+                                                        Editar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deleteHighlight(story.id)}
+                                                        style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px', background: 'rgba(255, 68, 68, 0.1)', color: '#ff4444' }}
+                                                    >
+                                                        Borrar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Section 2: Destacadas Permanentes */}
+                        <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                <div>
+                                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                        ⭐ Destacadas Permanentes ({permanentHighlightsList.length})
+                                    </h4>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                                        Aparecen como álbumes fijados abajo del perfil (ej: "Torneos", "Ubicación", "Reglas").
+                                    </p>
+                                </div>
+                            </div>
+
+                            {permanentHighlightsList.length === 0 ? (
+                                <div style={{ padding: '24px', border: '1px dashed var(--border)', borderRadius: '12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                    <p style={{ margin: 0, fontSize: '13px' }}>Aún no creaste destacadas permanentes.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gap: '10px' }}>
+                                    {permanentHighlightsList.map((highlight) => (
+                                        <div
+                                            key={highlight.id}
+                                            style={{
                                                 background: 'var(--bg-card)',
-                                                padding: '2px',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '12px',
+                                                padding: '12px 16px',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                justifyContent: 'center'
+                                                gap: '14px'
+                                            }}
+                                        >
+                                            <div style={{
+                                                width: '50px',
+                                                height: '50px',
+                                                borderRadius: '50%',
+                                                border: '1px solid var(--border)',
+                                                padding: '2px',
+                                                flexShrink: 0
                                             }}>
-                                                {highlight.cover_image ? (
-                                                    <img
-                                                        src={highlight.cover_image}
-                                                        alt={highlight.title}
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            objectFit: 'cover',
-                                                            borderRadius: '50%'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <span style={{ fontSize: '24px' }}>📷</span>
-                                                )}
+                                                <img
+                                                    src={highlight.cover_image || highlight.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
+                                                    alt={highlight.title}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                                />
                                             </div>
-                                        </div>
 
-                                        {/* Info */}
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>
-                                                {highlight.title}
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                                    {highlight.title}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                                    {highlight.images?.length || 0} foto{highlight.images?.length !== 1 ? 's' : ''}
+                                                </div>
                                             </div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                {highlight.images.length} foto{highlight.images.length !== 1 ? 's' : ''}
-                                            </div>
-                                        </div>
 
-                                        {/* Actions */}
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button
-                                                onClick={() => setEditingHighlight(highlight)}
-                                                style={{
-                                                    ...buttonSecondaryStyle,
-                                                    padding: '6px 12px',
-                                                    fontSize: '12px'
-                                                }}
-                                            >
-                                                Editar
-                                            </button>
-                                            <button
-                                                onClick={() => deleteHighlight(highlight.id)}
-                                                style={{
-                                                    ...buttonSecondaryStyle,
-                                                    padding: '6px 12px',
-                                                    fontSize: '12px',
-                                                    background: 'rgba(255, 68, 68, 0.1)',
-                                                    color: '#ff4444'
-                                                }}
-                                            >
-                                                Borrar
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => setEditingHighlight(highlight)}
+                                                    style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px' }}
+                                                >
+                                                    Editar
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteHighlight(highlight.id)}
+                                                    style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px', background: 'rgba(255, 68, 68, 0.1)', color: '#ff4444' }}
+                                                >
+                                                    Borrar
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Edit Modal */}
                         {editingHighlight && (
                             <div style={{
                                 position: 'fixed',
                                 inset: 0,
-                                background: 'rgba(0,0,0,0.5)',
+                                background: 'rgba(0,0,0,0.6)',
+                                backdropFilter: 'blur(4px)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -2192,18 +2286,20 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 <div
                                     style={{
                                         background: 'var(--bg-card)',
-                                        borderRadius: '16px',
+                                        borderRadius: '20px',
                                         padding: '24px',
                                         maxWidth: '600px',
                                         width: '100%',
                                         maxHeight: '90vh',
-                                        overflow: 'auto'
+                                        overflow: 'auto',
+                                        border: '1px solid var(--border)',
+                                        boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
                                     }}
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                         <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                                            {editingHighlight.images.length > 0 ? 'Editar' : 'Nueva'} Destacada
+                                            {editingHighlight.is_story ? '⚡ Publicar Historia (24hs)' : (editingHighlight.images?.length > 0 ? 'Editar Destacada' : 'Nueva Destacada')}
                                         </h3>
                                         <button
                                             onClick={() => setEditingHighlight(null)}
@@ -2217,6 +2313,35 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         >
                                             ×
                                         </button>
+                                    </div>
+
+                                    {/* 24h Story Switch */}
+                                    <div style={{ marginBottom: '20px', background: 'var(--bg-main)', padding: '14px', borderRadius: '14px', border: '1px solid var(--border)' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={!!editingHighlight.is_story}
+                                                onChange={(e) => {
+                                                    const isStory = e.target.checked;
+                                                    const now = new Date();
+                                                    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                                                    setEditingHighlight({
+                                                        ...editingHighlight,
+                                                        is_story: isStory,
+                                                        expires_at: isStory ? expiresAt.toISOString() : null
+                                                    });
+                                                }}
+                                                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                            />
+                                            <div>
+                                                <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                    ⚡ Publicar como Historia de 24 Horas
+                                                </span>
+                                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                                                    Activa el anillo con gradiente de Instagram en el logo del negocio. Expira en 24hs.
+                                                </p>
+                                            </div>
+                                        </label>
                                     </div>
 
                                     {/* Title Input */}

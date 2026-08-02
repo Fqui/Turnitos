@@ -494,7 +494,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
     const containerWidth = hasPadelCourts ? '90%' : '800px';
 
-    const highlights = business?.gallery_highlights && business.gallery_highlights.length > 0
+    const now = new Date();
+    const rawHighlights = business?.gallery_highlights && business.gallery_highlights.length > 0
         ? business.gallery_highlights
         : (business?.gallery_images && business.gallery_images.length > 0
             ? [{
@@ -505,6 +506,18 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 order: 0
             }]
             : []);
+
+    // Filter out expired 24-hour stories
+    const validHighlights = rawHighlights.filter(item => {
+        if (item.is_story && item.expires_at) {
+            return new Date(item.expires_at) > now;
+        }
+        return true;
+    });
+
+    const activeStories = validHighlights.filter(h => h.is_story);
+    const permanentHighlights = validHighlights.filter(h => !h.is_story);
+    const highlights = activeStories.length > 0 ? [...activeStories, ...permanentHighlights] : permanentHighlights;
 
 
 
@@ -830,18 +843,20 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                 }]
                                 : []);
 
-                        if (highlights.length === 0) return null;
+                        if (permanentHighlights.length === 0) return null;
 
                         return (
                             <div id="galeria" style={{ marginBottom: '20px', animation: 'slideUp 0.4s ease' }}>
                                 <div className="highlights-container">
-                                    {highlights.map((highlight, index) => (
-                                        <div
-                                            key={highlight.id || index}
-                                            onClick={() => {
-                                                setSelectedPhotoIndex(0);
-                                                setSelectedHighlight(index);
-                                            }}
+                                    {permanentHighlights.map((highlight, index) => {
+                                        const mainIdx = highlights.findIndex(h => h.id === highlight.id);
+                                        return (
+                                            <div
+                                                key={highlight.id || index}
+                                                onClick={() => {
+                                                    setSelectedPhotoIndex(0);
+                                                    setSelectedHighlight(mainIdx >= 0 ? mainIdx : index);
+                                                }}
                                             style={{
                                                 flexShrink: 0,
                                                 scrollSnapAlign: 'start',
@@ -895,10 +910,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap'
                                             }}>
-                                                {highlight.title}
+                                                 {highlight.title}
                                             </span>
                                         </div>
-                                    ))}
+                                    );
+                                })}
                                 </div>
                             </div>
                         );
