@@ -49,6 +49,38 @@ export default function LinkBio({ overrideSlug }) {
         fetchBusiness();
     }, [businessSlug]);
 
+    // Theme Management
+    useEffect(() => {
+        if (business) {
+            const root = document.documentElement;
+            const body = document.body;
+
+            // Calculate primary color
+            const color = business.primary_color || business.button_color || business.buttonColor ||
+                (business.category === 'beauty' ? '#FF4081' :
+                    business.category === 'health' ? '#2979FF' : '#00E676');
+
+            // Set primary color variable
+            root.style.setProperty('--primary-paddle', color);
+
+            if (business.theme === 'light') {
+                root.style.setProperty('--bg-main', '#F5F7FA');
+                root.style.setProperty('--bg-card', '#FFFFFF');
+                root.style.setProperty('--text-primary', '#1A1A1A');
+                root.style.setProperty('--text-secondary', '#4A4A4A');
+                root.style.setProperty('--border', '#E0E0E0');
+                body.style.backgroundImage = 'radial-gradient(#E0E0E0 1.5px, transparent 1.5px)';
+            } else {
+                root.style.setProperty('--bg-main', '#121212');
+                root.style.setProperty('--bg-card', '#1E1E1E');
+                root.style.setProperty('--text-primary', '#FFFFFF');
+                root.style.setProperty('--text-secondary', '#A0A0A0');
+                root.style.setProperty('--border', '#333333');
+                body.style.backgroundImage = 'radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px)';
+            }
+        }
+    }, [business]);
+
     if (loading) {
         return (
             <div style={{
