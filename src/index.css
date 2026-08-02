@@ -398,9 +398,8 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
-/* LinkBio responsive layout to prevent vertical scroll on mobile */
 .linkbio-container {
-  min-height: 100vh;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -410,8 +409,11 @@ input:focus, select:focus, textarea:focus {
 
 @media (max-width: 768px) {
   .linkbio-container {
-    height: 100vh !important;
-    max-height: 100vh !important;
+    flex: 1 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     overflow-y: auto !important;
   }
   
@@ -473,6 +475,10 @@ input:focus, select:focus, textarea:focus {
   }
   
   .linkbio-links-section {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
     gap: 8px !important;
     margin-bottom: 12px !important;
   }
