@@ -6,7 +6,7 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
-import { findBusinessBySlug } from '../utils/utils';
+import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import ServiceSelector from '../components/ServiceSelector';
 import Calendar from '../components/Calendar';
 import MonthCalendar from '../components/MonthCalendar';
@@ -1070,6 +1070,93 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     </section>
                 )}
 
+                {/* 5. Products Showcase Section */}
+                <section style={{ 
+                    marginBottom: '30px',
+                    padding: '20px',
+                    background: 'linear-gradient(135deg, var(--bg-card) 0%, rgba(255,255,255,0.01) 100%)',
+                    borderRadius: '24px',
+                    border: '1px solid var(--border)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                    backdropFilter: 'blur(10px)'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <div>
+                            <h3 style={{ fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                                🛍️ Productos Destacados
+                            </h3>
+                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Equipate y retira cuando vengas a jugar</p>
+                        </div>
+                        <button 
+                            onClick={() => {
+                                const subdomain = getSubdomain();
+                                navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
+                            }}
+                            style={{
+                                padding: '6px 14px',
+                                borderRadius: '20px',
+                                border: 'none',
+                                background: 'rgba(255,255,255,0.08)',
+                                color: 'var(--text-primary)',
+                                fontWeight: '700',
+                                fontSize: '11px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                        >
+                            Ver Tienda ➔
+                        </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                        {[
+                            { name: 'Tubo Pelotas Padel Premium', price: 8500, category: 'Pelotas', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80' },
+                            { name: 'Pack x3 Overgrips Wilson', price: 4000, category: 'Accesorios', image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80' },
+                            { name: 'Alquiler Pala Bullpadel Vertex', price: 2000, category: 'Alquileres', image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80' },
+                            { name: 'Gatorade Manzana 500ml', price: 2500, category: 'Bebidas', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80' }
+                        ].map((prod, idx) => (
+                            <div 
+                                key={idx}
+                                onClick={() => {
+                                    const subdomain = getSubdomain();
+                                    navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
+                                }}
+                                style={{
+                                    flexShrink: 0,
+                                    width: '130px',
+                                    background: 'var(--bg-main)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '16px',
+                                    padding: '10px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'space-between',
+                                    transition: 'transform 0.2s',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                                <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
+                                    <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                                <h4 style={{ fontSize: '11px', fontWeight: '700', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{prod.name}</h4>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: '800', color: primaryColor }}>${prod.price.toLocaleString('es-AR')}</span>
+                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>🛒</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
                 {/* Step 2: Select Date */}
                 {(selectedItem || business.type === 'venue') && (
                     <section
@@ -1406,32 +1493,143 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                         }}>
                                             ⚠️ No hay especialistas disponibles para este horario
                                         </div>
-                                    ) : (
-                                        <select
-                                            value={selectedSpecialist?.id || ''}
-                                            onChange={(e) => {
-                                                const specialist = availableSpecialists.find(s => s.id === e.target.value);
-                                                setSelectedSpecialist(specialist);
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                padding: '12px',
-                                                fontSize: '14px',
-                                                borderRadius: '8px',
-                                                border: '1px solid var(--border)',
-                                                background: 'var(--bg-main)',
-                                                color: 'var(--text-primary)',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            <option value="">Seleccionar especialista...</option>
-                                            {availableSpecialists.map(specialist => (
-                                                <option key={specialist.id} value={specialist.id}>
-                                                    {specialist.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    )}
+                                     ) : (
+                                         <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
+                                             {/* "Cualquier especialista" Option */}
+                                             <div
+                                                 onClick={() => setSelectedSpecialist(null)}
+                                                 style={{
+                                                     display: 'flex',
+                                                     alignItems: 'center',
+                                                     gap: '12px',
+                                                     padding: '12px',
+                                                     borderRadius: '12px',
+                                                     border: !selectedSpecialist ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                     background: !selectedSpecialist ? 'rgba(132, 204, 22, 0.05)' : 'var(--bg-main)',
+                                                     cursor: 'pointer',
+                                                     transition: 'all 0.2s ease',
+                                                     boxShadow: !selectedSpecialist ? '0 4px 12px rgba(132, 204, 22, 0.15)' : 'none',
+                                                     gridColumn: isMobile ? 'span 1' : 'span 2'
+                                                 }}
+                                             >
+                                                 <div style={{
+                                                     width: '40px',
+                                                     height: '40px',
+                                                     borderRadius: '50%',
+                                                     background: 'var(--border)',
+                                                     display: 'flex',
+                                                     alignItems: 'center',
+                                                     justifyContent: 'center',
+                                                     fontSize: '18px'
+                                                 }}>
+                                                     👥
+                                                 </div>
+                                                 <div style={{ flex: 1, minWidth: 0 }}>
+                                                     <div style={{
+                                                         fontWeight: '700',
+                                                         fontSize: '14px',
+                                                         color: !selectedSpecialist ? 'var(--primary-paddle)' : 'var(--text-primary)'
+                                                     }}>
+                                                         Cualquier especialista
+                                                     </div>
+                                                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                                         Asignación automática
+                                                     </div>
+                                                 </div>
+                                                 <div style={{
+                                                     width: '20px',
+                                                     height: '20px',
+                                                     borderRadius: '50%',
+                                                     border: !selectedSpecialist ? 'none' : '2px solid var(--border)',
+                                                     background: !selectedSpecialist ? 'var(--primary-paddle)' : 'transparent',
+                                                     display: 'flex',
+                                                     alignItems: 'center',
+                                                     justifyContent: 'center',
+                                                     transition: 'all 0.2s'
+                                                 }}>
+                                                     {!selectedSpecialist && (
+                                                         <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                             <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                         </svg>
+                                                     )}
+                                                 </div>
+                                             </div>
+
+                                             {/* Available Specialists list */}
+                                             {availableSpecialists.map(specialist => {
+                                                 const isSelected = selectedSpecialist?.id === specialist.id;
+                                                 const avatarUrl = specialist.avatar_url || specialist.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(specialist.name)}&background=random&size=100`;
+                                                 return (
+                                                     <div
+                                                         key={specialist.id}
+                                                         onClick={() => setSelectedSpecialist(specialist)}
+                                                         style={{
+                                                             display: 'flex',
+                                                             alignItems: 'center',
+                                                             gap: '12px',
+                                                             padding: '12px',
+                                                             borderRadius: '12px',
+                                                             border: isSelected ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                             background: isSelected ? 'rgba(132, 204, 22, 0.05)' : 'var(--bg-main)',
+                                                             cursor: 'pointer',
+                                                             transition: 'all 0.2s ease',
+                                                             boxShadow: isSelected ? '0 4px 12px rgba(132, 204, 22, 0.15)' : 'none'
+                                                         }}
+                                                     >
+                                                         <img
+                                                             src={avatarUrl}
+                                                             alt={specialist.name}
+                                                             style={{
+                                                                 width: '40px',
+                                                                 height: '40px',
+                                                                 borderRadius: '50%',
+                                                                 objectFit: 'cover',
+                                                                 border: '2px solid var(--bg-card)'
+                                                             }}
+                                                         />
+                                                         <div style={{ flex: 1, minWidth: 0 }}>
+                                                             <div style={{
+                                                                 fontWeight: '700',
+                                                                 fontSize: '14px',
+                                                                 color: isSelected ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                                                                 whiteSpace: 'nowrap',
+                                                                 overflow: 'hidden',
+                                                                 textOverflow: 'ellipsis'
+                                                             }}>
+                                                                 {specialist.name}
+                                                             </div>
+                                                             <div style={{
+                                                                 fontSize: '11px',
+                                                                 color: 'var(--text-secondary)',
+                                                                 whiteSpace: 'nowrap',
+                                                                 overflow: 'hidden',
+                                                                 textOverflow: 'ellipsis'
+                                                             }}>
+                                                                 {specialist.role || 'Especialista'}
+                                                             </div>
+                                                         </div>
+                                                         <div style={{
+                                                             width: '20px',
+                                                             height: '20px',
+                                                             borderRadius: '50%',
+                                                             border: isSelected ? 'none' : '2px solid var(--border)',
+                                                             background: isSelected ? 'var(--primary-paddle)' : 'transparent',
+                                                             display: 'flex',
+                                                             alignItems: 'center',
+                                                             justifyContent: 'center',
+                                                             transition: 'all 0.2s'
+                                                         }}>
+                                                             {isSelected && (
+                                                                 <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                     <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                                 </svg>
+                                                             )}
+                                                         </div>
+                                                     </div>
+                                                 );
+                                             })}
+                                         </div>
+                                     )}
                                 </div>
                             )}
                         </div>
@@ -2004,6 +2202,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         </div>
                     </div>
                 </section>
+
+
 
                 {/* Booking Summary Modal */}
                 {showModal && (
