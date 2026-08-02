@@ -74,8 +74,16 @@ export default function CourtSelector({
                             return (
                                 <motion.div
                                     key={court.id}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
+                                    whileHover={{
+                                        borderColor: sportColor,
+                                        boxShadow: isSelected
+                                            ? `0 6px 16px ${sportColor}40`
+                                            : '0 4px 12px rgba(0,0,0,0.08)',
+                                        backgroundColor: isSelected
+                                            ? `${sportColor}15`
+                                            : 'var(--bg-main)'
+                                    }}
+                                    whileTap={{ scale: 0.99 }}
                                     onClick={() => handleCourtClick(court)}
                                     style={{
                                         padding: '16px',
