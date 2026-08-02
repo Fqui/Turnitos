@@ -123,7 +123,7 @@ export default function BusinessStore({ overrideSlug }) {
         const productListText = cart.map(item => `• ${item.qty}x ${item.name} ($${(item.price * item.qty).toLocaleString('es-AR')})`).join('\n');
         const totalText = getCartTotal().toLocaleString('es-AR');
         
-        const message = `¡Hola ${business.name}! 👋\n\nQuiero realizar el siguiente pedido para retirar por el local:\n\n${productListText}\n\n*Total a pagar:* $${totalText}\n\n*(Pedido realizado sin reserva de turno)* 🛒`;
+        const message = `¡Hola ${business.name}! 👋\n\nQuiero realizar el siguiente pedido para retirar por el local:\n\n${productListText}\n\n*Total a pagar:* $${totalText}`;
         
         window.open(`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
         
@@ -179,6 +179,11 @@ export default function BusinessStore({ overrideSlug }) {
     // Responsive setup check
     const isMobile = window.innerWidth <= 768;
 
+    // Derive primaryColor for use in JSX (same logic as useEffect)
+    const primaryColor = business.primary_color || business.button_color || business.buttonColor ||
+        (business.category === 'beauty' ? '#FF4081' :
+            business.category === 'health' ? '#2979FF' : '#00E676');
+
     return (
         <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', padding: isMobile ? '16px' : '32px 24px', paddingBottom: '100px', position: 'relative' }}>
             
@@ -201,12 +206,45 @@ export default function BusinessStore({ overrideSlug }) {
                     </button>
                 </div>
 
-                {/* Banner info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '20px', marginBottom: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.02)' }}>
-                    <img src={business.logo || business.image} alt="Logo" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} />
-                    <div>
-                        <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0 }}>Artículos y Equipamiento</h3>
-                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Pedí ahora y retirá cuando vengas a jugar</p>
+                {/* Promotional Banner */}
+                <div style={{
+                    background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}CC 50%, ${primaryColor}99 100%)`,
+                    borderRadius: '20px',
+                    padding: isMobile ? '20px' : '24px 32px',
+                    marginBottom: '24px',
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}>
+                    <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
+                    <div style={{ position: 'absolute', bottom: '-30px', right: '60px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+                    
+                    <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: '#fff', margin: '0 0 6px 0', position: 'relative', zIndex: 1 }}>
+                        Todo lo que necesitás para tu partido
+                    </h3>
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', margin: '0 0 14px 0', position: 'relative', zIndex: 1 }}>
+                        Elegí tus productos y retiralos cuando vengas a jugar
+                    </p>
+                    <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
+                        {[
+                            { icon: '🏪', text: 'Retirá en el local' },
+                            { icon: '💬', text: 'Pedí por WhatsApp' },
+                            { icon: '⚡', text: 'Sin esperas' }
+                        ].map((item, i) => (
+                            <span key={i} style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                background: 'rgba(255,255,255,0.18)',
+                                color: '#fff',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                backdropFilter: 'blur(4px)'
+                            }}>
+                                {item.icon} {item.text}
+                            </span>
+                        ))}
                     </div>
                 </div>
 
