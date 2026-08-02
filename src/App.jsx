@@ -70,6 +70,7 @@ function AppContent() {
   const isBusinessPortal = location.pathname.startsWith('/portal');
   const isAdmin = location.pathname.startsWith('/admin');
   const isLinkBio = (subdomain && location.pathname === '/') || location.pathname.endsWith('/bio');
+  const isBusinessPage = isLinkBio || location.pathname.endsWith('/turnos') || location.pathname.endsWith('/tienda') || (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda'));
 
   if (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda')) {
     const isMainSubdomainPage = location.pathname === '/';
