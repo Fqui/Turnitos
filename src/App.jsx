@@ -69,9 +69,7 @@ function AppContent() {
   const isHome = location.pathname === '/';
   const isBusinessPortal = location.pathname.startsWith('/portal');
   const isAdmin = location.pathname.startsWith('/admin');
-  const isPublicRoute = ['/', '/ayuda', '/negocios', '/colaboradores', '/for-business', '/help'].includes(location.pathname) || location.pathname.endsWith('/turnos') || location.pathname.endsWith('/tienda');
-  const isLinkBio = (!isAdmin && !isBusinessPortal && !isPublicRoute) || (subdomain && location.pathname === '/');
-  const isBusinessPage = isLinkBio || location.pathname.endsWith('/turnos') || location.pathname.endsWith('/tienda') || (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda'));
+  const isLinkBio = (subdomain && location.pathname === '/') || location.pathname.endsWith('/bio');
 
   if (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda')) {
     const isMainSubdomainPage = location.pathname === '/';
@@ -139,10 +137,11 @@ function AppContent() {
               <Route path="/login" element={<SellerLogin />} />
               <Route path="/portal" element={<BusinessPortal />} />
               <Route path="/business-portal" element={<BusinessPortal />} />
-              {/* Keep old routes temporarily for compatibility if needed, or remove them */}
-              <Route path="/:businessSlug" element={<LinkBio />} />
+              {/* /:businessSlug now goes directly to the reservation / booking page */}
+              <Route path="/:businessSlug" element={<BusinessProfileRouter />} />
               <Route path="/:businessSlug/turnos" element={<BusinessProfileRouter />} />
               <Route path="/:businessSlug/tienda" element={<BusinessStore />} />
+              <Route path="/:businessSlug/bio" element={<LinkBio />} />
               <Route path="/admin" element={<Navigate to="/login" replace />} />
               <Route path="/admin/login" element={<Navigate to="/login" replace />} />
 
