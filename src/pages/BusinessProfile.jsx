@@ -55,6 +55,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
     // Gallery state
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
     const [selectedHighlight, setSelectedHighlight] = useState(null); // Which highlight category is open
+    const [storyViewerList, setStoryViewerList] = useState(null); // Active stories vs permanent highlights being viewed
 
     // 🎫 Promotion linking state
     const [activePromotion, setActivePromotion] = useState(null);
@@ -606,10 +607,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     marginBottom: '30px',
                     border: '1px solid var(--border)'
                 }}>
-                    {/* Business Profile Avatar with Instagram Story Gradient Ring */}
+                    {/* Business Profile Avatar with Instagram Story Gradient Ring (Only active for 24h stories) */}
                     <div
                         onClick={() => {
-                            if (highlights && highlights.length > 0) {
+                            if (activeStories && activeStories.length > 0) {
+                                setStoryViewerList(activeStories);
                                 setSelectedPhotoIndex(0);
                                 setSelectedHighlight(0);
                             }
@@ -619,16 +621,18 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             height: '106px',
                             borderRadius: '50%',
                             padding: '3px',
-                            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                            background: activeStories.length > 0
+                                ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
+                                : 'var(--border)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             margin: '-74px auto 12px',
-                            cursor: (highlights && highlights.length > 0) ? 'pointer' : 'default',
+                            cursor: activeStories.length > 0 ? 'pointer' : 'default',
                             boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
                             position: 'relative'
                         }}
-                        title={highlights && highlights.length > 0 ? "Ver Historias" : business.name}
+                        title={activeStories.length > 0 ? "Ver Historias (24hs)" : business.name}
                     >
                         <div style={{
                             width: '100%',
@@ -848,15 +852,14 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         return (
                             <div id="galeria" style={{ marginBottom: '20px', animation: 'slideUp 0.4s ease' }}>
                                 <div className="highlights-container">
-                                    {permanentHighlights.map((highlight, index) => {
-                                        const mainIdx = highlights.findIndex(h => h.id === highlight.id);
-                                        return (
-                                            <div
-                                                key={highlight.id || index}
-                                                onClick={() => {
-                                                    setSelectedPhotoIndex(0);
-                                                    setSelectedHighlight(mainIdx >= 0 ? mainIdx : index);
-                                                }}
+                                    {permanentHighlights.map((highlight, index) => (
+                                        <div
+                                            key={highlight.id || index}
+                                            onClick={() => {
+                                                setStoryViewerList(permanentHighlights);
+                                                setSelectedPhotoIndex(0);
+                                                setSelectedHighlight(index);
+                                            }}
                                             style={{
                                                 flexShrink: 0,
                                                 scrollSnapAlign: 'start',
@@ -913,8 +916,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                  {highlight.title}
                                             </span>
                                         </div>
-                                    );
-                                })}
+                                    ))}
                                 </div>
                             </div>
                         );
@@ -2301,20 +2303,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
             <AnimatePresence>
                 {selectedHighlight !== null && selectedPhotoIndex !== null && business && (
                     (() => {
-                        // Use same fallback logic as carousel
-                        const highlights = business.gallery_highlights && business.gallery_highlights.length > 0
-                            ? business.gallery_highlights
-                            : (business.gallery_images && business.gallery_images.length > 0
-                                ? [{
-                                    id: 'legacy_gallery',
-                                    title: 'Galería',
-                                    cover_image: business.gallery_images[0],
-                                    images: business.gallery_images,
-                                    order: 0
-                                }]
-                                : []);
-
-                        const highlight = highlights[selectedHighlight];
+                        const viewerHighlights = storyViewerList || activeStories;
+                        const highlight = viewerHighlights[selectedHighlight];
                         if (!highlight) return null;
 
                         const images = highlight.images || [];
@@ -2432,12 +2422,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                         const nextIndex = selectedPhotoIndex + 1;
                                         if (nextIndex >= totalImages) {
                                             // Move to next highlight or close
-                                            if (selectedHighlight < highlights.length - 1) {
+                                            if (selectedHighlight < viewerHighlights.length - 1) {
                                                 setSelectedHighlight(selectedHighlight + 1);
                                                 setSelectedPhotoIndex(0);
                                             } else {
                                                 setSelectedPhotoIndex(null);
                                                 setSelectedHighlight(null);
+                                                setStoryViewerList(null);
                                             }
                                         } else {
                                             setSelectedPhotoIndex(nextIndex);
