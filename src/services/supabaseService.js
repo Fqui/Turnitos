@@ -356,14 +356,34 @@ class SupabaseService {
         // Ensure slug is always present (auto-generate from name if missing)
         let finalSlug = businessData.slug;
         if (!finalSlug && businessData.name) {
-            const randomSuffix = Math.random().toString(36).substring(2, 6);
-            finalSlug = businessData.name
+            const baseSlug = businessData.name
                 .toLowerCase()
                 .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                 .replace(/[^a-z0-9\s-]/g, '')
                 .trim()
                 .replace(/\s+/g, '-')
-                .replace(/-+/g, '-') + '-' + randomSuffix;
+                .replace(/-+/g, '-');
+            
+            try {
+                // Check if this slug is already taken
+                const { data: existing } = await supabase
+                    .from('businesses')
+                    .select('id')
+                    .eq('slug', baseSlug)
+                    .limit(1);
+                
+                if (existing && existing.length > 0) {
+                    // Collision: append suffix
+                    const randomSuffix = Math.random().toString(36).substring(2, 6);
+                    finalSlug = `${baseSlug}-${randomSuffix}`;
+                } else {
+                    // No collision: use base slug
+                    finalSlug = baseSlug;
+                }
+            } catch (e) {
+                const randomSuffix = Math.random().toString(36).substring(2, 6);
+                finalSlug = `${baseSlug}-${randomSuffix}`;
+            }
         }
         finalSlug = finalSlug || `business-${Date.now()}`;
 
