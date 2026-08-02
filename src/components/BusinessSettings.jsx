@@ -99,14 +99,27 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
     useEffect(() => {
         if (business) {
-            // Only update form data if we switched to a different business
-            // or if it's the first load. We compare IDs.
+            const defaultProducts = [
+                { id: '1', name: 'Tubo Pelotas Padel Premium', price: 8500, category: 'Pelotas', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80', desc: 'Presurizador de alta duración', is_active: true },
+                { id: '2', name: 'Pack x3 Overgrips Wilson', price: 4000, category: 'Accesorios', image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80', desc: 'Máximo agarre y absorción', is_active: true },
+                { id: '3', name: 'Alquiler Pala Bullpadel Vertex', price: 2000, category: 'Alquileres', image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80', desc: 'Pala de potencia profesional', is_active: true },
+                { id: '4', name: 'Gatorade Manzana 500ml', price: 2500, category: 'Bebidas', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80', desc: 'Hidratación rápida', is_active: true },
+                { id: '5', name: 'Remera Oficial Cancha Apolo', price: 18000, category: 'Indumentaria', image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400&q=80', desc: 'Tela dry-fit respirable', is_active: true }
+            ];
+
             setFormData(prev => {
-                if (prev.id === business.id) return prev; // Don't overwrite local changes if same business
+                if (prev.id === business.id) return prev;
+                const meta = business?.metadata || {};
                 return {
                     ...business,
-                    // Initialize gallery_highlights if it doesn't exist
-                    gallery_highlights: business?.gallery_highlights || []
+                    store_enabled: business.store_enabled !== undefined ? business.store_enabled : (business.slug === 'cancha-apolo'),
+                    gallery_highlights: business?.gallery_highlights || [],
+                    metadata: {
+                        ...meta,
+                        store_banner_title: meta.store_banner_title || 'Todo lo que necesitás para tu partido',
+                        store_banner_subtitle: meta.store_banner_subtitle || 'Elegí tus productos y retiralos cuando vengas a jugar',
+                        store_products: (meta.store_products && meta.store_products.length > 0) ? meta.store_products : defaultProducts
+                    }
                 };
             });
         }
@@ -3764,7 +3777,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     <input
                                         type="text"
                                         style={inputStyle}
-                                        value={formData.metadata?.store_banner_title || ''}
+                                        value={formData.metadata?.store_banner_title || 'Todo lo que necesitás para tu partido'}
                                         placeholder="Ej: Todo lo que necesitás para tu partido"
                                         onChange={e => handleMetadataChange('store_banner_title', e.target.value)}
                                     />
@@ -3774,7 +3787,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     <input
                                         type="text"
                                         style={inputStyle}
-                                        value={formData.metadata?.store_banner_subtitle || ''}
+                                        value={formData.metadata?.store_banner_subtitle || 'Elegí tus productos y retiralos cuando vengas a jugar'}
                                         placeholder="Ej: Elegí tus productos y retiralos cuando vengas a jugar"
                                         onChange={e => handleMetadataChange('store_banner_subtitle', e.target.value)}
                                     />
