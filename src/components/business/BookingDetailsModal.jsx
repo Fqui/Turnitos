@@ -92,7 +92,7 @@ const BookingDetailsModal = ({
                                                 depositAmountText = `*$${amount}*`;
                                             }
                                         }
-                                        const señaLabel = depositAmountText ? `la seña de ${depositAmountText}` : 'la seña';
+                                        const señaLabel = depositAmountText || 'la seña';
 
                                         const bankName = bankDetails?.bank_name || bankDetails?.bankName || '';
                                         const accountHolder = bankDetails?.account_holder || bankDetails?.accountHolder || '';
