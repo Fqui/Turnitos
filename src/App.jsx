@@ -71,7 +71,7 @@ function AppContent() {
   const isAdmin = location.pathname.startsWith('/admin');
   const isPublicRoute = ['/', '/ayuda', '/negocios', '/colaboradores', '/for-business', '/help'].includes(location.pathname) || location.pathname.endsWith('/turnos') || location.pathname.endsWith('/tienda');
   const isLinkBio = (!isAdmin && !isBusinessPortal && !isPublicRoute) || (subdomain && location.pathname === '/');
-  const isBusinessPage = isLinkBio || location.pathname.endsWith('/turnos') || (subdomain && (location.pathname === '/' || location.pathname === '/turnos'));
+  const isBusinessPage = isLinkBio || location.pathname.endsWith('/turnos') || location.pathname.endsWith('/tienda') || (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda'));
 
   if (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda')) {
     const isMainSubdomainPage = location.pathname === '/';

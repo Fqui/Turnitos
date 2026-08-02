@@ -894,5 +894,6 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     </div>
                 </div>
             )}
+        </div>
     );
 }
