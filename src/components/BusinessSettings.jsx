@@ -2358,6 +2358,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 const methods = paymentSettings.methods || [{ type: 'cash', enabled: true }];
                 const instructions = paymentSettings.instructions || '';
                 const bankDetails = paymentSettings.bank_details || { bank_name: '', account_holder: '', cbu: '', alias: '' };
+                const whatsappTemplate = paymentSettings.whatsapp_template || '';
 
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
@@ -2748,6 +2749,39 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                                             Información extra que quieras mostrar al cliente.
                                         </p>
+                                    </div>
+
+                                    {/* WhatsApp Message Template */}
+                                    <div style={{ marginBottom: '24px', padding: '20px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                                        <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                            💬 Plantilla de Mensaje de WhatsApp (Pedir Seña)
+                                        </h4>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: '1.4' }}>
+                                            Personaliza el mensaje que se abrirá en WhatsApp para pedir la seña. Puedes usar las siguientes variables dentro del texto:
+                                            <br />
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', marginRight: '6px', display: 'inline-block', marginTop: '6px' }}>{`{cliente}`}</code>
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', marginRight: '6px', display: 'inline-block', marginTop: '6px' }}>{`{fecha}`}</code>
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', marginRight: '6px', display: 'inline-block', marginTop: '6px' }}>{`{hora}`}</code>
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', marginRight: '6px', display: 'inline-block', marginTop: '6px' }}>{`{negocio}`}</code>
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', marginRight: '6px', display: 'inline-block', marginTop: '6px' }}>{`{seña}`}</code>
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', display: 'inline-block', marginTop: '6px' }}>{`{datos_bancarios}`}</code>
+                                        </p>
+                                        <textarea
+                                            value={whatsappTemplate}
+                                            onChange={(e) => handleInputChange('payment_settings', {
+                                                ...paymentSettings,
+                                                whatsapp_template: e.target.value
+                                            })}
+                                            placeholder="Ej: Hola {cliente}, te recordamos realizar {seña} para confirmar tu turno del {fecha} en {negocio}.{datos_bancarios}"
+                                            style={{
+                                                ...inputStyle,
+                                                minHeight: '120px',
+                                                resize: 'vertical',
+                                                fontFamily: 'inherit',
+                                                fontSize: '14px',
+                                                lineHeight: '1.5'
+                                            }}
+                                        />
                                     </div>
 
                                     {/* Save Button */}

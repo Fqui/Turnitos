@@ -65,44 +65,94 @@ const BookingDetailsModal = ({
                         {booking.status !== 'blocked' && booking.status !== 'completed' && booking.status !== 'cancelled' && (
                             <button
                                 onClick={() => {
-                                    if (booking.status === 'confirmed' || booking.status === 'pending') return;
+                                    if (booking.status === 'confirmed') return;
                                     const name = booking.customer_name || booking.customerName;
                                     const phone = booking.customer_phone || booking.customerPhone;
                                     const date = formatDisplayDate(booking.date);
                                     const time = booking.time;
                                     const biz = businesses.find(b => b.id === selectedBusinessId);
                                     const businessName = biz?.name || 'nuestro local';
-                                    const message = `Hola ${name}, te recordamos tu turno para el día ${date} a las ${time} hs en ${businessName}. ¿Confirmas tu asistencia?`;
+
+                                    let message = '';
+                                    if (booking.status === 'pending') {
+                                        const paymentSettings = biz?.payment_settings || biz?.paymentSettings || {};
+                                        const deposit = paymentSettings.deposit || { enabled: false, type: 'percentage', percentage: 30, fixed_amount: 0 };
+                                        const bankDetails = paymentSettings.bank_details || { bank_name: '', account_holder: '', cbu: '', alias: '' };
+                                        const whatsappTemplate = paymentSettings.whatsapp_template || '';
+
+                                        let depositAmountText = '';
+                                        if (deposit && deposit.enabled) {
+                                            let amount = 0;
+                                            if (deposit.type === 'percentage') {
+                                                amount = Math.round((booking.price * (deposit.percentage || 0)) / 100);
+                                            } else {
+                                                amount = deposit.fixed_amount || deposit.fixedAmount || 0;
+                                            }
+                                            if (amount > 0) {
+                                                depositAmountText = `*$${amount}*`;
+                                            }
+                                        }
+                                        const señaLabel = depositAmountText ? `la seña de ${depositAmountText}` : 'la seña';
+
+                                        const bankName = bankDetails?.bank_name || bankDetails?.bankName || '';
+                                        const accountHolder = bankDetails?.account_holder || bankDetails?.accountHolder || '';
+                                        const cbu = bankDetails?.cbu || '';
+                                        const alias = bankDetails?.alias || '';
+
+                                        let bankText = '';
+                                        if (alias || cbu) {
+                                            bankText = `\n\n*Datos para la transferencia:*`;
+                                            if (bankName) bankText += `\nBanco: ${bankName}`;
+                                            if (accountHolder) bankText += `\nTitular: ${accountHolder}`;
+                                            if (cbu) bankText += `\nCBU: *${cbu}*`;
+                                            if (alias) bankText += `\nAlias: *${alias}*`;
+                                        }
+
+                                        if (whatsappTemplate) {
+                                            message = whatsappTemplate
+                                                .replace(/{cliente}/g, name)
+                                                .replace(/{fecha}/g, date)
+                                                .replace(/{hora}/g, time)
+                                                .replace(/{negocio}/g, businessName)
+                                                .replace(/{seña}/g, señaLabel)
+                                                .replace(/{datos_bancarios}/g, bankText);
+                                        } else {
+                                            message = `Hola ${name}, te recordamos que para confirmar tu reserva del día ${date} a las ${time} hs en ${businessName} es necesario realizar ${señaLabel}.${bankText}\n\nUna vez realizada, por favor envíanos el comprobante por este medio. ¡Muchas gracias!`;
+                                        }
+                                    } else {
+                                        message = `Hola ${name}, te recordamos tu turno para el día ${date} a las ${time} hs en ${businessName}. ¿Confirmas tu asistencia?`;
+                                    }
+
                                     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
                                 }}
-                                disabled={booking.status === 'confirmed' || booking.status === 'pending'}
+                                disabled={booking.status === 'confirmed'}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '8px',
                                     padding: '8px 12px',
                                     borderRadius: '10px',
-                                    border: (booking.status === 'confirmed' || booking.status === 'pending') ? '1px solid var(--border)' : '1px solid #25D366',
-                                    background: (booking.status === 'confirmed' || booking.status === 'pending') ? 'transparent' : 'rgba(37, 211, 102, 0.1)',
-                                    color: (booking.status === 'confirmed' || booking.status === 'pending') ? 'var(--text-secondary)' : '#25D366',
+                                    border: booking.status === 'confirmed' ? '1px solid var(--border)' : '1px solid #25D366',
+                                    background: booking.status === 'confirmed' ? 'transparent' : 'rgba(37, 211, 102, 0.1)',
+                                    color: booking.status === 'confirmed' ? 'var(--text-secondary)' : '#25D366',
                                     fontSize: '13px',
                                     fontWeight: '700',
-                                    cursor: (booking.status === 'confirmed' || booking.status === 'pending') ? 'default' : 'pointer',
+                                    cursor: booking.status === 'confirmed' ? 'default' : 'pointer',
                                     transition: 'all 0.2s',
-                                    opacity: (booking.status === 'confirmed' || booking.status === 'pending') ? 0.5 : 1
+                                    opacity: booking.status === 'confirmed' ? 0.5 : 1
                                 }}
                                 onMouseEnter={(e) => {
-                                    if (booking.status !== 'confirmed' && booking.status !== 'pending') {
+                                    if (booking.status !== 'confirmed') {
                                         e.currentTarget.style.background = 'rgba(37, 211, 102, 0.2)';
                                     }
                                 }}
                                 onMouseLeave={(e) => {
-                                    if (booking.status !== 'confirmed' && booking.status !== 'pending') {
+                                    if (booking.status !== 'confirmed') {
                                         e.currentTarget.style.background = 'rgba(37, 211, 102, 0.1)';
                                     }
                                 }}
                             >
-                                <span>📲</span> {booking.status === 'confirmed' ? 'Asistencia Confirmada' : (booking.status === 'pending' ? 'Recordar (Pendiente)' : 'Recordar')}
+                                <span>📲</span> {booking.status === 'confirmed' ? 'Asistencia Confirmada' : (booking.status === 'pending' ? 'Pedir Seña' : 'Recordar')}
                             </button>
                         )}
                     </div>
