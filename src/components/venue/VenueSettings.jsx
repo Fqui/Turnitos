@@ -29,6 +29,8 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
     const { showToast, showConfirm } = useNotification();
     const [activeTab, setActiveTab] = useState('general');
     const [saving, setSaving] = useState(false);
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState(null);
 
     // Main form state
     const [formData, setFormData] = useState({ ...business });
@@ -232,6 +234,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     { id: 'gallery', label: 'Galería de Fotos', icon: '📸' },
                     { id: 'pricing', label: 'Precios y Capacidad', icon: '💰' },
                     { id: 'services', label: 'Servicios Adicionales', icon: '✨' },
+                    { id: 'store', label: 'Tienda del Negocio', icon: '🛒' },
                     { id: 'amenities', label: 'Comodidades', icon: '🛋️' },
                     { id: 'calendar', label: 'Bloqueo de Fechas', icon: '📅' },
                 ].map(tab => (
@@ -595,7 +598,301 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     </div>
                 )}
 
+                {activeTab === 'store' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* Store Switch & Banner Config Card */}
+                        <div style={cardStyle}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                                <div>
+                                    <h2 style={sectionTitleStyle}>Configuración de la Tienda</h2>
+                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                                        Activa tu e-commerce y personaliza el banner promocional.
+                                    </p>
+                                </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: 'var(--bg-main)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: '700', color: formData.store_enabled ? 'var(--primary-paddle)' : 'var(--text-secondary)' }}>
+                                        {formData.store_enabled ? '🟢 Tienda Habilitada' : '⚪ Tienda Deshabilitada'}
+                                    </span>
+                                    <input
+                                        type="checkbox"
+                                        checked={!!formData.store_enabled}
+                                        onChange={e => handleInputChange('store_enabled', e.target.checked)}
+                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    />
+                                </label>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                                <div>
+                                    <label style={labelStyle}>Título del Banner Promocional</label>
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        value={formData.metadata?.store_banner_title || ''}
+                                        placeholder="Ej: Todo lo que necesitás para tu partido"
+                                        onChange={e => handleMetadataChange('store_banner_title', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Subtítulo del Banner Promocional</label>
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        value={formData.metadata?.store_banner_subtitle || ''}
+                                        placeholder="Ej: Elegí tus productos y retiralos cuando vengas a jugar"
+                                        onChange={e => handleMetadataChange('store_banner_subtitle', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Product Catalog Card */}
+                        <div style={cardStyle}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                                <div>
+                                    <h2 style={sectionTitleStyle}>Catálogo de Productos</h2>
+                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                                        Gestiona los artículos, alquileres y bebidas que vendes en tu local.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setEditingProduct({ id: Date.now().toString(), name: '', price: 0, category: 'Pelotas', desc: '', image: '', is_active: true });
+                                        setIsProductModalOpen(true);
+                                    }}
+                                    style={buttonStyle}
+                                >
+                                    + Agregar Producto
+                                </button>
+                            </div>
+
+                            {/* Products Grid / List */}
+                            {(!formData.metadata?.store_products || formData.metadata.store_products.length === 0) ? (
+                                <div style={{ textAlign: 'center', padding: '32px', border: '1px dashed var(--border)', borderRadius: '16px', color: 'var(--text-secondary)' }}>
+                                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>🛒</div>
+                                    <p style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Aún no agregaste productos a tu catálogo.</p>
+                                    <button
+                                        onClick={() => {
+                                            const defaultProducts = [
+                                                { id: '1', name: 'Tubo Pelotas Padel Premium', price: 8500, category: 'Pelotas', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80', desc: 'Presurizador de alta duración', is_active: true },
+                                                { id: '2', name: 'Pack x3 Overgrips Wilson', price: 4000, category: 'Accesorios', image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80', desc: 'Máximo agarre y absorción', is_active: true },
+                                                { id: '3', name: 'Alquiler Pala Bullpadel Vertex', price: 2000, category: 'Alquileres', image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80', desc: 'Pala de potencia profesional', is_active: true },
+                                                { id: '4', name: 'Gatorade Manzana 500ml', price: 2500, category: 'Bebidas', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80', desc: 'Hidratación rápida', is_active: true },
+                                                { id: '5', name: 'Remera Oficial Cancha Apolo', price: 18000, category: 'Indumentaria', image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400&q=80', desc: 'Tela dry-fit respirable', is_active: true }
+                                            ];
+                                            handleMetadataChange('store_products', defaultProducts);
+                                        }}
+                                        style={{ ...buttonStyle, background: 'transparent', border: '1px solid var(--primary-paddle)', color: 'var(--text-primary)' }}
+                                    >
+                                        ✨ Cargar Productos de Ejemplo
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+                                    {(formData.metadata.store_products || []).map((prod, idx) => (
+                                        <div
+                                            key={prod.id || idx}
+                                            style={{
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '16px',
+                                                padding: '14px',
+                                                backgroundColor: 'var(--bg-main)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'space-between',
+                                                gap: '12px'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                <img
+                                                    src={prod.image || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&q=80'}
+                                                    alt={prod.name}
+                                                    style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                                                />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary-paddle)', textTransform: 'uppercase' }}>
+                                                        {prod.category || 'General'}
+                                                    </div>
+                                                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {prod.name}
+                                                    </div>
+                                                    <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>
+                                                        ${Number(prod.price).toLocaleString('es-AR')}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+                                                <span style={{ fontSize: '12px', color: prod.is_active !== false ? '#10b981' : 'var(--text-secondary)', fontWeight: '600' }}>
+                                                    {prod.is_active !== false ? '● Activo' : '○ Inactivo'}
+                                                </span>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingProduct({ ...prod });
+                                                            setIsProductModalOpen(true);
+                                                        }}
+                                                        style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer', color: 'var(--text-primary)' }}
+                                                    >
+                                                        ✏️ Editar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const updated = (formData.metadata.store_products || []).filter((_, i) => i !== idx);
+                                                            handleMetadataChange('store_products', updated);
+                                                        }}
+                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '14px', cursor: 'pointer' }}
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
             </div>
-        </div>
+
+            {/* Modal de Crear/Editar Producto */}
+            {isProductModalOpen && editingProduct && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 1100,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '20px',
+                        padding: '24px',
+                        maxWidth: '480px',
+                        width: '100%',
+                        border: '1px solid var(--border)',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '16px'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                {formData.metadata?.store_products?.some(p => p.id === editingProduct.id) ? 'Editar Producto' : 'Nuevo Producto'}
+                            </h3>
+                            <button
+                                onClick={() => setIsProductModalOpen(false)}
+                                style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Nombre del Producto</label>
+                            <input
+                                type="text"
+                                style={inputStyle}
+                                value={editingProduct.name || ''}
+                                placeholder="Ej: Tubo Pelotas Wilson"
+                                onChange={e => setEditingProduct(prev => ({ ...prev, name: e.target.value }))}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={labelStyle}>Precio ($)</label>
+                                <input
+                                    type="number"
+                                    style={inputStyle}
+                                    value={editingProduct.price || ''}
+                                    placeholder="8500"
+                                    onChange={e => setEditingProduct(prev => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
+                                />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label style={labelStyle}>Categoría</label>
+                                <select
+                                    style={inputStyle}
+                                    value={editingProduct.category || 'Pelotas'}
+                                    onChange={e => setEditingProduct(prev => ({ ...prev, category: e.target.value }))}
+                                >
+                                    <option value="Pelotas">Pelotas</option>
+                                    <option value="Accesorios">Accesorios</option>
+                                    <option value="Alquileres">Alquileres</option>
+                                    <option value="Bebidas">Bebidas</option>
+                                    <option value="Indumentaria">Indumentaria</option>
+                                    <option value="General">General</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Descripción corta</label>
+                            <input
+                                type="text"
+                                style={inputStyle}
+                                value={editingProduct.desc || ''}
+                                placeholder="Ej: Presurizador de alta duración"
+                                onChange={e => setEditingProduct(prev => ({ ...prev, desc: e.target.value }))}
+                            />
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>URL de la Imagen</label>
+                            <input
+                                type="text"
+                                style={inputStyle}
+                                value={editingProduct.image || ''}
+                                placeholder="https://..."
+                                onChange={e => setEditingProduct(prev => ({ ...prev, image: e.target.value }))}
+                            />
+                        </div>
+
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '4px' }}>
+                            <input
+                                type="checkbox"
+                                checked={editingProduct.is_active !== false}
+                                onChange={e => setEditingProduct(prev => ({ ...prev, is_active: e.target.checked }))}
+                            />
+                            <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>Producto visible en la tienda</span>
+                        </label>
+
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                            <button
+                                onClick={() => setIsProductModalOpen(false)}
+                                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (!editingProduct.name) return;
+                                    const currentProducts = formData.metadata?.store_products || [];
+                                    const existingIdx = currentProducts.findIndex(p => p.id === editingProduct.id);
+                                    let updated;
+                                    if (existingIdx >= 0) {
+                                        updated = [...currentProducts];
+                                        updated[existingIdx] = editingProduct;
+                                    } else {
+                                        updated = [...currentProducts, { ...editingProduct, id: Date.now().toString() }];
+                                    }
+                                    handleMetadataChange('store_products', updated);
+                                    setIsProductModalOpen(false);
+                                }}
+                                style={{ flex: 2, ...buttonStyle }}
+                            >
+                                Guardar Producto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
     );
 }

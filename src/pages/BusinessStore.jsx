@@ -29,6 +29,8 @@ export default function BusinessStore({ overrideSlug }) {
 
     const categories = ['Todos', 'Pelotas', 'Alquileres', 'Bebidas', 'Accesorios', 'Indumentaria'];
 
+    const [products, setProducts] = useState(mockProducts);
+
     useEffect(() => {
         const fetchBusiness = async () => {
             try {
@@ -36,6 +38,19 @@ export default function BusinessStore({ overrideSlug }) {
                 const foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
                 if (foundBusiness) {
                     setBusiness(foundBusiness);
+                    // 1. Check metadata store_products
+                    const customProducts = foundBusiness.metadata?.store_products;
+                    if (Array.isArray(customProducts) && customProducts.length > 0) {
+                        setProducts(customProducts.filter(p => p.is_active !== false));
+                    } else {
+                        // 2. Check store_products table
+                        const dbProducts = await serviceAdapter.getStoreProducts(foundBusiness.id, true);
+                        if (dbProducts && dbProducts.length > 0) {
+                            setProducts(dbProducts);
+                        } else {
+                            setProducts(mockProducts);
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching business for Store:', error);
@@ -172,9 +187,15 @@ export default function BusinessStore({ overrideSlug }) {
         );
     }
 
+    const activeProductsList = products && products.length > 0 ? products : mockProducts;
+    const dynamicCategories = ['Todos', ...Array.from(new Set(activeProductsList.map(p => p.category || 'General')))];
+
     const filteredProducts = activeCategory === 'Todos'
-        ? mockProducts
-        : mockProducts.filter(p => p.category === activeCategory);
+        ? activeProductsList
+        : activeProductsList.filter(p => p.category === activeCategory);
+
+    const bannerTitle = business.metadata?.store_banner_title || 'Todo lo que necesitás para tu partido';
+    const bannerSubtitle = business.metadata?.store_banner_subtitle || 'Elegí tus productos y retiralos cuando vengas a jugar';
 
     // Responsive setup check
     const isMobile = window.innerWidth <= 768;
@@ -219,10 +240,10 @@ export default function BusinessStore({ overrideSlug }) {
                     <div style={{ position: 'absolute', bottom: '-30px', right: '60px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
                     
                     <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: '#fff', margin: '0 0 6px 0', position: 'relative', zIndex: 1 }}>
-                        Todo lo que necesitás para tu partido
+                        {bannerTitle}
                     </h3>
                     <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', margin: '0 0 14px 0', position: 'relative', zIndex: 1 }}>
-                        Elegí tus productos y retiralos cuando vengas a jugar
+                        {bannerSubtitle}
                     </p>
                     <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
                         {[
@@ -250,7 +271,7 @@ export default function BusinessStore({ overrideSlug }) {
 
                 {/* Categories */}
                 <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', marginBottom: '20px', msOverflowStyle: 'none', scrollbarWidth: 'none', justifyContent: isMobile ? 'flex-start' : 'center' }}>
-                    {categories.map(cat => (
+                    {dynamicCategories.map(cat => (
                         <button
                             key={cat}
                             onClick={() => setActiveCategory(cat)}

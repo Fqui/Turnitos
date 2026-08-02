@@ -241,8 +241,39 @@ class ServiceAdapter {
         }
         return this.service.uploadImage(file);
     }
+
+    // --- Store Product Methods ---
+
+    async getStoreProducts(businessId, onlyActive = false) {
+        if (this.service.getStoreProducts) {
+            return this.service.getStoreProducts(businessId, onlyActive);
+        }
+        return [];
+    }
+
+    async createStoreProduct(productData) {
+        if (this.service.createStoreProduct) {
+            return this.service.createStoreProduct(productData);
+        }
+        throw new Error('createStoreProduct not supported');
+    }
+
+    async updateStoreProduct(id, productData) {
+        if (this.service.updateStoreProduct) {
+            return this.service.updateStoreProduct(id, productData);
+        }
+        throw new Error('updateStoreProduct not supported');
+    }
+
+    async deleteStoreProduct(id) {
+        if (this.service.deleteStoreProduct) {
+            return this.service.deleteStoreProduct(id);
+        }
+        throw new Error('deleteStoreProduct not supported');
+    }
 }
 
 // Export singleton instance
 const serviceAdapter = new ServiceAdapter();
 export default serviceAdapter;
+
