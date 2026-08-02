@@ -32,6 +32,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const [searchParams] = useSearchParams();
     const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
     const [loading, setLoading] = useState(!business);
+    const isMobile = window.innerWidth <= 768;
 
     const [selectedItem, setSelectedItem] = useState(null); // Sport (string) or Service (object)
     const [selectedDate, setSelectedDate] = useState(null);
@@ -1070,7 +1071,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     </section>
                 )}
 
-                {/* 5. Products Showcase Section */}
+                {/* 5. Recommended Addons Section (Virtual Salesperson) */}
                 <section style={{ 
                     marginBottom: '30px',
                     padding: '20px',
@@ -1083,77 +1084,79 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <div>
                             <h3 style={{ fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
-                                🛍️ Productos Destacados
+                                🏸 Sumá a tu reserva:
                             </h3>
-                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Equipate y retira cuando vengas a jugar</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Sumalos a tu turno y los retirás al llegar</p>
                         </div>
-                        <button 
-                            onClick={() => {
-                                const subdomain = getSubdomain();
-                                navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
-                            }}
-                            style={{
-                                padding: '6px 14px',
-                                borderRadius: '20px',
-                                border: 'none',
-                                background: 'rgba(255,255,255,0.08)',
-                                color: 'var(--text-primary)',
-                                fontWeight: '700',
-                                fontSize: '11px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                cursor: 'pointer',
-                                transition: 'background 0.2s',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                        >
-                            Ver Tienda ➔
-                        </button>
+                        {selectedAdditionalServices.length > 0 && (
+                            <button 
+                                onClick={() => setSelectedAdditionalServices([])}
+                                style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '20px',
+                                    border: 'none',
+                                    background: 'rgba(255,255,255,0.08)',
+                                    color: 'var(--text-primary)',
+                                    fontWeight: '700',
+                                    fontSize: '11px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Limpiar
+                            </button>
+                        )}
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
                         {[
-                            { name: 'Tubo Pelotas Padel Premium', price: 8500, category: 'Pelotas', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80' },
-                            { name: 'Pack x3 Overgrips Wilson', price: 4000, category: 'Accesorios', image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80' },
-                            { name: 'Alquiler Pala Bullpadel Vertex', price: 2000, category: 'Alquileres', image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80' },
-                            { name: 'Gatorade Manzana 500ml', price: 2500, category: 'Bebidas', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80' }
-                        ].map((prod, idx) => (
-                            <div 
-                                key={idx}
-                                onClick={() => {
-                                    const subdomain = getSubdomain();
-                                    navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
-                                }}
-                                style={{
-                                    flexShrink: 0,
-                                    width: '130px',
-                                    background: 'var(--bg-main)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '16px',
-                                    padding: '10px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'space-between',
-                                    transition: 'transform 0.2s',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                            >
-                                <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
-                                    <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            { name: 'Alquiler Pala Vertex', price: 2000, category: 'Alquileres', image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80' },
+                            { name: 'Alquiler Tubo Pelotas', price: 1000, category: 'Alquileres', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80' },
+                            { name: 'Gatorade Fría 500ml', price: 2500, category: 'Bebidas', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80' }
+                        ].map((addon, idx) => {
+                            const isSelected = selectedAdditionalServices.some(s => s.name === addon.name);
+                            return (
+                                <div 
+                                    key={idx}
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            setSelectedAdditionalServices(prev => prev.filter(s => s.name !== addon.name));
+                                        } else {
+                                            setSelectedAdditionalServices(prev => [...prev, addon]);
+                                        }
+                                    }}
+                                    style={{
+                                        flexShrink: 0,
+                                        width: '130px',
+                                        background: isSelected ? `${primaryColor}15` : 'var(--bg-main)',
+                                        border: isSelected ? `2px solid ${primaryColor}` : '1px solid var(--border)',
+                                        borderRadius: '16px',
+                                        padding: '10px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'space-between',
+                                        transition: 'all 0.2s',
+                                        boxShadow: isSelected ? `0 4px 14px ${primaryColor}20` : '0 4px 12px rgba(0,0,0,0.02)'
+                                    }}
+                                >
+                                    <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', borderRadius: '12px', marginBottom: '8px', overflow: 'hidden', position: 'relative' }}>
+                                        <img src={addon.image} alt={addon.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        {isSelected && (
+                                            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: 'white' }}>
+                                                ✓
+                                            </div>
+                                        )}
+                                    </div>
+                                    <h4 style={{ fontSize: '11px', fontWeight: '700', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{addon.name}</h4>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                        <span style={{ fontSize: '11px', fontWeight: '800', color: primaryColor }}>${addon.price.toLocaleString('es-AR')}</span>
+                                        <span style={{ fontSize: '10px', color: isSelected ? primaryColor : 'var(--text-secondary)', fontWeight: '700' }}>
+                                            {isSelected ? 'Agregado' : '+ Sumar'}
+                                        </span>
+                                    </div>
                                 </div>
-                                <h4 style={{ fontSize: '11px', fontWeight: '700', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{prod.name}</h4>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: '800', color: primaryColor }}>${prod.price.toLocaleString('es-AR')}</span>
-                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>🛒</span>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
 
@@ -2203,6 +2206,90 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     </div>
                 </section>
 
+                {/* 6. Store Promotion Section */}
+                <section style={{ 
+                    marginTop: '40px',
+                    padding: '24px',
+                    background: 'var(--bg-card)',
+                    borderRadius: '24px',
+                    border: '1px solid var(--border)',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.02)'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <div>
+                            <h3 style={{ fontSize: '18px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                                🛍️ Tienda {business.name}
+                            </h3>
+                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Comprá online indumentaria, paletas y más</p>
+                        </div>
+                        <button 
+                            onClick={() => {
+                                const subdomain = getSubdomain();
+                                navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
+                            }}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '12px',
+                                border: `1px solid ${primaryColor}`,
+                                background: 'transparent',
+                                color: primaryColor,
+                                fontWeight: '700',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = `${primaryColor}15`;
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                            }}
+                        >
+                            Ver Tienda →
+                        </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '12px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                        {[
+                            { name: 'Tubo Pelotas Padel Premium', price: 8500, image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80' },
+                            { name: 'Pack x3 Overgrips Wilson', price: 4000, image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80' },
+                            { name: 'Remera Oficial Cancha Apolo', price: 18000, image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400&q=80' }
+                        ].map((prod, idx) => (
+                            <div 
+                                key={idx}
+                                onClick={() => {
+                                    const subdomain = getSubdomain();
+                                    navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
+                                }}
+                                style={{
+                                    flexShrink: 0,
+                                    width: '140px',
+                                    background: 'var(--bg-main)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '16px',
+                                    padding: '12px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'space-between',
+                                    transition: 'transform 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                                <div style={{ height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
+                                    <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                                <h4 style={{ fontSize: '12px', fontWeight: '700', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{prod.name}</h4>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: '800', color: primaryColor }}>${prod.price.toLocaleString('es-AR')}</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>🛒</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
 
 
                 {/* Booking Summary Modal */}
@@ -2216,10 +2303,10 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             time: selectedTime.time || selectedTime,
                             duration: selectedTime.duration || (business.type === 'service' ? selectedItem.duration : 60), // Ensure duration is passed
                             price: (selectedTime.price || (business.type === 'service' ? selectedItem.price : 0)) +
-                                (business.type === 'venue' ? selectedAdditionalServices.reduce((sum, s) => sum + Number(s.price), 0) : 0),
+                                selectedAdditionalServices.reduce((sum, s) => sum + Number(s.price), 0),
                             courtName: business.type === 'sport' ? selectedTime.courtName : null,
                             courtId: business.type === 'sport' ? selectedTime.courtId : null,
-                            extras: business.type === 'venue' ? selectedAdditionalServices : []
+                            extras: selectedAdditionalServices
                         }}
                         activePromotion={activePromotion}
                         onClose={() => setShowModal(false)}
