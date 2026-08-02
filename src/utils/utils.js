@@ -35,3 +35,26 @@ export function findBusinessBySlug(businesses, slug) {
         return business.slug === slug || generateSlug(business.name) === slug;
     });
 }
+
+/**
+ * Extracts the subdomain from current window hostname if applicable
+ * @returns {string|null} - Subdomain name or null
+ */
+export function getSubdomain() {
+    if (typeof window === 'undefined') return null;
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+
+    if (hostname.includes('turnitoslr.com') && parts.length > 2) {
+        const sub = parts[0].toLowerCase();
+        if (!['www', 'admin', 'app', 'portal', 'api'].includes(sub)) {
+            return sub;
+        }
+    } else if (hostname.includes('localhost') && parts.length > 1) {
+        const sub = parts[0].toLowerCase();
+        if (!['www', 'admin', 'app', 'portal', 'api', 'localhost'].includes(sub)) {
+            return sub;
+        }
+    }
+    return null;
+}

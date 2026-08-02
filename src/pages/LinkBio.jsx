@@ -16,12 +16,20 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-export default function LinkBio() {
-    const { businessSlug } = useParams();
+export default function LinkBio({ overrideSlug }) {
+    const { businessSlug: routeSlug } = useParams();
+    const businessSlug = overrideSlug || routeSlug;
     const navigate = useNavigate();
     const [business, setBusiness] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
+
+    const getBookingPath = (hash = '') => {
+        if (overrideSlug) {
+            return `/turnos${hash}`;
+        }
+        return `/${businessSlug}/turnos${hash}`;
+    };
 
     useEffect(() => {
         const fetchBusiness = async () => {
@@ -77,7 +85,7 @@ export default function LinkBio() {
                 business.type === 'venue' ? 'Ver Disponibilidad' : 'Reservar Turno',
             subtitle: 'Reserva tu lugar en segundos',
             icon: '📅',
-            action: () => navigate(`/${businessSlug}/turnos#servicios`),
+            action: () => navigate(getBookingPath('#servicios')),
             highlight: true
         }
     ];
@@ -255,7 +263,7 @@ export default function LinkBio() {
                             ))}
                             {business.gallery_images.length > 0 && (
                                 <button
-                                    onClick={() => navigate(`/${businessSlug}/turnos`)}
+                                    onClick={() => navigate(getBookingPath())}
                                     style={{
                                         width: 'calc(33.33% - 6px)',
                                         height: '100px',

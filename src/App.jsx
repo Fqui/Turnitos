@@ -59,24 +59,7 @@ const LoadingFallback = () => (
   </div>
 );
 
-const getSubdomain = () => {
-  if (typeof window === 'undefined') return null;
-  const hostname = window.location.hostname;
-  const parts = hostname.split('.');
-
-  if (hostname.includes('turnitoslr.com') && parts.length > 2) {
-    const sub = parts[0].toLowerCase();
-    if (!['www', 'admin', 'app', 'portal', 'api'].includes(sub)) {
-      return sub;
-    }
-  } else if (hostname.includes('localhost') && parts.length > 1) {
-    const sub = parts[0].toLowerCase();
-    if (!['www', 'admin', 'app', 'portal', 'api', 'localhost'].includes(sub)) {
-      return sub;
-    }
-  }
-  return null;
-};
+import { getSubdomain } from './utils/utils';
 
 function AppContent() {
   const location = useLocation();
@@ -86,16 +69,21 @@ function AppContent() {
   const isBusinessPortal = location.pathname.startsWith('/portal');
   const isAdmin = location.pathname.startsWith('/admin');
   const isPublicRoute = ['/', '/ayuda', '/negocios', '/colaboradores', '/for-business', '/help'].includes(location.pathname) || location.pathname.endsWith('/turnos');
-  const isLinkBio = !isAdmin && !isBusinessPortal && !isPublicRoute;
+  const isLinkBio = (!isAdmin && !isBusinessPortal && !isPublicRoute) || (subdomain && location.pathname === '/');
   const isBusinessPage = isLinkBio || location.pathname.endsWith('/turnos') || (subdomain && (location.pathname === '/' || location.pathname === '/turnos'));
 
   if (subdomain && (location.pathname === '/' || location.pathname === '/turnos')) {
+    const isMainSubdomainPage = location.pathname === '/';
     return (
       <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Header showSearch={false} />
         <main style={{ flex: 1, minHeight: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column' }}>
           <Suspense fallback={<LoadingFallback />}>
-            <BusinessProfileRouter overrideSlug={subdomain} />
+            {isMainSubdomainPage ? (
+              <LinkBio overrideSlug={subdomain} />
+            ) : (
+              <BusinessProfileRouter overrideSlug={subdomain} />
+            )}
           </Suspense>
         </main>
         <Footer minimal={true} />
