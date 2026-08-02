@@ -140,13 +140,13 @@ export default function LinkBio({ overrideSlug }) {
             action: () => navigate(getBookingPath('#servicios')),
             highlight: true
         },
-        {
+        ...(business.store_enabled ? [{
             title: 'Ver Tienda / Productos',
             subtitle: 'Paletas, grips, bebidas y más',
             icon: '🛒',
             action: () => navigate(getStorePath()),
             highlight: false
-        }
+        }] : [])
     ];
 
     return (

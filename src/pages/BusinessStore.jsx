@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
@@ -8,6 +8,7 @@ export default function BusinessStore({ overrideSlug }) {
     const { businessSlug: routeSlug } = useParams();
     const businessSlug = overrideSlug || routeSlug;
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [business, setBusiness] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -104,9 +105,15 @@ export default function BusinessStore({ overrideSlug }) {
 
     const getCartTotal = () => cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
-    const getBackPath = () => {
-        if (overrideSlug) return '/';
-        return `/${businessSlug}`;
+    const handleGoBack = () => {
+        // Si hay historial de navegación, volver atrás (respeta si vino de LinkBio o de Turnos)
+        if (window.history.length > 1) {
+            navigate(-1);
+        } else if (overrideSlug) {
+            navigate('/');
+        } else {
+            navigate(`/${businessSlug}`);
+        }
     };
 
     const handleConfirmOrder = () => {
@@ -136,6 +143,35 @@ export default function BusinessStore({ overrideSlug }) {
         return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
     }
 
+    if (!business.store_enabled) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', gap: '16px', padding: '20px', textAlign: 'center' }}>
+                <div style={{ fontSize: '48px' }}>🏪</div>
+                <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0 }}>Tienda no disponible</h2>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0, maxWidth: '300px' }}>
+                    Este negocio aún no tiene su tienda habilitada. ¡Próximamente!
+                </p>
+                <button
+                    onClick={handleGoBack}
+                    style={{
+                        marginTop: '8px',
+                        padding: '12px 28px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        backgroundColor: 'var(--primary-paddle)',
+                        color: '#fff',
+                        fontSize: '15px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s'
+                    }}
+                >
+                    Volver
+                </button>
+            </div>
+        );
+    }
+
     const filteredProducts = activeCategory === 'Todos'
         ? mockProducts
         : mockProducts.filter(p => p.category === activeCategory);
@@ -151,8 +187,8 @@ export default function BusinessStore({ overrideSlug }) {
                 
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-                    <button onClick={() => navigate(getBackPath())} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '16px', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
-                        ←
+                    <button onClick={handleGoBack} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-primary)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                     </button>
                     <h2 style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: '800' }}>Tienda {business.name}</h2>
                     <button onClick={() => setIsCartOpen(true)} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-primary)', position: 'relative', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
@@ -169,8 +205,8 @@ export default function BusinessStore({ overrideSlug }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '20px', marginBottom: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.02)' }}>
                     <img src={business.logo || business.image} alt="Logo" style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} />
                     <div>
-                        <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0 }}>{business.name} Pro-Shop</h3>
-                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Comprá online y retirá por el local cuando vengas</p>
+                        <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0 }}>Artículos y Equipamiento</h3>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Pedí ahora y retirá cuando vengas a jugar</p>
                     </div>
                 </div>
 

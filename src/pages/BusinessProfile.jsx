@@ -1071,7 +1071,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     </section>
                 )}
 
-                {/* 5. Store Promotion Section (Tienda del Negocio) */}
+                {/* 5. Store Promotion Section (Tienda del Negocio) - Solo si el negocio tiene tienda habilitada */}
+                {business.store_enabled && (
                 <section style={{ 
                     marginBottom: '30px',
                     padding: '20px',
@@ -1157,6 +1158,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         ))}
                     </div>
                 </section>
+                )}
 
                 {/* Step 2: Select Date */}
                 {(selectedItem || business.type === 'venue') && (
