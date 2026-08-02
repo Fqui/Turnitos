@@ -191,21 +191,45 @@ export default function LinkBio({ overrideSlug }) {
                     zIndex: 10
                 }}
             >
-                <div className="linkbio-logo" style={{
-                    width: '120px',
-                    height: '120px',
-                    borderRadius: '50%',
-                    margin: '0 auto 16px',
-                    border: '4px solid var(--bg-main)',
-                    boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
-                    overflow: 'hidden',
-                    backgroundColor: 'white'
-                }}>
-                    <img
-                        src={business.logo || business.image}
-                        alt={business.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
+                <div
+                    onClick={() => {
+                        if (highlights && highlights.length > 0) {
+                            setSelectedPhotoIndex(0);
+                            setSelectedHighlight(0);
+                        }
+                    }}
+                    className="linkbio-logo"
+                    style={{
+                        width: '124px',
+                        height: '124px',
+                        borderRadius: '50%',
+                        margin: '0 auto 16px',
+                        padding: '3px',
+                        background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                        boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: (highlights && highlights.length > 0) ? 'pointer' : 'default'
+                    }}
+                    title={highlights && highlights.length > 0 ? "Ver Historias" : business.name}
+                >
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        padding: '3px',
+                        background: 'var(--bg-main)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <img
+                            src={business.logo || business.image}
+                            alt={business.name}
+                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                    </div>
                 </div>
                 <h1 className="linkbio-name" style={{ fontSize: '22px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
                     {business.name}

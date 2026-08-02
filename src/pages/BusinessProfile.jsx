@@ -494,6 +494,18 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
     const containerWidth = hasPadelCourts ? '90%' : '800px';
 
+    const highlights = business?.gallery_highlights && business.gallery_highlights.length > 0
+        ? business.gallery_highlights
+        : (business?.gallery_images && business.gallery_images.length > 0
+            ? [{
+                id: 'legacy_gallery',
+                title: 'Galería',
+                cover_image: business.gallery_images[0],
+                images: business.gallery_images,
+                order: 0
+            }]
+            : []);
+
 
 
     // Helper to format social links
@@ -581,24 +593,52 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     marginBottom: '30px',
                     border: '1px solid var(--border)'
                 }}>
-                    <motion.img
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        src={business.logo || business.image} // Use Logo here
-                        alt={business.name}
-                        style={{
-                            width: '100px',
-                            height: '100px',
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            border: `4px solid var(--bg-card)`,
-                            marginTop: '-74px',
-                            marginBottom: '12px',
-                            boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
-                            backgroundColor: '#fff'
+                    {/* Business Profile Avatar with Instagram Story Gradient Ring */}
+                    <div
+                        onClick={() => {
+                            if (highlights && highlights.length > 0) {
+                                setSelectedPhotoIndex(0);
+                                setSelectedHighlight(0);
+                            }
                         }}
-                    />
+                        style={{
+                            width: '106px',
+                            height: '106px',
+                            borderRadius: '50%',
+                            padding: '3px',
+                            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '-74px auto 12px',
+                            cursor: (highlights && highlights.length > 0) ? 'pointer' : 'default',
+                            boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+                            position: 'relative'
+                        }}
+                        title={highlights && highlights.length > 0 ? "Ver Historias" : business.name}
+                    >
+                        <div style={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: '50%',
+                            padding: '3px',
+                            background: 'var(--bg-card)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <img
+                                src={business.logo || business.image}
+                                alt={business.name}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    borderRadius: '50%',
+                                    objectFit: 'cover'
+                                }}
+                            />
+                        </div>
+                    </div>
                     <h1 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '8px', color: 'var(--text-primary)' }}>{business.name}</h1>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
                         <span>📍 {business.location}</span>
@@ -812,13 +852,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 gap: '8px'
                                             }}
                                         >
-                                            {/* Circular thumbnail with gradient border */}
+                                            {/* Circular thumbnail with clean subtle border */}
                                             <div style={{
                                                 width: '90px',
                                                 height: '90px',
                                                 borderRadius: '50%',
-                                                padding: '3px',
-                                                background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                                                padding: '2px',
+                                                background: 'var(--border)',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center'
@@ -827,7 +867,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                     width: '100%',
                                                     height: '100%',
                                                     borderRadius: '50%',
-                                                    padding: '3px',
+                                                    padding: '2px',
                                                     background: 'var(--bg-card)',
                                                     display: 'flex',
                                                     alignItems: 'center',
