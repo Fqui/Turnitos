@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
+import { getSubdomain } from '../utils/utils';
 
 export default function Header() {
     const location = useLocation();
-    const isHome = location.pathname === '/';
+    const subdomain = getSubdomain();
+    const isHome = location.pathname === '/' && !subdomain;
     // Show preview badge only on Vercel preview URLs or localhost
     const isPreview = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost');
 
