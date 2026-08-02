@@ -4176,7 +4176,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     fontWeight: '600',
                                     cursor: uploadingProductImage ? 'wait' : 'pointer'
                                 }}>
-                                    {uploadingProductImage ? '⏳ Subiendo...' : (editingProduct.image ? '📷 Cambiar Imagen' : '📷 Subir Imagen a Supabase')}
+                                    {uploadingProductImage ? '⏳ Subiendo...' : (editingProduct.image ? '📷 Cambiar Imagen' : '📷 Subir Imagen')}
                                     <input
                                         type="file"
                                         accept="image/*"
@@ -4189,7 +4189,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                 setUploadingProductImage(true);
                                                 const publicUrl = await serviceAdapter.uploadImage(file);
                                                 setEditingProduct(prev => ({ ...prev, image: publicUrl }));
-                                                showToast('Imagen subida a Supabase correctamente', 'success');
+                                                showToast('Imagen subida correctamente', 'success');
                                             } catch (err) {
                                                 console.error('Error uploading product image:', err);
                                                 showToast('Error al subir imagen', 'error');
