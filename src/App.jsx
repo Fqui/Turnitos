@@ -75,9 +75,22 @@ function AppContent() {
   if (subdomain && (location.pathname === '/' || location.pathname === '/turnos')) {
     const isMainSubdomainPage = location.pathname === '/';
     return (
-      <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="app-container" style={{ 
+        height: isMainSubdomainPage ? '100vh' : 'auto',
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        overflow: isMainSubdomainPage ? 'hidden' : 'visible'
+      }}>
         <Header showSearch={false} />
-        <main style={{ flex: 1, minHeight: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column' }}>
+        <main style={{ 
+          flex: 1, 
+          minHeight: isMainSubdomainPage ? '0' : 'calc(100vh - 70px)', 
+          height: isMainSubdomainPage ? 'calc(100vh - 130px)' : 'auto',
+          display: 'flex', 
+          flexDirection: 'column',
+          overflow: isMainSubdomainPage ? 'hidden' : 'visible'
+        }}>
           <Suspense fallback={<LoadingFallback />}>
             {isMainSubdomainPage ? (
               <LinkBio overrideSlug={subdomain} />
@@ -95,10 +108,23 @@ function AppContent() {
   }
 
   return (
-    <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="app-container" style={{ 
+      height: isLinkBio ? '100vh' : 'auto',
+      minHeight: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column',
+      overflow: isLinkBio ? 'hidden' : 'visible'
+    }}>
       {!isAdmin && !isLinkBio && !isBusinessPortal && <Header showSearch={isHome} />}
 
-      <main style={{ flex: 1, minHeight: 'calc(100vh - 70px)', display: 'flex', flexDirection: 'column' }}>
+      <main style={{ 
+        flex: 1, 
+        minHeight: isLinkBio ? '0' : 'calc(100vh - 70px)', 
+        height: isLinkBio ? 'calc(100vh - 60px)' : 'auto',
+        display: 'flex', 
+        flexDirection: 'column',
+        overflow: isLinkBio ? 'hidden' : 'visible'
+      }}>
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
