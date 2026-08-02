@@ -10,10 +10,24 @@ export default function Header() {
     // Show preview badge only on Vercel preview URLs or localhost
     const isPreview = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('localhost');
 
+    const handleLogoClick = (e) => {
+        if (subdomain) {
+            e.preventDefault();
+            const parts = window.location.host.split('.');
+            if (parts.length > 2) {
+                // e.g. apolo.turnitoslr.com -> turnitoslr.com
+                const rootDomain = parts.slice(1).join('.');
+                window.location.href = `${window.location.protocol}//${rootDomain}/`;
+            } else {
+                window.location.href = `${window.location.protocol}//${window.location.host}/`;
+            }
+        }
+    };
+
     return (
         <header style={{ padding: '20px 0' }}>
             <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <a href="/" onClick={handleLogoClick} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '-1px' }}>
                         Turnitos<span style={{ color: '#00E676' }}>LR</span>
                         {isPreview && (
@@ -22,7 +36,7 @@ export default function Header() {
                             </span>
                         )}
                     </div>
-                </Link>
+                </a>
                 {isHome && <ThemeToggle />}
             </div>
         </header>
