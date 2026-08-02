@@ -612,11 +612,6 @@ export default function LinkBio({ overrideSlug }) {
                     </motion.button>
                 )}
             </div>
-
-            {/* Footer */}
-            <div style={{ marginTop: 'auto', paddingTop: '20px', opacity: 0.5, fontSize: '12px' }}>
-                Potenciado por <strong>TurnitosLR</strong>
-            </div>
         </div >
     );
 }
