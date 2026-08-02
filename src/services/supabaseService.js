@@ -1074,20 +1074,44 @@ class SupabaseService {
         const blockedFields = ['id', 'created_at', 'courts', 'bookings', 'customers', 'specialists', 'services'];
         blockedFields.forEach(field => delete safeUpdates[field]);
 
-        // If special_days is provided, save it inside hours JSON to ensure compatibility if column special_days is not in DB schema
-        if (safeUpdates.special_days) {
-            let hoursObj = {};
-            if (safeUpdates.hours) {
-                hoursObj = typeof safeUpdates.hours === 'string' ? JSON.parse(safeUpdates.hours) : { ...safeUpdates.hours };
-            }
-            hoursObj.special_days = safeUpdates.special_days;
-            safeUpdates.hours = JSON.stringify(hoursObj);
-            // Delete special_days from root updates to avoid 'Could not find special_days column' error
-            delete safeUpdates.special_days;
-        }
+        // Safely merge hours and special_days so saving one never overwrites/wipes the other
+        if (safeUpdates.special_days || safeUpdates.hours) {
+            let currentHoursObj = {};
+            try {
+                const { data: currentBiz } = await supabase
+                    .from('businesses')
+                    .select('hours')
+                    .eq('id', businessId)
+                    .single();
 
-        if (safeUpdates.hours && typeof safeUpdates.hours === 'object') {
-            safeUpdates.hours = JSON.stringify(safeUpdates.hours);
+                if (currentBiz?.hours) {
+                    currentHoursObj = typeof currentBiz.hours === 'string'
+                        ? JSON.parse(currentBiz.hours)
+                        : { ...currentBiz.hours };
+                }
+            } catch (e) {
+                console.warn('Could not fetch existing hours for patch:', e);
+            }
+
+            let mergedHours = { ...currentHoursObj };
+
+            if (safeUpdates.hours) {
+                const incomingHours = typeof safeUpdates.hours === 'string'
+                    ? JSON.parse(safeUpdates.hours)
+                    : safeUpdates.hours;
+                const existingSpecialDays = mergedHours.special_days;
+                mergedHours = { ...mergedHours, ...incomingHours };
+                if (existingSpecialDays && !incomingHours.special_days) {
+                    mergedHours.special_days = existingSpecialDays;
+                }
+            }
+
+            if (safeUpdates.special_days) {
+                mergedHours.special_days = safeUpdates.special_days;
+                delete safeUpdates.special_days;
+            }
+
+            safeUpdates.hours = JSON.stringify(mergedHours);
         }
 
         // 1. Update main business table if there are fields left

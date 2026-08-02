@@ -1846,6 +1846,9 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         breakEnd: current.breakEnd || null
                                     };
                                 });
+                                if (formData.special_days) {
+                                    normalizedHours.special_days = formData.special_days;
+                                }
                                 handleInputChange('hours', normalizedHours);
                                 handleSave({ hours: normalizedHours });
                             }}
