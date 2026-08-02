@@ -32,7 +32,6 @@ export function findBusinessBySlug(businesses, slug) {
     if (!businesses || !slug) return null;
 
     return businesses.find(business => {
-        const businessSlug = generateSlug(business.name);
-        return businessSlug === slug;
+        return business.slug === slug || generateSlug(business.name) === slug;
     });
 }

@@ -1,7 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function Footer() {
+export default function Footer({ minimal = false }) {
+    if (minimal) {
+        return (
+            <div style={{
+                padding: '24px 20px',
+                textAlign: 'center',
+                color: 'var(--text-secondary)',
+                fontSize: '13px',
+                marginTop: 'auto',
+                borderTop: '1px solid var(--border)'
+            }}>
+                © {new Date().getFullYear()} TurnitosLR. Todos los derechos reservados. Hecho con ❤️ en La Rioja.
+            </div>
+        );
+    }
+
     return (
         <footer style={{
             backgroundColor: '#1A1A1A',

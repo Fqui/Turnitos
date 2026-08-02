@@ -56,7 +56,7 @@ class ServiceAdapter {
             // For Supabase, we need to get all businesses and filter by slug
             const businesses = await this.service.getBusinesses();
             const { generateSlug } = await import('../utils/utils');
-            return businesses.find(b => generateSlug(b.name) === slug);
+            return businesses.find(b => b.slug === slug || generateSlug(b.name) === slug);
         }
     }
 

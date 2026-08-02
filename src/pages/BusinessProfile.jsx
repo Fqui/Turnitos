@@ -773,8 +773,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     />
                 )}
 
-                {/* Instagram-Style Highlights - Only for Service Businesses */}
-                {business.type === 'service' && (
+                {/* Instagram-Style Highlights */}
+                {business && (
                     (() => {
                         // Use gallery_highlights if available, otherwise convert gallery_images
                         const highlights = business.gallery_highlights && business.gallery_highlights.length > 0
@@ -793,16 +793,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
                         return (
                             <div id="galeria" style={{ marginBottom: '20px', animation: 'slideUp 0.4s ease' }}>
-                                {/* Highlights carousel */}
-                                <div style={{
-                                    display: 'flex',
-                                    overflowX: 'auto',
-                                    gap: '16px',
-                                    paddingBottom: '10px',
-                                    scrollSnapType: 'x mandatory',
-                                    WebkitOverflowScrolling: 'touch',
-                                    justifyContent: window.innerWidth > 768 ? 'center' : 'flex-start'
-                                }}>
+                                <div className="highlights-container">
                                     {highlights.map((highlight, index) => (
                                         <div
                                             key={highlight.id || index}

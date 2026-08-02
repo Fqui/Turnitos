@@ -319,6 +319,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                             <MapContainer
                                 center={[formData.latitude || -34.6, formData.longitude || -58.4]}
                                 zoom={13}
+                                scrollWheelZoom={false}
                                 style={{ height: '100%', width: '100%' }}
                             >
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

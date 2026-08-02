@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
-import { generateTimeSlots, formatDateKey, getBookingsForSlot } from '../shared/utils';
+import { generateTimeSlots, formatDateKey, getBookingsForSlot, timeToMinutes } from '../shared/utils';
 import ConfirmModal from '../../common/ConfirmModal';
 
 export default function DayView({
@@ -121,17 +121,33 @@ export default function DayView({
 
         if (dayConfig?.isOpen === false) return false;
 
+        const slotMin = timeToMinutes(time);
+
         // Verificar si es horario cortado (con open/close/open2/close2)
         if (dayConfig?.isSplit) {
-            const inFirstShift = time >= dayConfig.open && time < dayConfig.close;
-            const inSecondShift = dayConfig.open2 && dayConfig.close2 &&
-                time >= dayConfig.open2 && time < dayConfig.close2;
+            const start1 = timeToMinutes(dayConfig.open);
+            let close1 = timeToMinutes(dayConfig.close);
+            if (close1 < start1) close1 += 1440; // Cruzado a medianoche
+
+            const inFirstShift = slotMin >= start1 && slotMin < close1;
+
+            let inSecondShift = false;
+            if (dayConfig.open2 && dayConfig.close2) {
+                const start2 = timeToMinutes(dayConfig.open2);
+                let close2 = timeToMinutes(dayConfig.close2);
+                if (close2 < start2) close2 += 1440; // Cruzado a medianoche
+                inSecondShift = slotMin >= start2 && slotMin < close2;
+            }
+
             return inFirstShift || inSecondShift;
         }
 
         // Horario continuo
         if (dayConfig?.open && dayConfig?.close) {
-            return time >= dayConfig.open && time < dayConfig.close;
+            const start = timeToMinutes(dayConfig.open);
+            let close = timeToMinutes(dayConfig.close);
+            if (close < start) close += 1440; // Cruzado a medianoche
+            return slotMin >= start && slotMin < close;
         }
 
         return true;

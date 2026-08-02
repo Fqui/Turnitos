@@ -82,6 +82,13 @@ function AppContent() {
   const location = useLocation();
   const subdomain = getSubdomain();
 
+  const isHome = location.pathname === '/';
+  const isBusinessPortal = location.pathname.startsWith('/portal');
+  const isAdmin = location.pathname.startsWith('/admin');
+  const isPublicRoute = ['/', '/ayuda', '/negocios', '/colaboradores', '/for-business', '/help'].includes(location.pathname) || location.pathname.endsWith('/turnos');
+  const isLinkBio = !isAdmin && !isBusinessPortal && !isPublicRoute;
+  const isBusinessPage = isLinkBio || location.pathname.endsWith('/turnos') || (subdomain && (location.pathname === '/' || location.pathname === '/turnos'));
+
   if (subdomain && (location.pathname === '/' || location.pathname === '/turnos')) {
     return (
       <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -91,19 +98,13 @@ function AppContent() {
             <BusinessProfileRouter overrideSlug={subdomain} />
           </Suspense>
         </main>
-        <Footer />
+        <Footer minimal={true} />
         <Toast />
         <ConfirmDialog />
         <AlertDialog />
       </div>
     );
   }
-
-  const isHome = location.pathname === '/';
-  const isBusinessPortal = location.pathname.startsWith('/portal');
-  const isAdmin = location.pathname.startsWith('/admin');
-  const isPublicRoute = ['/', '/ayuda', '/negocios', '/colaboradores', '/for-business', '/help'].includes(location.pathname) || location.pathname.endsWith('/turnos');
-  const isLinkBio = !isAdmin && !isBusinessPortal && !isPublicRoute;
 
   return (
     <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -139,7 +140,7 @@ function AppContent() {
         </Suspense>
       </main>
 
-      {!isAdmin && !isLinkBio && !isBusinessPortal && <Footer />}
+      {!isAdmin && !isBusinessPortal && <Footer minimal={isBusinessPage} />}
 
       {/* Notification Components */}
       <Toast />
