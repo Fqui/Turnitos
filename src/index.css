@@ -397,3 +397,106 @@ input:focus, select:focus, textarea:focus {
     justify-content: center !important;
   }
 }
+
+/* LinkBio responsive layout to prevent vertical scroll on mobile */
+.linkbio-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .linkbio-container {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow-y: auto !important;
+  }
+  
+  /* Hide scrollbars for a clean app-like interface */
+  .linkbio-container::-webkit-scrollbar {
+    display: none !important;
+  }
+  .linkbio-container {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+  
+  .linkbio-banner {
+    height: 90px !important;
+  }
+  
+  .linkbio-profile-card {
+    margin-top: -36px !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .linkbio-logo {
+    width: 70px !important;
+    height: 70px !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .linkbio-name {
+    font-size: 18px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .linkbio-desc {
+    font-size: 12px !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .linkbio-socials {
+    margin-bottom: 8px !important;
+    gap: 8px !important;
+  }
+  
+  .linkbio-social-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .linkbio-social-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+  
+  .linkbio-gallery-container {
+    margin-bottom: 12px !important;
+  }
+  
+  .linkbio-gallery-item, .linkbio-gallery-btn {
+    height: 70px !important;
+  }
+  
+  .linkbio-links-section {
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+  }
+  
+  .linkbio-link-btn {
+    padding: 8px 12px !important;
+  }
+  
+  .linkbio-link-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+  
+  .linkbio-link-icon-wrapper {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 16px !important;
+  }
+  
+  .linkbio-link-title {
+    font-size: 14px !important;
+  }
+  
+  .linkbio-link-subtitle {
+    font-size: 11px !important;
+  }
+}

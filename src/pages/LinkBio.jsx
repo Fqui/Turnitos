@@ -91,18 +91,14 @@ export default function LinkBio({ overrideSlug }) {
     ];
 
     return (
-        <div style={{
-            minHeight: '100vh',
+        <div className="linkbio-container" style={{
             backgroundColor: 'var(--bg-main)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
             backgroundImage: 'radial-gradient(var(--border) 1.5px, transparent 1.5px)',
             backgroundSize: '24px 24px',
             overflowX: 'hidden'
         }}>
             {/* Banner Section */}
-            <div style={{
+            <div className="linkbio-banner" style={{
                 width: '100%',
                 height: '140px',
                 backgroundImage: `url(${business.banner_image || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&q=80'})`,
@@ -122,6 +118,7 @@ export default function LinkBio({ overrideSlug }) {
 
             {/* Profile Section */}
             <motion.div
+                className="linkbio-profile-card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 style={{
@@ -135,9 +132,7 @@ export default function LinkBio({ overrideSlug }) {
                     zIndex: 10
                 }}
             >
-                <div style={{
-                    width: '100px',
-                    height: '100px',
+                <div className="linkbio-logo" style={{
                     borderRadius: '50%',
                     margin: '0 auto 16px',
                     border: '4px solid var(--bg-main)',
@@ -151,18 +146,19 @@ export default function LinkBio({ overrideSlug }) {
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                 </div>
-                <h1 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                <h1 className="linkbio-name" style={{ fontSize: '22px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
                     {business.name}
                 </h1>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                <p className="linkbio-desc" style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
                     {business.description || '¡Reserva tu turno online de forma rápida y sencilla!'}
                 </p>
 
                 {/* Social Media Row */}
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '16px' }}>
+                <div className="linkbio-socials" style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '16px' }}>
                     {/* Instagram */}
                     {business.instagram && (
                         <a
+                            className="linkbio-social-btn"
                             href={business.instagram}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -188,6 +184,7 @@ export default function LinkBio({ overrideSlug }) {
                     {/* Facebook */}
                     {business.facebook && (
                         <a
+                            className="linkbio-social-btn"
                             href={business.facebook}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -213,6 +210,7 @@ export default function LinkBio({ overrideSlug }) {
                     {/* TikTok */}
                     {business.tiktok && (
                         <a
+                            className="linkbio-social-btn"
                             href={business.tiktok}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -238,11 +236,12 @@ export default function LinkBio({ overrideSlug }) {
 
                 {/* Gallery Section */}
                 {business.gallery_images && business.gallery_images.length > 0 && (
-                    <div style={{ width: '100%', maxWidth: '450px', padding: '0 16px', marginBottom: '24px' }}>
+                    <div className="linkbio-gallery-container" style={{ width: '100%', maxWidth: '450px', padding: '0 16px', marginBottom: '24px' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                             {business.gallery_images.slice(0, 2).map((img, index) => (
                                 <div
                                     key={index}
+                                    className="linkbio-gallery-item"
                                     onClick={() => setSelectedPhotoIndex(index)}
                                     style={{
                                         width: 'calc(33.33% - 6px)',
@@ -263,6 +262,7 @@ export default function LinkBio({ overrideSlug }) {
                             ))}
                             {business.gallery_images.length > 0 && (
                                 <button
+                                    className="linkbio-gallery-btn"
                                     onClick={() => navigate(getBookingPath())}
                                     style={{
                                         width: 'calc(33.33% - 6px)',
@@ -427,10 +427,11 @@ export default function LinkBio({ overrideSlug }) {
             </AnimatePresence>
 
             {/* Main Links Section */}
-            <div style={{ width: '100%', maxWidth: '450px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', padding: '0 16px' }}>
+            <div className="linkbio-links-section" style={{ width: '100%', maxWidth: '450px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', padding: '0 16px' }}>
                 {mainLinks.map((link, index) => (
                     <motion.button
                         key={index}
+                        className="linkbio-link-btn"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
@@ -459,7 +460,7 @@ export default function LinkBio({ overrideSlug }) {
                             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
                         }}
                     >
-                        <span style={{
+                        <span className="linkbio-link-icon-wrapper" style={{
                             fontSize: '20px',
                             backgroundColor: link.highlight ? 'rgba(255,255,255,0.2)' : 'var(--bg-main)',
                             width: '40px',
@@ -472,8 +473,8 @@ export default function LinkBio({ overrideSlug }) {
                             {link.icon}
                         </span>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '700', fontSize: '16px' }}>{link.title}</div>
-                            <div style={{
+                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: '16px' }}>{link.title}</div>
+                            <div className="linkbio-link-subtitle" style={{
                                 fontSize: '13px',
                                 opacity: 0.8,
                                 color: link.highlight ? 'white' : 'var(--text-secondary)'
@@ -492,6 +493,7 @@ export default function LinkBio({ overrideSlug }) {
                 {/* WhatsApp Button */}
                 {business.whatsapp && (
                     <motion.button
+                        className="linkbio-link-btn"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.2 }}
@@ -520,7 +522,7 @@ export default function LinkBio({ overrideSlug }) {
                             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
                         }}
                     >
-                        <span style={{
+                        <span className="linkbio-link-icon-wrapper" style={{
                             fontSize: '20px',
                             backgroundColor: 'rgba(255,255,255,0.2)',
                             width: '40px',
@@ -535,8 +537,8 @@ export default function LinkBio({ overrideSlug }) {
                             </svg>
                         </span>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '700', fontSize: '16px' }}>WhatsApp</div>
-                            <div style={{
+                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: '16px' }}>WhatsApp</div>
+                            <div className="linkbio-link-subtitle" style={{
                                 fontSize: '13px',
                                 opacity: 0.8,
                                 color: 'white'
@@ -552,6 +554,7 @@ export default function LinkBio({ overrideSlug }) {
                 {/* Location Button */}
                 {business.location && (
                     <motion.button
+                        className="linkbio-link-btn"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.3 }}
@@ -580,7 +583,7 @@ export default function LinkBio({ overrideSlug }) {
                             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
                         }}
                     >
-                        <span style={{
+                        <span className="linkbio-link-icon-wrapper" style={{
                             fontSize: '20px',
                             backgroundColor: 'var(--bg-main)',
                             width: '40px',
@@ -593,8 +596,8 @@ export default function LinkBio({ overrideSlug }) {
                             📍
                         </span>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '700', fontSize: '16px' }}>Ubicación</div>
-                            <div style={{
+                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: '16px' }}>Ubicación</div>
+                            <div className="linkbio-link-subtitle" style={{
                                 fontSize: '13px',
                                 opacity: 0.8,
                                 color: 'var(--text-secondary)',
