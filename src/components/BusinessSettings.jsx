@@ -57,6 +57,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     // Store management
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+    const [uploadingProductImage, setUploadingProductImage] = useState(false);
 
     const handleMetadataChange = (key, value) => {
         setFormData(prev => ({
@@ -99,14 +100,6 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
     useEffect(() => {
         if (business) {
-            const defaultProducts = [
-                { id: '1', name: 'Tubo Pelotas Padel Premium', price: 8500, category: 'Pelotas', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80', desc: 'Presurizador de alta duración', is_active: true },
-                { id: '2', name: 'Pack x3 Overgrips Wilson', price: 4000, category: 'Accesorios', image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80', desc: 'Máximo agarre y absorción', is_active: true },
-                { id: '3', name: 'Alquiler Pala Bullpadel Vertex', price: 2000, category: 'Alquileres', image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80', desc: 'Pala de potencia profesional', is_active: true },
-                { id: '4', name: 'Gatorade Manzana 500ml', price: 2500, category: 'Bebidas', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80', desc: 'Hidratación rápida', is_active: true },
-                { id: '5', name: 'Remera Oficial Cancha Apolo', price: 18000, category: 'Indumentaria', image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400&q=80', desc: 'Tela dry-fit respirable', is_active: true }
-            ];
-
             setFormData(prev => {
                 if (prev.id === business.id) return prev;
                 const meta = business?.metadata || {};
@@ -116,9 +109,9 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     gallery_highlights: business?.gallery_highlights || [],
                     metadata: {
                         ...meta,
-                        store_banner_title: meta.store_banner_title || 'Todo lo que necesitás para tu partido',
-                        store_banner_subtitle: meta.store_banner_subtitle || 'Elegí tus productos y retiralos cuando vengas a jugar',
-                        store_products: (meta.store_products && meta.store_products.length > 0) ? meta.store_products : defaultProducts
+                        store_banner_title: meta.store_banner_title || '',
+                        store_banner_subtitle: meta.store_banner_subtitle || '',
+                        store_products: meta.store_products || []
                     }
                 };
             });
@@ -3777,7 +3770,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     <input
                                         type="text"
                                         style={inputStyle}
-                                        value={formData.metadata?.store_banner_title || 'Todo lo que necesitás para tu partido'}
+                                        value={formData.metadata?.store_banner_title || ''}
                                         placeholder="Ej: Todo lo que necesitás para tu partido"
                                         onChange={e => handleMetadataChange('store_banner_title', e.target.value)}
                                     />
@@ -3787,7 +3780,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     <input
                                         type="text"
                                         style={inputStyle}
-                                        value={formData.metadata?.store_banner_subtitle || 'Elegí tus productos y retiralos cuando vengas a jugar'}
+                                        value={formData.metadata?.store_banner_subtitle || ''}
                                         placeholder="Ej: Elegí tus productos y retiralos cuando vengas a jugar"
                                         onChange={e => handleMetadataChange('store_banner_subtitle', e.target.value)}
                                     />
@@ -3806,15 +3799,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         {/* Product Catalog Management */}
                         <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                                <div>
-                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>Catálogo de Productos</h3>
-                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-                                        Gestiona los artículos, alquileres y bebidas que vendes en tu local.
-                                    </p>
-                                </div>
+                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>Catálogo de Productos</h3>
                                 <button
                                     onClick={() => {
-                                        setEditingProduct({ id: Date.now().toString(), name: '', price: 0, category: 'Pelotas', desc: '', image: '', is_active: true });
+                                        setEditingProduct({ id: Date.now().toString(), name: '', price: '', category: 'General', desc: '', image: '', is_active: true });
                                         setIsProductModalOpen(true);
                                     }}
                                     style={{
@@ -3836,18 +3824,11 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             {(!formData.metadata?.store_products || formData.metadata.store_products.length === 0) ? (
                                 <div style={{ textAlign: 'center', padding: '32px', border: '1px dashed var(--border)', borderRadius: '16px', color: 'var(--text-secondary)' }}>
                                     <div style={{ fontSize: '32px', marginBottom: '8px' }}>🛒</div>
-                                    <p style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Aún no agregaste productos a tu catálogo.</p>
+                                    <p style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Aún no tienes productos cargados en tu catálogo.</p>
                                     <button
-                                        onClick={async () => {
-                                            const defaultProducts = [
-                                                { id: '1', name: 'Tubo Pelotas Padel Premium', price: 8500, category: 'Pelotas', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80', desc: 'Presurizador de alta duración', is_active: true },
-                                                { id: '2', name: 'Pack x3 Overgrips Wilson', price: 4000, category: 'Accesorios', image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80', desc: 'Máximo agarre y absorción', is_active: true },
-                                                { id: '3', name: 'Alquiler Pala Bullpadel Vertex', price: 2000, category: 'Alquileres', image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80', desc: 'Pala de potencia profesional', is_active: true },
-                                                { id: '4', name: 'Gatorade Manzana 500ml', price: 2500, category: 'Bebidas', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80', desc: 'Hidratación rápida', is_active: true },
-                                                { id: '5', name: 'Remera Oficial Cancha Apolo', price: 18000, category: 'Indumentaria', image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400&q=80', desc: 'Tela dry-fit respirable', is_active: true }
-                                            ];
-                                            handleMetadataChange('store_products', defaultProducts);
-                                            await handleSave({ metadata: { ...formData.metadata, store_products: defaultProducts } });
+                                        onClick={() => {
+                                            setEditingProduct({ id: Date.now().toString(), name: '', price: '', category: 'General', desc: '', image: '', is_active: true });
+                                            setIsProductModalOpen(true);
                                         }}
                                         style={{
                                             padding: '10px 20px',
@@ -3860,7 +3841,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        ✨ Cargar Productos de Ejemplo
+                                        + Agregar Primer Producto
                                     </button>
                                 </div>
                             ) : (
@@ -3899,9 +3880,23 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                             </div>
 
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-                                                <span style={{ fontSize: '12px', color: prod.is_active !== false ? '#10b981' : 'var(--text-secondary)', fontWeight: '600' }}>
-                                                    {prod.is_active !== false ? '● Activo' : '○ Inactivo'}
-                                                </span>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={prod.is_active !== false}
+                                                        onChange={async (e) => {
+                                                            const updated = (formData.metadata?.store_products || []).map((p, i) =>
+                                                                i === idx ? { ...p, is_active: e.target.checked } : p
+                                                            );
+                                                            handleMetadataChange('store_products', updated);
+                                                            await handleSave({ metadata: { ...formData.metadata, store_products: updated } });
+                                                        }}
+                                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                    />
+                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: prod.is_active !== false ? '#10b981' : 'var(--text-secondary)' }}>
+                                                        {prod.is_active !== false ? 'Visible' : 'Oculto'}
+                                                    </span>
+                                                </label>
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button
                                                         onClick={() => {
@@ -4111,7 +4106,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 type="text"
                                 style={inputStyle}
                                 value={editingProduct.name || ''}
-                                placeholder="Ej: Tubo Pelotas Wilson"
+                                placeholder="Nombre del producto"
                                 onChange={e => setEditingProduct(prev => ({ ...prev, name: e.target.value }))}
                             />
                         </div>
@@ -4123,24 +4118,25 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     type="number"
                                     style={inputStyle}
                                     value={editingProduct.price || ''}
-                                    placeholder="8500"
+                                    placeholder="0"
                                     onChange={e => setEditingProduct(prev => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
                                 />
                             </div>
                             <div style={{ flex: 1 }}>
                                 <label style={labelStyle}>Categoría</label>
-                                <select
+                                <input
+                                    type="text"
                                     style={inputStyle}
-                                    value={editingProduct.category || 'Pelotas'}
+                                    value={editingProduct.category || ''}
+                                    placeholder="Ej: Bebidas, Equipamiento..."
+                                    list="store-categories-list"
                                     onChange={e => setEditingProduct(prev => ({ ...prev, category: e.target.value }))}
-                                >
-                                    <option value="Pelotas">Pelotas</option>
-                                    <option value="Accesorios">Accesorios</option>
-                                    <option value="Alquileres">Alquileres</option>
-                                    <option value="Bebidas">Bebidas</option>
-                                    <option value="Indumentaria">Indumentaria</option>
-                                    <option value="General">General</option>
-                                </select>
+                                />
+                                <datalist id="store-categories-list">
+                                    {Array.from(new Set(['General', 'Equipamiento', 'Bebidas', 'Indumentaria', 'Alquileres', 'Accesorios', ...(formData.metadata?.store_products || []).map(p => p.category).filter(Boolean)])).map(cat => (
+                                        <option key={cat} value={cat} />
+                                    ))}
+                                </datalist>
                             </div>
                         </div>
 
@@ -4150,30 +4146,61 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 type="text"
                                 style={inputStyle}
                                 value={editingProduct.desc || ''}
-                                placeholder="Ej: Presurizador de alta duración"
+                                placeholder="Descripción corta (opcional)"
                                 onChange={e => setEditingProduct(prev => ({ ...prev, desc: e.target.value }))}
                             />
                         </div>
 
                         <div>
-                            <label style={labelStyle}>URL de la Imagen</label>
-                            <input
-                                type="text"
-                                style={inputStyle}
-                                value={editingProduct.image || ''}
-                                placeholder="https://..."
-                                onChange={e => setEditingProduct(prev => ({ ...prev, image: e.target.value }))}
-                            />
+                            <label style={labelStyle}>Imagen del Producto</label>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                {editingProduct.image && (
+                                    <img
+                                        src={editingProduct.image}
+                                        alt="Preview"
+                                        style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                                    />
+                                )}
+                                <label style={{
+                                    flex: 1,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    padding: '10px 16px',
+                                    borderRadius: '12px',
+                                    border: '1px dashed var(--border)',
+                                    background: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: uploadingProductImage ? 'wait' : 'pointer'
+                                }}>
+                                    {uploadingProductImage ? '⏳ Subiendo...' : (editingProduct.image ? '📷 Cambiar Imagen' : '📷 Subir Imagen a Supabase')}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        disabled={uploadingProductImage}
+                                        style={{ display: 'none' }}
+                                        onChange={async (e) => {
+                                            const file = e.target.files[0];
+                                            if (!file) return;
+                                            try {
+                                                setUploadingProductImage(true);
+                                                const publicUrl = await serviceAdapter.uploadImage(file);
+                                                setEditingProduct(prev => ({ ...prev, image: publicUrl }));
+                                                showToast('Imagen subida a Supabase correctamente', 'success');
+                                            } catch (err) {
+                                                console.error('Error uploading product image:', err);
+                                                showToast('Error al subir imagen', 'error');
+                                            } finally {
+                                                setUploadingProductImage(false);
+                                            }
+                                        }}
+                                    />
+                                </label>
+                            </div>
                         </div>
-
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '4px' }}>
-                            <input
-                                type="checkbox"
-                                checked={editingProduct.is_active !== false}
-                                onChange={e => setEditingProduct(prev => ({ ...prev, is_active: e.target.checked }))}
-                            />
-                            <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>Producto visible en la tienda</span>
-                        </label>
 
                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                             <button
@@ -4184,7 +4211,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             </button>
                             <button
                                 onClick={async () => {
-                                    if (!editingProduct.name) return;
+                                    if (!editingProduct.name) {
+                                        showToast('Ingresá el nombre del producto', 'error');
+                                        return;
+                                    }
                                     const currentProducts = formData.metadata?.store_products || [];
                                     const existingIdx = currentProducts.findIndex(p => p.id === editingProduct.id);
                                     let updated;
