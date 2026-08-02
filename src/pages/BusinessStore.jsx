@@ -17,17 +17,85 @@ export default function BusinessStore({ overrideSlug }) {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [toastMessage, setToastMessage] = useState(null);
 
-    // Mock products list with real Unsplash images
-    const mockProducts = [
-        { id: 1, name: 'Tubo Pelotas Padel Premium', price: 8500, category: 'Pelotas', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80', desc: 'Presurizador de alta duración' },
-        { id: 2, name: 'Pack x3 Overgrips Wilson', price: 4000, category: 'Accesorios', image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80', desc: 'Máximo agarre y absorción' },
-        { id: 3, name: 'Alquiler Pala Bullpadel Vertex', price: 2000, category: 'Alquileres', image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80', desc: 'Pala de potencia profesional' },
-        { id: 4, name: 'Gatorade Manzana 500ml', price: 2500, category: 'Bebidas', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80', desc: 'Hidratación rápida' },
-        { id: 5, name: 'Remera Oficial Cancha Apolo', price: 18000, category: 'Indumentaria', image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400&q=80', desc: 'Tela dry-fit respirable' },
-        { id: 6, name: 'Protector Pala Transparente', price: 3000, category: 'Accesorios', image: 'https://images.unsplash.com/photo-1560069000-74947555924a?w=400&q=80', desc: 'Evita rayaduras e impactos' }
-    ];
+    // Product Detail & Gallery Modal state
+    const [selectedProductModal, setSelectedProductModal] = useState(null);
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [modalQty, setModalQty] = useState(1);
 
-    const categories = ['Todos', 'Pelotas', 'Alquileres', 'Bebidas', 'Accesorios', 'Indumentaria'];
+    // Mock products list with rich images gallery fallback
+    const mockProducts = [
+        {
+            id: 1,
+            name: 'Tubo Pelotas Padel Premium',
+            price: 8500,
+            category: 'Pelotas',
+            image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=600&q=80',
+            images: [
+                'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=600&q=80',
+                'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=600&q=80',
+                'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=600&q=80'
+            ],
+            desc: 'Presurizador de alta duración. Pelotas oficiales homologadas para alta competición. Mantienen la presión por más tiempo gracias a su núcleo sintético reforzado.'
+        },
+        {
+            id: 2,
+            name: 'Pack x3 Overgrips Wilson',
+            price: 4000,
+            category: 'Accesorios',
+            image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=600&q=80',
+            images: [
+                'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=600&q=80',
+                'https://images.unsplash.com/photo-1560069000-74947555924a?w=600&q=80'
+            ],
+            desc: 'Máximo agarre y absorción de sudor. Antideslizantes con textura micro-perforada para un agarre suave y firme en cada impacto.'
+        },
+        {
+            id: 3,
+            name: 'Alquiler Pala Bullpadel Vertex',
+            price: 2000,
+            category: 'Alquileres',
+            image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=600&q=80',
+            images: [
+                'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=600&q=80',
+                'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=600&q=80'
+            ],
+            desc: 'Pala de potencia profesional de fibra de carbono. Ideal para jugadores de nivel intermedio a avanzado que buscan mayor potencia de remate.'
+        },
+        {
+            id: 4,
+            name: 'Gatorade Manzana 500ml',
+            price: 2500,
+            category: 'Bebidas',
+            image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&q=80',
+            images: [
+                'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&q=80'
+            ],
+            desc: 'Hidratación rápida con sales minerales y electrolitos para mantener tu rendimiento al máximo durante todo el partido.'
+        },
+        {
+            id: 5,
+            name: 'Remera Oficial Cancha Apolo',
+            price: 18000,
+            category: 'Indumentaria',
+            image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=600&q=80',
+            images: [
+                'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=600&q=80',
+                'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&q=80'
+            ],
+            desc: 'Tela dry-fit respirable ligera con tecnología de secado rápido. Diseño exclusivo oficial del club.'
+        },
+        {
+            id: 6,
+            name: 'Protector Pala Transparente',
+            price: 3000,
+            category: 'Accesorios',
+            image: 'https://images.unsplash.com/photo-1560069000-74947555924a?w=600&q=80',
+            images: [
+                'https://images.unsplash.com/photo-1560069000-74947555924a?w=600&q=80'
+            ],
+            desc: 'Evita rayaduras e impactos en el marco de tu pala. Adhesivo 3M de alta resistencia ultra transparente.'
+        }
+    ];
 
     const [products, setProducts] = useState(mockProducts);
 
@@ -67,7 +135,6 @@ export default function BusinessStore({ overrideSlug }) {
             const root = document.documentElement;
             const body = document.body;
 
-            // Resolved exactly like BusinessProfile to ensure matching colors
             const primaryColor = business.primary_color || business.button_color || business.buttonColor ||
                 (business.category === 'beauty' ? '#FF4081' :
                     business.category === 'health' ? '#2979FF' : '#00E676');
@@ -92,17 +159,17 @@ export default function BusinessStore({ overrideSlug }) {
         }
     }, [business]);
 
-    const addToCart = (product) => {
+    const addToCart = (product, quantity = 1) => {
         setCart(prev => {
             const existing = prev.find(item => item.id === product.id);
             if (existing) {
-                return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+                return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + quantity } : item);
             }
-            return [...prev, { ...product, qty: 1 }];
+            return [...prev, { ...product, qty: quantity }];
         });
 
         // Trigger toast message
-        setToastMessage(`¡${product.name} agregado! 🛒`);
+        setToastMessage(`¡${product.name} (${quantity > 1 ? quantity + 'x' : '1x'}) agregado! 🛒`);
         setTimeout(() => {
             setToastMessage(null);
         }, 2000);
@@ -121,13 +188,15 @@ export default function BusinessStore({ overrideSlug }) {
     const getCartTotal = () => cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
     const handleGoBack = () => {
-        // Si hay historial de navegación, volver atrás (respeta si vino de LinkBio o de Turnos)
-        if (window.history.length > 1) {
+        // Robust navigation: check if React Router history stack has a previous entry
+        if (window.history.state && window.history.state.idx > 0) {
             navigate(-1);
         } else if (overrideSlug) {
-            navigate('/');
-        } else {
+            navigate(`/${overrideSlug}`);
+        } else if (businessSlug) {
             navigate(`/${businessSlug}`);
+        } else {
+            navigate('/');
         }
     };
 
@@ -137,13 +206,31 @@ export default function BusinessStore({ overrideSlug }) {
         // Build WhatsApp text list
         const productListText = cart.map(item => `• ${item.qty}x ${item.name} ($${(item.price * item.qty).toLocaleString('es-AR')})`).join('\n');
         const totalText = getCartTotal().toLocaleString('es-AR');
-        
+
         const message = `¡Hola ${business.name}! 👋\n\nQuiero realizar el siguiente pedido para retirar por el local:\n\n${productListText}\n\n*Total a pagar:* $${totalText}`;
-        
+
         window.open(`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
-        
+
         setCart([]);
         setIsCartOpen(false);
+    };
+
+    // Helper to extract image list for gallery view
+    const getProductImages = (prod) => {
+        if (!prod) return [];
+        if (Array.isArray(prod.images) && prod.images.length > 0) {
+            return prod.images;
+        }
+        if (prod.image) {
+            return [prod.image];
+        }
+        return ['https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=600&q=80'];
+    };
+
+    const handleOpenProductModal = (prod) => {
+        setSelectedProductModal(prod);
+        setActiveImageIndex(0);
+        setModalQty(1);
     };
 
     if (loading) {
@@ -167,6 +254,7 @@ export default function BusinessStore({ overrideSlug }) {
                     Este negocio aún no tiene su tienda habilitada. ¡Próximamente!
                 </p>
                 <button
+                    type="button"
                     onClick={handleGoBack}
                     style={{
                         marginTop: '8px',
@@ -207,17 +295,59 @@ export default function BusinessStore({ overrideSlug }) {
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', padding: isMobile ? '16px' : '32px 24px', paddingBottom: '100px', position: 'relative' }}>
-            
+
             {/* Centered Desktop Wrapper */}
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-                
+
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-                    <button onClick={handleGoBack} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-primary)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                    <button
+                        type="button"
+                        onClick={handleGoBack}
+                        style={{
+                            background: 'var(--bg-card)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: 'var(--text-primary)',
+                            position: 'relative',
+                            zIndex: 10,
+                            transition: 'transform 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                    >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                     </button>
+
                     <h2 style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: '800' }}>Tienda {business.name}</h2>
-                    <button onClick={() => setIsCartOpen(true)} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-primary)', position: 'relative', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+
+                    <button
+                        type="button"
+                        onClick={() => setIsCartOpen(true)}
+                        style={{
+                            background: 'var(--bg-card)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: 'var(--text-primary)',
+                            position: 'relative',
+                            zIndex: 10,
+                            transition: 'transform 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                    >
                         🛒
                         {cart.length > 0 && (
                             <span style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: 'var(--primary-paddle)', color: '#fff', fontSize: '11px', fontWeight: '700', borderRadius: '50%', minWidth: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
@@ -238,7 +368,7 @@ export default function BusinessStore({ overrideSlug }) {
                 }}>
                     <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
                     <div style={{ position: 'absolute', bottom: '-30px', right: '60px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-                    
+
                     <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '800', color: '#fff', margin: '0 0 6px 0', position: 'relative', zIndex: 1 }}>
                         {bannerTitle}
                     </h3>
@@ -274,6 +404,7 @@ export default function BusinessStore({ overrideSlug }) {
                     {dynamicCategories.map(cat => (
                         <button
                             key={cat}
+                            type="button"
                             onClick={() => setActiveCategory(cat)}
                             style={{
                                 padding: '8px 18px',
@@ -293,27 +424,77 @@ export default function BusinessStore({ overrideSlug }) {
                     ))}
                 </div>
 
-                {/* Products Grid - Improved Desktop Columns */}
+                {/* Products Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
                     {filteredProducts.map(prod => (
-                        <motion.div 
-                            key={prod.id} 
+                        <motion.div
+                            key={prod.id}
                             style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(0,0,0,0.02)' }}
                             whileHover={{ y: -4, boxShadow: '0 12px 30px rgba(0,0,0,0.06)' }}
                         >
                             <div>
-                                <div style={{ height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', borderRadius: '14px', marginBottom: '12px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                {/* Clickable Product Image Frame */}
+                                <div
+                                    onClick={() => handleOpenProductModal(prod)}
+                                    style={{
+                                        height: '140px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        backgroundColor: '#fff',
+                                        borderRadius: '14px',
+                                        marginBottom: '12px',
+                                        overflow: 'hidden',
+                                        border: '1px solid var(--border)',
+                                        cursor: 'pointer',
+                                        position: 'relative'
+                                    }}
+                                >
                                     <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <span style={{
+                                        position: 'absolute',
+                                        bottom: '6px',
+                                        right: '6px',
+                                        backgroundColor: 'rgba(0,0,0,0.65)',
+                                        color: '#fff',
+                                        fontSize: '10px',
+                                        fontWeight: '700',
+                                        padding: '2px 8px',
+                                        borderRadius: '10px',
+                                        backdropFilter: 'blur(4px)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '3px'
+                                    }}>
+                                        🔍 Ver fotos
+                                    </span>
                                 </div>
-                                <h4 style={{ fontSize: '14px', fontWeight: '800', marginBottom: '4px', lineHeight: '1.3', color: 'var(--text-primary)' }}>{prod.name}</h4>
-                                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px', height: '32px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{prod.desc}</p>
+
+                                <h4
+                                    onClick={() => handleOpenProductModal(prod)}
+                                    style={{
+                                        fontSize: '14px',
+                                        fontWeight: '800',
+                                        marginBottom: '4px',
+                                        lineHeight: '1.3',
+                                        color: 'var(--text-primary)',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {prod.name}
+                                </h4>
+                                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px', height: '32px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                    {prod.desc}
+                                </p>
                             </div>
+
                             <div>
                                 <div style={{ fontSize: '16px', fontWeight: '900', marginBottom: '10px', color: 'var(--primary-paddle)' }}>
                                     ${prod.price.toLocaleString('es-AR')}
                                 </div>
                                 <button
-                                    onClick={() => addToCart(prod)}
+                                    type="button"
+                                    onClick={() => addToCart(prod, 1)}
                                     style={{
                                         width: '100%',
                                         padding: '10px',
@@ -336,6 +517,290 @@ export default function BusinessStore({ overrideSlug }) {
                     ))}
                 </div>
             </div>
+
+            {/* Product Detail & Multi-Image Gallery Modal */}
+            <AnimatePresence>
+                {selectedProductModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            backgroundColor: 'rgba(0,0,0,0.75)',
+                            backdropFilter: 'blur(6px)',
+                            zIndex: 1100,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '16px'
+                        }}
+                        onClick={() => setSelectedProductModal(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            style={{
+                                width: '100%',
+                                maxWidth: '550px',
+                                maxHeight: '90vh',
+                                backgroundColor: 'var(--bg-card)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '24px',
+                                overflowY: 'auto',
+                                padding: isMobile ? '20px' : '28px',
+                                boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '18px'
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Close Button */}
+                            <button
+                                type="button"
+                                onClick={() => setSelectedProductModal(null)}
+                                style={{
+                                    position: 'absolute',
+                                    top: '16px',
+                                    right: '16px',
+                                    border: 'none',
+                                    background: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    borderRadius: '50%',
+                                    width: '36px',
+                                    height: '36px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '20px',
+                                    cursor: 'pointer',
+                                    zIndex: 10,
+                                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                                }}
+                            >
+                                ×
+                            </button>
+
+                            {/* Image Gallery Section */}
+                            {(() => {
+                                const images = getProductImages(selectedProductModal);
+                                const currentImg = images[activeImageIndex] || images[0];
+
+                                return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        {/* Main Image Display */}
+                                        <div style={{
+                                            position: 'relative',
+                                            width: '100%',
+                                            height: isMobile ? '240px' : '300px',
+                                            backgroundColor: '#fff',
+                                            borderRadius: '16px',
+                                            overflow: 'hidden',
+                                            border: '1px solid var(--border)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <motion.img
+                                                key={activeImageIndex}
+                                                initial={{ opacity: 0.5, scale: 0.98 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                transition={{ duration: 0.2 }}
+                                                src={currentImg}
+                                                alt={selectedProductModal.name}
+                                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                            />
+
+                                            {/* Navigation Arrows (if multiple images) */}
+                                            {images.length > 1 && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setActiveImageIndex(prev => prev > 0 ? prev - 1 : images.length - 1)}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            left: '10px',
+                                                            top: '50%',
+                                                            transform: 'translateY(-50%)',
+                                                            backgroundColor: 'rgba(0,0,0,0.65)',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '50%',
+                                                            width: '36px',
+                                                            height: '36px',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: '18px',
+                                                            zIndex: 5
+                                                        }}
+                                                    >
+                                                        ‹
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setActiveImageIndex(prev => prev < images.length - 1 ? prev + 1 : 0)}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            right: '10px',
+                                                            top: '50%',
+                                                            transform: 'translateY(-50%)',
+                                                            backgroundColor: 'rgba(0,0,0,0.65)',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '50%',
+                                                            width: '36px',
+                                                            height: '36px',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: '18px',
+                                                            zIndex: 5
+                                                        }}
+                                                    >
+                                                        ›
+                                                    </button>
+                                                    <span style={{
+                                                        position: 'absolute',
+                                                        bottom: '10px',
+                                                        right: '10px',
+                                                        backgroundColor: 'rgba(0,0,0,0.7)',
+                                                        color: '#fff',
+                                                        fontSize: '11px',
+                                                        fontWeight: '700',
+                                                        padding: '4px 12px',
+                                                        borderRadius: '12px',
+                                                        backdropFilter: 'blur(4px)'
+                                                    }}>
+                                                        {activeImageIndex + 1} / {images.length}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Thumbnails Row (if multiple images) */}
+                                        {images.length > 1 && (
+                                            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                                {images.map((imgUrl, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        onClick={() => setActiveImageIndex(idx)}
+                                                        style={{
+                                                            width: '56px',
+                                                            height: '56px',
+                                                            borderRadius: '10px',
+                                                            overflow: 'hidden',
+                                                            border: activeImageIndex === idx ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                            cursor: 'pointer',
+                                                            opacity: activeImageIndex === idx ? 1 : 0.5,
+                                                            transition: 'all 0.2s',
+                                                            flexShrink: 0,
+                                                            backgroundColor: '#fff'
+                                                        }}
+                                                    >
+                                                        <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Product Details */}
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                    <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: '700',
+                                        padding: '4px 10px',
+                                        borderRadius: '12px',
+                                        backgroundColor: 'rgba(132, 204, 22, 0.15)',
+                                        color: 'var(--primary-paddle)'
+                                    }}>
+                                        {selectedProductModal.category || 'General'}
+                                    </span>
+                                </div>
+
+                                <h3 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>
+                                    {selectedProductModal.name}
+                                </h3>
+
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 16px 0', lineHeight: '1.5' }}>
+                                    {selectedProductModal.desc || 'Sin descripción disponible.'}
+                                </p>
+
+                                <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--primary-paddle)', marginBottom: '20px' }}>
+                                    ${(selectedProductModal.price || 0).toLocaleString('es-AR')}
+                                </div>
+
+                                {/* Quantity Selector & Add Button */}
+                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        backgroundColor: 'var(--bg-main)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '14px',
+                                        padding: '8px 16px'
+                                    }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setModalQty(prev => Math.max(1, prev - 1))}
+                                            style={{ border: 'none', background: 'none', fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', cursor: 'pointer' }}
+                                        >
+                                            -
+                                        </button>
+                                        <span style={{ fontSize: '15px', fontWeight: '800', minWidth: '20px', textAlign: 'center' }}>
+                                            {modalQty}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setModalQty(prev => prev + 1)}
+                                            style={{ border: 'none', background: 'none', fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', cursor: 'pointer' }}
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            addToCart(selectedProductModal, modalQty);
+                                            setSelectedProductModal(null);
+                                        }}
+                                        style={{
+                                            flex: 1,
+                                            padding: '14px',
+                                            borderRadius: '14px',
+                                            border: 'none',
+                                            backgroundColor: 'var(--primary-paddle)',
+                                            color: '#fff',
+                                            fontWeight: '800',
+                                            fontSize: '14px',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 6px 16px rgba(0,0,0,0.1)',
+                                            transition: 'transform 0.2s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                        Agregar al Carrito 🛒
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Floating Toast Notification */}
             <AnimatePresence>

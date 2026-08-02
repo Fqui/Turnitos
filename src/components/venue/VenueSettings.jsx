@@ -845,13 +845,28 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                         </div>
 
                         <div>
-                            <label style={labelStyle}>URL de la Imagen</label>
+                            <label style={labelStyle}>URL de Imagen Principal</label>
                             <input
                                 type="text"
                                 style={inputStyle}
                                 value={editingProduct.image || ''}
                                 placeholder="https://..."
                                 onChange={e => setEditingProduct(prev => ({ ...prev, image: e.target.value }))}
+                            />
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Imágenes Adicionales (URLs separadas por comas)</label>
+                            <input
+                                type="text"
+                                style={inputStyle}
+                                value={Array.isArray(editingProduct.images) ? editingProduct.images.join(', ') : (editingProduct.images || '')}
+                                placeholder="https://img2.jpg, https://img3.jpg"
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    const list = val.split(',').map(s => s.trim()).filter(Boolean);
+                                    setEditingProduct(prev => ({ ...prev, images: list }));
+                                }}
                             />
                         </div>
 
