@@ -146,7 +146,11 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
         
         // Add selected extras to WhatsApp message
         const extrasText = selectedExtras.length > 0 
-            ? `\n🛒 Adicionales sumados:\n` + selectedExtras.map(e => `- ${e.name} ($${e.price.toLocaleString('es-AR')})`).join('\n')
+            ? `\n🛒 Adicionales sumados:\n` + selectedExtras.map(e => {
+                const qty = e.quantity || 1;
+                const total = (Number(e.price) * qty).toLocaleString('es-AR');
+                return `- ${qty > 1 ? `${qty}x ` : ''}${e.name} ($${total})`;
+            }).join('\n')
             : '';
             
         const message = `Hola, mi nombre es ${customerName}. Reservé ${displayServiceName}${specialistText}, el día ${formattedDate} a las ${time}.${extrasText}\n\nA continuación le envío una captura del comprobante.`;
