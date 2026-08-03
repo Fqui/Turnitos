@@ -305,10 +305,26 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
 
                                 {/* Vertical List of Extras */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '42vh', overflowY: 'auto', paddingRight: '4px' }}>
-                                    {availableExtras && availableExtras.length > 0 ? (
-                                        availableExtras.map((extra, idx) => {
+                                    {(() => {
+                                        const effectiveExtras = (availableExtras && availableExtras.length > 0)
+                                            ? availableExtras
+                                            : (business?.metadata?.store_products && business.metadata.store_products.length > 0)
+                                                ? business.metadata.store_products.filter(p => p.is_active !== false)
+                                                : (business?.additional_services && business.additional_services.length > 0)
+                                                    ? business.additional_services
+                                                    : [];
+
+                                        if (effectiveExtras.length === 0) {
+                                            return (
+                                                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
+                                                    No hay adicionales recomendados disponibles.
+                                                </div>
+                                            );
+                                        }
+
+                                        return effectiveExtras.map((extra, idx) => {
                                             const isSelected = selectedExtras.some(e => e.name === extra.name);
-                                            const extraImage = extra.image || (
+                                            const extraImage = extra.image || extra.image_url || (
                                                 extra.name.includes('Pala') ? 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=200&q=80' :
                                                 extra.name.includes('Pelotas') ? 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=200&q=80' :
                                                 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=200&q=80'
@@ -344,12 +360,12 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                             {extra.name}
                                                         </div>
                                                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                                            {extra.name.includes('Alquiler') ? 'Alquiler para el partido' : 'Bebida fría al llegar'}
+                                                            {extra.desc || extra.category || (extra.name.includes('Alquiler') ? 'Alquiler para el partido' : 'Adicional para tu turno')}
                                                         </div>
                                                     </div>
                                                     <div style={{ textAlign: 'right' }}>
                                                         <div style={{ fontSize: '13px', fontWeight: '800', color: isSelected ? sportColor : 'var(--text-primary)' }}>
-                                                            +${extra.price.toLocaleString('es-AR')}
+                                                            +${Number(extra.price).toLocaleString('es-AR')}
                                                         </div>
                                                         <div style={{ fontSize: '10px', color: isSelected ? sportColor : 'var(--text-secondary)', fontWeight: '700', marginTop: '2px' }}>
                                                             {isSelected ? 'Sumado ✓' : 'Agregar'}
@@ -357,12 +373,8 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                     </div>
                                                 </div>
                                             );
-                                        })
-                                    ) : (
-                                        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
-                                            No hay adicionales recomendados disponibles.
-                                        </div>
-                                    )}
+                                        });
+                                    })()}
                                 </div>
 
                                 {/* Action Buttons */}

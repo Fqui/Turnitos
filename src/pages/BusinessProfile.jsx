@@ -1130,93 +1130,101 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 )}
 
                 {/* 5. Store Promotion Section (Tienda del Negocio) - Solo si el negocio tiene tienda habilitada */}
-                {business.store_enabled && (
-                <section style={{ 
-                    marginBottom: '30px',
-                    padding: '20px',
-                    background: 'linear-gradient(135deg, var(--bg-card) 0%, rgba(255,255,255,0.01) 100%)',
-                    borderRadius: '24px',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                    backdropFilter: 'blur(10px)'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <div>
-                            <h3 style={{ fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
-                                🛍️ Tienda {business.name}
-                            </h3>
-                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Remeras, paletas, overgrips y más</p>
-                        </div>
-                        <button 
-                            onClick={() => {
-                                const subdomain = getSubdomain();
-                                navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
-                            }}
-                            style={{
-                                padding: '6px 14px',
-                                borderRadius: '20px',
-                                border: 'none',
-                                background: 'rgba(255,255,255,0.08)',
-                                color: 'var(--text-primary)',
-                                fontWeight: '700',
-                                fontSize: '11px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                cursor: 'pointer',
-                                transition: 'background 0.2s',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                        >
-                            Ver Tienda ➔
-                        </button>
-                    </div>
+                {business.store_enabled && (() => {
+                    const storeProducts = (business.metadata?.store_products && business.metadata.store_products.length > 0)
+                        ? business.metadata.store_products.filter(p => p.is_active !== false)
+                        : [
+                            { name: 'Tubo Pelotas Padel', price: 8500, image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80' },
+                            { name: 'Pack x3 Overgrips', price: 4000, image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80' },
+                            { name: 'Alquiler Pala Vertex', price: 2000, image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80' },
+                            { name: 'Gatorade 500ml', price: 2500, image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80' }
+                        ];
 
-                    <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-                        {[
-                            { name: 'Remera Oficial Cancha Apolo', price: 18000, image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=400&q=80' },
-                            { name: 'Paleta Bullpadel Vertex', price: 290000, image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80' },
-                            { name: 'Pack x3 Overgrips Wilson', price: 4000, image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80' },
-                            { name: 'Tubo Pelotas Padel Premium', price: 8500, image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80' }
-                        ].map((prod, idx) => (
-                            <div 
-                                key={idx}
-                                onClick={() => {
-                                    const subdomain = getSubdomain();
-                                    navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
-                                }}
-                                style={{
-                                    flexShrink: 0,
-                                    width: '130px',
-                                    background: 'var(--bg-main)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '16px',
-                                    padding: '10px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'space-between',
-                                    transition: 'transform 0.2s',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                            >
-                                <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
-                                    <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    const storeSubtitle = business.metadata?.store_banner_subtitle || 'Elegí tus productos y retiralos cuando vengas a jugar';
+
+                    return (
+                        <section style={{ 
+                            marginBottom: '30px',
+                            padding: '20px',
+                            background: 'linear-gradient(135deg, var(--bg-card) 0%, rgba(255,255,255,0.01) 100%)',
+                            borderRadius: '24px',
+                            border: '1px solid var(--border)',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                            backdropFilter: 'blur(10px)'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <div>
+                                    <h3 style={{ fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                                        🛍️ Tienda {business.name}
+                                    </h3>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>{storeSubtitle}</p>
                                 </div>
-                                <h4 style={{ fontSize: '11px', fontWeight: '700', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{prod.name}</h4>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: '800', color: primaryColor }}>${prod.price.toLocaleString('es-AR')}</span>
-                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>➔</span>
-                                </div>
+                                <button 
+                                    onClick={() => {
+                                        const subdomain = getSubdomain();
+                                        navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
+                                    }}
+                                    style={{
+                                        padding: '6px 14px',
+                                        borderRadius: '20px',
+                                        border: 'none',
+                                        background: 'rgba(255,255,255,0.08)',
+                                        color: 'var(--text-primary)',
+                                        fontWeight: '700',
+                                        fontSize: '11px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                                >
+                                    Ver Tienda ➔
+                                </button>
                             </div>
-                        ))}
-                    </div>
-                </section>
-                )}
+
+                            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                                {storeProducts.map((prod, idx) => (
+                                    <div 
+                                        key={prod.id || idx}
+                                        onClick={() => {
+                                            const subdomain = getSubdomain();
+                                            navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
+                                        }}
+                                        style={{
+                                            flexShrink: 0,
+                                            width: '130px',
+                                            background: 'var(--bg-main)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '16px',
+                                            padding: '10px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'space-between',
+                                            transition: 'transform 0.2s',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                    >
+                                        <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
+                                            <img src={prod.image || prod.images?.[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&q=80'} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        </div>
+                                        <h4 style={{ fontSize: '11px', fontWeight: '700', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{prod.name}</h4>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                            <span style={{ fontSize: '11px', fontWeight: '800', color: primaryColor }}>${Number(prod.price).toLocaleString('es-AR')}</span>
+                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>➔</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    );
+                })()}
 
                 {/* Step 2: Select Date */}
                 {(selectedItem || business.type === 'venue') && (
