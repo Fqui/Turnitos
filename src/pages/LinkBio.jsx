@@ -166,7 +166,9 @@ export default function LinkBio({ overrideSlug }) {
             backgroundColor: 'var(--bg-main)',
             backgroundImage: 'radial-gradient(var(--border) 1.5px, transparent 1.5px)',
             backgroundSize: '24px 24px',
-            minHeight: '100vh',
+            height: isDesktop ? '100vh' : 'auto',
+            minHeight: isDesktop ? 'auto' : '100vh',
+            overflow: isDesktop ? 'hidden' : 'visible',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -176,13 +178,13 @@ export default function LinkBio({ overrideSlug }) {
         }}>
             {/* Banner Section */}
             <div className="linkbio-banner" style={{
-                height: isDesktop ? '140px' : '180px',
+                height: isDesktop ? '110px' : '180px',
                 width: '100%',
-                maxWidth: isDesktop ? '480px' : '100%',
-                borderRadius: isDesktop ? '20px' : '0',
-                marginTop: isDesktop ? '0' : '0',
+                maxWidth: isDesktop ? '420px' : '100%',
+                borderRadius: isDesktop ? '16px' : '0',
                 position: 'relative',
                 overflow: 'hidden',
+                flexShrink: 0,
                 boxShadow: isDesktop ? '0 8px 24px rgba(0,0,0,0.1)' : 'none',
                 backgroundColor: 'var(--bg-card)'
             }}>
@@ -205,11 +207,11 @@ export default function LinkBio({ overrideSlug }) {
                 animate={{ opacity: 1, y: 0 }}
                 style={{
                     textAlign: 'center',
-                    marginBottom: isDesktop ? '10px' : '16px',
+                    marginBottom: isDesktop ? '6px' : '16px',
                     width: '100%',
-                    maxWidth: isDesktop ? '480px' : '520px',
+                    maxWidth: isDesktop ? '420px' : '520px',
                     padding: '0 16px',
-                    marginTop: isDesktop ? '-40px' : '-50px',
+                    marginTop: isDesktop ? '-30px' : '-50px',
                     position: 'relative',
                     zIndex: 10
                 }}
@@ -223,10 +225,10 @@ export default function LinkBio({ overrideSlug }) {
                     }}
                     className="linkbio-logo"
                     style={{
-                        width: isDesktop ? '90px' : '124px',
-                        height: isDesktop ? '90px' : '124px',
+                        width: isDesktop ? '70px' : '124px',
+                        height: isDesktop ? '70px' : '124px',
                         borderRadius: '50%',
-                        margin: isDesktop ? '0 auto 10px' : '0 auto 16px',
+                        margin: isDesktop ? '0 auto 6px' : '0 auto 16px',
                         padding: '3px',
                         background: activeStories.length > 0
                             ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
@@ -256,15 +258,15 @@ export default function LinkBio({ overrideSlug }) {
                         />
                     </div>
                 </div>
-                <h1 className="linkbio-name" style={{ fontSize: isDesktop ? '18px' : '22px', fontWeight: '800', marginBottom: isDesktop ? '4px' : '8px', color: 'var(--text-primary)' }}>
+                <h1 className="linkbio-name" style={{ fontSize: isDesktop ? '16px' : '22px', fontWeight: '800', marginBottom: isDesktop ? '2px' : '8px', color: 'var(--text-primary)' }}>
                     {business.name}
                 </h1>
-                <p className="linkbio-desc" style={{ fontSize: isDesktop ? '13px' : '14px', color: 'var(--text-secondary)', marginBottom: isDesktop ? '8px' : '12px' }}>
+                <p className="linkbio-desc" style={{ fontSize: isDesktop ? '12px' : '14px', color: 'var(--text-secondary)', marginBottom: isDesktop ? '6px' : '12px' }}>
                     {business.description || '¡Reserva tu turno online de forma rápida y sencilla!'}
                 </p>
 
                 {/* Social Media Row */}
-                <div className="linkbio-socials" style={{ display: 'flex', gap: isDesktop ? '10px' : '12px', justifyContent: 'center', marginBottom: isDesktop ? '8px' : '16px' }}>
+                <div className="linkbio-socials" style={{ display: 'flex', gap: isDesktop ? '8px' : '12px', justifyContent: 'center', marginBottom: isDesktop ? '4px' : '16px' }}>
                     {/* Instagram */}
                     {business.instagram && (
                         <a
@@ -529,7 +531,7 @@ export default function LinkBio({ overrideSlug }) {
             </AnimatePresence>
 
             {/* Main Links Section */}
-            <div className="linkbio-links-section" style={{ width: '100%', maxWidth: isDesktop ? '480px' : '520px', display: 'flex', flexDirection: 'column', gap: isDesktop ? '8px' : '12px', marginBottom: isDesktop ? '12px' : '24px', padding: '0 16px' }}>
+            <div className="linkbio-links-section" style={{ width: '100%', maxWidth: isDesktop ? '420px' : '520px', display: 'flex', flexDirection: 'column', gap: isDesktop ? '6px' : '12px', marginBottom: isDesktop ? '0' : '24px', padding: '0 16px' }}>
                 {mainLinks.map((link, index) => (
                     <motion.button
                         key={index}
