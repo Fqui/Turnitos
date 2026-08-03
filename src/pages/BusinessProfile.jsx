@@ -2290,11 +2290,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             business: business,
                             businessPhone: business.whatsapp
                         }}
-                        availableExtras={[
-                            { name: 'Alquiler Pala Vertex', price: 2000 },
-                            { name: 'Alquiler Tubo Pelotas', price: 1000 },
-                            { name: 'Gatorade Fría 500ml', price: 2500 }
-                        ]}
+                        availableExtras={(business?.additional_services || []).filter(s => s.is_active !== false)}
                         activePromotion={activePromotion}
                         onClose={() => setShowModal(false)}
                         onConfirm={handleConfirmBooking}
