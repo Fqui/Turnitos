@@ -45,6 +45,16 @@ export function getSubdomain() {
     const hostname = window.location.hostname;
     const parts = hostname.split('.');
 
+    // Handle double subdomain like www.cancha-apolo.turnitoslr.com
+    if (hostname.includes('turnitoslr.com') && parts.length > 3 && parts[0] === 'www') {
+        const actualSub = parts[1].toLowerCase();
+        if (!['admin', 'app', 'portal', 'api'].includes(actualSub)) {
+            const cleanHost = parts.slice(1).join('.');
+            window.location.href = `${window.location.protocol}//${cleanHost}${window.location.pathname}${window.location.search}`;
+            return actualSub;
+        }
+    }
+
     if (hostname.includes('turnitoslr.com') && parts.length > 2) {
         const sub = parts[0].toLowerCase();
         if (!['www', 'admin', 'app', 'portal', 'api'].includes(sub)) {
