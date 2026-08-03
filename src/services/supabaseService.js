@@ -539,17 +539,24 @@ class SupabaseService {
                     role: 'General'
                 }));
             } else {
-                // Determine default sport from subcategory/category
+                // Determine default sport from name, subcategory, or category
+                const nameLower = (businessData.name || '').toLowerCase();
                 const subcatLower = (businessData.subcategory_slug || businessData.subcategory || '').toLowerCase();
                 const catLower = (businessData.category || '').toLowerCase();
-                let defaultSport = 'futbol';
-                if (subcatLower.includes('padel') || catLower.includes('padel')) {
+                let defaultSport = 'padel';
+                if (nameLower.includes('padel') || subcatLower.includes('padel') || catLower.includes('padel')) {
                     defaultSport = 'padel';
-                } else if (subcatLower.includes('futbol') || catLower.includes('futbol')) {
+                } else if (nameLower.includes('futbol') || subcatLower.includes('futbol') || catLower.includes('futbol')) {
                     defaultSport = 'futbol';
                 }
 
                 businessData.courts = Array.from({ length: requestedCount }, (_, i) => ({
+                    id: (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+                        ? crypto.randomUUID()
+                        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                            const r = Math.random() * 16 | 0;
+                            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+                        }),
                     name: `Cancha ${i + 1}`,
                     sport: defaultSport,
                     price: businessData.price_per_hour || 10000
