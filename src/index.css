@@ -261,6 +261,30 @@ button, input, select, textarea {
 /* ═══════════════════════════════════════════
    PROMOTIONS HERO
    ═══════════════════════════════════════════ */
+.promotions-hero-card {
+  height: 200px;
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px -8px rgba(0,0,0,0.15);
+  background-color: var(--bg-card);
+}
+
+.desktop-only-arrow {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .promotions-hero-card {
+    height: 260px;
+    border-radius: 28px;
+  }
+
+  .desktop-only-arrow {
+    display: flex;
+  }
+}
+
 .promo-card {
   display: flex;
   flex-direction: column;

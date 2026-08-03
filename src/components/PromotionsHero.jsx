@@ -105,14 +105,7 @@ export default function PromotionsHero({ promotions, businesses }) {
                     100% { background-position: 200% 0; }
                 }
             `}</style>
-            <div style={{
-                height: window.innerWidth <= 768 ? '200px' : '260px',
-                position: 'relative',
-                borderRadius: window.innerWidth <= 768 ? '20px' : '28px',
-                overflow: 'hidden',
-                boxShadow: '0 12px 30px -8px rgba(0,0,0,0.15)',
-                backgroundColor: 'var(--bg-card)'
-            }}>
+            <div className="promotions-hero-card">
                 <AnimatePresence mode='wait'>
                     <motion.div
                         key={currentPromo.id}
@@ -120,11 +113,11 @@ export default function PromotionsHero({ promotions, businesses }) {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.25 }}
-                        drag={window.innerWidth <= 768 ? "x" : false}
+                        drag="x"
                         dragConstraints={{ left: 0, right: 0 }}
                         dragElastic={0.2}
                         onDragEnd={handleDragEnd}
-                        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, cursor: window.innerWidth <= 768 ? 'grab' : 'pointer' }}
+                        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, cursor: 'grab' }}
                         whileDrag={{ cursor: 'grabbing' }}
                     >
                         <Link
@@ -220,10 +213,11 @@ export default function PromotionsHero({ promotions, businesses }) {
                     </motion.div>
                 </AnimatePresence>
 
-                {/* Navigation Arrows - Desktop Only */}
-                {window.innerWidth > 768 && promotions.length > 1 && (
+                {/* Navigation Arrows - Desktop Only via CSS */}
+                {promotions.length > 1 && (
                     <>
                         <button
+                            className="desktop-only-arrow"
                             onClick={handlePrev}
                             style={{
                                 position: 'absolute',
@@ -236,7 +230,6 @@ export default function PromotionsHero({ promotions, businesses }) {
                                 background: 'rgba(255, 255, 255, 0.9)',
                                 border: 'none',
                                 cursor: 'pointer',
-                                display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '20px',
@@ -257,6 +250,7 @@ export default function PromotionsHero({ promotions, businesses }) {
                             ‹
                         </button>
                         <button
+                            className="desktop-only-arrow"
                             onClick={handleNext}
                             style={{
                                 position: 'absolute',
@@ -269,7 +263,6 @@ export default function PromotionsHero({ promotions, businesses }) {
                                 background: 'rgba(255, 255, 255, 0.9)',
                                 border: 'none',
                                 cursor: 'pointer',
-                                display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '20px',
