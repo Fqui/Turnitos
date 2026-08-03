@@ -525,12 +525,16 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                         <span>{courtName || serviceName}</span>
                                                         <span>${basePrice.toLocaleString('es-AR')}</span>
                                                     </div>
-                                                    {selectedExtras.map((extra, idx) => (
-                                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                                            <span>+ {extra.name}</span>
-                                                            <span>${extra.price.toLocaleString('es-AR')}</span>
-                                                        </div>
-                                                    ))}
+                                                    {selectedExtras.map((extra, idx) => {
+                                                        const qty = extra.quantity || 1;
+                                                        const itemTotal = Number(extra.price) * qty;
+                                                        return (
+                                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                                <span>+ {qty > 1 ? `${qty}x ` : ''}{extra.name}</span>
+                                                                <span>${itemTotal.toLocaleString('es-AR')}</span>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
 
