@@ -12,38 +12,12 @@ export default defineConfig({
       srcDir: 'public',
       filename: 'sw-v2.js',
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      injectRegister: false,
       // Force new SW when these files change
       globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
       // Bust cache on new builds by including timestamp
       buildTimestamp: Date.now(),
-      manifest: {
-        name: 'Turnitos LR - Gestión',
-        short_name: 'TurnitosLR',
-        description: 'Gestión de reservas en tiempo real',
-        theme_color: '#059669',
-        background_color: '#ffffff',
-        start_url: '/portal',
-        display: 'standalone',
-        icons: [
-          {
-            src: 'logo.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'logo.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'logo.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          }
-        ]
-      }
+      manifest: false
     })
   ],
   // For GitHub Pages, set base to '/<repo-name>/'

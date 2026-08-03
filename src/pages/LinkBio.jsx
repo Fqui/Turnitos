@@ -542,7 +542,7 @@ export default function LinkBio({ overrideSlug }) {
                         onClick={link.action}
                         style={{
                             width: '100%',
-                            padding: isDesktop ? '10px 14px' : '12px 16px',
+                            padding: isDesktop ? '8px 12px' : '12px 16px',
                             borderRadius: '20px',
                             border: '1px solid var(--border)',
                             backgroundColor: link.highlight ? primaryColor : 'var(--bg-card)',
@@ -604,7 +604,7 @@ export default function LinkBio({ overrideSlug }) {
                         onClick={() => window.open(`https://wa.me/${business.whatsapp}`, '_blank')}
                         style={{
                             width: '100%',
-                            padding: isDesktop ? '10px 14px' : '12px 16px',
+                            padding: isDesktop ? '8px 12px' : '12px 16px',
                             borderRadius: '20px',
                             border: '1px solid var(--border)',
                             backgroundColor: '#25D366',
