@@ -1137,7 +1137,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
                     if (storeProducts.length === 0) return null;
 
-                    const storeSubtitle = business.metadata?.store_banner_subtitle || 'Elegí tus productos y retiralos cuando vengas a jugar';
+                    const storeSubtitle = business.metadata?.store_banner_title || business.metadata?.store_banner_subtitle || 'Elegí tus productos y retiralos cuando vengas a jugar';
 
                     return (
                         <section style={{ 
