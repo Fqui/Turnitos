@@ -139,7 +139,7 @@ export default function PromotionsHero({ promotions, businesses }) {
                         >
                             <div className="promo-card">
                                 {/* Image Section */}
-                                <div className="promo-image-container" style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
+                                <div className="promo-image-container" style={{ overflow: 'hidden', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
                                     {currentPromo.image && !imgError ? (
                                         <img
                                             src={currentPromo.image}

@@ -303,7 +303,7 @@ button, input, select, textarea {
   color: rgba(255, 255, 255, 0.95);
 }
 
-@media (min-width: 900px) {
+@media (min-width: 640px) {
   .promo-card {
     flex-direction: row;
     align-items: center;
@@ -315,13 +315,15 @@ button, input, select, textarea {
     flex: 1.2;
     height: 100%;
     inset: auto;
+    order: 2;
   }
 
   .promo-content {
     flex: 0.8;
     justify-content: center;
     background: none;
-    padding: 40px;
+    padding: 32px 40px;
+    order: 1;
   }
 
   .promo-title-mobile {
