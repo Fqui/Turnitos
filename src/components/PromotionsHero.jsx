@@ -5,6 +5,40 @@ import { generateSlug } from '../utils/utils';
 
 export default function PromotionsHero({ promotions, businesses }) {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [loadedImages, setLoadedImages] = useState(() => new Set());
+    const [failedImages, setFailedImages] = useState(() => new Set());
+
+    // Preload all promotion images for instant carousel transitions
+    useEffect(() => {
+        if (!promotions || promotions.length === 0) return;
+        promotions.forEach(p => {
+            if (p.image) {
+                const img = new Image();
+                img.onload = () => {
+                    setLoadedImages(prev => {
+                        const next = new Set(prev);
+                        next.add(p.image);
+                        return next;
+                    });
+                };
+                img.onerror = () => {
+                    setFailedImages(prev => {
+                        const next = new Set(prev);
+                        next.add(p.image);
+                        return next;
+                    });
+                };
+                img.src = p.image;
+                if (img.complete && img.naturalWidth > 0) {
+                    setLoadedImages(prev => {
+                        const next = new Set(prev);
+                        next.add(p.image);
+                        return next;
+                    });
+                }
+            }
+        });
+    }, [promotions]);
 
     // Auto-rotate every 5 seconds
     useEffect(() => {
@@ -43,6 +77,8 @@ export default function PromotionsHero({ promotions, businesses }) {
 
     const currentPromo = promotions[currentIndex];
     const business = businesses.find(b => b.id === currentPromo.business_id);
+    const hasImage = Boolean(currentPromo.image);
+    const imgError = hasImage && failedImages.has(currentPromo.image);
 
     const handleNext = () => {
         setCurrentIndex((prev) => (prev + 1) % promotions.length);
@@ -63,12 +99,19 @@ export default function PromotionsHero({ promotions, businesses }) {
 
     return (
         <section style={{ marginBottom: '40px', position: 'relative' }}>
+            <style>{`
+                @keyframes shimmerWave {
+                    0% { background-position: -200% 0; }
+                    100% { background-position: 200% 0; }
+                }
+            `}</style>
             <div style={{
                 height: '280px',
                 position: 'relative',
                 borderRadius: '32px',
                 overflow: 'hidden',
-                boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)'
+                boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)',
+                backgroundColor: 'var(--bg-card)'
             }}>
                 <AnimatePresence mode='wait'>
                     <motion.div
@@ -76,7 +119,7 @@ export default function PromotionsHero({ promotions, businesses }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4 }}
+                        transition={{ duration: 0.25 }}
                         drag={window.innerWidth <= 768 ? "x" : false}
                         dragConstraints={{ left: 0, right: 0 }}
                         dragElastic={0.2}
@@ -85,57 +128,94 @@ export default function PromotionsHero({ promotions, businesses }) {
                         whileDrag={{ cursor: 'grabbing' }}
                     >
                         <Link
-                            to={`/${generateSlug(business?.name || '')}/turnos?promoId=${currentPromo.id}`}
+                            to={`/${business?.slug || generateSlug(business?.name || '')}?promoId=${currentPromo.id}`}
                             state={{ business, activePromo: currentPromo }}
-                            style={{ textDecoration: 'none', display: 'block', height: '100%', pointerEvents: 'auto' }}
+                            style={{
+                                textDecoration: 'none',
+                                display: 'block',
+                                height: '100%',
+                                pointerEvents: 'auto'
+                            }}
                         >
                             <div className="promo-card">
-                                {/* Image Section (Background on Mobile, Right Side on Desktop) */}
-                                <div className="promo-image-container">
-                                    <img
-                                        src={currentPromo.image}
-                                        alt={currentPromo.title}
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                    />
+                                {/* Image Section */}
+                                <div className="promo-image-container" style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
+                                    {currentPromo.image && !imgError ? (
+                                        <img
+                                            src={currentPromo.image}
+                                            alt={currentPromo.title}
+                                            onLoad={() => {
+                                                setLoadedImages(prev => {
+                                                    const next = new Set(prev);
+                                                    next.add(currentPromo.image);
+                                                    return next;
+                                                });
+                                            }}
+                                            onError={() => {
+                                                setFailedImages(prev => {
+                                                    const next = new Set(prev);
+                                                    next.add(currentPromo.image);
+                                                    return next;
+                                                });
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover'
+                                            }}
+                                        />
+                                    ) : (
+                                        <div style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            background: 'linear-gradient(135deg, #00E67620 0%, #2979FF20 100%)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '48px'
+                                        }}>
+                                            🏷️
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Content Section (Overlay on Mobile, Left Side on Desktop) */}
-                                <div className="promo-content">
-                                    <motion.div
-                                        initial={{ y: 20, opacity: 0 }}
-                                        animate={{ y: 0, opacity: 1 }}
-                                        transition={{ delay: 0.1 }}
-                                    >
-                                        <div className="promo-badge" style={{
-                                            display: 'inline-flex',
-                                            padding: '6px 12px',
-                                            backdropFilter: 'blur(4px)',
-                                            borderRadius: '50px',
-                                            fontSize: '13px',
-                                            fontWeight: '700',
-                                            marginBottom: '16px',
-                                        }}>
-                                            {currentPromo.discount}
-                                            {currentPromo.discount && currentPromo.discount.toString().trim().endsWith('%') && ' OFF'}
-                                        </div>
-                                        <h2 className="promo-title-mobile" style={{
-                                            fontSize: 'clamp(24px, 4vw, 42px)',
-                                            fontWeight: '800',
-                                            lineHeight: 1.1,
-                                            marginBottom: '12px',
-                                        }}>
-                                            {currentPromo.title}
-                                        </h2>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <span style={{ fontSize: '16px' }}>📍</span>
-                                            <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'var(--font-title)' }}>
-                                                {business?.name || 'Ver Negocio'}
-                                            </span>
-                                        </div>
-                                    </motion.div>
+                                    {/* Content Section */}
+                                    <div className="promo-content">
+                                        <motion.div
+                                            initial={{ y: 15, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            transition={{ delay: 0.05 }}
+                                        >
+                                            <div className="promo-badge" style={{
+                                                display: 'inline-flex',
+                                                padding: '6px 12px',
+                                                backdropFilter: 'blur(4px)',
+                                                borderRadius: '50px',
+                                                fontSize: '13px',
+                                                fontWeight: '700',
+                                                marginBottom: '16px',
+                                            }}>
+                                                {currentPromo.discount}
+                                                {currentPromo.discount && currentPromo.discount.toString().trim().endsWith('%') && ' OFF'}
+                                            </div>
+                                            <h2 className="promo-title-mobile" style={{
+                                                fontSize: 'clamp(24px, 4vw, 42px)',
+                                                fontWeight: '800',
+                                                lineHeight: 1.1,
+                                                marginBottom: '12px',
+                                            }}>
+                                                {currentPromo.title}
+                                            </h2>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ fontSize: '16px' }}>📍</span>
+                                                <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'var(--font-title)' }}>
+                                                    {business?.name || 'Ver Negocio'}
+                                                </span>
+                                            </div>
+                                        </motion.div>
+                                    </div>
                                 </div>
-                            </div>
-                        </Link>
+                            </Link>
                     </motion.div>
                 </AnimatePresence>
 
