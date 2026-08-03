@@ -9,6 +9,7 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
     const [editingIndex, setEditingIndex] = useState(null);
     const [editValue, setEditValue] = useState('');
     const [editRoleValue, setEditRoleValue] = useState('');
+    const [editPriceValue, setEditPriceValue] = useState('');
     const editInputRef = useRef(null);
 
     useEffect(() => {
@@ -88,26 +89,33 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
         setEditingIndex(index);
         setEditValue(resources[index].name || '');
         setEditRoleValue(resources[index].role || '');
+        setEditPriceValue(resources[index].price !== undefined ? resources[index].price : (formData?.price_per_hour || business?.price_per_hour || ''));
     };
 
     const confirmEdit = () => {
         if (editingIndex === null) return;
         const newResources = [...resources];
+        const parsedPrice = editPriceValue !== '' ? Number(editPriceValue) : undefined;
         newResources[editingIndex] = {
             ...resources[editingIndex],
             name: editValue.trim() || `${resourceLabel} ${editingIndex + 1}`,
-            ...(isSport ? {} : { role: editRoleValue.trim() })
+            ...(isSport
+                ? { price: parsedPrice !== undefined && !isNaN(parsedPrice) ? parsedPrice : (resources[editingIndex].price || formData?.price_per_hour || 0) }
+                : { role: editRoleValue.trim() }
+            )
         };
         if (onResourcesChange) onResourcesChange(resourceKey, newResources);
         setEditingIndex(null);
         setEditValue('');
         setEditRoleValue('');
+        setEditPriceValue('');
     };
 
     const cancelEdit = () => {
         setEditingIndex(null);
         setEditValue('');
         setEditRoleValue('');
+        setEditPriceValue('');
     };
 
     const handleKeyDown = (e) => {
@@ -179,7 +187,7 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                             {isSport ? 'Mis Canchas' : 'Mis Especialistas'}
                         </h3>
                         <p className="resources-subtitle">
-                            Tocá el <span className="pencil-hint">✏️</span> para cambiar el nombre.
+                            Tocá el <span className="pencil-hint">✏️</span> para cambiar el nombre {isSport ? 'y precio' : ''}.
                         </p>
                     </div>
                 </div>
@@ -243,6 +251,21 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                                                 onKeyDown={handleKeyDown}
                                                 placeholder={`Nombre de ${resourceLabel.toLowerCase()}`}
                                             />
+                                            {isSport && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)' }}>$</span>
+                                                    <input
+                                                        type="number"
+                                                        className="edit-price-input"
+                                                        value={editPriceValue}
+                                                        onChange={(e) => setEditPriceValue(e.target.value)}
+                                                        onKeyDown={handleKeyDown}
+                                                        placeholder="Precio"
+                                                        style={{ width: '90px', padding: '6px 10px', border: '1px solid #3ECF8E', borderRadius: '8px', background: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '14px', fontWeight: '700', outline: 'none' }}
+                                                    />
+                                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>/h</span>
+                                                </div>
+                                            )}
                                             {!isSport && (
                                                 <input
                                                     type="text"
@@ -259,12 +282,17 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                                             </div>
                                         </div>
                                     ) : (
-                                        <>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                             <span className="resource-name">{resource.name}</span>
+                                            {isSport && (
+                                                <span style={{ fontSize: '12px', fontWeight: '700', color: '#3ECF8E' }}>
+                                                    ${Number(resource.price !== undefined ? resource.price : (formData?.price_per_hour || business?.price_per_hour || 0)).toLocaleString('es-AR')}/hora
+                                                </span>
+                                            )}
                                             {!isSport && resource.role && (
                                                 <span className="resource-role">{resource.role}</span>
                                             )}
-                                        </>
+                                        </div>
                                     )}
                                 </div>
 
