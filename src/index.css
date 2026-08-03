@@ -284,50 +284,52 @@ button, input, select, textarea {
     display: flex;
   }
 }
-
+/* Promotions Hero Responsive Layout - Image first, text on right */
 .promo-card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;  /* SIEMPRE horizontal: imagen izquierda, texto derecha */
   height: 100%;
-  min-height: 280px;  /* Altura mínima para que se vea bien en mobile */
+  min-height: 240px;
   position: relative;
   overflow: hidden;
-  border-radius: 20px;  /* Hereda del padre */
+  border-radius: 20px;
+  background: var(--bg-card);
 }
 
 .promo-image-container {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+  position: relative;
+  flex: 1.2;
   height: 100%;
-  width: 100%;
+  min-height: 240px;
   overflow: hidden;
+  order: 1;  /* Imagen primero (izquierda) */
 }
 
 .promo-image-container img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;  /* Centra la imagen si se corta */
+  object-position: center;
 }
 
 .promo-content {
-  position: relative;
-  z-index: 1;
-  height: 100%;
+  flex: 0.8;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  padding: 16px 20px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.45) 50%, rgba(0, 0, 0, 0.1) 100%);
+  justify-content: center;
+  padding: 24px;
+  background: none;
+  position: relative;
+  z-index: 1;
+  order: 2;  /* Texto después (derecha) */
 }
 
 .promo-title-mobile {
-  color: white;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   font-size: 1.5rem;
   line-height: 1.2;
   margin-bottom: 8px;
+  color: var(--text-primary);
+  text-shadow: none;
 }
 
 .promo-badge {
@@ -337,55 +339,61 @@ button, input, select, textarea {
 }
 
 .promo-business-name {
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--text-secondary);
 }
 
+/* Mobile chico (hasta 600px) - layout stack vertical, imagen arriba */
+@media (max-width: 600px) {
+  .promo-card {
+    flex-direction: column;
+    min-height: auto;
+  }
+  .promo-image-container {
+    width: 100%;
+    height: 180px;
+    flex: none;
+    order: 1;
+  }
+  .promo-content {
+    padding: 16px;
+    order: 2;
+    flex: 1;
+  }
+  .promo-title-mobile {
+    font-size: 1.1rem;
+    color: white;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+  .promo-business-name {
+    color: rgba(255, 255, 255, 0.95);
+  }
+}
+
+/* Desktop y tablet (más de 600px) - horizontal estricto */
+@media (min-width: 601px) {
   .promo-card {
     flex-direction: row;
     align-items: center;
-    background: var(--bg-card);
-    min-height: auto;
   }
-
   .promo-image-container {
-    position: relative;
     flex: 1.2;
     height: 100%;
-    inset: auto;
-    order: 2;
-  }
-
-  .promo-content {
-    flex: 0.8;
-    justify-content: center;
-    background: none;
-    padding: 32px 40px;
     order: 1;
   }
-
-  .promo-title-mobile {
-    color: var(--text-primary);
-    text-shadow: none;
-    font-size: 2rem;
+  .promo-content {
+    flex: 0.8;
+    order: 2;
+    background: var(--bg-card);
+    padding: 32px 40px;
   }
-
+  .promo-title-mobile {
+    font-size: 1.75rem;
+    color: var(--text-primary);
+  }
   .promo-business-name {
     color: var(--text-secondary);
   }
 }
-
-/* ═══════════════════════════════════════════
-   SUPABASE UI UTILITIES & ENHANCEMENTS
-   ═══════════════════════════════════════════ */
-
-/* Input Focus Glow in Supabase Emerald */
-input:focus, select:focus, textarea:focus {
-  outline: none !important;
-  border-color: #3ECF8E !important;
-  box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.25) !important;
-}
-
-/* Supabase Emerald Buttons */
 .btn-supabase-primary {
   background-color: #3ECF8E !important;
   color: #121212 !important;
