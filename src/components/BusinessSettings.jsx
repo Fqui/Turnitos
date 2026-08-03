@@ -3904,7 +3904,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         type="text"
                                         style={inputStyle}
                                         value={formData.metadata?.store_banner_title || ''}
-                                        placeholder="Ej: Todo lo que necesitás para tu partido"
+                                        placeholder=""
                                         onChange={e => handleMetadataChange('store_banner_title', e.target.value)}
                                     />
                                 </div>
@@ -3914,7 +3914,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         type="text"
                                         style={inputStyle}
                                         value={formData.metadata?.store_banner_subtitle || ''}
-                                        placeholder="Ej: Elegí tus productos y retiralos cuando vengas a jugar"
+                                        placeholder=""
                                         onChange={e => handleMetadataChange('store_banner_subtitle', e.target.value)}
                                     />
                                 </div>
@@ -4372,7 +4372,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 type="text"
                                 style={inputStyle}
                                 value={editingProduct.name || ''}
-                                placeholder="Nombre del producto"
+                                placeholder=""
                                 onChange={e => setEditingProduct(prev => ({ ...prev, name: e.target.value }))}
                             />
                         </div>
@@ -4384,7 +4384,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     type="number"
                                     style={inputStyle}
                                     value={editingProduct.price || ''}
-                                    placeholder="0"
+                                    placeholder=""
                                     onChange={e => setEditingProduct(prev => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
                                 />
                             </div>
@@ -4394,7 +4394,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     type="text"
                                     style={inputStyle}
                                     value={editingProduct.category || ''}
-                                    placeholder="Ej: Bebidas, Equipamiento..."
+                                    placeholder=""
                                     list="store-categories-list"
                                     onChange={e => setEditingProduct(prev => ({ ...prev, category: e.target.value }))}
                                 />
@@ -4412,7 +4412,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 type="text"
                                 style={inputStyle}
                                 value={editingProduct.desc || ''}
-                                placeholder="Descripción corta (opcional)"
+                                placeholder=""
                                 onChange={e => setEditingProduct(prev => ({ ...prev, desc: e.target.value }))}
                             />
                         </div>
@@ -4546,7 +4546,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 type="text"
                                 style={inputStyle}
                                 value={editingExtra.name || ''}
-                                placeholder="Ej: Alquiler Pala Bullpadel, Tubo de Pelotas, Agua"
+                                placeholder=""
                                 onChange={e => setEditingExtra(prev => ({ ...prev, name: e.target.value }))}
                             />
                         </div>
@@ -4557,7 +4557,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 type="number"
                                 style={inputStyle}
                                 value={editingExtra.price || ''}
-                                placeholder="0"
+                                placeholder=""
                                 onChange={e => setEditingExtra(prev => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
                             />
                         </div>
@@ -4568,7 +4568,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 type="text"
                                 style={inputStyle}
                                 value={editingExtra.desc || ''}
-                                placeholder="Ej: Pala profesional para el partido"
+                                placeholder=""
                                 onChange={e => setEditingExtra(prev => ({ ...prev, desc: e.target.value }))}
                             />
                         </div>
