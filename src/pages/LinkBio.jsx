@@ -159,6 +159,7 @@ export default function LinkBio({ overrideSlug }) {
     ];
 
     const bannerUrl = business.banner_image || business.banner || business.image || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&q=80';
+    const isDesktop = window.innerWidth > 768;
 
     return (
         <div className="linkbio-container" style={{
@@ -169,19 +170,20 @@ export default function LinkBio({ overrideSlug }) {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            paddingBottom: '40px',
+            justifyContent: isDesktop ? 'center' : 'flex-start',
+            paddingBottom: isDesktop ? '0' : '40px',
             overflowX: 'hidden'
         }}>
             {/* Banner Section */}
             <div className="linkbio-banner" style={{
-                height: window.innerWidth > 768 ? '220px' : '180px',
+                height: isDesktop ? '140px' : '180px',
                 width: '100%',
-                maxWidth: window.innerWidth > 768 ? '560px' : '100%',
-                borderRadius: window.innerWidth > 768 ? '24px' : '0',
-                marginTop: window.innerWidth > 768 ? '20px' : '0',
+                maxWidth: isDesktop ? '480px' : '100%',
+                borderRadius: isDesktop ? '20px' : '0',
+                marginTop: isDesktop ? '0' : '0',
                 position: 'relative',
                 overflow: 'hidden',
-                boxShadow: window.innerWidth > 768 ? '0 12px 32px rgba(0,0,0,0.1)' : 'none',
+                boxShadow: isDesktop ? '0 8px 24px rgba(0,0,0,0.1)' : 'none',
                 backgroundColor: 'var(--bg-card)'
             }}>
                 <img
@@ -203,11 +205,11 @@ export default function LinkBio({ overrideSlug }) {
                 animate={{ opacity: 1, y: 0 }}
                 style={{
                     textAlign: 'center',
-                    marginBottom: '16px',
+                    marginBottom: isDesktop ? '10px' : '16px',
                     width: '100%',
-                    maxWidth: '520px',
+                    maxWidth: isDesktop ? '480px' : '520px',
                     padding: '0 16px',
-                    marginTop: '-50px',
+                    marginTop: isDesktop ? '-40px' : '-50px',
                     position: 'relative',
                     zIndex: 10
                 }}
@@ -221,10 +223,10 @@ export default function LinkBio({ overrideSlug }) {
                     }}
                     className="linkbio-logo"
                     style={{
-                        width: '124px',
-                        height: '124px',
+                        width: isDesktop ? '90px' : '124px',
+                        height: isDesktop ? '90px' : '124px',
                         borderRadius: '50%',
-                        margin: '0 auto 16px',
+                        margin: isDesktop ? '0 auto 10px' : '0 auto 16px',
                         padding: '3px',
                         background: activeStories.length > 0
                             ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
@@ -254,15 +256,15 @@ export default function LinkBio({ overrideSlug }) {
                         />
                     </div>
                 </div>
-                <h1 className="linkbio-name" style={{ fontSize: '22px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                <h1 className="linkbio-name" style={{ fontSize: isDesktop ? '18px' : '22px', fontWeight: '800', marginBottom: isDesktop ? '4px' : '8px', color: 'var(--text-primary)' }}>
                     {business.name}
                 </h1>
-                <p className="linkbio-desc" style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                <p className="linkbio-desc" style={{ fontSize: isDesktop ? '13px' : '14px', color: 'var(--text-secondary)', marginBottom: isDesktop ? '8px' : '12px' }}>
                     {business.description || '¡Reserva tu turno online de forma rápida y sencilla!'}
                 </p>
 
                 {/* Social Media Row */}
-                <div className="linkbio-socials" style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '16px' }}>
+                <div className="linkbio-socials" style={{ display: 'flex', gap: isDesktop ? '10px' : '12px', justifyContent: 'center', marginBottom: isDesktop ? '8px' : '16px' }}>
                     {/* Instagram */}
                     {business.instagram && (
                         <a
@@ -527,7 +529,7 @@ export default function LinkBio({ overrideSlug }) {
             </AnimatePresence>
 
             {/* Main Links Section */}
-            <div className="linkbio-links-section" style={{ width: '100%', maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', padding: '0 16px' }}>
+            <div className="linkbio-links-section" style={{ width: '100%', maxWidth: isDesktop ? '480px' : '520px', display: 'flex', flexDirection: 'column', gap: isDesktop ? '8px' : '12px', marginBottom: isDesktop ? '12px' : '24px', padding: '0 16px' }}>
                 {mainLinks.map((link, index) => (
                     <motion.button
                         key={index}
@@ -538,7 +540,7 @@ export default function LinkBio({ overrideSlug }) {
                         onClick={link.action}
                         style={{
                             width: '100%',
-                            padding: '12px 16px',
+                            padding: isDesktop ? '10px 14px' : '12px 16px',
                             borderRadius: '20px',
                             border: '1px solid var(--border)',
                             backgroundColor: link.highlight ? primaryColor : 'var(--bg-card)',
@@ -573,7 +575,7 @@ export default function LinkBio({ overrideSlug }) {
                             {link.icon}
                         </span>
                         <div style={{ flex: 1 }}>
-                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: '16px' }}>{link.title}</div>
+                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: isDesktop ? '14px' : '16px' }}>{link.title}</div>
                             <div className="linkbio-link-subtitle" style={{
                                 fontSize: '13px',
                                 opacity: 0.8,
@@ -600,7 +602,7 @@ export default function LinkBio({ overrideSlug }) {
                         onClick={() => window.open(`https://wa.me/${business.whatsapp}`, '_blank')}
                         style={{
                             width: '100%',
-                            padding: '12px 16px',
+                            padding: isDesktop ? '10px 14px' : '12px 16px',
                             borderRadius: '20px',
                             border: '1px solid var(--border)',
                             backgroundColor: '#25D366',
@@ -637,7 +639,7 @@ export default function LinkBio({ overrideSlug }) {
                             </svg>
                         </span>
                         <div style={{ flex: 1 }}>
-                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: '16px' }}>WhatsApp</div>
+                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: isDesktop ? '14px' : '16px' }}>WhatsApp</div>
                             <div className="linkbio-link-subtitle" style={{
                                 fontSize: '13px',
                                 opacity: 0.8,
@@ -661,7 +663,7 @@ export default function LinkBio({ overrideSlug }) {
                         onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.location)}`, '_blank')}
                         style={{
                             width: '100%',
-                            padding: '12px 16px',
+                            padding: isDesktop ? '10px 14px' : '12px 16px',
                             borderRadius: '20px',
                             border: '1px solid var(--border)',
                             backgroundColor: 'var(--bg-card)',
@@ -696,7 +698,7 @@ export default function LinkBio({ overrideSlug }) {
                             📍
                         </span>
                         <div style={{ flex: 1 }}>
-                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: '16px' }}>Ubicación</div>
+                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: isDesktop ? '14px' : '16px' }}>Ubicación</div>
                             <div className="linkbio-link-subtitle" style={{
                                 fontSize: '13px',
                                 opacity: 0.8,
