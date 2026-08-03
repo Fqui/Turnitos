@@ -1133,12 +1133,9 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 {business.store_enabled && (() => {
                     const storeProducts = (business.metadata?.store_products && business.metadata.store_products.length > 0)
                         ? business.metadata.store_products.filter(p => p.is_active !== false)
-                        : [
-                            { name: 'Tubo Pelotas Padel', price: 8500, image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80' },
-                            { name: 'Pack x3 Overgrips', price: 4000, image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a4b1ca?w=400&q=80' },
-                            { name: 'Alquiler Pala Vertex', price: 2000, image: 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=400&q=80' },
-                            { name: 'Gatorade 500ml', price: 2500, image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80' }
-                        ];
+                        : [];
+
+                    if (storeProducts.length === 0) return null;
 
                     const storeSubtitle = business.metadata?.store_banner_subtitle || 'Elegí tus productos y retiralos cuando vengas a jugar';
 

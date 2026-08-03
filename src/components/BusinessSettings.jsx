@@ -4060,13 +4060,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
                         {/* Section 2: Adicionales para Reservas de Turnos */}
                         <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border)', marginTop: '24px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '12px' }}>
-                                <div>
-                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>⚡ Adicionales para Reservas de Turnos</h3>
-                                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                        Servicios, alquileres o consumiciones que se ofrecen al cliente al confirmar su turno (ej: Alquiler de paletas, pelotas, agua).
-                                    </p>
-                                </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>⚡ Adicionales para Reservas de Turnos</h3>
                                 <button
                                     onClick={() => {
                                         setEditingExtra({ id: Date.now().toString(), name: '', price: '', desc: '', image: '', is_active: true });
@@ -4076,8 +4071,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         padding: '10px 20px',
                                         borderRadius: '12px',
                                         border: 'none',
-                                        background: 'linear-gradient(45deg, #f09433 0%, #dc2743 100%)',
-                                        color: '#fff',
+                                        background: 'var(--primary-paddle)',
+                                        color: '#000',
                                         fontWeight: '700',
                                         fontSize: '14px',
                                         cursor: 'pointer'

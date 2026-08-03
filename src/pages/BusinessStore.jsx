@@ -97,7 +97,7 @@ export default function BusinessStore({ overrideSlug }) {
         }
     ];
 
-    const [products, setProducts] = useState(mockProducts);
+    const [products, setProducts] = useState([]);
 
     useEffect(() => {
         const fetchBusiness = async () => {
@@ -116,7 +116,7 @@ export default function BusinessStore({ overrideSlug }) {
                         if (dbProducts && dbProducts.length > 0) {
                             setProducts(dbProducts);
                         } else {
-                            setProducts(mockProducts);
+                            setProducts([]);
                         }
                     }
                 }
