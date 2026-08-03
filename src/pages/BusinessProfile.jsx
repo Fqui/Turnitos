@@ -378,7 +378,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 root.style.setProperty('--text-secondary', '#4A4A4A');
                 root.style.setProperty('--border', '#E0E0E0');
                 // Keep original dot grid for light mode
-                body.style.backgroundImage = 'radial-gradient(#E0E0E0 1.5px, transparent 1.5px)';
+                body.style.backgroundImage = 'radial-gradient(#C5C5C5 1.5px, transparent 1.5px)';
+                body.style.backgroundSize = '24px 24px';
             } else {
                 root.style.setProperty('--bg-main', '#121212');
                 root.style.setProperty('--bg-card', '#1E1E1E');
@@ -386,7 +387,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 root.style.setProperty('--text-secondary', '#A0A0A0');
                 root.style.setProperty('--border', '#333333');
                 // More subtle dot grid for dark mode
-                body.style.backgroundImage = 'radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px)';
+                body.style.backgroundImage = 'radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px)';
+                body.style.backgroundSize = '24px 24px';
             }
         }
         return () => {
@@ -401,6 +403,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
             root.style.removeProperty('--text-secondary');
             root.style.removeProperty('--border');
             body.style.removeProperty('background-image');
+            body.style.removeProperty('background-size');
         };
     }, [business]);
 

@@ -147,14 +147,16 @@ export default function BusinessStore({ overrideSlug }) {
                 root.style.setProperty('--text-primary', '#1A1A1A');
                 root.style.setProperty('--text-secondary', '#4A4A4A');
                 root.style.setProperty('--border', '#E0E0E0');
-                body.style.backgroundImage = 'radial-gradient(#E0E0E0 1.5px, transparent 1.5px)';
+                body.style.backgroundImage = 'radial-gradient(#C5C5C5 1.5px, transparent 1.5px)';
+                body.style.backgroundSize = '24px 24px';
             } else {
                 root.style.setProperty('--bg-main', '#121212');
                 root.style.setProperty('--bg-card', '#1E1E1E');
                 root.style.setProperty('--text-primary', '#FFFFFF');
                 root.style.setProperty('--text-secondary', '#A0A0A0');
                 root.style.setProperty('--border', '#333333');
-                body.style.backgroundImage = 'radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px)';
+                body.style.backgroundImage = 'radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px)';
+                body.style.backgroundSize = '24px 24px';
             }
         }
     }, [business]);
