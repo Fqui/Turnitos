@@ -545,119 +545,121 @@ export default function BusinessProfile({ business: initialBusiness }) {
             className="business-profile-page"
             style={{ paddingBottom: '80px', width: '100%', overflowX: 'clip' }}
         >
-            {/* 1. Immersive Hero Section */}
-            {/* Header / Banner */}
-            <div style={{
-                position: 'relative',
-                height: window.innerWidth <= 768 ? '25vh' : '180px',
-                minHeight: '160px',
-                maxHeight: '220px',
-                overflow: 'hidden'
-            }}>
-                <motion.img
-                    layoutId={`business-image-${business.id}`}
-                    src={selectedItem?.image_url || business.banner_image || business.image}
-                    alt={business.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    transition={{ duration: 0.5, ease: "circOut" }}
-                />
-                <div style={{
-                    position: 'absolute',
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)'
-                }}></div>
-
-                <button
-                    onClick={() => navigate('/')}
-                    style={{
-                        position: 'absolute',
-                        top: '16px',
-                        left: '16px',
-                        background: 'rgba(0,0,0,0.3)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        borderRadius: '50%',
-                        width: '40px',
-                        height: '40px',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        zIndex: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s ease'
-                    }}
-                >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M19 12H5" />
-                        <path d="M12 19l-7-7 7-7" />
-                    </svg>
-                </button>
-            </div>
-
-            <div className="container" style={{ maxWidth: containerWidth, margin: '0 auto', padding: '0 16px', position: 'relative', zIndex: 2 }}>
-
-                {/* 2. Business Info Card */}
-                <div style={{
-                    backgroundColor: 'var(--bg-card)',
-                    borderRadius: '24px',
-                    padding: '24px 20px',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                    textAlign: 'center',
-                    marginTop: '-40px',
-                    marginBottom: '30px',
-                    border: '1px solid var(--border)'
+            <div className="business-profile-card-shell">
+                {/* 1. Immersive Hero Section */}
+                {/* Header / Banner */}
+                <div className="business-profile-banner" style={{
+                    position: 'relative',
+                    height: window.innerWidth <= 768 ? '25vh' : '180px',
+                    minHeight: '160px',
+                    maxHeight: '220px',
+                    overflow: 'hidden'
                 }}>
-                    {/* Business Profile Avatar with Instagram Story Gradient Ring (Only active for 24h stories) */}
-                    <div
-                        onClick={() => {
-                            if (activeStories && activeStories.length > 0) {
-                                setStoryViewerList(activeStories);
-                                setSelectedPhotoIndex(0);
-                                setSelectedHighlight(0);
-                            }
-                        }}
+                    <motion.img
+                        layoutId={`business-image-${business.id}`}
+                        src={selectedItem?.image_url || business.banner_image || business.image}
+                        alt={business.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        transition={{ duration: 0.5, ease: "circOut" }}
+                    />
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)'
+                    }}></div>
+
+                    <button
+                        onClick={() => navigate('/')}
                         style={{
-                            width: '106px',
-                            height: '106px',
+                            position: 'absolute',
+                            top: '16px',
+                            left: '16px',
+                            background: 'rgba(0,0,0,0.3)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
                             borderRadius: '50%',
-                            padding: '3px',
-                            background: activeStories.length > 0
-                                ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
-                                : 'var(--border)',
+                            width: '40px',
+                            height: '40px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            zIndex: 10,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            margin: '-74px auto 12px',
-                            cursor: activeStories.length > 0 ? 'pointer' : 'default',
-                            boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
-                            position: 'relative'
+                            transition: 'all 0.2s ease'
                         }}
-                        title={activeStories.length > 0 ? "Ver Historias (24hs)" : business.name}
                     >
-                        <div style={{
-                            width: '100%',
-                            height: '100%',
-                            borderRadius: '50%',
-                            padding: '3px',
-                            background: 'var(--bg-card)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-                            <img
-                                src={business.logo || business.image}
-                                alt={business.name}
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    borderRadius: '50%',
-                                    objectFit: 'cover'
-                                }}
-                            />
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 12H5" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div className="container" style={{ maxWidth: containerWidth, margin: '0 auto', padding: '0 16px', position: 'relative', zIndex: 2 }}>
+
+                    {/* 2. Business Info Card */}
+                    <div className="business-info-main-card" style={{
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '24px',
+                        padding: '24px 20px',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                        textAlign: 'center',
+                        marginTop: '-40px',
+                        marginBottom: '30px',
+                        border: '1px solid var(--border)'
+                    }}>
+                        {/* Business Profile Avatar with Instagram Story Gradient Ring (Only active for 24h stories) */}
+                        <div
+                            onClick={() => {
+                                if (activeStories && activeStories.length > 0) {
+                                    setStoryViewerList(activeStories);
+                                    setSelectedPhotoIndex(0);
+                                    setSelectedHighlight(0);
+                                }
+                            }}
+                            className="business-avatar-container"
+                            style={{
+                                width: '106px',
+                                height: '106px',
+                                borderRadius: '50%',
+                                padding: '3px',
+                                background: activeStories.length > 0
+                                    ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
+                                    : 'var(--border)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '-74px auto 12px',
+                                cursor: activeStories.length > 0 ? 'pointer' : 'default',
+                                boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+                                position: 'relative'
+                            }}
+                            title={activeStories.length > 0 ? "Ver Historias (24hs)" : business.name}
+                        >
+                            <div style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                padding: '3px',
+                                background: 'var(--bg-card)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                                <img
+                                    src={business.logo || business.image}
+                                    alt={business.name}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        borderRadius: '50%',
+                                        objectFit: 'cover'
+                                    }}
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <h1 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '8px', color: 'var(--text-primary)' }}>{business.name}</h1>
+                        <h1 className="business-profile-title" style={{ fontSize: '24px', fontWeight: '900', marginBottom: '8px', color: 'var(--text-primary)' }}>{business.name}</h1>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
                         <span>📍 {business.location}</span>
                     </div>
@@ -2300,6 +2302,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     />
                 )}
             </div>
+            </div> {/* End of business-profile-card-shell */}
 
             {/* Instagram-Style Highlight Viewer */}
             <AnimatePresence>
