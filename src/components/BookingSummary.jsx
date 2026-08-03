@@ -9,13 +9,28 @@ let globalCachedPaymentData = {
 };
 
 export default function BookingSummary({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting, activePromotion, availableExtras }) {
+    const incomingBusiness = bookingDetails?.business || {};
+    const effectiveExtras = (availableExtras && availableExtras.length > 0)
+        ? availableExtras.filter(s => s.is_active !== false)
+        : (incomingBusiness?.additional_services && incomingBusiness.additional_services.length > 0)
+            ? incomingBusiness.additional_services.filter(s => s.is_active !== false)
+            : (incomingBusiness?.metadata?.additional_services && incomingBusiness.metadata.additional_services.length > 0)
+                ? incomingBusiness.metadata.additional_services.filter(s => s.is_active !== false)
+                : [];
+    const hasExtras = effectiveExtras.length > 0;
+
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
-    const [currentStep, setCurrentStep] = useState(1);
+    const [currentStep, setCurrentStep] = useState(hasExtras ? 1 : 2);
     const [copiedField, setCopiedField] = useState(null);
 
-    const incomingBusiness = bookingDetails.business || {};
+    useEffect(() => {
+        if (!hasExtras && currentStep === 1) {
+            setCurrentStep(2);
+        }
+    }, [hasExtras]);
+
     const businessId = incomingBusiness.id;
     const incomingPaymentSettings = incomingBusiness.payment_settings || {};
 
@@ -231,13 +246,15 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                     <div style={{ textAlign: 'center' }}>
                         {/* Step indicator */}
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-                            <div style={{
-                                width: '32px',
-                                height: '4px',
-                                borderRadius: '2px',
-                                backgroundColor: currentStep >= 1 ? sportColor : 'var(--border)',
-                                transition: 'all 0.3s'
-                            }} />
+                            {hasExtras && (
+                                <div style={{
+                                    width: '32px',
+                                    height: '4px',
+                                    borderRadius: '2px',
+                                    backgroundColor: currentStep >= 1 ? sportColor : 'var(--border)',
+                                    transition: 'all 0.3s'
+                                }} />
+                            )}
                             <div style={{
                                 width: '32px',
                                 height: '4px',
@@ -655,7 +672,13 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                 {/* Action Buttons */}
                                 <div style={{ display: 'flex', gap: '12px' }}>
                                     <button
-                                        onClick={() => setCurrentStep(1)}
+                                        onClick={() => {
+                                            if (hasExtras) {
+                                                setCurrentStep(1);
+                                            } else {
+                                                onClose();
+                                            }
+                                        }}
                                         style={{
                                             flex: 1,
                                             padding: '16px',
@@ -669,7 +692,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                             transition: 'all 0.2s'
                                         }}
                                     >
-                                        Volver
+                                        {hasExtras ? 'Volver' : 'Cancelar'}
                                     </button>
                                     <button
                                         onClick={() => setCurrentStep(3)}
