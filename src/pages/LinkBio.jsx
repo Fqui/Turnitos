@@ -158,34 +158,42 @@ export default function LinkBio({ overrideSlug }) {
         }] : [])
     ];
 
+    const bannerUrl = business.banner_image || business.banner || business.image || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&q=80';
+
     return (
         <div className="linkbio-container" style={{
             backgroundColor: 'var(--bg-main)',
             backgroundImage: 'radial-gradient(var(--border) 1.5px, transparent 1.5px)',
             backgroundSize: '24px 24px',
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            paddingBottom: '40px',
             overflowX: 'hidden'
         }}>
             {/* Banner Section */}
             <div className="linkbio-banner" style={{
-                height: '180px',
+                height: window.innerWidth > 768 ? '220px' : '180px',
                 width: '100%',
+                maxWidth: window.innerWidth > 768 ? '560px' : '100%',
+                borderRadius: window.innerWidth > 768 ? '24px' : '0',
+                marginTop: window.innerWidth > 768 ? '20px' : '0',
                 position: 'relative',
                 overflow: 'hidden',
+                boxShadow: window.innerWidth > 768 ? '0 12px 32px rgba(0,0,0,0.1)' : 'none',
                 backgroundColor: 'var(--bg-card)'
             }}>
-                {business.banner || business.image ? (
-                    <img
-                        src={business.banner || business.image}
-                        alt={business.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                ) : (
-                    <div style={{
-                        width: '100%',
-                        height: '100%',
-                        background: `linear-gradient(135deg, ${primaryColor}22 0%, var(--bg-card) 100%)`
-                    }} />
-                )}
+                <img
+                    src={bannerUrl}
+                    alt={business.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.3) 100%)'
+                }} />
             </div>
 
             {/* Profile Section */}
@@ -197,7 +205,7 @@ export default function LinkBio({ overrideSlug }) {
                     textAlign: 'center',
                     marginBottom: '16px',
                     width: '100%',
-                    maxWidth: '450px',
+                    maxWidth: '520px',
                     padding: '0 16px',
                     marginTop: '-50px',
                     position: 'relative',
@@ -519,7 +527,7 @@ export default function LinkBio({ overrideSlug }) {
             </AnimatePresence>
 
             {/* Main Links Section */}
-            <div className="linkbio-links-section" style={{ width: '100%', maxWidth: '450px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', padding: '0 16px' }}>
+            <div className="linkbio-links-section" style={{ width: '100%', maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', padding: '0 16px' }}>
                 {mainLinks.map((link, index) => (
                     <motion.button
                         key={index}
