@@ -1157,7 +1157,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     <h3 style={{ fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
                                         🛍️ Tienda {business.name}
                                     </h3>
-                                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>{storeSubtitle}</p>
                                 </div>
                                 <button 
                                     onClick={() => {
