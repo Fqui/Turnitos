@@ -4413,54 +4413,118 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         </div>
 
                         <div>
-                            <label style={labelStyle}>Imagen del Producto</label>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                {editingProduct.image && (
-                                    <img
-                                        src={editingProduct.image}
-                                        alt="Preview"
-                                        style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }}
-                                    />
-                                )}
-                                <label style={{
-                                    flex: 1,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '8px',
-                                    padding: '10px 16px',
-                                    borderRadius: '12px',
-                                    border: '1px dashed var(--border)',
-                                    background: 'var(--bg-main)',
-                                    color: 'var(--text-primary)',
-                                    fontSize: '13px',
-                                    fontWeight: '600',
-                                    cursor: uploadingProductImage ? 'wait' : 'pointer'
-                                }}>
-                                    {uploadingProductImage ? '⏳ Subiendo...' : (editingProduct.image ? '📷 Cambiar Imagen' : '📷 Subir Imagen')}
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        disabled={uploadingProductImage}
-                                        style={{ display: 'none' }}
-                                        onChange={async (e) => {
-                                            const file = e.target.files[0];
-                                            if (!file) return;
-                                            try {
-                                                setUploadingProductImage(true);
-                                                const publicUrl = await serviceAdapter.uploadImage(file);
-                                                setEditingProduct(prev => ({ ...prev, image: publicUrl }));
-                                                showToast('Imagen subida correctamente', 'success');
-                                            } catch (err) {
-                                                console.error('Error uploading product image:', err);
-                                                showToast('Error al subir imagen', 'error');
-                                            } finally {
-                                                setUploadingProductImage(false);
-                                            }
-                                        }}
-                                    />
-                                </label>
-                            </div>
+                            <label style={labelStyle}>Imágenes del Producto (Podés subir varias)</label>
+                            
+                            {/* Grid of uploaded images */}
+                            {((Array.isArray(editingProduct.images) && editingProduct.images.length > 0) || editingProduct.image) && (
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                    {(Array.isArray(editingProduct.images) && editingProduct.images.length > 0
+                                        ? editingProduct.images
+                                        : [editingProduct.image]
+                                    ).filter(Boolean).map((imgUrl, iIdx) => (
+                                        <div key={iIdx} style={{ position: 'relative', width: '60px', height: '60px' }}>
+                                            <img
+                                                src={imgUrl}
+                                                alt={`Foto ${iIdx + 1}`}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    borderRadius: '12px',
+                                                    objectFit: 'cover',
+                                                    border: (editingProduct.image === imgUrl || (!editingProduct.image && iIdx === 0)) ? '2px solid var(--primary-paddle)' : '1px solid var(--border)'
+                                                }}
+                                            />
+                                            {/* Delete button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const currentList = Array.isArray(editingProduct.images) && editingProduct.images.length > 0
+                                                        ? editingProduct.images
+                                                        : [editingProduct.image];
+                                                    const newImgs = currentList.filter((_, idx) => idx !== iIdx);
+                                                    setEditingProduct(prev => ({
+                                                        ...prev,
+                                                        images: newImgs,
+                                                        image: newImgs[0] || null
+                                                    }));
+                                                }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '-6px',
+                                                    right: '-6px',
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    borderRadius: '50%',
+                                                    background: '#ef4444',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    fontSize: '11px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                }}
+                                                title="Eliminar foto"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <label style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                width: '100%',
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                border: '1px dashed var(--border)',
+                                background: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: uploadingProductImage ? 'wait' : 'pointer'
+                            }}>
+                                {uploadingProductImage ? '⏳ Subiendo imágenes...' : '📷 Subir Imágenes (Seleccionar 1 o varias)'}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    disabled={uploadingProductImage}
+                                    style={{ display: 'none' }}
+                                    onChange={async (e) => {
+                                        const files = Array.from(e.target.files || []);
+                                        if (files.length === 0) return;
+                                        try {
+                                            setUploadingProductImage(true);
+                                            const uploadPromises = files.map(file => serviceAdapter.uploadImage(file));
+                                            const uploadedUrls = await Promise.all(uploadPromises);
+
+                                            setEditingProduct(prev => {
+                                                const existingImages = Array.isArray(prev.images) && prev.images.length > 0
+                                                    ? prev.images
+                                                    : (prev.image ? [prev.image] : []);
+                                                const combined = [...existingImages, ...uploadedUrls];
+                                                return {
+                                                    ...prev,
+                                                    images: combined,
+                                                    image: combined[0] || null
+                                                };
+                                            });
+                                            showToast(`${uploadedUrls.length} imagen(es) subida(s)`, 'success');
+                                        } catch (err) {
+                                            console.error('Error uploading product images:', err);
+                                            showToast('Error al subir imágenes', 'error');
+                                        } finally {
+                                            setUploadingProductImage(false);
+                                        }
+                                    }}
+                                />
+                            </label>
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
@@ -4476,14 +4540,23 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         showToast('Ingresá el nombre del producto', 'error');
                                         return;
                                     }
+                                    const finalImages = Array.isArray(editingProduct.images) && editingProduct.images.length > 0
+                                        ? editingProduct.images
+                                        : (editingProduct.image ? [editingProduct.image] : []);
+                                    const prodToSave = {
+                                        ...editingProduct,
+                                        images: finalImages,
+                                        image: finalImages[0] || editingProduct.image || null
+                                    };
+
                                     const currentProducts = formData.metadata?.store_products || [];
-                                    const existingIdx = currentProducts.findIndex(p => p.id === editingProduct.id);
+                                    const existingIdx = currentProducts.findIndex(p => p.id === prodToSave.id);
                                     let updated;
                                     if (existingIdx >= 0) {
                                         updated = [...currentProducts];
-                                        updated[existingIdx] = editingProduct;
+                                        updated[existingIdx] = prodToSave;
                                     } else {
-                                        updated = [...currentProducts, { ...editingProduct, id: Date.now().toString() }];
+                                        updated = [...currentProducts, { ...prodToSave, id: Date.now().toString() }];
                                     }
                                     handleMetadataChange('store_products', updated);
                                     setIsProductModalOpen(false);
@@ -4569,54 +4642,118 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         </div>
 
                         <div>
-                            <label style={labelStyle}>Imagen del Adicional</label>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                {editingExtra.image && (
-                                    <img
-                                        src={editingExtra.image}
-                                        alt="Preview"
-                                        style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }}
-                                    />
-                                )}
-                                <label style={{
-                                    flex: 1,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '8px',
-                                    padding: '10px 16px',
-                                    borderRadius: '12px',
-                                    border: '1px dashed var(--border)',
-                                    background: 'var(--bg-main)',
-                                    color: 'var(--text-primary)',
-                                    fontSize: '13px',
-                                    fontWeight: '600',
-                                    cursor: uploadingExtraImage ? 'wait' : 'pointer'
-                                }}>
-                                    {uploadingExtraImage ? '⏳ Subiendo...' : (editingExtra.image ? '📷 Cambiar Imagen' : '📷 Subir Imagen')}
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        disabled={uploadingExtraImage}
-                                        style={{ display: 'none' }}
-                                        onChange={async (e) => {
-                                            const file = e.target.files[0];
-                                            if (!file) return;
-                                            try {
-                                                setUploadingExtraImage(true);
-                                                const publicUrl = await serviceAdapter.uploadImage(file);
-                                                setEditingExtra(prev => ({ ...prev, image: publicUrl }));
-                                                showToast('Imagen subida correctamente', 'success');
-                                            } catch (err) {
-                                                console.error('Error uploading extra image:', err);
-                                                showToast('Error al subir imagen', 'error');
-                                            } finally {
-                                                setUploadingExtraImage(false);
-                                            }
-                                        }}
-                                    />
-                                </label>
-                            </div>
+                            <label style={labelStyle}>Imágenes del Adicional (Podés subir varias)</label>
+
+                            {/* Grid of uploaded images */}
+                            {((Array.isArray(editingExtra.images) && editingExtra.images.length > 0) || editingExtra.image) && (
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                    {(Array.isArray(editingExtra.images) && editingExtra.images.length > 0
+                                        ? editingExtra.images
+                                        : [editingExtra.image]
+                                    ).filter(Boolean).map((imgUrl, iIdx) => (
+                                        <div key={iIdx} style={{ position: 'relative', width: '60px', height: '60px' }}>
+                                            <img
+                                                src={imgUrl}
+                                                alt={`Foto ${iIdx + 1}`}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    borderRadius: '12px',
+                                                    objectFit: 'cover',
+                                                    border: (editingExtra.image === imgUrl || (!editingExtra.image && iIdx === 0)) ? '2px solid var(--primary-paddle)' : '1px solid var(--border)'
+                                                }}
+                                            />
+                                            {/* Delete button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const currentList = Array.isArray(editingExtra.images) && editingExtra.images.length > 0
+                                                        ? editingExtra.images
+                                                        : [editingExtra.image];
+                                                    const newImgs = currentList.filter((_, idx) => idx !== iIdx);
+                                                    setEditingExtra(prev => ({
+                                                        ...prev,
+                                                        images: newImgs,
+                                                        image: newImgs[0] || null
+                                                    }));
+                                                }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '-6px',
+                                                    right: '-6px',
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    borderRadius: '50%',
+                                                    background: '#ef4444',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    fontSize: '11px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                }}
+                                                title="Eliminar foto"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <label style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                width: '100%',
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                border: '1px dashed var(--border)',
+                                background: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: uploadingExtraImage ? 'wait' : 'pointer'
+                            }}>
+                                {uploadingExtraImage ? '⏳ Subiendo imágenes...' : '📷 Subir Imágenes (Seleccionar 1 o varias)'}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    disabled={uploadingExtraImage}
+                                    style={{ display: 'none' }}
+                                    onChange={async (e) => {
+                                        const files = Array.from(e.target.files || []);
+                                        if (files.length === 0) return;
+                                        try {
+                                            setUploadingExtraImage(true);
+                                            const uploadPromises = files.map(file => serviceAdapter.uploadImage(file));
+                                            const uploadedUrls = await Promise.all(uploadPromises);
+
+                                            setEditingExtra(prev => {
+                                                const existingImages = Array.isArray(prev.images) && prev.images.length > 0
+                                                    ? prev.images
+                                                    : (prev.image ? [prev.image] : []);
+                                                const combined = [...existingImages, ...uploadedUrls];
+                                                return {
+                                                    ...prev,
+                                                    images: combined,
+                                                    image: combined[0] || null
+                                                };
+                                            });
+                                            showToast(`${uploadedUrls.length} imagen(es) subida(s)`, 'success');
+                                        } catch (err) {
+                                            console.error('Error uploading extra images:', err);
+                                            showToast('Error al subir imágenes', 'error');
+                                        } finally {
+                                            setUploadingExtraImage(false);
+                                        }
+                                    }}
+                                />
+                            </label>
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
@@ -4632,14 +4769,23 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         showToast('Ingresá el nombre del adicional', 'error');
                                         return;
                                     }
+                                    const finalImages = Array.isArray(editingExtra.images) && editingExtra.images.length > 0
+                                        ? editingExtra.images
+                                        : (editingExtra.image ? [editingExtra.image] : []);
+                                    const extraToSave = {
+                                        ...editingExtra,
+                                        images: finalImages,
+                                        image: finalImages[0] || editingExtra.image || null
+                                    };
+
                                     const currentExtras = formData.additional_services || [];
-                                    const existingIdx = currentExtras.findIndex(e => e.id === editingExtra.id);
+                                    const existingIdx = currentExtras.findIndex(e => e.id === extraToSave.id);
                                     let updated;
                                     if (existingIdx >= 0) {
                                         updated = [...currentExtras];
-                                        updated[existingIdx] = editingExtra;
+                                        updated[existingIdx] = extraToSave;
                                     } else {
-                                        updated = [...currentExtras, { ...editingExtra, id: Date.now().toString() }];
+                                        updated = [...currentExtras, { ...extraToSave, id: Date.now().toString() }];
                                     }
                                     handleInputChange('additional_services', updated);
                                     setIsExtraModalOpen(false);
