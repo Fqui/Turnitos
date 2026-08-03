@@ -29,7 +29,7 @@ export default function LinkBio({ overrideSlug }) {
         if (overrideSlug) {
             return `/turnos${hash}`;
         }
-        return `/${businessSlug}/turnos${hash}`;
+        return `/${businessSlug}${hash}`;
     };
 
     const getStorePath = () => {
