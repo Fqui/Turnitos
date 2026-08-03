@@ -130,6 +130,15 @@ export default function LinkBio({ overrideSlug }) {
             }]
             : []);
 
+    // Filter active 24h stories
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    const activeStories = (highlights || []).filter(h => {
+        if (!h.is_story) return false;
+        const createdAt = h.created_at ? new Date(h.created_at).getTime() : 0;
+        return (now - createdAt) < twentyFourHours;
+    });
+
     // Filter out social/location links from the main list as they will have their own sections
     const mainLinks = [
         {
@@ -142,7 +151,7 @@ export default function LinkBio({ overrideSlug }) {
         },
         ...(business.store_enabled ? [{
             title: 'Ver Tienda / Productos',
-            subtitle: 'Paletas, grips, bebidas y más',
+            subtitle: business.metadata?.store_banner_subtitle || 'Conocé nuestros productos y artículos',
             icon: '🛒',
             action: () => navigate(getStorePath()),
             highlight: false
@@ -158,21 +167,25 @@ export default function LinkBio({ overrideSlug }) {
         }}>
             {/* Banner Section */}
             <div className="linkbio-banner" style={{
+                height: '180px',
                 width: '100%',
-                height: '240px',
-                backgroundImage: `url(${business.banner_image || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&q=80'})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                position: 'relative'
+                position: 'relative',
+                overflow: 'hidden',
+                backgroundColor: 'var(--bg-card)'
             }}>
-                <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%)'
-                }} />
+                {business.banner || business.image ? (
+                    <img
+                        src={business.banner || business.image}
+                        alt={business.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                ) : (
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
+                        background: `linear-gradient(135deg, ${primaryColor}22 0%, var(--bg-card) 100%)`
+                    }} />
+                )}
             </div>
 
             {/* Profile Section */}
@@ -193,7 +206,7 @@ export default function LinkBio({ overrideSlug }) {
             >
                 <div
                     onClick={() => {
-                        if (highlights && highlights.length > 0) {
+                        if (activeStories && activeStories.length > 0) {
                             setSelectedPhotoIndex(0);
                             setSelectedHighlight(0);
                         }
@@ -205,14 +218,16 @@ export default function LinkBio({ overrideSlug }) {
                         borderRadius: '50%',
                         margin: '0 auto 16px',
                         padding: '3px',
-                        background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                        background: activeStories.length > 0
+                            ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
+                            : 'var(--border)',
                         boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        cursor: (highlights && highlights.length > 0) ? 'pointer' : 'default'
+                        cursor: activeStories.length > 0 ? 'pointer' : 'default'
                     }}
-                    title={highlights && highlights.length > 0 ? "Ver Historias" : business.name}
+                    title={activeStories.length > 0 ? "Ver Historias (24hs)" : business.name}
                 >
                     <div style={{
                         width: '100%',
