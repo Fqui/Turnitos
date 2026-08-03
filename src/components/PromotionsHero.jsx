@@ -106,11 +106,11 @@ export default function PromotionsHero({ promotions, businesses }) {
                 }
             `}</style>
             <div style={{
-                height: '280px',
+                height: window.innerWidth <= 768 ? '200px' : '260px',
                 position: 'relative',
-                borderRadius: '32px',
+                borderRadius: window.innerWidth <= 768 ? '20px' : '28px',
                 overflow: 'hidden',
-                boxShadow: '0 20px 40px -10px rgba(0,0,0,0.15)',
+                boxShadow: '0 12px 30px -8px rgba(0,0,0,0.15)',
                 backgroundColor: 'var(--bg-card)'
             }}>
                 <AnimatePresence mode='wait'>
@@ -161,7 +161,8 @@ export default function PromotionsHero({ promotions, businesses }) {
                                             style={{
                                                 width: '100%',
                                                 height: '100%',
-                                                objectFit: 'cover'
+                                                objectFit: 'cover',
+                                                objectPosition: 'center 40%'
                                             }}
                                         />
                                     ) : (
@@ -188,21 +189,21 @@ export default function PromotionsHero({ promotions, businesses }) {
                                         >
                                             <div className="promo-badge" style={{
                                                 display: 'inline-flex',
-                                                padding: '6px 12px',
+                                                padding: '4px 10px',
                                                 backdropFilter: 'blur(4px)',
                                                 borderRadius: '50px',
-                                                fontSize: '13px',
+                                                fontSize: '12px',
                                                 fontWeight: '700',
-                                                marginBottom: '16px',
+                                                marginBottom: '8px',
                                             }}>
                                                 {currentPromo.discount}
                                                 {currentPromo.discount && currentPromo.discount.toString().trim().endsWith('%') && ' OFF'}
                                             </div>
                                             <h2 className="promo-title-mobile" style={{
-                                                fontSize: 'clamp(24px, 4vw, 42px)',
+                                                fontSize: 'clamp(18px, 4.5vw, 36px)',
                                                 fontWeight: '800',
-                                                lineHeight: 1.1,
-                                                marginBottom: '12px',
+                                                lineHeight: 1.15,
+                                                marginBottom: '6px',
                                             }}>
                                                 {currentPromo.title}
                                             </h2>
