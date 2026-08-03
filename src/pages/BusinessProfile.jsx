@@ -491,9 +491,9 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const { open, close, ranges } = getBusinessHours(selectedDate);
     const interval = selectedItem?.duration || 60; // Use service duration or default 60 min
 
-    // 🆕 Check if business has padel courts to adjust layout width
+    // 🆕 Compact layout width for Desktop ONLY
     const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
-    const containerWidth = hasPadelCourts ? '90%' : '800px';
+    const containerWidth = hasPadelCourts ? '740px' : '660px';
 
     const now = new Date();
     const rawHighlights = business?.gallery_highlights && business.gallery_highlights.length > 0
@@ -549,8 +549,9 @@ export default function BusinessProfile({ business: initialBusiness }) {
             {/* Header / Banner */}
             <div style={{
                 position: 'relative',
-                height: window.innerWidth <= 768 ? '25vh' : '40vh',
-                minHeight: window.innerWidth <= 768 ? '180px' : '250px',
+                height: window.innerWidth <= 768 ? '25vh' : '180px',
+                minHeight: '160px',
+                maxHeight: '220px',
                 overflow: 'hidden'
             }}>
                 <motion.img
