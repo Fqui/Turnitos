@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
-import { generateTimeSlots, formatDateKey, getBookingsForSlot } from '../shared/utils';
+import { generateTimeSlots, formatDateKey, getBookingsForSlot, timeToMinutes } from '../shared/utils';
+import ConfirmModal from '../../common/ConfirmModal';
 
 export default function DayView({
     type,
@@ -22,6 +23,7 @@ export default function DayView({
 }) {
     const [showSlotMenu, setShowSlotMenu] = useState(null);
     const [showBookingMenu, setShowBookingMenu] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Generar slots de tiempo
     const timeSlots = generateTimeSlots(businessHours.start, businessHours.end, config.slotSize);
@@ -119,17 +121,33 @@ export default function DayView({
 
         if (dayConfig?.isOpen === false) return false;
 
+        const slotMin = timeToMinutes(time);
+
         // Verificar si es horario cortado (con open/close/open2/close2)
         if (dayConfig?.isSplit) {
-            const inFirstShift = time >= dayConfig.open && time < dayConfig.close;
-            const inSecondShift = dayConfig.open2 && dayConfig.close2 &&
-                time >= dayConfig.open2 && time < dayConfig.close2;
+            const start1 = timeToMinutes(dayConfig.open);
+            let close1 = timeToMinutes(dayConfig.close);
+            if (close1 < start1) close1 += 1440; // Cruzado a medianoche
+
+            const inFirstShift = slotMin >= start1 && slotMin < close1;
+
+            let inSecondShift = false;
+            if (dayConfig.open2 && dayConfig.close2) {
+                const start2 = timeToMinutes(dayConfig.open2);
+                let close2 = timeToMinutes(dayConfig.close2);
+                if (close2 < start2) close2 += 1440; // Cruzado a medianoche
+                inSecondShift = slotMin >= start2 && slotMin < close2;
+            }
+
             return inFirstShift || inSecondShift;
         }
 
         // Horario continuo
         if (dayConfig?.open && dayConfig?.close) {
-            return time >= dayConfig.open && time < dayConfig.close;
+            const start = timeToMinutes(dayConfig.open);
+            let close = timeToMinutes(dayConfig.close);
+            if (close < start) close += 1440; // Cruzado a medianoche
+            return slotMin >= start && slotMin < close;
         }
 
         return true;
@@ -150,8 +168,8 @@ export default function DayView({
         <div style={{
             display: 'grid',
             gridTemplateColumns: config.showResourceColumns
-                ? `70px repeat(${resources.length}, 1fr)`
-                : '70px 1fr',
+                ? `70px repeat(${resources.length}, minmax(0, 1fr))`
+                : '70px minmax(0, 1fr)',
             gridAutoRows: `${config.gridRowHeight}px`,
             minWidth: isMobile ? 'auto' : '900px',
             width: '100%'
@@ -221,25 +239,42 @@ export default function DayView({
                 return (
                     <React.Fragment key={time}>
                         {/* Time Column */}
-                        <div style={{
-                            padding: '10px',
-                            textAlign: 'center',
-                            fontSize: '12px',
-                            fontWeight: '500',
-                            color: 'var(--text-secondary)',
-                            borderBottom: '1px solid var(--border)',
-                            borderRight: '1px solid var(--border)',
-                            position: 'sticky',
-                            left: 0,
-                            left: 0,
-                            background: isCurrentSlot ? 'var(--primary-paddle)' : 'var(--bg-card)',
-                            color: isCurrentSlot ? '#ffffff' : 'var(--text-secondary)',
-                            fontWeight: isCurrentSlot ? '700' : '500',
-                            zIndex: 10,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
+                        <div
+                            onClick={() => {
+                                setConfirmModal({
+                                    isOpen: true,
+                                    title: 'Bloquear Horario Global',
+                                    message: `¿Deseas bloquear TODAS las canchas/especialistas para las ${time} hs de hoy?`,
+                                    confirmText: 'Sí, bloquear todos',
+                                    isDanger: true,
+                                    onConfirm: () => onBlockSlot && onBlockSlot(currentDate, time, null)
+                                });
+                            }}
+                            title="Click para bloquear todos los recursos a esta hora"
+                            style={{
+                                padding: '10px',
+                                textAlign: 'center',
+                                fontSize: '12px',
+                                borderBottom: isCurrentSlot ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                borderRight: '1px solid var(--border)',
+                                position: 'sticky',
+                                left: 0,
+                                background: isCurrentSlot ? 'var(--primary-paddle)' : 'var(--bg-card)',
+                                color: isCurrentSlot ? '#ffffff' : 'var(--text-secondary)',
+                                fontWeight: isCurrentSlot ? '700' : '500',
+                                zIndex: 10,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!isCurrentSlot) e.currentTarget.style.background = 'var(--bg-main)';
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!isCurrentSlot) e.currentTarget.style.background = 'var(--bg-card)';
+                            }}
                             id={`time-slot-${time}`}
                         >
                             {time}
@@ -280,11 +315,8 @@ export default function DayView({
                                             minHeight: `${config.gridRowHeight}px`,
                                             padding: '4px',
                                             position: 'relative',
-                                            background: !isOpen
-                                                ? 'repeating-linear-gradient(45deg, var(--bg-main), var(--bg-main) 10px, var(--border) 10px, var(--border) 11px)'
-                                                : isCurrentSlot ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
-                                            opacity: !isOpen ? 0.6 : 1,
-                                            cursor: !isOpen ? 'not-allowed' : 'default',
+                                            background: isCurrentSlot ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
+                                            cursor: 'default',
                                             display: 'flex',
                                             flexDirection: 'column',
                                             gap: '4px'
@@ -708,10 +740,19 @@ export default function DayView({
         .slot-add-area:hover {
           background-color: rgba(0, 230, 118, 0.04) !important;
           border-color: rgba(0, 230, 118, 0.3) !important;
-          border-style: solid !important;
-          color: rgba(0, 230, 118, 0.6) !important;
         }
       `}</style>
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                isDanger={confirmModal.isDanger}
+                onConfirm={() => confirmModal.onConfirm && confirmModal.onConfirm()}
+                onClose={() => setConfirmModal({ isOpen: false })}
+            />
         </div>
     );
 }

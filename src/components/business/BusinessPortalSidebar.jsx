@@ -1,4 +1,5 @@
 import React from 'react';
+import { pushService } from '../../services/pushService';
 
 const BusinessPortalSidebar = ({
     isVisible,
@@ -10,7 +11,8 @@ const BusinessPortalSidebar = ({
     theme,
     toggleTheme,
     onLogout,
-    onCreateBooking // Add prop
+    onCreateBooking,
+    pendingCount = 0
 }) => {
     const handleNavigation = (mode) => {
         setViewMode(mode);
@@ -19,14 +21,23 @@ const BusinessPortalSidebar = ({
         }
     };
 
+    const navItems = [
+        { id: 'calendar', icon: '📅', label: 'Calendario' },
+        { id: 'list', icon: '📋', label: 'Reservas', badge: pendingCount > 0 ? pendingCount : null },
+        { id: 'analytics', icon: '📊', label: 'Analytics' },
+        { id: 'customers', icon: '👥', label: 'Clientes' },
+        { id: 'settings', icon: '⚙️', label: 'Ajustes' }
+    ];
+
     return (
         <div style={{
-            width: isMobile ? '100%' : (isVisible ? '280px' : '88px'),
-            background: 'var(--bg-card)',
-            borderRight: isMobile ? 'none' : '1px solid var(--border)',
+            width: isMobile ? '100%' : (isVisible ? '260px' : '72px'),
+            minWidth: isMobile ? 'auto' : (isVisible ? '260px' : '72px'),
+            background: 'var(--sidebar-bg)',
+            borderRight: isMobile ? 'none' : '1px solid var(--sidebar-border)',
             display: (isMobile && !isVisible) ? 'none' : 'flex',
             flexDirection: 'column',
-            padding: isMobile ? '20px' : '30px 16px',
+            padding: isMobile ? '20px' : (isVisible ? '24px 16px' : '24px 8px'),
             position: isMobile ? 'fixed' : 'sticky',
             top: isMobile ? '60px' : 0,
             left: 0,
@@ -35,64 +46,108 @@ const BusinessPortalSidebar = ({
             height: isMobile ? 'calc(100vh - 60px)' : '100vh',
             zIndex: 99,
             overflowY: 'auto',
-            transition: 'width 0.3s ease, padding 0.3s ease'
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
         }}>
+            {/* Business Logo & Name */}
             <div style={{
-                marginBottom: '40px',
+                marginBottom: '28px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: isVisible ? 'space-between' : 'center',
                 flexDirection: isVisible ? 'row' : 'column',
-                gap: '12px'
+                gap: '10px'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: isVisible ? 'auto' : '100%', justifyContent: 'center' }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: isVisible ? 'auto' : '100%',
+                    justifyContent: isVisible ? 'flex-start' : 'center'
+                }}>
                     {currentBusiness?.logo || currentBusiness?.image ? (
                         <img
                             src={currentBusiness.logo || currentBusiness.image}
                             alt="Logo"
-                            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }}
+                            style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '10px',
+                                objectFit: 'cover',
+                                border: '2px solid var(--border)',
+                                boxShadow: 'var(--shadow-sm)'
+                            }}
                         />
                     ) : (
-                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--primary-paddle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#fff', fontWeight: 'bold' }}>
-                            {currentBusiness?.name ? currentBusiness.name.charAt(0).toUpperCase() : 'P'}
+                        <div style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '10px',
+                            background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '18px',
+                            color: '#fff',
+                            fontWeight: 'bold',
+                            boxShadow: 'var(--shadow-primary)'
+                        }}>
+                            {currentBusiness?.name ? currentBusiness.name.charAt(0).toUpperCase() : 'T'}
                         </div>
                     )}
                     {isVisible && (
-                        <div style={{ overflow: 'hidden' }}>
-                            <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap' }}>
+                        <div style={{ overflow: 'hidden', minWidth: 0 }}>
+                            <h1 style={{
+                                fontSize: '16px',
+                                fontWeight: '800',
+                                color: 'var(--text-primary)',
+                                margin: 0,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '150px'
+                            }}>
                                 {currentBusiness?.name || 'Portal'}
                             </h1>
-                            <p style={{ color: 'var(--text-secondary)', margin: '0', fontSize: '11px', fontWeight: '500', whiteSpace: 'nowrap' }}>Panel de Control</p>
+                            <p style={{
+                                color: 'var(--text-muted)',
+                                margin: '0',
+                                fontSize: '11px',
+                                fontWeight: '500'
+                            }}>Panel de Control</p>
                         </div>
                     )}
                 </div>
 
-                {/* Toggle Button (Desktop) */}
+                {/* Collapse Toggle (Desktop Only) */}
                 {!isMobile && (
                     <button
                         onClick={() => onToggleSidebar(!isVisible)}
                         style={{
-                            background: 'transparent',
+                            background: 'var(--bg-main)',
                             border: '1px solid var(--border)',
-                            color: 'var(--text-secondary)',
+                            color: 'var(--text-muted)',
                             cursor: 'pointer',
-                            padding: '6px',
-                            width: '28px',
-                            height: '28px',
+                            padding: '4px',
+                            width: '24px',
+                            height: '24px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            borderRadius: '50%',
+                            borderRadius: '6px',
                             transition: 'all 0.2s',
-                            marginTop: isVisible ? 0 : '8px'
+                            fontSize: '11px',
+                            marginTop: isVisible ? 0 : '8px',
+                            flexShrink: 0
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--bg-main)';
-                            e.currentTarget.style.transform = 'scale(1.1)';
+                            e.currentTarget.style.background = 'var(--primary-bg)';
+                            e.currentTarget.style.borderColor = 'var(--primary-border)';
+                            e.currentTarget.style.color = 'var(--primary)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.background = 'var(--bg-main)';
+                            e.currentTarget.style.borderColor = 'var(--border)';
+                            e.currentTarget.style.color = 'var(--text-muted)';
                         }}
                         title={isVisible ? "Colapsar menú" : "Expandir menú"}
                     >
@@ -101,86 +156,237 @@ const BusinessPortalSidebar = ({
                 )}
             </div>
 
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                {[
-                    { id: 'calendar', icon: '📅', label: 'Calendario' },
-                    { id: 'list', icon: '📋', label: 'Reservas' },
-                    { id: 'analytics', icon: '📊', label: 'Analytics' },
-                    { id: 'customers', icon: '👥', label: 'Clientes' },
-                    { id: 'settings', icon: '⚙️', label: 'Ajustes' }
-                ].map(item => (
-                    <button
-                        key={item.id}
-                        onClick={() => handleNavigation(item.id)}
-                        title={!isVisible ? item.label : ''}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: isVisible ? 'flex-start' : 'center',
-                            gap: '12px',
-                            padding: isVisible ? '12px 16px' : '12px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: viewMode === item.id ? 'var(--primary-paddle)' : 'transparent',
-                            color: viewMode === item.id ? '#000' : 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            transition: 'all 0.2s',
-                            textAlign: 'left',
-                            width: '100%'
-                        }}
-                    >
-                        <span style={{ fontSize: '20px' }}>{item.icon}</span>
-                        {isVisible && <span style={{ transition: 'opacity 0.2s', whiteSpace: 'nowrap' }}>{item.label}</span>}
-                    </button>
-                ))}
+            {/* + New Booking Button */}
+            {onCreateBooking && (
+                <button
+                    onClick={onCreateBooking}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: isVisible ? '10px 16px' : '10px',
+                        borderRadius: 'var(--radius-md)',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                        color: '#FFFFFF',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        marginBottom: '20px',
+                        transition: 'all 0.2s',
+                        boxShadow: 'var(--shadow-primary)',
+                        width: '100%'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.35)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'var(--shadow-primary)';
+                    }}
+                >
+                    <span style={{ fontSize: '16px' }}>＋</span>
+                    {isVisible && <span>Nueva Reserva</span>}
+                </button>
+            )}
+
+            {/* Navigation */}
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                {navItems.map(item => {
+                    const isActive = viewMode === item.id;
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => handleNavigation(item.id)}
+                            title={!isVisible ? item.label : ''}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: isVisible ? 'flex-start' : 'center',
+                                gap: '12px',
+                                padding: isVisible ? '10px 14px' : '10px',
+                                borderRadius: 'var(--radius-md)',
+                                border: 'none',
+                                borderLeft: isActive ? `3px solid var(--sidebar-active-border)` : '3px solid transparent',
+                                background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
+                                color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                fontWeight: isActive ? '700' : '600',
+                                transition: 'all 0.15s ease',
+                                textAlign: 'left',
+                                width: '100%',
+                                position: 'relative',
+                                fontSize: '14px'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!isActive) {
+                                    e.currentTarget.style.background = 'var(--sidebar-hover-bg)';
+                                    e.currentTarget.style.color = 'var(--text-primary)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!isActive) {
+                                    e.currentTarget.style.background = 'transparent';
+                                    e.currentTarget.style.color = 'var(--text-secondary)';
+                                }
+                            }}
+                        >
+                            <span style={{ fontSize: '18px', width: '24px', textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+                            {isVisible && (
+                                <span style={{
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                }}>
+                                    {item.label}
+                                </span>
+                            )}
+                            {/* Badge */}
+                            {item.badge && isVisible && (
+                                <span style={{
+                                    marginLeft: 'auto',
+                                    background: 'var(--status-pending)',
+                                    color: '#fff',
+                                    fontSize: '10px',
+                                    fontWeight: '800',
+                                    padding: '2px 7px',
+                                    borderRadius: 'var(--radius-full)',
+                                    minWidth: '20px',
+                                    textAlign: 'center'
+                                }}>
+                                    {item.badge}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
             </nav>
 
-            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: isMobile ? '20px' : 0 }}>
+            {/* Bottom Actions */}
+            <div style={{
+                marginTop: 'auto',
+                paddingTop: '16px',
+                borderTop: '1px solid var(--border-light)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                paddingBottom: isMobile ? '20px' : 0
+            }}>
                 <button
                     onClick={toggleTheme}
                     title={!isVisible ? (theme === 'dark' ? 'Modo Oscuro' : 'Modo Claro') : ''}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: isVisible ? 'space-between' : 'center',
-                        padding: isVisible ? '10px 16px' : '12px',
-                        borderRadius: '10px',
+                        justifyContent: isVisible ? 'flex-start' : 'center',
+                        gap: '10px',
+                        padding: isVisible ? '10px 14px' : '10px',
+                        borderRadius: 'var(--radius-md)',
                         border: '1px solid var(--border)',
                         background: 'var(--bg-main)',
-                        color: 'var(--text-primary)',
+                        color: 'var(--text-secondary)',
                         cursor: 'pointer',
                         fontSize: '13px',
                         fontWeight: '600',
-                        width: '100%'
+                        width: '100%',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--primary-border)';
+                        e.currentTarget.style.background = 'var(--primary-bg)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.background = 'var(--bg-main)';
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '18px' }}>{theme === 'dark' ? '🌙' : '☀️'}</span>
-                        {isVisible && <span>{theme === 'dark' ? 'Oscuro' : 'Claro'}</span>}
-                    </div>
+                    <span style={{ fontSize: '16px' }}>{theme === 'dark' ? '🌙' : '☀️'}</span>
+                    {isVisible && <span>{theme === 'dark' ? 'Modo Oscuro' : 'Modo Claro'}</span>}
                 </button>
+
+                <button
+                    onClick={async () => {
+                        try {
+                            if (!('Notification' in window)) {
+                                alert('Tu navegador no soporta notificaciones push');
+                                return;
+                            }
+                            if (Notification.permission === 'denied') {
+                                alert('⚠️ Los permisos de notificación fueron Bloqueados previamente en tu navegador.\n\nPara activarlos:\n1. Tocá el ícono del Candado 🔒 al lado de la dirección de la web arriba (turnitoslr.com).\n2. En "Notificaciones", seleccioná "Permitir".\n3. Recargá la página e intentá de nuevo.');
+                                return;
+                            }
+                            const result = await pushService.requestPermissionAndGetTokenDetailed(currentBusiness?.id);
+                            if (result.success && result.token) {
+                                alert('🔔 ¡Notificaciones Push activadas y vinculadas correctamente! Recibirás alertas flotantes de turnos nuevos.');
+                            } else {
+                                alert(`⚠️ No se pudo activar la notificación:\n${result.error || 'Permiso denegado por el usuario'}`);
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    }}
+                    title={!isVisible ? 'Activar Notificaciones' : ''}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: isVisible ? 'flex-start' : 'center',
+                        gap: '10px',
+                        padding: isVisible ? '10px 14px' : '10px',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-main)',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        width: '100%',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--primary-border)';
+                        e.currentTarget.style.background = 'var(--primary-bg)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.background = 'var(--bg-main)';
+                    }}
+                >
+                    <span style={{ fontSize: '16px' }}>🔔</span>
+                    {isVisible && <span>Notificaciones PWA</span>}
+                </button>
+
                 <button
                     onClick={onLogout}
                     title={!isVisible ? 'Cerrar Sesión' : ''}
                     style={{
-                        padding: isVisible ? '10px 16px' : '12px',
-                        borderRadius: '10px',
-                        border: '1px solid rgba(255,68,68,0.2)',
-                        background: 'rgba(255,68,68,0.05)',
-                        color: '#ff4444',
+                        padding: isVisible ? '10px 14px' : '10px',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid rgba(239, 68, 68, 0.15)',
+                        background: 'rgba(239, 68, 68, 0.04)',
+                        color: '#EF4444',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: isVisible ? 'center' : 'center',
-                        gap: '8px',
+                        justifyContent: isVisible ? 'flex-start' : 'center',
+                        gap: '10px',
                         fontSize: '13px',
                         fontWeight: '600',
-                        width: '100%'
+                        width: '100%',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.10)';
+                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.30)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.04)';
+                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.15)';
                     }}
                 >
-                    <span style={{ fontSize: '18px' }}>🚪</span>
-                    {isVisible && <span>Salir</span>}
+                    <span style={{ fontSize: '16px' }}>🚪</span>
+                    {isVisible && <span>Cerrar Sesión</span>}
                 </button>
             </div>
         </div>

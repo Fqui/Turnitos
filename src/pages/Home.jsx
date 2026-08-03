@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { categories } from '../data/mockData';
+import { categories, promotions as initialPromotions, businesses as initialBusinesses } from '../data/mockData';
 import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
 import { generateSlug } from '../utils/utils';
@@ -10,8 +10,8 @@ export default function Home() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedSubCategory, setSelectedSubCategory] = useState('all');
-    const [businesses, setBusinesses] = useState([]);
-    const [promotions, setPromotions] = useState([]);
+    const [businesses, setBusinesses] = useState(initialBusinesses || []);
+    const [promotions, setPromotions] = useState(initialPromotions || []);
     const [categoriesData, setCategoriesData] = useState([]); // ✅ New state for dynamic categories
     const [loading, setLoading] = useState(true);
     const [isNearMeActive, setIsNearMeActive] = useState(false); // ✅ New state for Near Me
@@ -111,13 +111,9 @@ export default function Home() {
                     serviceAdapter.getPromotions(),
                     serviceAdapter.getCategories() // ✅ Fetch categories
                 ]);
-                setBusinesses(businessesData || []);
-                setPromotions(promotionsData || []);
-                setCategoriesData(categoriesResult || []);
-
-                setBusinesses(businessesData || []);
-                setPromotions(promotionsData || []);
-                setCategoriesData(categoriesResult || []);
+                if (businessesData && businessesData.length > 0) setBusinesses(businessesData);
+                if (promotionsData && promotionsData.length > 0) setPromotions(promotionsData);
+                if (categoriesResult && categoriesResult.length > 0) setCategoriesData(categoriesResult);
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
@@ -129,33 +125,52 @@ export default function Home() {
 
     // Memoize filtered businesses to avoid re-filtering on every render
     // Memoize filtered businesses to avoid re-filtering on every render
+    // Helper to normalize strings (remove accents, lowercase)
+    const normalizeText = (text) => {
+        return (text || '')
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim();
+    };
+
+    // Memoize filtered businesses to avoid re-filtering on every render
     const filteredBusinesses = useMemo(() => {
-        // Helper to normalize strings (remove accents, lowercase)
-        const normalizeText = (text) => {
-            return (text || '')
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .trim();
-        };
+        const termNorm = normalizeText(searchTerm);
 
         return businesses.filter(b => {
             // 1. Search Filter
             let matchesSearch = true;
-            if (searchTerm && searchTerm.length >= 1) {
-                const term = searchTerm.toLowerCase();
-                const matchesBusiness = b.name.toLowerCase().includes(term) ||
-                    b.location.toLowerCase().includes(term);
-                const matchesServices = b.services?.some(s => s.name.toLowerCase().includes(term));
-                const matchesCourts = b.courts?.some(c => c.name.toLowerCase().includes(term));
-                const matchesSpecialists = b.specialists?.some(s => s.name.toLowerCase().includes(term));
+            if (termNorm.length >= 1) {
+                const matchesName = normalizeText(b.name).includes(termNorm);
+                const matchesLocation = normalizeText(b.location).includes(termNorm);
+                const matchesDescription = normalizeText(b.description).includes(termNorm);
+                const matchesCategory = normalizeText(b.categories?.name).includes(termNorm) || 
+                                        normalizeText(b.categories?.slug).includes(termNorm);
+                const matchesSubcategory = b.subcategories?.some(sub => 
+                    normalizeText(sub.name).includes(termNorm) || normalizeText(sub.slug).includes(termNorm)
+                );
+                const matchesServices = b.services?.some(s => normalizeText(s.name).includes(termNorm) || normalizeText(s.description).includes(termNorm));
+                const matchesCourts = b.courts?.some(c => normalizeText(c.name).includes(termNorm) || normalizeText(c.sport).includes(termNorm) || normalizeText(c.type).includes(termNorm));
+                const matchesSpecialists = b.specialists?.some(s => normalizeText(s.name).includes(termNorm) || normalizeText(s.specialty).includes(termNorm));
 
-                matchesSearch = matchesBusiness || matchesServices || matchesCourts || matchesSpecialists;
+                // Specific sport / keyword synonyms matching
+                let matchesSynonym = false;
+                if (termNorm === 'futbol' || termNorm === 'soccer' || termNorm === 'cancha') {
+                    matchesSynonym = (b.type === 'sport') || normalizeText(b.categories?.name).includes('deporte') || b.courts?.some(c => normalizeText(c.name).includes('futbol') || normalizeText(c.sport).includes('futbol'));
+                } else if (termNorm === 'padel' || termNorm === 'tenis') {
+                    matchesSynonym = b.courts?.some(c => normalizeText(c.name).includes(termNorm) || normalizeText(c.sport).includes(termNorm));
+                }
+
+                matchesSearch = matchesName || matchesLocation || matchesDescription || matchesCategory || matchesSubcategory || matchesServices || matchesCourts || matchesSpecialists || matchesSynonym;
             }
 
             if (!matchesSearch) return false;
 
-            // 2. Category Filter
+            // When searching with a query, search globally across all categories
+            if (termNorm.length >= 1) return true;
+
+            // 2. Category Filter (active when search term is empty)
             if (selectedCategory === 'all') return true;
 
             const categorySlug = (b.categories?.slug || '').toLowerCase();
@@ -176,7 +191,6 @@ export default function Home() {
             } else if (selectedCategory === 'mascotas') {
                 isCategoryMatch = categorySlug === 'mascotas' || categoryName === 'mascotas';
             } else {
-                // Generic fallback
                 isCategoryMatch = categorySlug === selectedCategory || categoryName === selectedCategory;
             }
 
@@ -187,12 +201,10 @@ export default function Home() {
 
             const selectedSubNorm = normalizeText(selectedSubCategory);
 
-            // Check explicit subcategories array
             let hasSubcategory = b.subcategories?.some(sub => {
                 return normalizeText(sub.slug) === selectedSubNorm || normalizeText(sub.name) === selectedSubNorm;
             });
 
-            // Fallback: Check legacy subcategory_id using categoriesData
             if (!hasSubcategory && b.subcategory_id && categoriesData.length > 0) {
                 for (const cat of categoriesData) {
                     const foundSub = cat.subcategories?.find(s => s.id === b.subcategory_id);
@@ -209,7 +221,6 @@ export default function Home() {
         });
     }, [searchTerm, selectedCategory, selectedSubCategory, businesses, categoriesData]);
 
-    // Memoize category click handler
     // Category click handler
     const handleCategoryClick = async (category) => {
         if (isNearMeActive) {
@@ -237,41 +248,76 @@ export default function Home() {
         }
     };
 
-
-
     // State for suggestions
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     // Memoize suggestions based on search term
     const suggestions = useMemo(() => {
-        if (!searchTerm || searchTerm.length < 2) return [];
+        if (!searchTerm || normalizeText(searchTerm).length < 1) return [];
 
-        const term = searchTerm.toLowerCase();
+        const termNorm = normalizeText(searchTerm);
         const results = [];
         const seen = new Set(); // duplicate checker
 
         businesses.forEach(b => {
+            const bNameNorm = normalizeText(b.name);
+
             // 1. Business Name Match
-            if (b.name.toLowerCase().includes(term)) {
-                results.push({
-                    type: 'business',
-                    id: b.id,
-                    title: b.name,
-                    subtitle: 'Negocio',
-                    business: b
-                });
+            if (bNameNorm.includes(termNorm)) {
+                const key = `biz-${b.id}`;
+                if (!seen.has(key)) {
+                    results.push({
+                        type: 'business',
+                        id: b.id,
+                        title: b.name,
+                        subtitle: `${b.categories?.name || 'Negocio'} • ${b.location || 'La Rioja'}`,
+                        business: b
+                    });
+                    seen.add(key);
+                }
             }
 
-            // 2. Services Match
+            // 2. Category & Subcategory Match
+            if (normalizeText(b.categories?.name).includes(termNorm)) {
+                const key = `cat-${b.categories?.name}-${b.id}`;
+                if (!seen.has(key)) {
+                    results.push({
+                        type: 'category',
+                        id: key,
+                        title: b.categories.name,
+                        subtitle: `en ${b.name}`,
+                        business: b
+                    });
+                    seen.add(key);
+                }
+            }
+
+            b.subcategories?.forEach(sub => {
+                if (normalizeText(sub.name).includes(termNorm)) {
+                    const key = `sub-${sub.name}-${b.id}`;
+                    if (!seen.has(key)) {
+                        results.push({
+                            type: 'subcategory',
+                            id: key,
+                            title: sub.name,
+                            subtitle: `Subcategoría en ${b.name}`,
+                            business: b
+                        });
+                        seen.add(key);
+                    }
+                }
+            });
+
+            // 3. Services Match
             b.services?.forEach(s => {
-                if (s.name.toLowerCase().includes(term)) {
+                if (normalizeText(s.name).includes(termNorm)) {
                     const key = `service-${s.name}-${b.id}`;
                     if (!seen.has(key)) {
                         results.push({
                             type: 'service',
-                            id: s.id,
+                            id: key,
                             title: s.name,
-                            subtitle: `en ${b.name}`,
+                            subtitle: `Servicio en ${b.name}`,
                             business: b
                         });
                         seen.add(key);
@@ -279,16 +325,16 @@ export default function Home() {
                 }
             });
 
-            // 3. Courts/Resources Match
+            // 4. Courts/Resources Match
             b.courts?.forEach(c => {
-                if (c.name.toLowerCase().includes(term)) {
+                if (normalizeText(c.name).includes(termNorm) || normalizeText(c.sport).includes(termNorm)) {
                     const key = `court-${c.name}-${b.id}`;
                     if (!seen.has(key)) {
                         results.push({
                             type: 'court',
-                            id: c.id,
+                            id: key,
                             title: c.name,
-                            subtitle: `en ${b.name}`,
+                            subtitle: `Cancha/Espacio en ${b.name}`,
                             business: b
                         });
                         seen.add(key);
@@ -296,14 +342,14 @@ export default function Home() {
                 }
             });
 
-            // 4. Specialists Match
+            // 5. Specialists Match
             b.specialists?.forEach(s => {
-                if (s.name.toLowerCase().includes(term)) {
+                if (normalizeText(s.name).includes(termNorm) || normalizeText(s.specialty).includes(termNorm)) {
                     const key = `spec-${s.name}-${b.id}`;
                     if (!seen.has(key)) {
                         results.push({
                             type: 'specialist',
-                            id: s.id,
+                            id: key,
                             title: s.name,
                             subtitle: `Especialista en ${b.name}`,
                             business: b
@@ -340,19 +386,29 @@ export default function Home() {
                     <div style={{ position: 'relative', width: '100%', maxWidth: '600px' }}>
                         <input
                             type="text"
-                            placeholder="Buscar..."
+                            placeholder="Buscar por negocio, fútbol, pádel, kinesiología, barbería..."
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
                                 setShowSuggestions(true);
                             }}
                             onFocus={() => setShowSuggestions(true)}
-                            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} // Delay to allow click
+                            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    setShowSuggestions(false);
+                                    e.target.blur();
+                                    if (resultsRef.current) {
+                                        resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    }
+                                }
+                            }}
                             style={{
                                 width: '100%',
                                 padding: '16px 20px',
                                 paddingLeft: '50px',
-                                fontSize: '16px',
+                                paddingRight: searchTerm ? '45px' : '20px',
+                                fontSize: '15px',
                                 borderRadius: '24px',
                                 border: '1px solid var(--border)',
                                 backgroundColor: 'var(--bg-card)',
@@ -367,6 +423,27 @@ export default function Home() {
                             🔍
                         </span>
 
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                style={{
+                                    position: 'absolute',
+                                    right: '16px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '16px',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    lineHeight: 1
+                                }}
+                            >
+                                ✕
+                            </button>
+                        )}
+
                         {/* Autocomplete Dropdown */}
                         {showSuggestions && suggestions.length > 0 && (
                             <div style={{
@@ -379,7 +456,8 @@ export default function Home() {
                                 boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
                                 border: '1px solid var(--border)',
                                 overflow: 'hidden',
-                                padding: '8px 0'
+                                padding: '8px 0',
+                                zIndex: 100
                             }}>
                                 {suggestions.map((item, index) => (
                                     <div
@@ -398,7 +476,7 @@ export default function Home() {
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
                                         <div style={{ fontSize: '18px' }}>
-                                            {item.type === 'business' ? '🏢' : item.type === 'court' ? '🎾' : item.type === 'specialist' ? '👨‍⚕️' : '💆'}
+                                            {item.type === 'business' ? '🏢' : item.type === 'court' ? '⚽' : item.type === 'category' ? '🏷️' : item.type === 'subcategory' ? '📌' : item.type === 'specialist' ? '👨‍⚕️' : '💆'}
                                         </div>
                                         <div>
                                             <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{item.title}</div>
@@ -446,7 +524,7 @@ export default function Home() {
                             }}
                         >
                             <span style={{ fontSize: '32px' }}>⚡</span>
-                            <span style={{ fontSize: '14px', fontWeight: '700', fontFamily: 'var(--font-title)' }}>Todos</span>
+                            <span style={{ fontSize: '14px', fontWeight: '600', fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em' }}>Todos</span>
                         </motion.button>
 
                         {/* Use DB categories if available, otherwise fallback to static mock */}
@@ -476,7 +554,7 @@ export default function Home() {
                                 }}
                             >
                                 <span style={{ fontSize: '32px' }}>{cat.icon}</span>
-                                <span style={{ fontSize: '14px', fontWeight: '700', fontFamily: 'var(--font-title)' }}>{cat.name}</span>
+                                <span style={{ fontSize: '14px', fontWeight: '600', fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em' }}>{cat.name}</span>
                             </motion.button>
                         ))}
                     </div>
@@ -508,10 +586,10 @@ export default function Home() {
                                         backgroundColor: selectedSubCategory === 'all' ? 'var(--text-primary)' : 'var(--bg-card)',
                                         color: selectedSubCategory === 'all' ? 'var(--bg-card)' : 'var(--text-secondary)',
                                         cursor: 'pointer',
-                                        fontWeight: '700',
+                                        fontWeight: '600',
                                         whiteSpace: 'nowrap',
                                         fontSize: '13px',
-                                        fontFamily: 'var(--font-title)',
+                                        fontFamily: 'var(--font-sans)',
                                         boxShadow: selectedSubCategory === 'all' ? '0 4px 12px rgba(0, 0, 0, 0.08)' : 'none',
                                         transition: 'all 0.2s'
                                     }}
@@ -531,10 +609,10 @@ export default function Home() {
                                             backgroundColor: selectedSubCategory === sub.slug ? 'var(--text-primary)' : 'var(--bg-card)',
                                             color: selectedSubCategory === sub.slug ? 'var(--bg-card)' : 'var(--text-secondary)',
                                             cursor: 'pointer',
-                                            fontWeight: '700',
+                                            fontWeight: '600',
                                             whiteSpace: 'nowrap',
                                             fontSize: '13px',
-                                            fontFamily: 'var(--font-title)',
+                                            fontFamily: 'var(--font-sans)',
                                             boxShadow: selectedSubCategory === sub.slug ? '0 4px 12px rgba(0, 0, 0, 0.08)' : 'none',
                                             transition: 'all 0.2s'
                                         }}
@@ -564,10 +642,10 @@ export default function Home() {
                                                 backgroundColor: isSelected ? 'var(--text-primary)' : 'var(--bg-card)',
                                                 color: isSelected ? 'var(--bg-card)' : 'var(--text-secondary)',
                                                 cursor: 'pointer',
-                                                fontWeight: '700',
+                                                fontWeight: '600',
                                                 whiteSpace: 'nowrap',
                                                 fontSize: '13px',
-                                                fontFamily: 'var(--font-title)',
+                                                fontFamily: 'var(--font-sans)',
                                                 boxShadow: isSelected ? '0 4px 12px rgba(0, 0, 0, 0.08)' : 'none',
                                                 transition: 'all 0.2s'
                                             }}
@@ -594,10 +672,10 @@ export default function Home() {
                                         backgroundColor: 'var(--text-primary)',
                                         color: 'var(--bg-card)',
                                         cursor: 'pointer',
-                                        fontWeight: '700',
+                                        fontWeight: '600',
                                         whiteSpace: 'nowrap',
                                         fontSize: '13px',
-                                        fontFamily: 'var(--font-title)',
+                                        fontFamily: 'var(--font-sans)',
                                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
                                     }}
                                 >

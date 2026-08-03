@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
@@ -15,13 +15,14 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-export default function VenueProfile() {
+export default function VenueProfile({ business: initialBusiness }) {
     const { businessSlug: slug } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { showAlert } = useNotification();
 
-    const [business, setBusiness] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
+    const [loading, setLoading] = useState(!business);
     const [selectedDate, setSelectedDate] = useState(null);
     const [guestCount, setGuestCount] = useState(30);
     const [duration, setDuration] = useState(4);
@@ -41,8 +42,10 @@ export default function VenueProfile() {
     }, []);
 
     useEffect(() => {
-        fetchBusiness();
-    }, [slug]);
+        if (!business) {
+            fetchBusiness();
+        }
+    }, [slug, business]);
 
     const fetchBusiness = async () => {
         try {
@@ -65,17 +68,20 @@ export default function VenueProfile() {
     const getGalleryImages = () => {
         if (!business) return [];
 
-        // Try to get from metadata.venue_gallery first (with captions)
-        if (business.metadata?.venue_gallery && Array.isArray(business.metadata.venue_gallery)) {
-            return business.metadata.venue_gallery;
+        let images = [];
+        if (business.metadata?.venue_gallery && Array.isArray(business.metadata.venue_gallery) && business.metadata.venue_gallery.length > 0) {
+            images = [...business.metadata.venue_gallery];
+        } else if (business.gallery_images && Array.isArray(business.gallery_images) && business.gallery_images.length > 0) {
+            images = business.gallery_images.map(url => (typeof url === 'string' ? { url, caption: '', category: 'General' } : url));
         }
 
-        // Fallback to gallery_images (simple URLs)
-        if (business.gallery_images && Array.isArray(business.gallery_images)) {
-            return business.gallery_images.map(url => ({ url, caption: '', category: 'General' }));
+        // Add main banner / image / logo to images if not present
+        const coverUrl = business.banner_image || business.banner_url || business.image || business.logo || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200';
+        if (coverUrl && !images.some(img => img.url === coverUrl)) {
+            images.unshift({ url: coverUrl, caption: business.name, category: 'General' });
         }
 
-        return [];
+        return images;
     };
 
     // Calculate price based on guest count and pricing tiers
@@ -163,17 +169,27 @@ export default function VenueProfile() {
     const handleConfirmBooking = async (bookingDetails) => {
         try {
             const bookingData = {
+                businessId: business.id,
                 business_id: business.id,
-                date: selectedDate.toISOString().split('T')[0],
-                time: '00:00', // Venue bookings are all-day or custom
-                duration: duration,
+                date: selectedDate,
+                time: '00:00',
+                duration: duration * 60, // Venue duration in minutes
+                price: totalPrice,
+                guestCount: guestCount,
                 guest_count: guestCount,
+                selectedServices: selectedServices,
                 selected_services: selectedServices,
+                servicesTotal: servicesTotal,
                 services_total: servicesTotal,
+                basePrice: basePrice,
                 base_price: basePrice,
+                totalPrice: totalPrice,
                 total_price: totalPrice,
+                customerName: bookingDetails.customerName,
                 customer_name: bookingDetails.customerName,
+                customerPhone: bookingDetails.customerPhone,
                 customer_phone: bookingDetails.customerPhone,
+                customerEmail: bookingDetails.customerEmail,
                 customer_email: bookingDetails.customerEmail,
                 notes: bookingDetails.notes,
                 status: 'pending'
@@ -235,7 +251,7 @@ export default function VenueProfile() {
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 
     return (
-        <div style={{ background: '#F8F9FA', minHeight: '100vh' }}>
+        <div style={{ background: '#F8F9FA', minHeight: '100vh', width: '100%', overflowX: 'clip' }}>
             {/* Hero Section */}
             <div style={{
                 position: 'relative',
@@ -244,28 +260,26 @@ export default function VenueProfile() {
                 background: 'linear-gradient(135deg, #2D3748 0%, #1A202C 100%)',
                 overflow: 'hidden'
             }}>
-                {galleryImages[0] && (
-                    <img
-                        src={galleryImages[0].url}
-                        alt={business.name}
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            opacity: 0.7
-                        }}
-                    />
-                )}
+                <img
+                    src={business.banner_image || business.banner_url || business.image || galleryImages[0]?.url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200'}
+                    alt={business.name}
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        opacity: 0.8
+                    }}
+                />
                 <div style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%)'
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%)'
                 }} />
                 {/* Content Container */}
                 <div style={{
@@ -280,32 +294,104 @@ export default function VenueProfile() {
                     width: '100%',
                     margin: '0 auto'
                 }}>
-                    <div style={{ marginBottom: '16px' }}>
-                        <span style={{
-                            background: 'rgba(255,255,255,0.2)',
-                            backdropFilter: 'blur(4px)',
-                            padding: '6px 12px',
-                            borderRadius: '20px',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                        }}>
-                            {business.category || 'Venue'}
-                        </span>
-                    </div>
                     <h1 style={{
                         fontSize: windowWidth < 768 ? '36px' : '56px',
                         fontWeight: '900',
-                        marginBottom: '16px',
+                        marginBottom: '8px',
                         lineHeight: '1.1',
                         textShadow: '0 4px 12px rgba(0,0,0,0.3)'
                     }}>
                         {business.name}
                     </h1>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: '500', opacity: 0.9 }}>
-                        <span>📍</span>
-                        <span>{business.address}, {business.city}</span>
+
+                    {/* Address / Location */}
+                    {(() => {
+                        const fullAddress = [business.address, business.city || business.location].filter(Boolean).join(', ');
+                        if (!fullAddress) return null;
+                        return (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: '500', opacity: 0.9 }}>
+                                <span>📍</span>
+                                <span>{fullAddress}</span>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Social Media Links */}
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '14px', flexWrap: 'wrap' }}>
+                        {(business.whatsapp || business.phone) && (
+                            <a
+                                href={`https://wa.me/${(business.whatsapp || business.phone).replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    width: '38px',
+                                    height: '38px',
+                                    borderRadius: '50%',
+                                    background: '#25D366',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'white',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                    transition: 'transform 0.2s'
+                                }}
+                                title="WhatsApp"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                                </svg>
+                            </a>
+                        )}
+
+                        {business.instagram && (
+                            <a
+                                href={business.instagram.startsWith('http') ? business.instagram : `https://instagram.com/${business.instagram.replace('@', '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    width: '38px',
+                                    height: '38px',
+                                    borderRadius: '50%',
+                                    background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'white',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                    transition: 'transform 0.2s'
+                                }}
+                                title="Instagram"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                                </svg>
+                            </a>
+                        )}
+
+                        {business.facebook && (
+                            <a
+                                href={business.facebook.startsWith('http') ? business.facebook : `https://facebook.com/${business.facebook}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    width: '38px',
+                                    height: '38px',
+                                    borderRadius: '50%',
+                                    background: '#1877F2',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'white',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                    transition: 'transform 0.2s'
+                                }}
+                                title="Facebook"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                </svg>
+                            </a>
+                        )}
                     </div>
                 </div>
             </div>
@@ -320,6 +406,7 @@ export default function VenueProfile() {
                 display: 'grid',
                 gridTemplateColumns: windowWidth > 1200 ? '1fr 450px' : '1fr',
                 gap: windowWidth < 768 ? '16px' : '32px',
+                alignItems: 'start',
                 position: 'relative',
                 zIndex: 10,
                 marginTop: '-60px'
@@ -331,7 +418,7 @@ export default function VenueProfile() {
                         <div style={{
                             background: 'white',
                             borderRadius: '24px',
-                            padding: '32px',
+                            padding: windowWidth < 768 ? '16px' : '32px',
                             boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -352,9 +439,9 @@ export default function VenueProfile() {
                             </div>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: '2fr 1fr',
+                                gridTemplateColumns: windowWidth < 768 ? '1fr' : '2fr 1fr',
                                 gap: '12px',
-                                height: '400px'
+                                height: windowWidth < 768 ? '240px' : '400px'
                             }}>
                                 <div
                                     onClick={() => { setLightboxIndex(0); setShowLightbox(true); }}
@@ -434,7 +521,7 @@ export default function VenueProfile() {
                         <div style={{
                             background: 'white',
                             borderRadius: '24px',
-                            padding: '32px',
+                            padding: windowWidth < 768 ? '16px' : '32px',
                             boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
                         }}>
                             <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>
@@ -442,8 +529,8 @@ export default function VenueProfile() {
                             </h2>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                                gap: '16px'
+                                gridTemplateColumns: windowWidth < 768 ? 'repeat(auto-fill, minmax(100px, 1fr))' : 'repeat(auto-fill, minmax(140px, 1fr))',
+                                gap: windowWidth < 768 ? '10px' : '16px'
                             }}>
                                 {amenities.map((amenity, idx) => (
                                     <div
@@ -497,7 +584,7 @@ export default function VenueProfile() {
                             <div
                                 onClick={() => setShowServicesExpanded(!showServicesExpanded)}
                                 style={{
-                                    padding: '32px',
+                                    padding: windowWidth < 768 ? '16px' : '32px',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     justifyContent: 'space-between',
@@ -527,7 +614,7 @@ export default function VenueProfile() {
                                 overflow: 'hidden',
                                 transition: 'max-height 0.4s ease'
                             }}>
-                                <div style={{ padding: '0 32px 32px 32px', display: 'grid', gap: '12px' }}>
+                                <div style={{ padding: windowWidth < 768 ? '0 16px 16px 16px' : '0 32px 32px 32px', display: 'grid', gap: '12px' }}>
                                     {additionalServices.map((service, idx) => (
                                         <div
                                             key={idx}
@@ -582,7 +669,7 @@ export default function VenueProfile() {
                     <div style={{
                         background: 'white',
                         borderRadius: '24px',
-                        padding: '32px',
+                        padding: windowWidth < 768 ? '16px' : '32px',
                         boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
                     }}>
                         <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>
@@ -633,15 +720,15 @@ export default function VenueProfile() {
                         <div style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(7, 1fr)',
-                            gap: '8px'
+                            gap: windowWidth < 768 ? '4px' : '8px'
                         }}>
                             {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
                                 <div key={day} style={{
                                     textAlign: 'center',
-                                    fontSize: '12px',
+                                    fontSize: windowWidth < 768 ? '11px' : '12px',
                                     fontWeight: '700',
                                     color: '#64748B',
-                                    padding: '8px'
+                                    padding: windowWidth < 768 ? '4px 2px' : '8px'
                                 }}>
                                     {day}
                                 </div>
@@ -662,12 +749,12 @@ export default function VenueProfile() {
                                         onClick={() => handleDateSelect(date)}
                                         disabled={isDisabled}
                                         style={{
-                                            padding: '12px',
+                                            padding: windowWidth < 768 ? '8px 2px' : '12px',
                                             borderRadius: '12px',
                                             background: isSelected ? '#84CC16' : isBlocked ? '#FEE2E2' : isPast ? '#F8F9FA' : 'white',
 
                                             color: isSelected ? 'white' : isDisabled ? '#CBD5E1' : '#1a1a1a',
-                                            fontSize: '14px',
+                                            fontSize: windowWidth < 768 ? '13px' : '14px',
                                             fontWeight: isSelected ? '700' : '500',
                                             cursor: isDisabled ? 'not-allowed' : 'pointer',
                                             transition: 'all 0.2s',
@@ -712,7 +799,7 @@ export default function VenueProfile() {
                         <div style={{
                             background: 'white',
                             borderRadius: '24px',
-                            padding: '32px',
+                            padding: windowWidth < 768 ? '16px' : '32px',
                             boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
                         }}>
                             <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '16px' }}>
@@ -795,7 +882,7 @@ export default function VenueProfile() {
                     windowWidth > 1200 && (
                         <div style={{
                             position: 'sticky',
-                            top: '32px',
+                            top: '90px',
                             height: 'fit-content'
                         }}>
                             <BookingPanel
@@ -813,6 +900,47 @@ export default function VenueProfile() {
                     )
                 }
             </div >
+
+            {/* Mobile Sticky Booking Bar */}
+            {windowWidth <= 1200 && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    padding: '12px 20px',
+                    borderTop: '1px solid #E2E8F0',
+                    boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    zIndex: 999
+                }}>
+                    <div>
+                        <div style={{ fontSize: '12px', color: '#64748B', fontWeight: '500' }}>Precio Total Estimado</div>
+                        <div style={{ fontSize: '20px', fontWeight: '900', color: '#84CC16' }}>
+                            ${totalPrice.toLocaleString()}
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleContinue}
+                        style={{
+                            background: '#84CC16',
+                            color: 'white',
+                            border: 'none',
+                            padding: '12px 24px',
+                            borderRadius: '14px',
+                            fontSize: '15px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(132, 204, 22, 0.3)'
+                        }}
+                    >
+                        Reservar Espacio
+                    </button>
+                </div>
+            )}
 
 
 

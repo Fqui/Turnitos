@@ -2,19 +2,39 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 
-const BusinessFormModal = ({ business, categories, subcategories, sellers = [], onClose, onSave }) => {
+const BusinessFormModal = ({ business, categories = [], subcategories = [], sellers = [], onClose, onSave }) => {
     const [formData, setFormData] = useState({
         name: business?.name || '',
-        category_id: business?.category_id || '',
-        subcategory_id: business?.subcategory_id || '',
+        category_id: business?.category_id || business?.categories?.id || '',
+        subcategory_id: business?.subcategory_id || (business?.subcategories?.[0]?.id) || '',
         location: business?.location || '',
         whatsapp: business?.whatsapp || '',
         instagram: business?.instagram || '',
         facebook: business?.facebook || '',
         type: business?.type || 'venue',
         seller_id: business?.seller_id || '',
-        subscription_plan_id: business?.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb'
+        subscription_plan_id: business?.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb',
+        resources_count: business?.courts?.length || business?.specialists?.length || 2
     });
+
+    useEffect(() => {
+        if (business) {
+            setFormData({
+                name: business.name || '',
+                category_id: business.category_id || business.categories?.id || '',
+                subcategory_id: business.subcategory_id || (business.subcategories?.[0]?.id) || '',
+                location: business.location || '',
+                whatsapp: business.whatsapp || '',
+                instagram: business.instagram || '',
+                facebook: business.facebook || '',
+                type: business.type || 'venue',
+                seller_id: business.seller_id || '',
+                subscription_plan_id: business.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb',
+                resources_count: business.courts?.length || business.specialists?.length || 2
+            });
+        }
+    }, [business]);
+
     const [loading, setLoading] = useState(false);
     const [createdCredentials, setCreatedCredentials] = useState(null);
     const [showCredentials, setShowCredentials] = useState(false);
@@ -51,10 +71,29 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers = [], 
         return () => document.removeEventListener('keydown', handle);
     }, []);
 
-    const filteredSubcategories = subcategories.filter(
-        sub => sub.category_id === formData.category_id
+    // Find current category object
+    const currentCategory = (categories || []).find(
+        c => String(c.id) === String(formData.category_id) || c.name === formData.category_id
     );
-    const selectedSubcategory = filteredSubcategories.find(s => s.id === formData.subcategory_id);
+    const resolvedCategoryId = currentCategory ? currentCategory.id : formData.category_id;
+
+    // Combine top-level subcategories + category's nested subcategories
+    const categorySubcategories = currentCategory?.subcategories || [];
+    const rawSubcategories = [
+        ...(subcategories || []).filter(sub =>
+            resolvedCategoryId && (String(sub.category_id) === String(resolvedCategoryId) || String(sub.category_id) === String(formData.category_id))
+        ),
+        ...categorySubcategories
+    ];
+
+    // Deduplicate by ID
+    const filteredSubcategories = Array.from(
+        new Map(rawSubcategories.map(s => [s.id, s])).values()
+    );
+
+    const selectedSubcategory = filteredSubcategories.find(
+        s => String(s.id) === String(formData.subcategory_id)
+    );
     // Base input style
     const inputStyle = {
         width: '100%',
@@ -78,7 +117,7 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers = [], 
                 'Belleza': 'service',
                 'Salud': 'service',
                 'Mascotas': 'service',
-                'Alquileres': 'venue',
+                'Alquileres': 'alquiler', // Fixed: was 'venue', DB and portal use 'alquiler'
             };
             const cat = categories.find(c => c.id === formData.category_id);
             const derivedType = cat ? (TYPE_BY_CATEGORY_NAME[cat.name] || null) : null;
@@ -133,6 +172,7 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers = [], 
                 password: ownerPassword,
                 type: derivedType || formData.type,
                 seller_id: formData.seller_id || null,
+                subcategories: formData.subcategory_id ? [formData.subcategory_id] : []
             };
 
             if (business) {
@@ -507,6 +547,37 @@ const BusinessFormModal = ({ business, categories, subcategories, sellers = [], 
                                 }}
                             />
                         </div>
+                    </div>
+
+                    {/* Cantidad de Canchas / Especialistas */}
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
+                            ⚙️ Cantidad de Canchas / Especialistas
+                        </label>
+                        <input
+                            type="number"
+                            min="1"
+                            max="30"
+                            value={formData.resources_count || 2}
+                            onChange={(e) => setFormData({ ...formData, resources_count: parseInt(e.target.value) || 1 })}
+                            style={{
+                                width: '100%',
+                                padding: '14px',
+                                background: 'rgba(99, 102, 241, 0.08)',
+                                border: '1px solid rgba(99, 102, 241, 0.4)',
+                                borderRadius: '12px',
+                                color: '#818CF8',
+                                fontWeight: '700',
+                                fontSize: '16px',
+                                outline: 'none'
+                            }}
+                        />
+                        <small style={{ display: 'block', marginTop: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+                            {business
+                                ? 'Modificar este valor ajustará automáticamente la cantidad de canchas/especialistas creados en el sistema.'
+                                : 'Se generarán automáticamente al crear el negocio (ej: Cancha 1, Cancha 2, etc.)'
+                            }
+                        </small>
                     </div>
 
                     {/* Vendedor */}

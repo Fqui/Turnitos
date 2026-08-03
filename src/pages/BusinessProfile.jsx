@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
-import { findBusinessBySlug } from '../utils/utils';
+import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import ServiceSelector from '../components/ServiceSelector';
 import Calendar from '../components/Calendar';
 import MonthCalendar from '../components/MonthCalendar';
@@ -29,8 +29,10 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const { businessSlug } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams] = useSearchParams();
     const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
     const [loading, setLoading] = useState(!business);
+    const isMobile = window.innerWidth <= 768;
 
     const [selectedItem, setSelectedItem] = useState(null); // Sport (string) or Service (object)
     const [selectedDate, setSelectedDate] = useState(null);
@@ -53,6 +55,10 @@ export default function BusinessProfile({ business: initialBusiness }) {
     // Gallery state
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
     const [selectedHighlight, setSelectedHighlight] = useState(null); // Which highlight category is open
+    const [storyViewerList, setStoryViewerList] = useState(null); // Active stories vs permanent highlights being viewed
+
+    // 🎫 Promotion linking state
+    const [activePromotion, setActivePromotion] = useState(null);
 
     // Refs for auto-scrolling
     const calendarRef = useRef(null);
@@ -76,6 +82,28 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 }
             } catch (e) {
                 // Not JSON, continue as string
+            }
+        }
+
+        // Check special_days override first
+        const specialDays = business?.special_days || [];
+        if (specialDays.length > 0 && date) {
+            const dateObj = date instanceof Date
+                ? date
+                : new Date(date.includes('T') ? date : date + 'T00:00:00');
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+
+            const matchedSpecialDay = specialDays.find(sd => sd.date === dateStr);
+            if (matchedSpecialDay) {
+                if (matchedSpecialDay.type === 'closed' || matchedSpecialDay.type === 'holiday') {
+                    return { open: '00:00', close: '00:00' }; // Closed all day
+                }
+                if (matchedSpecialDay.type === 'special_hours' && matchedSpecialDay.open && matchedSpecialDay.close) {
+                    return { open: matchedSpecialDay.open, close: matchedSpecialDay.close };
+                }
             }
         }
 
@@ -105,15 +133,14 @@ export default function BusinessProfile({ business: initialBusiness }) {
             //     breakEnd: schedule?.breakEnd
             // });
 
-            // Treat schedule as open if either isOpen is true OR if isSplit is true (defensive)
-            // Treat schedule as open if either isOpen is true OR if isSplit is true (defensive)
-            // This handles legacy data where isSplit exists but isOpen might be undefined
-            const isValidTime = (t) => t && t !== '00:00';
-            const isScheduleOpen = schedule.isOpen === true ||
-                (schedule.isSplit && schedule.isOpen !== false) ||
-                (schedule.isOpen !== false && isValidTime(schedule.open) && isValidTime(schedule.close));
+            if (!schedule) {
+                return { open: '08:00', close: '23:00' };
+            }
 
-            if (schedule && isScheduleOpen) {
+            // If day explicitly marked as closed
+            if (schedule.isOpen === false) {
+                return { open: '00:00', close: '00:00' };
+            }
                 // console.log('✅ Schedule is OPEN for', dayName);
 
                 // Check if split schedule is enabled in the new format (from BusinessSettings)
@@ -158,14 +185,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
                 // console.log('➡️ Continuous shift for', dayName);
 
-                // Fallback to explicit ranges if they exist (old logic)
                 return {
-                    open: schedule.open,
-                    close: schedule.close,
+                    open: schedule.open || '08:00',
+                    close: schedule.close || '23:00',
                     ranges: (schedule.ranges && schedule.ranges.length > 0) ? schedule.ranges : undefined
                 };
-            }
-            return { open: '00:00', close: '00:00' }; // Closed
         }
 
         // Handle legacy object format (weekday/weekend)
@@ -299,6 +323,35 @@ export default function BusinessProfile({ business: initialBusiness }) {
         }
     }, [business]);
 
+    // 🎫 Detect promoId in URL and fetch promotion details
+    useEffect(() => {
+        const promoId = searchParams.get('promoId');
+        if (promoId && business) {
+            const fetchPromotion = async () => {
+                try {
+                    const promo = await serviceAdapter.getPromotionById(promoId);
+                    if (promo && promo.business_id === business.id) {
+                        setActivePromotion(promo);
+                        // Auto-select sport if promo has sport_type
+                        if (promo.sport_type && business.type === 'sport') {
+                            setSelectedItem(promo.sport_type);
+                        }
+                        // Auto-select service if promo has service_id
+                        if (promo.service_id && business.type === 'service' && business.services) {
+                            const matchingService = business.services.find(s => s.id === promo.service_id);
+                            if (matchingService) {
+                                setSelectedItem(matchingService);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn('⚠️ Could not fetch promotion:', err.message);
+                }
+            };
+            fetchPromotion();
+        }
+    }, [searchParams, business]);
+
 
 
 
@@ -325,7 +378,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 root.style.setProperty('--text-secondary', '#4A4A4A');
                 root.style.setProperty('--border', '#E0E0E0');
                 // Keep original dot grid for light mode
-                body.style.backgroundImage = 'radial-gradient(#E0E0E0 1.5px, transparent 1.5px)';
+                body.style.backgroundImage = 'radial-gradient(#C5C5C5 1.5px, transparent 1.5px)';
+                body.style.backgroundSize = '24px 24px';
             } else {
                 root.style.setProperty('--bg-main', '#121212');
                 root.style.setProperty('--bg-card', '#1E1E1E');
@@ -333,7 +387,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 root.style.setProperty('--text-secondary', '#A0A0A0');
                 root.style.setProperty('--border', '#333333');
                 // More subtle dot grid for dark mode
-                body.style.backgroundImage = 'radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px)';
+                body.style.backgroundImage = 'radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px)';
+                body.style.backgroundSize = '24px 24px';
             }
         }
         return () => {
@@ -348,6 +403,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
             root.style.removeProperty('--text-secondary');
             root.style.removeProperty('--border');
             body.style.removeProperty('background-image');
+            body.style.removeProperty('background-size');
         };
     }, [business]);
 
@@ -370,6 +426,19 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 finalSpecialistId = availableSpecialists[0].id;
             }
 
+            // 🎫 Calculate discount from active promotion
+            let finalPrice = finalDetails.price;
+            let discountApplied = 0;
+            if (activePromotion && activePromotion.discount_value > 0) {
+                if (activePromotion.discount_type === 'fixed') {
+                    discountApplied = Math.min(activePromotion.discount_value, finalPrice);
+                } else {
+                    // percentage (default)
+                    discountApplied = Math.round(finalPrice * (activePromotion.discount_value / 100));
+                }
+                finalPrice = finalPrice - discountApplied;
+            }
+
             const bookingData = {
                 businessId: business.id,
                 serviceId: business.type === 'service' ? selectedItem.id : null,
@@ -379,14 +448,14 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 time: finalDetails.time,
                 customerName: finalDetails.customerName,
                 customerPhone: finalDetails.customerPhone,
-                price: finalDetails.price,
+                price: finalPrice,
                 status: 'pending',
-                // Venue specific fields
                 // Venue specific fields - Prioritize selectedTime.duration for Padel
                 duration: selectedTime?.duration || finalDetails.duration || (business.type === 'venue' ? (selectedDuration * 60) : (business.type === 'service' ? selectedItem.duration : 60)),
                 metadata: business.type === 'venue' ? { additionalServices: selectedAdditionalServices } : null,
-
-
+                // 🎫 Promo tracking
+                promo_id: activePromotion?.id || null,
+                discount_applied: discountApplied,
 
                 history: [
                     {
@@ -425,9 +494,34 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const { open, close, ranges } = getBusinessHours(selectedDate);
     const interval = selectedItem?.duration || 60; // Use service duration or default 60 min
 
-    // 🆕 Check if business has padel courts to adjust layout width
+    // 🆕 Compact layout width for Desktop ONLY
     const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
-    const containerWidth = hasPadelCourts ? '90%' : '800px';
+    const containerWidth = hasPadelCourts ? '740px' : '660px';
+
+    const now = new Date();
+    const rawHighlights = business?.gallery_highlights && business.gallery_highlights.length > 0
+        ? business.gallery_highlights
+        : (business?.gallery_images && business.gallery_images.length > 0
+            ? [{
+                id: 'legacy_gallery',
+                title: 'Galería',
+                cover_image: business.gallery_images[0],
+                images: business.gallery_images,
+                order: 0
+            }]
+            : []);
+
+    // Filter out expired 24-hour stories
+    const validHighlights = rawHighlights.filter(item => {
+        if (item.is_story && item.expires_at) {
+            return new Date(item.expires_at) > now;
+        }
+        return true;
+    });
+
+    const activeStories = validHighlights.filter(h => h.is_story);
+    const permanentHighlights = validHighlights.filter(h => !h.is_story);
+    const highlights = activeStories.length > 0 ? [...activeStories, ...permanentHighlights] : permanentHighlights;
 
 
 
@@ -451,89 +545,124 @@ export default function BusinessProfile({ business: initialBusiness }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            style={{ paddingBottom: '80px' }}
+            className="business-profile-page"
+            style={{ paddingBottom: '80px', width: '100%', overflowX: 'clip' }}
         >
-            {/* 1. Immersive Hero Section */}
-            {/* Header / Banner */}
-            <div style={{
-                position: 'relative',
-                height: window.innerWidth <= 768 ? '25vh' : '40vh',
-                minHeight: window.innerWidth <= 768 ? '180px' : '250px',
-                overflow: 'hidden'
-            }}>
-                <motion.img
-                    layoutId={`business-image-${business.id}`}
-                    src={selectedItem?.image_url || business.banner_image || business.image}
-                    alt={business.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    transition={{ duration: 0.5, ease: "circOut" }}
-                />
-                <div style={{
-                    position: 'absolute',
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)'
-                }}></div>
-
-                <button
-                    onClick={() => navigate('/')}
-                    style={{
-                        position: 'absolute',
-                        top: '16px',
-                        left: '16px',
-                        background: 'rgba(0,0,0,0.3)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        borderRadius: '50%',
-                        width: '40px',
-                        height: '40px',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        zIndex: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s ease'
-                    }}
-                >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M19 12H5" />
-                        <path d="M12 19l-7-7 7-7" />
-                    </svg>
-                </button>
-            </div>
-
-            <div className="container" style={{ maxWidth: containerWidth, margin: '0 auto', padding: '0 16px', position: 'relative', zIndex: 2 }}>
-
-                {/* 2. Business Info Card */}
-                <div style={{
-                    backgroundColor: 'var(--bg-card)',
-                    borderRadius: '24px',
-                    padding: '24px 20px',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                    textAlign: 'center',
-                    marginTop: '-40px',
-                    marginBottom: '30px',
-                    border: '1px solid var(--border)'
+            <div className="business-profile-card-shell">
+                {/* 1. Immersive Hero Section */}
+                {/* Header / Banner */}
+                <div className="business-profile-banner" style={{
+                    position: 'relative',
+                    height: window.innerWidth <= 768 ? '25vh' : '180px',
+                    minHeight: '160px',
+                    maxHeight: '220px',
+                    overflow: 'hidden'
                 }}>
                     <motion.img
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        src={business.logo || business.image} // Use Logo here
+                        layoutId={`business-image-${business.id}`}
+                        src={selectedItem?.image_url || business.banner_image || business.image}
                         alt={business.name}
-                        style={{
-                            width: '100px',
-                            height: '100px',
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            border: `4px solid var(--bg-card)`,
-                            marginTop: '-74px',
-                            marginBottom: '12px',
-                            boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
-                            backgroundColor: '#fff'
-                        }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        transition={{ duration: 0.5, ease: "circOut" }}
                     />
-                    <h1 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '8px', color: 'var(--text-primary)' }}>{business.name}</h1>
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)'
+                    }}></div>
+
+                    <button
+                        onClick={() => navigate('/')}
+                        style={{
+                            position: 'absolute',
+                            top: '16px',
+                            left: '16px',
+                            background: 'rgba(0,0,0,0.3)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            zIndex: 10,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 12H5" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div className="container" style={{ maxWidth: containerWidth, margin: '0 auto', padding: '0 16px', position: 'relative', zIndex: 2 }}>
+
+                    {/* 2. Business Info Card */}
+                    <div className="business-info-main-card" style={{
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '24px',
+                        padding: '24px 20px',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                        textAlign: 'center',
+                        marginTop: '-40px',
+                        marginBottom: '30px',
+                        border: '1px solid var(--border)'
+                    }}>
+                        {/* Business Profile Avatar with Instagram Story Gradient Ring (Only active for 24h stories) */}
+                        <div
+                            onClick={() => {
+                                if (activeStories && activeStories.length > 0) {
+                                    setStoryViewerList(activeStories);
+                                    setSelectedPhotoIndex(0);
+                                    setSelectedHighlight(0);
+                                }
+                            }}
+                            className="business-avatar-container"
+                            style={{
+                                width: '106px',
+                                height: '106px',
+                                borderRadius: '50%',
+                                padding: '3px',
+                                background: activeStories.length > 0
+                                    ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
+                                    : 'var(--border)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '-74px auto 12px',
+                                cursor: activeStories.length > 0 ? 'pointer' : 'default',
+                                boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+                                position: 'relative'
+                            }}
+                            title={activeStories.length > 0 ? "Ver Historias (24hs)" : business.name}
+                        >
+                            <div style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                padding: '3px',
+                                background: 'var(--bg-card)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                                <img
+                                    src={business.logo || business.image}
+                                    alt={business.name}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        borderRadius: '50%',
+                                        objectFit: 'cover'
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        <h1 className="business-profile-title" style={{ fontSize: '24px', fontWeight: '900', marginBottom: '8px', color: 'var(--text-primary)' }}>{business.name}</h1>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
                         <span>📍 {business.location}</span>
                     </div>
@@ -708,8 +837,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     />
                 )}
 
-                {/* Instagram-Style Highlights - Only for Service Businesses */}
-                {business.type === 'service' && (
+                {/* Instagram-Style Highlights */}
+                {business && (
                     (() => {
                         // Use gallery_highlights if available, otherwise convert gallery_images
                         const highlights = business.gallery_highlights && business.gallery_highlights.length > 0
@@ -724,24 +853,16 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                 }]
                                 : []);
 
-                        if (highlights.length === 0) return null;
+                        if (permanentHighlights.length === 0) return null;
 
                         return (
                             <div id="galeria" style={{ marginBottom: '20px', animation: 'slideUp 0.4s ease' }}>
-                                {/* Highlights carousel */}
-                                <div style={{
-                                    display: 'flex',
-                                    overflowX: 'auto',
-                                    gap: '16px',
-                                    paddingBottom: '10px',
-                                    scrollSnapType: 'x mandatory',
-                                    WebkitOverflowScrolling: 'touch',
-                                    justifyContent: window.innerWidth > 768 ? 'center' : 'flex-start'
-                                }}>
-                                    {highlights.map((highlight, index) => (
+                                <div className="highlights-container">
+                                    {permanentHighlights.map((highlight, index) => (
                                         <div
                                             key={highlight.id || index}
                                             onClick={() => {
+                                                setStoryViewerList(permanentHighlights);
                                                 setSelectedPhotoIndex(0);
                                                 setSelectedHighlight(index);
                                             }}
@@ -755,13 +876,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 gap: '8px'
                                             }}
                                         >
-                                            {/* Circular thumbnail with gradient border */}
+                                            {/* Circular thumbnail with clean subtle border */}
                                             <div style={{
                                                 width: '90px',
                                                 height: '90px',
                                                 borderRadius: '50%',
-                                                padding: '3px',
-                                                background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                                                padding: '2px',
+                                                background: 'var(--border)',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center'
@@ -770,7 +891,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                     width: '100%',
                                                     height: '100%',
                                                     borderRadius: '50%',
-                                                    padding: '3px',
+                                                    padding: '2px',
                                                     background: 'var(--bg-card)',
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -798,7 +919,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 textOverflow: 'ellipsis',
                                                 whiteSpace: 'nowrap'
                                             }}>
-                                                {highlight.title}
+                                                 {highlight.title}
                                             </span>
                                         </div>
                                     ))}
@@ -938,6 +1059,51 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     </>
                 )}
 
+                {/* 🎫 Active Promotion Banner */}
+                {activePromotion && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{
+                            margin: '0 0 20px 0',
+                            padding: '12px 16px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, #10b98115, #10b98108)',
+                            border: '1px solid #10b98140',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px'
+                        }}
+                    >
+                        <span style={{ fontSize: '22px' }}>🎫</span>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
+                                ¡Cupón activado!
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                {activePromotion.discount_type === 'fixed'
+                                    ? `$${activePromotion.discount_value} de descuento`
+                                    : `${activePromotion.discount_value}% OFF`
+                                } — {activePromotion.title}
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActivePromotion(null)}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                fontSize: '18px',
+                                padding: '4px'
+                            }}
+                            title="Quitar cupón"
+                        >
+                            ✕
+                        </button>
+                    </motion.div>
+                )}
+
                 {/* Step 1: Select Service (Only for Service businesses) */}
                 {business.type === 'service' && (
                     <section id="servicios" style={{ marginBottom: '30px' }}>
@@ -968,6 +1134,99 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         />
                     </section>
                 )}
+
+                {/* 5. Store Promotion Section (Tienda del Negocio) - Solo si el negocio tiene tienda habilitada */}
+                {business.store_enabled && (() => {
+                    const storeProducts = (business.metadata?.store_products && business.metadata.store_products.length > 0)
+                        ? business.metadata.store_products.filter(p => p.is_active !== false)
+                        : [];
+
+                    if (storeProducts.length === 0) return null;
+
+                    const storeSubtitle = business.metadata?.store_banner_title || business.metadata?.store_banner_subtitle || 'Elegí tus productos y retiralos cuando vengas a jugar';
+
+                    return (
+                        <section style={{ 
+                            marginBottom: '30px',
+                            padding: '20px',
+                            background: 'linear-gradient(135deg, var(--bg-card) 0%, rgba(255,255,255,0.01) 100%)',
+                            borderRadius: '24px',
+                            border: '1px solid var(--border)',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                            backdropFilter: 'blur(10px)'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <div>
+                                    <h3 style={{ fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                                        🛍️ Tienda {business.name}
+                                    </h3>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        const subdomain = getSubdomain();
+                                        navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
+                                    }}
+                                    style={{
+                                        padding: '6px 14px',
+                                        borderRadius: '20px',
+                                        border: 'none',
+                                        background: 'rgba(255,255,255,0.08)',
+                                        color: 'var(--text-primary)',
+                                        fontWeight: '700',
+                                        fontSize: '11px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                                >
+                                    Ver Tienda ➔
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                                {storeProducts.map((prod, idx) => (
+                                    <div 
+                                        key={prod.id || idx}
+                                        onClick={() => {
+                                            const subdomain = getSubdomain();
+                                            navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
+                                        }}
+                                        style={{
+                                            flexShrink: 0,
+                                            width: '130px',
+                                            background: 'var(--bg-main)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '16px',
+                                            padding: '10px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'space-between',
+                                            transition: 'transform 0.2s',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                    >
+                                        <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
+                                            <img src={prod.image || prod.images?.[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&q=80'} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        </div>
+                                        <h4 style={{ fontSize: '11px', fontWeight: '700', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{prod.name}</h4>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                            <span style={{ fontSize: '11px', fontWeight: '800', color: primaryColor }}>${Number(prod.price).toLocaleString('es-AR')}</span>
+                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>➔</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    );
+                })()}
 
                 {/* Step 2: Select Date */}
                 {(selectedItem || business.type === 'venue') && (
@@ -1305,32 +1564,143 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                         }}>
                                             ⚠️ No hay especialistas disponibles para este horario
                                         </div>
-                                    ) : (
-                                        <select
-                                            value={selectedSpecialist?.id || ''}
-                                            onChange={(e) => {
-                                                const specialist = availableSpecialists.find(s => s.id === e.target.value);
-                                                setSelectedSpecialist(specialist);
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                padding: '12px',
-                                                fontSize: '14px',
-                                                borderRadius: '8px',
-                                                border: '1px solid var(--border)',
-                                                background: 'var(--bg-main)',
-                                                color: 'var(--text-primary)',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            <option value="">Seleccionar especialista...</option>
-                                            {availableSpecialists.map(specialist => (
-                                                <option key={specialist.id} value={specialist.id}>
-                                                    {specialist.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    )}
+                                     ) : (
+                                         <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
+                                             {/* "Cualquier especialista" Option */}
+                                             <div
+                                                 onClick={() => setSelectedSpecialist(null)}
+                                                 style={{
+                                                     display: 'flex',
+                                                     alignItems: 'center',
+                                                     gap: '12px',
+                                                     padding: '12px',
+                                                     borderRadius: '12px',
+                                                     border: !selectedSpecialist ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                     background: !selectedSpecialist ? 'rgba(132, 204, 22, 0.05)' : 'var(--bg-main)',
+                                                     cursor: 'pointer',
+                                                     transition: 'all 0.2s ease',
+                                                     boxShadow: !selectedSpecialist ? '0 4px 12px rgba(132, 204, 22, 0.15)' : 'none',
+                                                     gridColumn: isMobile ? 'span 1' : 'span 2'
+                                                 }}
+                                             >
+                                                 <div style={{
+                                                     width: '40px',
+                                                     height: '40px',
+                                                     borderRadius: '50%',
+                                                     background: 'var(--border)',
+                                                     display: 'flex',
+                                                     alignItems: 'center',
+                                                     justifyContent: 'center',
+                                                     fontSize: '18px'
+                                                 }}>
+                                                     👥
+                                                 </div>
+                                                 <div style={{ flex: 1, minWidth: 0 }}>
+                                                     <div style={{
+                                                         fontWeight: '700',
+                                                         fontSize: '14px',
+                                                         color: !selectedSpecialist ? 'var(--primary-paddle)' : 'var(--text-primary)'
+                                                     }}>
+                                                         Cualquier especialista
+                                                     </div>
+                                                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                                         Asignación automática
+                                                     </div>
+                                                 </div>
+                                                 <div style={{
+                                                     width: '20px',
+                                                     height: '20px',
+                                                     borderRadius: '50%',
+                                                     border: !selectedSpecialist ? 'none' : '2px solid var(--border)',
+                                                     background: !selectedSpecialist ? 'var(--primary-paddle)' : 'transparent',
+                                                     display: 'flex',
+                                                     alignItems: 'center',
+                                                     justifyContent: 'center',
+                                                     transition: 'all 0.2s'
+                                                 }}>
+                                                     {!selectedSpecialist && (
+                                                         <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                             <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                         </svg>
+                                                     )}
+                                                 </div>
+                                             </div>
+
+                                             {/* Available Specialists list */}
+                                             {availableSpecialists.map(specialist => {
+                                                 const isSelected = selectedSpecialist?.id === specialist.id;
+                                                 const avatarUrl = specialist.avatar_url || specialist.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(specialist.name)}&background=random&size=100`;
+                                                 return (
+                                                     <div
+                                                         key={specialist.id}
+                                                         onClick={() => setSelectedSpecialist(specialist)}
+                                                         style={{
+                                                             display: 'flex',
+                                                             alignItems: 'center',
+                                                             gap: '12px',
+                                                             padding: '12px',
+                                                             borderRadius: '12px',
+                                                             border: isSelected ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                             background: isSelected ? 'rgba(132, 204, 22, 0.05)' : 'var(--bg-main)',
+                                                             cursor: 'pointer',
+                                                             transition: 'all 0.2s ease',
+                                                             boxShadow: isSelected ? '0 4px 12px rgba(132, 204, 22, 0.15)' : 'none'
+                                                         }}
+                                                     >
+                                                         <img
+                                                             src={avatarUrl}
+                                                             alt={specialist.name}
+                                                             style={{
+                                                                 width: '40px',
+                                                                 height: '40px',
+                                                                 borderRadius: '50%',
+                                                                 objectFit: 'cover',
+                                                                 border: '2px solid var(--bg-card)'
+                                                             }}
+                                                         />
+                                                         <div style={{ flex: 1, minWidth: 0 }}>
+                                                             <div style={{
+                                                                 fontWeight: '700',
+                                                                 fontSize: '14px',
+                                                                 color: isSelected ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                                                                 whiteSpace: 'nowrap',
+                                                                 overflow: 'hidden',
+                                                                 textOverflow: 'ellipsis'
+                                                             }}>
+                                                                 {specialist.name}
+                                                             </div>
+                                                             <div style={{
+                                                                 fontSize: '11px',
+                                                                 color: 'var(--text-secondary)',
+                                                                 whiteSpace: 'nowrap',
+                                                                 overflow: 'hidden',
+                                                                 textOverflow: 'ellipsis'
+                                                             }}>
+                                                                 {specialist.role || 'Especialista'}
+                                                             </div>
+                                                         </div>
+                                                         <div style={{
+                                                             width: '20px',
+                                                             height: '20px',
+                                                             borderRadius: '50%',
+                                                             border: isSelected ? 'none' : '2px solid var(--border)',
+                                                             background: isSelected ? 'var(--primary-paddle)' : 'transparent',
+                                                             display: 'flex',
+                                                             alignItems: 'center',
+                                                             justifyContent: 'center',
+                                                             transition: 'all 0.2s'
+                                                         }}>
+                                                             {isSelected && (
+                                                                 <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                     <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                                 </svg>
+                                                             )}
+                                                         </div>
+                                                     </div>
+                                                 );
+                                             })}
+                                         </div>
+                                     )}
                                 </div>
                             )}
                         </div>
@@ -1641,6 +2011,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             businessAlias: business.bank_alias,
                             businessCBU: business.cbu
                         }}
+                        activePromotion={activePromotion}
                         sportColor={primaryColor}
                         onClose={() => setShowModal(false)}
                         onConfirm={handleConfirmBooking}
@@ -1903,6 +2274,10 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     </div>
                 </section>
 
+
+
+
+
                 {/* Booking Summary Modal */}
                 {showModal && (
                     <BookingSummary
@@ -1913,12 +2288,15 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             date: selectedDate,
                             time: selectedTime.time || selectedTime,
                             duration: selectedTime.duration || (business.type === 'service' ? selectedItem.duration : 60), // Ensure duration is passed
-                            price: (selectedTime.price || (business.type === 'service' ? selectedItem.price : 0)) +
-                                (business.type === 'venue' ? selectedAdditionalServices.reduce((sum, s) => sum + Number(s.price), 0) : 0),
+                            price: (selectedTime.price || (business.type === 'service' ? selectedItem.price : 0)), // Base price only
                             courtName: business.type === 'sport' ? selectedTime.courtName : null,
                             courtId: business.type === 'sport' ? selectedTime.courtId : null,
-                            extras: business.type === 'venue' ? selectedAdditionalServices : []
+                            extras: [],
+                            business: business,
+                            businessPhone: business.whatsapp
                         }}
+                        availableExtras={(business?.additional_services || []).filter(s => s.is_active !== false)}
+                        activePromotion={activePromotion}
                         onClose={() => setShowModal(false)}
                         onConfirm={handleConfirmBooking}
                         isSubmitting={isSubmitting}
@@ -1926,25 +2304,14 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     />
                 )}
             </div>
+            </div> {/* End of business-profile-card-shell */}
 
             {/* Instagram-Style Highlight Viewer */}
             <AnimatePresence>
                 {selectedHighlight !== null && selectedPhotoIndex !== null && business && (
                     (() => {
-                        // Use same fallback logic as carousel
-                        const highlights = business.gallery_highlights && business.gallery_highlights.length > 0
-                            ? business.gallery_highlights
-                            : (business.gallery_images && business.gallery_images.length > 0
-                                ? [{
-                                    id: 'legacy_gallery',
-                                    title: 'Galería',
-                                    cover_image: business.gallery_images[0],
-                                    images: business.gallery_images,
-                                    order: 0
-                                }]
-                                : []);
-
-                        const highlight = highlights[selectedHighlight];
+                        const viewerHighlights = storyViewerList || activeStories;
+                        const highlight = viewerHighlights[selectedHighlight];
                         if (!highlight) return null;
 
                         const images = highlight.images || [];
@@ -2062,12 +2429,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                         const nextIndex = selectedPhotoIndex + 1;
                                         if (nextIndex >= totalImages) {
                                             // Move to next highlight or close
-                                            if (selectedHighlight < highlights.length - 1) {
+                                            if (selectedHighlight < viewerHighlights.length - 1) {
                                                 setSelectedHighlight(selectedHighlight + 1);
                                                 setSelectedPhotoIndex(0);
                                             } else {
                                                 setSelectedPhotoIndex(null);
                                                 setSelectedHighlight(null);
+                                                setStoryViewerList(null);
                                             }
                                         } else {
                                             setSelectedPhotoIndex(nextIndex);

@@ -32,7 +32,39 @@ export function findBusinessBySlug(businesses, slug) {
     if (!businesses || !slug) return null;
 
     return businesses.find(business => {
-        const businessSlug = generateSlug(business.name);
-        return businessSlug === slug;
+        return business.slug === slug || generateSlug(business.name) === slug;
     });
+}
+
+/**
+ * Extracts the subdomain from current window hostname if applicable
+ * @returns {string|null} - Subdomain name or null
+ */
+export function getSubdomain() {
+    if (typeof window === 'undefined') return null;
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+
+    // Handle double subdomain like www.cancha-apolo.turnitoslr.com
+    if (hostname.includes('turnitoslr.com') && parts.length > 3 && parts[0] === 'www') {
+        const actualSub = parts[1].toLowerCase();
+        if (!['admin', 'app', 'portal', 'api'].includes(actualSub)) {
+            const cleanHost = parts.slice(1).join('.');
+            window.location.href = `${window.location.protocol}//${cleanHost}${window.location.pathname}${window.location.search}`;
+            return actualSub;
+        }
+    }
+
+    if (hostname.includes('turnitoslr.com') && parts.length > 2) {
+        const sub = parts[0].toLowerCase();
+        if (!['www', 'admin', 'app', 'portal', 'api'].includes(sub)) {
+            return sub;
+        }
+    } else if (hostname.includes('localhost') && parts.length > 1) {
+        const sub = parts[0].toLowerCase();
+        if (!['www', 'admin', 'app', 'portal', 'api', 'localhost'].includes(sub)) {
+            return sub;
+        }
+    }
+    return null;
 }

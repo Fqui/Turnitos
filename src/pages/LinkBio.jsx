@@ -16,12 +16,28 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-export default function LinkBio() {
-    const { businessSlug } = useParams();
+export default function LinkBio({ overrideSlug }) {
+    const { businessSlug: routeSlug } = useParams();
+    const businessSlug = overrideSlug || routeSlug;
     const navigate = useNavigate();
     const [business, setBusiness] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
+    const [selectedHighlight, setSelectedHighlight] = useState(null);
+
+    const getBookingPath = (hash = '') => {
+        if (overrideSlug) {
+            return `/turnos${hash}`;
+        }
+        return `/${businessSlug}${hash}`;
+    };
+
+    const getStorePath = () => {
+        if (overrideSlug) {
+            return '/tienda';
+        }
+        return `/${businessSlug}/tienda`;
+    };
 
     useEffect(() => {
         const fetchBusiness = async () => {
@@ -40,6 +56,38 @@ export default function LinkBio() {
 
         fetchBusiness();
     }, [businessSlug]);
+
+    // Theme Management
+    useEffect(() => {
+        if (business) {
+            const root = document.documentElement;
+            const body = document.body;
+
+            // Calculate primary color
+            const color = business.primary_color || business.button_color || business.buttonColor ||
+                (business.category === 'beauty' ? '#FF4081' :
+                    business.category === 'health' ? '#2979FF' : '#00E676');
+
+            // Set primary color variable
+            root.style.setProperty('--primary-paddle', color);
+
+            if (business.theme === 'light') {
+                root.style.setProperty('--bg-main', '#F5F7FA');
+                root.style.setProperty('--bg-card', '#FFFFFF');
+                root.style.setProperty('--text-primary', '#1A1A1A');
+                root.style.setProperty('--text-secondary', '#4A4A4A');
+                root.style.setProperty('--border', '#E0E0E0');
+                body.style.backgroundImage = 'radial-gradient(#E0E0E0 1.5px, transparent 1.5px)';
+            } else {
+                root.style.setProperty('--bg-main', '#121212');
+                root.style.setProperty('--bg-card', '#1E1E1E');
+                root.style.setProperty('--text-primary', '#FFFFFF');
+                root.style.setProperty('--text-secondary', '#A0A0A0');
+                root.style.setProperty('--border', '#333333');
+                body.style.backgroundImage = 'radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px)';
+            }
+        }
+    }, [business]);
 
     if (loading) {
         return (
@@ -66,9 +114,30 @@ export default function LinkBio() {
         return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
     }
 
-    const primaryColor = business.primaryColor || business.button_color || business.buttonColor ||
+    const primaryColor = business.primary_color || business.button_color || business.buttonColor ||
         (business.category === 'beauty' ? '#FF4081' :
             business.category === 'health' ? '#2979FF' : '#00E676');
+
+    const highlights = business.gallery_highlights && business.gallery_highlights.length > 0
+        ? business.gallery_highlights
+        : (business.gallery_images && business.gallery_images.length > 0
+            ? [{
+                id: 'legacy_gallery',
+                title: 'Galería',
+                cover_image: business.gallery_images[0],
+                images: business.gallery_images,
+                order: 0
+            }]
+            : []);
+
+    // Filter active 24h stories
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    const activeStories = (highlights || []).filter(h => {
+        if (!h.is_story) return false;
+        const createdAt = h.created_at ? new Date(h.created_at).getTime() : 0;
+        return (now - createdAt) < twentyFourHours;
+    });
 
     // Filter out social/location links from the main list as they will have their own sections
     const mainLinks = [
@@ -77,84 +146,131 @@ export default function LinkBio() {
                 business.type === 'venue' ? 'Ver Disponibilidad' : 'Reservar Turno',
             subtitle: 'Reserva tu lugar en segundos',
             icon: '📅',
-            action: () => navigate(`/${businessSlug}/turnos#servicios`),
+            action: () => navigate(getBookingPath()),
             highlight: true
-        }
+        },
+        ...(business.store_enabled ? [{
+            title: `Tienda ${business.name}`,
+            subtitle: business.metadata?.store_banner_title || business.metadata?.store_banner_subtitle || 'Conocé nuestros productos',
+            icon: '🛒',
+            action: () => navigate(getStorePath()),
+            highlight: false
+        }] : [])
     ];
 
+    const bannerUrl = business.banner_image || business.banner || business.image || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&q=80';
+    const isDesktop = window.innerWidth > 768;
+
     return (
-        <div style={{
-            minHeight: '100vh',
+        <div className="linkbio-container" style={{
             backgroundColor: 'var(--bg-main)',
+            backgroundImage: 'radial-gradient(var(--border) 1.5px, transparent 1.5px)',
+            backgroundSize: '24px 24px',
+            height: isDesktop ? '100vh' : 'auto',
+            minHeight: isDesktop ? 'auto' : '100vh',
+            overflow: isDesktop ? 'hidden' : 'visible',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            backgroundImage: 'radial-gradient(var(--border) 1.5px, transparent 1.5px)',
-            backgroundSize: '24px 24px',
+            justifyContent: isDesktop ? 'center' : 'flex-start',
+            paddingBottom: isDesktop ? '0' : '40px',
             overflowX: 'hidden'
         }}>
             {/* Banner Section */}
-            <div style={{
+            <div className="linkbio-banner" style={{
+                height: isDesktop ? '110px' : '180px',
                 width: '100%',
-                height: '140px',
-                backgroundImage: `url(${business.banner_image || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&q=80'})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                position: 'relative'
+                maxWidth: isDesktop ? '420px' : '100%',
+                borderRadius: isDesktop ? '16px' : '0',
+                position: 'relative',
+                overflow: 'hidden',
+                flexShrink: 0,
+                boxShadow: isDesktop ? '0 8px 24px rgba(0,0,0,0.1)' : 'none',
+                backgroundColor: 'var(--bg-card)'
             }}>
+                <img
+                    src={bannerUrl}
+                    alt={business.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
                 <div style={{
                     position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%)'
+                    inset: 0,
+                    background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.3) 100%)'
                 }} />
             </div>
 
             {/* Profile Section */}
             <motion.div
+                className="linkbio-profile-card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 style={{
                     textAlign: 'center',
-                    marginBottom: '16px',
+                    marginBottom: isDesktop ? '6px' : '16px',
                     width: '100%',
-                    maxWidth: '450px',
+                    maxWidth: isDesktop ? '420px' : '520px',
                     padding: '0 16px',
-                    marginTop: '-50px',
+                    marginTop: isDesktop ? '-30px' : '-50px',
                     position: 'relative',
                     zIndex: 10
                 }}
             >
-                <div style={{
-                    width: '100px',
-                    height: '100px',
-                    borderRadius: '50%',
-                    margin: '0 auto 16px',
-                    border: '4px solid var(--bg-main)',
-                    boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
-                    overflow: 'hidden',
-                    backgroundColor: 'white'
-                }}>
-                    <img
-                        src={business.logo || business.image}
-                        alt={business.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
+                <div
+                    onClick={() => {
+                        if (activeStories && activeStories.length > 0) {
+                            setSelectedPhotoIndex(0);
+                            setSelectedHighlight(0);
+                        }
+                    }}
+                    className="linkbio-logo"
+                    style={{
+                        width: isDesktop ? '70px' : '124px',
+                        height: isDesktop ? '70px' : '124px',
+                        borderRadius: '50%',
+                        margin: isDesktop ? '0 auto 6px' : '0 auto 16px',
+                        padding: '3px',
+                        background: activeStories.length > 0
+                            ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
+                            : 'var(--border)',
+                        boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: activeStories.length > 0 ? 'pointer' : 'default'
+                    }}
+                    title={activeStories.length > 0 ? "Ver Historias (24hs)" : business.name}
+                >
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        padding: '3px',
+                        background: 'var(--bg-main)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <img
+                            src={business.logo || business.image}
+                            alt={business.name}
+                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                    </div>
                 </div>
-                <h1 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                <h1 className="linkbio-name" style={{ fontSize: isDesktop ? '16px' : '22px', fontWeight: '800', marginBottom: isDesktop ? '2px' : '8px', color: 'var(--text-primary)' }}>
                     {business.name}
                 </h1>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                <p className="linkbio-desc" style={{ fontSize: isDesktop ? '12px' : '14px', color: 'var(--text-secondary)', marginBottom: isDesktop ? '6px' : '12px' }}>
                     {business.description || '¡Reserva tu turno online de forma rápida y sencilla!'}
                 </p>
 
                 {/* Social Media Row */}
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '16px' }}>
+                <div className="linkbio-socials" style={{ display: 'flex', gap: isDesktop ? '8px' : '12px', justifyContent: 'center', marginBottom: isDesktop ? '4px' : '16px' }}>
                     {/* Instagram */}
                     {business.instagram && (
                         <a
+                            className="linkbio-social-btn"
                             href={business.instagram}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -180,6 +296,7 @@ export default function LinkBio() {
                     {/* Facebook */}
                     {business.facebook && (
                         <a
+                            className="linkbio-social-btn"
                             href={business.facebook}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -205,6 +322,7 @@ export default function LinkBio() {
                     {/* TikTok */}
                     {business.tiktok && (
                         <a
+                            className="linkbio-social-btn"
                             href={business.tiktok}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -228,208 +346,203 @@ export default function LinkBio() {
                     )}
                 </div>
 
-                {/* Gallery Section */}
-                {business.gallery_images && business.gallery_images.length > 0 && (
-                    <div style={{ width: '100%', maxWidth: '450px', padding: '0 16px', marginBottom: '24px' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                            {business.gallery_images.slice(0, 2).map((img, index) => (
-                                <div
-                                    key={index}
-                                    onClick={() => setSelectedPhotoIndex(index)}
-                                    style={{
-                                        width: 'calc(33.33% - 6px)',
-                                        height: '100px',
-                                        borderRadius: '12px',
-                                        overflow: 'hidden',
-                                        cursor: 'pointer',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                        border: '1px solid var(--border)'
-                                    }}
-                                >
-                                    <img
-                                        src={img}
-                                        alt={`Gallery ${index}`}
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                    />
-                                </div>
-                            ))}
-                            {business.gallery_images.length > 0 && (
-                                <button
-                                    onClick={() => navigate(`/${businessSlug}/turnos`)}
-                                    style={{
-                                        width: 'calc(33.33% - 6px)',
-                                        height: '100px',
-                                        borderRadius: '12px',
-                                        border: '1px solid var(--border)',
-                                        backgroundColor: 'var(--bg-card)',
-                                        color: 'var(--text-primary)',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: 'pointer',
-                                        fontSize: '11px',
-                                        fontWeight: '700',
-                                        gap: '4px',
-                                        padding: '0'
-                                    }}
-                                >
-                                    <span style={{ fontSize: '18px' }}>🖼️</span>
-                                    <span>Ver más</span>
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                )}
             </motion.div>
 
-            {/* Image Lightbox with Navigation */}
+            {/* Highlights Immersive Viewer (Instagram-style) */}
             <AnimatePresence>
-                {selectedPhotoIndex !== null && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            backgroundColor: 'rgba(0,0,0,0.92)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 1000,
-                            padding: '20px'
-                        }}
-                        onClick={() => setSelectedPhotoIndex(null)}
-                    >
-                        {/* Close Button */}
-                        <motion.button
-                            initial={{ y: -20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            style={{
-                                position: 'absolute',
-                                top: '24px',
-                                right: '24px',
-                                background: 'white',
-                                border: 'none',
-                                borderRadius: '50%',
-                                width: '44px',
-                                height: '44px',
-                                cursor: 'pointer',
-                                fontSize: '24px',
-                                color: 'black',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                                zIndex: 1001
-                            }}
-                        >
-                            ×
-                        </motion.button>
+                {selectedHighlight !== null && selectedPhotoIndex !== null && business && (
+                    (() => {
+                        const highlight = highlights[selectedHighlight];
+                        if (!highlight) return null;
 
-                        {/* Navigation Buttons */}
-                        {business.gallery_images.length > 1 && (
-                            <>
+                        const images = highlight.images || [];
+                        const totalImages = images.length;
+
+                        return (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                style={{
+                                    position: 'fixed',
+                                    inset: 0,
+                                    backgroundColor: 'rgba(0,0,0,0.95)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 2000
+                                }}
+                                onClick={() => {
+                                    setSelectedPhotoIndex(null);
+                                    setSelectedHighlight(null);
+                                }}
+                            >
+                                {/* Instagram-style progress bars */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '20px',
+                                    left: '20px',
+                                    right: '20px',
+                                    display: 'flex',
+                                    gap: '4px',
+                                    zIndex: 2002
+                                }}>
+                                    {images.map((_, index) => (
+                                        <div
+                                            key={index}
+                                            style={{
+                                                flex: 1,
+                                                height: '3px',
+                                                borderRadius: '2px',
+                                                background: index <= selectedPhotoIndex
+                                                    ? 'white'
+                                                    : 'rgba(255,255,255,0.3)',
+                                                transition: 'background 0.3s'
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Close Button */}
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setSelectedPhotoIndex((prev) => (prev > 0 ? prev - 1 : business.gallery_images.length - 1));
+                                        setSelectedPhotoIndex(null);
+                                        setSelectedHighlight(null);
                                     }}
                                     style={{
                                         position: 'absolute',
-                                        left: '20px',
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.2)',
-                                        borderRadius: '50%',
-                                        width: '44px',
-                                        height: '44px',
-                                        color: 'white',
-                                        fontSize: '20px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        backdropFilter: 'blur(5px)',
-                                        zIndex: 1001
-                                    }}
-                                >
-                                    ‹
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedPhotoIndex((prev) => (prev < business.gallery_images.length - 1 ? prev + 1 : 0));
-                                    }}
-                                    style={{
-                                        position: 'absolute',
+                                        top: '50px',
                                         right: '20px',
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        background: 'rgba(255,255,255,0.2)',
+                                        border: 'none',
                                         borderRadius: '50%',
-                                        width: '44px',
-                                        height: '44px',
-                                        color: 'white',
-                                        fontSize: '20px',
+                                        width: '40px',
+                                        height: '40px',
                                         cursor: 'pointer',
+                                        fontSize: '24px',
+                                        color: 'white',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        backdropFilter: 'blur(5px)',
-                                        zIndex: 1001
+                                        backdropFilter: 'blur(10px)',
+                                        zIndex: 2002
                                     }}
                                 >
-                                    ›
+                                    ×
                                 </button>
-                            </>
-                        )}
 
-                        <motion.img
-                            key={selectedPhotoIndex}
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            src={business.gallery_images[selectedPhotoIndex]}
-                            alt="Detailed view"
-                            style={{
-                                maxWidth: '100%',
-                                maxHeight: '85vh',
-                                borderRadius: '16px',
-                                boxShadow: '0 0 50px rgba(0,0,0,0.5)',
-                                objectFit: 'contain'
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                        />
+                                {/* Highlight title */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '50px',
+                                    left: '20px',
+                                    color: 'white',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    zIndex: 2002
+                                }}>
+                                    {highlight.title}
+                                </div>
 
-                        {/* Image Counter */}
-                        <div style={{
-                            position: 'absolute',
-                            bottom: '30px',
-                            color: 'white',
-                            fontSize: '14px',
-                            background: 'rgba(0,0,0,0.5)',
-                            padding: '6px 16px',
-                            borderRadius: '20px',
-                            backdropFilter: 'blur(10px)'
-                        }}>
-                            {selectedPhotoIndex + 1} / {business.gallery_images.length}
-                        </div>
-                    </motion.div>
+                                {/* Navigation areas (left/right tap zones) */}
+                                <div
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedPhotoIndex((prev) =>
+                                            prev > 0 ? prev - 1 : totalImages - 1
+                                        );
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: '30%',
+                                        cursor: 'pointer',
+                                        zIndex: 2001
+                                    }}
+                                />
+                                <div
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const nextIndex = selectedPhotoIndex + 1;
+                                        if (nextIndex >= totalImages) {
+                                            // Move to next highlight or close
+                                            if (selectedHighlight < highlights.length - 1) {
+                                                setSelectedHighlight(selectedHighlight + 1);
+                                                setSelectedPhotoIndex(0);
+                                            } else {
+                                                setSelectedPhotoIndex(null);
+                                                setSelectedHighlight(null);
+                                            }
+                                        } else {
+                                            setSelectedPhotoIndex(nextIndex);
+                                        }
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        right: 0,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: '70%',
+                                        cursor: 'pointer',
+                                        zIndex: 2001
+                                    }}
+                                />
+
+                                {/* Current image */}
+                                <motion.img
+                                    key={`${selectedHighlight}-${selectedPhotoIndex}`}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    transition={{ duration: 0.2 }}
+                                    src={images[selectedPhotoIndex]}
+                                    alt={`${highlight.title} - ${selectedPhotoIndex + 1}`}
+                                    style={{
+                                        maxWidth: '90%',
+                                        maxHeight: '80vh',
+                                        borderRadius: '8px',
+                                        objectFit: 'contain',
+                                        pointerEvents: 'none'
+                                    }}
+                                />
+
+                                {/* Image counter */}
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '30px',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    background: 'rgba(0,0,0,0.5)',
+                                    padding: '6px 16px',
+                                    borderRadius: '20px',
+                                    backdropFilter: 'blur(10px)',
+                                    zIndex: 2002
+                                }}>
+                                    {selectedPhotoIndex + 1} / {totalImages}
+                                </div>
+                            </motion.div>
+                        );
+                    })()
                 )}
             </AnimatePresence>
 
             {/* Main Links Section */}
-            <div style={{ width: '100%', maxWidth: '450px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', padding: '0 16px' }}>
+            <div className="linkbio-links-section" style={{ width: '100%', maxWidth: isDesktop ? '420px' : '520px', display: 'flex', flexDirection: 'column', gap: isDesktop ? '6px' : '12px', marginBottom: isDesktop ? '0' : '24px', padding: '0 16px' }}>
                 {mainLinks.map((link, index) => (
                     <motion.button
                         key={index}
+                        className="linkbio-link-btn"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
                         onClick={link.action}
                         style={{
                             width: '100%',
-                            padding: '12px 16px',
+                            padding: isDesktop ? '8px 12px' : '12px 16px',
                             borderRadius: '20px',
                             border: '1px solid var(--border)',
                             backgroundColor: link.highlight ? primaryColor : 'var(--bg-card)',
@@ -451,7 +564,7 @@ export default function LinkBio() {
                             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
                         }}
                     >
-                        <span style={{
+                        <span className="linkbio-link-icon-wrapper" style={{
                             fontSize: '20px',
                             backgroundColor: link.highlight ? 'rgba(255,255,255,0.2)' : 'var(--bg-main)',
                             width: '40px',
@@ -464,8 +577,8 @@ export default function LinkBio() {
                             {link.icon}
                         </span>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '700', fontSize: '16px' }}>{link.title}</div>
-                            <div style={{
+                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: isDesktop ? '14px' : '16px' }}>{link.title}</div>
+                            <div className="linkbio-link-subtitle" style={{
                                 fontSize: '13px',
                                 opacity: 0.8,
                                 color: link.highlight ? 'white' : 'var(--text-secondary)'
@@ -484,13 +597,14 @@ export default function LinkBio() {
                 {/* WhatsApp Button */}
                 {business.whatsapp && (
                     <motion.button
+                        className="linkbio-link-btn"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.2 }}
                         onClick={() => window.open(`https://wa.me/${business.whatsapp}`, '_blank')}
                         style={{
                             width: '100%',
-                            padding: '12px 16px',
+                            padding: isDesktop ? '8px 12px' : '12px 16px',
                             borderRadius: '20px',
                             border: '1px solid var(--border)',
                             backgroundColor: '#25D366',
@@ -512,7 +626,7 @@ export default function LinkBio() {
                             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
                         }}
                     >
-                        <span style={{
+                        <span className="linkbio-link-icon-wrapper" style={{
                             fontSize: '20px',
                             backgroundColor: 'rgba(255,255,255,0.2)',
                             width: '40px',
@@ -527,8 +641,8 @@ export default function LinkBio() {
                             </svg>
                         </span>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '700', fontSize: '16px' }}>WhatsApp</div>
-                            <div style={{
+                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: isDesktop ? '14px' : '16px' }}>WhatsApp</div>
+                            <div className="linkbio-link-subtitle" style={{
                                 fontSize: '13px',
                                 opacity: 0.8,
                                 color: 'white'
@@ -544,13 +658,14 @@ export default function LinkBio() {
                 {/* Location Button */}
                 {business.location && (
                     <motion.button
+                        className="linkbio-link-btn"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.3 }}
                         onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.location)}`, '_blank')}
                         style={{
                             width: '100%',
-                            padding: '12px 16px',
+                            padding: isDesktop ? '8px 12px' : '12px 16px',
                             borderRadius: '20px',
                             border: '1px solid var(--border)',
                             backgroundColor: 'var(--bg-card)',
@@ -572,7 +687,7 @@ export default function LinkBio() {
                             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
                         }}
                     >
-                        <span style={{
+                        <span className="linkbio-link-icon-wrapper" style={{
                             fontSize: '20px',
                             backgroundColor: 'var(--bg-main)',
                             width: '40px',
@@ -585,8 +700,8 @@ export default function LinkBio() {
                             📍
                         </span>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '700', fontSize: '16px' }}>Ubicación</div>
-                            <div style={{
+                            <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: isDesktop ? '14px' : '16px' }}>Ubicación</div>
+                            <div className="linkbio-link-subtitle" style={{
                                 fontSize: '13px',
                                 opacity: 0.8,
                                 color: 'var(--text-secondary)',
@@ -603,11 +718,6 @@ export default function LinkBio() {
                         </svg>
                     </motion.button>
                 )}
-            </div>
-
-            {/* Footer */}
-            <div style={{ marginTop: 'auto', paddingTop: '20px', opacity: 0.5, fontSize: '12px' }}>
-                Potenciado por <strong>TurnitosLR</strong>
             </div>
         </div >
     );

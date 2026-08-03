@@ -1,89 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import supabaseService from '../services/supabaseService';
 import './SubscriptionManager.css';
 
-const SubscriptionManager = ({ businessId, businessType, business }) => {
+const SubscriptionManager = ({ businessId, businessType, business, formData, onResourcesChange, onSave, saving, serviceAdapter, showToast }) => {
     const [subscription, setSubscription] = useState(null);
-    const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [selectedPlan, setSelectedPlan] = useState(null);
-    const [actualSpacesUsed, setActualSpacesUsed] = useState(0);
+    const [editingIndex, setEditingIndex] = useState(null);
+    const [editValue, setEditValue] = useState('');
+    const [editRoleValue, setEditRoleValue] = useState('');
+    const editInputRef = useRef(null);
 
     useEffect(() => {
         loadSubscriptionData();
     }, [businessId, businessType]);
 
     useEffect(() => {
-        // Calculate actual spaces used from business data
-        if (business) {
-            const isSport = business.type === 'sport' || business.type === 'venue';
-            const count = isSport
-                ? (business.courts?.length || 0)
-                : (business.specialists?.length || 0);
-            setActualSpacesUsed(count);
+        if (editingIndex !== null && editInputRef.current) {
+            editInputRef.current.focus();
+            editInputRef.current.select();
         }
-    }, [business]);
+    }, [editingIndex]);
 
     const loadSubscriptionData = async () => {
         try {
             setLoading(true);
             setError(null);
-
-            // Load current subscription
             const currentSub = await supabaseService.getSubscription(businessId);
             setSubscription(currentSub);
-
-            // Load available plans for this business type
-            const availablePlans = await supabaseService.getSubscriptionPlans(businessType);
-            setPlans(availablePlans);
-
         } catch (err) {
             console.error('Error loading subscription data:', err);
-            setError('Error al cargar información de suscripción');
+            setError('Error al cargar la información de suscripción');
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleUpgrade = async (planId) => {
-        if (!confirm('¿Estás seguro de cambiar tu plan de suscripción?')) {
-            return;
-        }
-
-        try {
-            setLoading(true);
-            await supabaseService.updateSubscription(businessId, planId);
-            await loadSubscriptionData();
-
-            // ✅ Notify parent component to refresh business data
-            if (business?.onSubscriptionUpdate) {
-                await business.onSubscriptionUpdate();
-            }
-
-            alert('¡Plan actualizado exitosamente!');
-        } catch (err) {
-            console.error('Error updating subscription:', err);
-            if (err.message && err.message.includes('valid_spaces')) {
-                alert('No puedes cambiar a un plan menor porque tienes más canchas/espacios creados de los que permite el nuevo plan. Por favor elimina algunos espacios antes de cambiar de plan.');
-            } else {
-                alert('Error al actualizar el plan: ' + err.message);
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
-    const getPlanBadge = (plan) => {
-        if (!subscription) return null;
-        if (plan.id === subscription.plan_name) {
-            return <span className="badge badge-current">Plan Actual</span>;
-        }
-        if (plan.spaces > subscription.spaces_included) {
-            return <span className="badge badge-upgrade">Upgrade</span>;
-        }
-        return null;
     };
 
     const formatPrice = (price) => {
@@ -94,8 +44,103 @@ const SubscriptionManager = ({ businessId, businessType, business }) => {
         }).format(price);
     };
 
+    // Determine business type
+    const bType = (formData?.type || business?.type || '').toLowerCase();
+    const categoryName = (formData?.categories?.name || formData?.category || business?.categories?.name || '').toLowerCase();
+    const subcatName = (formData?.subcategories?.[0]?.name || formData?.subcategories?.[0]?.slug || '').toLowerCase();
+    const isSport = bType === 'sport' || bType === 'venue' || categoryName.includes('deporte') || subcatName.includes('futbol') || subcatName.includes('padel') || ((formData?.courts?.length || 0) > 0);
+
+    const resourceLabel = isSport ? 'Cancha' : 'Especialista';
+    const resourceLabelPlural = isSport ? 'Canchas' : 'Especialistas';
+    const resourceKey = isSport ? 'courts' : 'specialists';
+    const resourceIcon = isSport ? '🏟️' : '👤';
+
+    // Build resources list
+    const planName = subscription?.plan_name || business?.subscription_plan_id || 'Plan Personalizado';
+    const spacesIncluded = subscription?.spaces_included || business?.capacity_limit || 1;
+    const monthlyPrice = subscription?.monthly_price || 0;
+
+    const expectedCount = Math.max(
+        spacesIncluded,
+        formData?.capacity_limit || 0,
+        formData?.capacity || 0,
+        formData?.courts?.length || 0,
+        formData?.specialists?.length || 0,
+        1
+    );
+
+    let rawResources = isSport ? (formData?.courts || []) : (formData?.specialists || []);
+    if (rawResources.length < expectedCount) {
+        rawResources = Array.from({ length: expectedCount }, (_, i) => {
+            return rawResources[i] || {
+                id: `temp-${resourceKey}-${i + 1}`,
+                name: `${resourceLabel} ${i + 1}`,
+                active: true
+            };
+        });
+    }
+    const resources = rawResources;
+    const actualSpacesUsed = resources.filter(r => r.active !== false).length;
+    const isLimitReached = actualSpacesUsed >= spacesIncluded;
+
+    // Edit handlers
+    const startEdit = (index) => {
+        setEditingIndex(index);
+        setEditValue(resources[index].name || '');
+        setEditRoleValue(resources[index].role || '');
+    };
+
+    const confirmEdit = () => {
+        if (editingIndex === null) return;
+        const newResources = [...resources];
+        newResources[editingIndex] = {
+            ...resources[editingIndex],
+            name: editValue.trim() || `${resourceLabel} ${editingIndex + 1}`,
+            ...(isSport ? {} : { role: editRoleValue.trim() })
+        };
+        if (onResourcesChange) onResourcesChange(resourceKey, newResources);
+        setEditingIndex(null);
+        setEditValue('');
+        setEditRoleValue('');
+    };
+
+    const cancelEdit = () => {
+        setEditingIndex(null);
+        setEditValue('');
+        setEditRoleValue('');
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') confirmEdit();
+        if (e.key === 'Escape') cancelEdit();
+    };
+
+    const toggleActive = (index) => {
+        const newResources = [...resources];
+        const newActive = resources[index].active === false ? true : false;
+        newResources[index] = { ...resources[index], active: newActive };
+        if (onResourcesChange) onResourcesChange(resourceKey, newResources);
+        if (showToast) showToast(`${resourceLabel} ${resources[index].name} ${newActive ? 'habilitado' : 'deshabilitado'}`, newActive ? 'success' : 'info');
+    };
+
+    const handlePhotoUpload = async (index, file) => {
+        if (!file || !serviceAdapter) return;
+        try {
+            if (showToast) showToast('Subiendo foto...', 'info');
+            const url = await serviceAdapter.uploadImage(file);
+            const newResources = [...resources];
+            newResources[index] = { ...resources[index], avatar_url: url };
+            if (onResourcesChange) onResourcesChange(resourceKey, newResources);
+            if (onSave) await onSave({ [resourceKey]: newResources });
+            if (showToast) showToast('Foto guardada correctamente', 'success');
+        } catch (error) {
+            console.error(error);
+            if (showToast) showToast('Error al subir imagen', 'error');
+        }
+    };
+
     if (loading) {
-        return <div className="subscription-manager loading">Cargando...</div>;
+        return <div className="subscription-manager loading">Cargando suscripción...</div>;
     }
 
     if (error) {
@@ -104,128 +149,159 @@ const SubscriptionManager = ({ businessId, businessType, business }) => {
 
     return (
         <div className="subscription-manager">
-            {/* Current Subscription Summary */}
-            {subscription && (
-                <div className="current-subscription">
-                    <h3>Tu Suscripción Actual</h3>
-                    <div className="subscription-card">
-                        <div className="subscription-header">
-                            <h4>
-                                {plans.find(p => p.id === subscription.plan_name)?.name || 'Plan Personalizado'}
-                            </h4>
-                            {subscription.status === 'trial' || (subscription.trial_end_date && new Date(subscription.trial_end_date) > new Date()) ? (
-                                <span className="status status-trial">
-                                    En periodo de prueba
-                                </span>
-                            ) : (
-                                <span className={`status status-${subscription.status}`}>
-                                    {subscription.status === 'active' ? 'Activo' : subscription.status}
-                                </span>
-                            )}
-                        </div>
-                        <div className="subscription-details">
-                            <div className="detail-item">
-                                <span className="label">Espacios incluidos:</span>
-                                <span className="value">{subscription.spaces_included}</span>
-                            </div>
-                            <div className="detail-item">
-                                <span className="label">Espacios en uso:</span>
-                                <span className="value">
-                                    {actualSpacesUsed} / {subscription.spaces_included}
-                                    {actualSpacesUsed >= subscription.spaces_included && (
-                                        <span className="warning"> ⚠️ Límite alcanzado</span>
-                                    )}
-                                </span>
-                            </div>
-                            <div className="detail-item">
-                                <span className="label">Precio mensual:</span>
-                                <span className="value price">{formatPrice(subscription.monthly_price)}</span>
-                            </div>
-                            <div className="detail-item">
-                                {subscription.status === 'trial' || (subscription.trial_end_date && new Date(subscription.trial_end_date) > new Date()) ? (
-                                    <>
-                                        <span className="label">Finaliza el:</span>
-                                        <span className="value" style={{ color: 'var(--warning)' }}>
-                                            {new Date(subscription.trial_end_date).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}
-                                        </span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="label">Próxima facturación:</span>
-                                        <span className="value">{new Date(subscription.next_billing_date).toLocaleDateString('es-AR')}</span>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+            {/* Plan details row */}
+            <div className="plan-details-row">
+                <div className="plan-detail-chip">
+                    <span className="chip-label">Precio</span>
+                    <span className="chip-value price">{formatPrice(monthlyPrice)}<span className="chip-period">/mes</span></span>
                 </div>
-            )}
-
-            {/* Available Plans */}
-            <div className="available-plans">
-                <h3>Planes Disponibles</h3>
-                <div className="plans-grid">
-                    {plans.map(plan => (
-                        <div
-                            key={plan.id}
-                            className={`plan-card ${subscription?.plan_name === plan.id ? 'current' : ''}`}
-                        >
-                            <div className="plan-header">
-                                <h4>{plan.name}</h4>
-                                {getPlanBadge(plan)}
-                            </div>
-                            <div className="plan-price">
-                                <span className="amount">{formatPrice(plan.price_monthly || plan.monthly_price || 0)}</span>
-                                <span className="period">/mes</span>
-                            </div>
-                            <div className="plan-features">
-                                <div className="feature">
-                                    <span className="icon">✓</span>
-                                    <span><strong>{plan.spaces_included || plan.spaces}</strong> {businessType === 'sport' ? 'canchas' : businessType === 'service' ? 'especialistas' : 'espacios'}</span>
-                                </div>
-                                {plan.price_per_space && (
-                                    <div className="feature secondary">
-                                        <span className="icon">💰</span>
-                                        <span>{formatPrice(plan.price_per_space)} por espacio</span>
-                                    </div>
-                                )}
-                                {plan.features && Object.entries(plan.features).map(([key, value]) => (
-                                    value && (
-                                        <div key={key} className="feature">
-                                            <span className="icon">✓</span>
-                                            <span>{key === 'support' ? `Soporte ${value}` :
-                                                key === 'analytics' ? 'Analytics avanzado' :
-                                                    key === 'custom_features' ? 'Features personalizados' :
-                                                        value}</span>
-                                        </div>
-                                    )
-                                ))}
-                            </div>
-                            {subscription?.plan_name !== plan.id && (
-                                <button
-                                    className="btn-select-plan"
-                                    onClick={() => handleUpgrade(plan.id)}
-                                    disabled={loading}
-                                >
-                                    {(plan.spaces_included || plan.spaces) > (subscription?.spaces_included || 0) ? 'Actualizar Plan' : 'Cambiar Plan'}
-                                </button>
-                            )}
-                        </div>
-                    ))}
+                <div className="plan-detail-chip">
+                    <span className="chip-label">{resourceLabelPlural} Incluidas</span>
+                    <span className="chip-value">{spacesIncluded}</span>
+                </div>
+                <div className="plan-detail-chip">
+                    <span className="chip-label">
+                        {subscription?.status === 'trial' || (subscription?.trial_end_date && new Date(subscription.trial_end_date) > new Date())
+                            ? 'Fin de Prueba'
+                            : 'Próxima Factura'}
+                    </span>
+                    <span className="chip-value">
+                        {new Date(subscription?.trial_end_date || subscription?.next_billing_date || Date.now()).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
                 </div>
             </div>
 
-            {/* Usage Warning */}
-            {subscription && actualSpacesUsed >= subscription.spaces_included && (
-                <div className="usage-warning">
-                    <h4>⚠️ Límite de espacios alcanzado</h4>
-                    <p>
-                        Has alcanzado el límite de {subscription.spaces_included} espacios de tu plan actual.
-                        Para agregar más {businessType === 'sport' ? 'canchas' : businessType === 'service' ? 'especialistas' : 'espacios'},
-                        necesitas actualizar tu plan.
-                    </p>
+            {/* ─── Resources List ─── */}
+            <div className="resources-section">
+                <div className="resources-header">
+                    <div>
+                        <h3 className="resources-title">
+                            {isSport ? 'Mis Canchas' : 'Mis Especialistas'}
+                        </h3>
+                        <p className="resources-subtitle">
+                            Tocá el <span className="pencil-hint">✏️</span> para cambiar el nombre.
+                        </p>
+                    </div>
                 </div>
-            )}
+
+                {/* Resources list */}
+                <div className="resources-list">
+                    {resources.map((resource, index) => {
+                        const isEditing = editingIndex === index;
+                        const isInactive = resource.active === false;
+
+                        return (
+                            <div
+                                key={resource.id || index}
+                                className={`resource-row ${isInactive ? 'inactive' : ''} ${isEditing ? 'editing' : ''}`}
+                            >
+                                {/* Number badge */}
+                                <div className="resource-number">
+                                    {index + 1}
+                                </div>
+
+                                {/* Photo for specialists */}
+                                {!isSport && (
+                                    <div className="specialist-photo-wrap">
+                                        <div className="specialist-photo">
+                                            {resource.avatar_url ? (
+                                                <img src={resource.avatar_url} alt={resource.name} />
+                                            ) : (
+                                                <span>{resourceIcon}</span>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="file"
+                                            id={`photo-upload-${index}`}
+                                            className="photo-input-hidden"
+                                            accept="image/*"
+                                            onChange={(e) => handlePhotoUpload(index, e.target.files[0])}
+                                        />
+                                        <label htmlFor={`photo-upload-${index}`} className="photo-upload-btn" title="Cambiar foto">
+                                            📷
+                                        </label>
+                                    </div>
+                                )}
+
+                                {/* Icon for sports */}
+                                {isSport && (
+                                    <div className="resource-icon-sport">
+                                        🏟️
+                                    </div>
+                                )}
+
+                                {/* Name display / edit */}
+                                <div className="resource-info">
+                                    {isEditing ? (
+                                        <div className="edit-fields">
+                                            <input
+                                                ref={editInputRef}
+                                                type="text"
+                                                className="edit-name-input"
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value)}
+                                                onKeyDown={handleKeyDown}
+                                                placeholder={`Nombre de ${resourceLabel.toLowerCase()}`}
+                                            />
+                                            {!isSport && (
+                                                <input
+                                                    type="text"
+                                                    className="edit-role-input"
+                                                    value={editRoleValue}
+                                                    onChange={(e) => setEditRoleValue(e.target.value)}
+                                                    onKeyDown={handleKeyDown}
+                                                    placeholder="Rol (ej: Peluquero, Masajista)"
+                                                />
+                                            )}
+                                            <div className="edit-actions">
+                                                <button className="edit-confirm" onClick={confirmEdit} title="Confirmar">✓</button>
+                                                <button className="edit-cancel" onClick={cancelEdit} title="Cancelar">✕</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="resource-name">{resource.name}</span>
+                                            {!isSport && resource.role && (
+                                                <span className="resource-role">{resource.role}</span>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Action buttons */}
+                                <div className="resource-actions">
+                                    {!isEditing && (
+                                        <button
+                                            className="btn-edit-pencil"
+                                            onClick={() => startEdit(index)}
+                                            title={`Editar nombre de ${resourceLabel.toLowerCase()}`}
+                                        >
+                                            ✏️
+                                        </button>
+                                    )}
+                                    <button
+                                        className={`btn-toggle-active ${isInactive ? 'is-inactive' : 'is-active'}`}
+                                        onClick={() => toggleActive(index)}
+                                        title={isInactive ? 'Habilitar' : 'Deshabilitar'}
+                                    >
+                                        {isInactive ? '🔴' : '🟢'}
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+            </div>
+
+            {/* Save button */}
+            <button
+                className="btn-save-resources"
+                onClick={() => onSave && onSave({ [resourceKey]: resources })}
+                disabled={saving}
+            >
+                {saving ? 'Guardando...' : 'Guardar'}
+            </button>
         </div>
     );
 };

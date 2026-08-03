@@ -1,5 +1,5 @@
 // Service Worker v2 - busts all old caches, network-first
-const VERSION = 'v2-2026-07-12-23-00';
+const VERSION = 'v2-2026-08-03-01-30';
 const CACHE_NAME = `turnitos-${VERSION}`;
 
 self.addEventListener('install', (event) => {

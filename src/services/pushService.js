@@ -30,12 +30,28 @@ export const pushService = {
 
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
-                const token = await getToken(messaging, {
-                    vapidKey: 'BM-YOUR-VAPID-KEY-HERE' // Por ahora placeholder, debe generarse en consola Firebase
-                });
+                let swRegistration = null;
+                if ('serviceWorker' in navigator) {
+                    try {
+                        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                    } catch (swErr) {
+                        console.warn('Error registrando firebase-messaging-sw.js:', swErr);
+                    }
+                }
+
+                const tokenOptions = {
+                    vapidKey: 'BLqMh62YlzvkaC_E7wHWtxiVbtK3Ip5BC6fXp3FcA7MBOW3JpGR3LmCNRkMP4C8H17vl51j0R4NKSt3xg4ExAz4'
+                };
+                if (swRegistration) {
+                    tokenOptions.serviceWorkerRegistration = swRegistration;
+                }
+
+                const token = await getToken(messaging, tokenOptions);
 
                 if (token) {
-                    await this.saveTokenToSupabase(businessId, token);
+                    if (businessId) {
+                        await this.saveTokenToSupabase(businessId, token);
+                    }
                     return token;
                 }
             } else {
@@ -45,6 +61,47 @@ export const pushService = {
             console.error('Error al solicitar permiso o token:', error);
         }
         return null;
+    },
+    async requestPermissionAndGetTokenDetailed(businessId) {
+        try {
+            const messaging = await this.getMessagingInstance();
+            if (!messaging) return { success: false, error: 'Firebase Messaging no está soportado en este dispositivo/navegador' };
+
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                return { success: false, error: `Permiso de notificación en estado: ${permission}` };
+            }
+
+            let swRegistration = null;
+            if ('serviceWorker' in navigator) {
+                try {
+                    swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                } catch (swErr) {
+                    console.warn('Error registrando firebase-messaging-sw.js:', swErr);
+                }
+            }
+
+            const tokenOptions = {
+                vapidKey: 'BLqMh62YlzvkaC_E7wHWtxiVbtK3Ip5BC6fXp3FcA7MBOW3JpGR3LmCNRkMP4C8H17vl51j0R4NKSt3xg4ExAz4'
+            };
+            if (swRegistration) {
+                tokenOptions.serviceWorkerRegistration = swRegistration;
+            }
+
+            const token = await getToken(messaging, tokenOptions);
+
+            if (token) {
+                if (businessId) {
+                    await this.saveTokenToSupabase(businessId, token);
+                }
+                return { success: true, token };
+            } else {
+                return { success: false, error: 'No se pudo generar el token de Firebase' };
+            }
+        } catch (error) {
+            console.error('Error al solicitar permiso o token:', error);
+            return { success: false, error: error.message || String(error) };
+        }
     },
 
     async saveTokenToSupabase(businessId, token) {

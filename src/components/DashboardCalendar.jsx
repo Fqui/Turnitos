@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { formatLongDate } from '../utils/dateUtils';
 import BookingListModal from './business/BookingListModal';
+import ConfirmModal from './common/ConfirmModal';
 
 export default function DashboardCalendar({
     bookings,
@@ -23,6 +24,7 @@ export default function DashboardCalendar({
     const [showSlotMenu, setShowSlotMenu] = useState(null); // { date, time, x, y }
     const [showBookingMenu, setShowBookingMenu] = useState(null); // { booking, x, y }
     const [slotSummaryData, setSlotSummaryData] = useState(null); // { bookings, title }
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Close menus when clicking outside
     useEffect(() => {
@@ -168,11 +170,11 @@ export default function DashboardCalendar({
         const slots = [];
         // console.log('🕐 Generating time slots:', { start: businessHours.start, end: businessHours.end });
 
-        for (let i = businessHours.start; i <= businessHours.end; i++) {
+        for (let i = businessHours.start; i < businessHours.end; i++) {
             // Convert hours > 24 to display format (25 → "01", 26 → "02", etc.)
             const displayHour = i % 24;
             slots.push(`${displayHour.toString().padStart(2, '0')}:00`);
-            if (i < businessHours.end) {
+            if (i < businessHours.end - 1) {
                 slots.push(`${displayHour.toString().padStart(2, '0')}:30`);
             }
         }
@@ -452,8 +454,8 @@ export default function DashboardCalendar({
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: (hasPadelCourts && viewMode === 'day')
-                            ? `70px repeat(${padelCourts.length}, 1fr)` // Court columns for Padel
-                            : `70px repeat(${displayDays.length}, 1fr)`, // Day columns for others
+                            ? `70px repeat(${padelCourts.length}, minmax(0, 1fr))` // Uniform court columns
+                            : `70px repeat(${displayDays.length}, minmax(0, 1fr))`, // Uniform day columns
                         gridAutoRows: '60px', // Fixed row height for consistency
                         minWidth: viewMode === 'day' ? 'auto' : '900px',
                         width: '100%'
@@ -560,22 +562,39 @@ export default function DashboardCalendar({
                         {timeSlots.map((time, i) => (
                             <React.Fragment key={time}>
                                 {/* Time Column */}
-                                <div style={{
-                                    padding: '10px',
-                                    textAlign: 'center',
-                                    fontSize: '12px',
-                                    fontWeight: '500',
-                                    color: 'var(--text-secondary)',
-                                    borderBottom: '1px solid var(--border)',
-                                    borderRight: '1px solid var(--border)',
-                                    position: 'sticky',
-                                    left: 0,
-                                    background: 'var(--bg-card)',
-                                    zIndex: 10,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}>
+                                <div
+                                    onClick={() => {
+                                        setConfirmModal({
+                                            isOpen: true,
+                                            title: 'Bloquear Horario Global',
+                                            message: `¿Deseas bloquear TODAS las canchas para las ${time} hs?`,
+                                            confirmText: 'Sí, bloquear todas',
+                                            isDanger: true,
+                                            onConfirm: () => onBlockSlot && onBlockSlot(currentDate, time, null)
+                                        });
+                                    }}
+                                    title="Click para bloquear todas las canchas a esta hora"
+                                    style={{
+                                        padding: '10px',
+                                        textAlign: 'center',
+                                        fontSize: '12px',
+                                        fontWeight: '500',
+                                        color: 'var(--text-secondary)',
+                                        borderBottom: '1px solid var(--border)',
+                                        borderRight: '1px solid var(--border)',
+                                        position: 'sticky',
+                                        left: 0,
+                                        background: 'var(--bg-card)',
+                                        zIndex: 10,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-main)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-card)'}
+                                >
                                     {time}
                                 </div>
 
@@ -683,7 +702,7 @@ export default function DashboardCalendar({
                                                 opacity: !isOpen ? 0.6 : 1,
                                                 cursor: !isOpen ? 'not-allowed' : 'default',
                                                 display: 'flex',
-                                                flexDirection: (viewMode === 'day' && !isMobile) ? 'row' : 'column', // Horizontal for Day (Desktop), Vertical otherwise
+                                                flexDirection: (viewMode === 'day' || (hasPadelCourts && padelCourts.length > 1)) ? 'row' : 'column',
                                                 gap: '4px'
                                             }}
                                             className="calendar-slot"
@@ -858,13 +877,13 @@ export default function DashboardCalendar({
                         {/* Month Days */}
                         {displayDays.map((day, i) => {
                             const dateKey = formatDateKey(day);
-                            const dayBookings = bookings.filter(b => {
+                            const activeBookings = bookings.filter(b => {
                                 let bDateKey = b.date;
                                 if (b.date.includes('/')) {
                                     const [d, m, y] = b.date.split('/');
                                     bDateKey = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                                 }
-                                return bDateKey === dateKey && b.status !== 'cancelled';
+                                return bDateKey === dateKey && b.status !== 'cancelled' && b.status !== 'blocked';
                             });
 
                             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
@@ -913,35 +932,36 @@ export default function DashboardCalendar({
                                         {day.getDate()}
                                     </div>
 
-                                    {/* Booking Indicators */}
+                                    {/* Booking Indicators (Only Active Customer Bookings) */}
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', marginTop: '4px' }}>
-                                        {dayBookings.slice(0, 5).map((b, idx) => (
+                                        {activeBookings.slice(0, 5).map((b, idx) => (
                                             <div
-                                                key={idx}
+                                                key={`b-${idx}`}
                                                 style={{
                                                     width: '6px',
                                                     height: '6px',
                                                     borderRadius: '50%',
                                                     backgroundColor: getStatusColor(b)
                                                 }}
+                                                title="Reserva cliente"
                                             />
                                         ))}
-                                        {dayBookings.length > 5 && (
+                                        {activeBookings.length > 5 && (
                                             <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                                                +{dayBookings.length - 5}
+                                                +{activeBookings.length - 5}
                                             </span>
                                         )}
                                     </div>
 
-                                    {/* Summary text if space allowed */}
-                                    {!isMobile && dayBookings.length > 0 && (
+                                    {/* Summary text if space allowed (ONLY IF ACTIVE BOOKINGS > 0) */}
+                                    {!isMobile && activeBookings.length > 0 && (
                                         <div style={{
                                             fontSize: '11px',
                                             color: 'var(--text-secondary)',
                                             marginTop: 'auto',
                                             fontWeight: '500'
                                         }}>
-                                            {dayBookings.length} {dayBookings.length === 1 ? 'reserva' : 'reservas'}
+                                            {activeBookings.length} {activeBookings.length === 1 ? 'reserva' : 'reservas'}
                                         </div>
                                     )}
                                 </div>
@@ -1229,6 +1249,16 @@ export default function DashboardCalendar({
                     setSlotSummaryData(null);
                     onUnblockSlot && onUnblockSlot(booking);
                 }}
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                isDanger={confirmModal.isDanger}
+                onConfirm={() => confirmModal.onConfirm && confirmModal.onConfirm()}
+                onClose={() => setConfirmModal({ isOpen: false })}
             />
         </div >
     );

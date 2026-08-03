@@ -29,6 +29,11 @@ function LocationPicker({ position, onLocationSelect }) {
 export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const { showToast, showConfirm, showAlert } = useNotification();
     const [activeTab, setActiveTab] = useState('general');
+
+    // Scroll to top of settings page whenever changing active settings tab
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [activeTab]);
     const [formData, setFormData] = useState(() => ({ ...business }));
     const [saving, setSaving] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -48,6 +53,26 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     // Services management
     const [newService, setNewService] = useState({ name: '', price: '', duration: '60', description: '', category: '', image_url: null });
     const [newCategory, setNewCategory] = useState('');
+
+    // Store management
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [uploadingProductImage, setUploadingProductImage] = useState(false);
+
+    // Turn Extras management
+    const [isExtraModalOpen, setIsExtraModalOpen] = useState(false);
+    const [editingExtra, setEditingExtra] = useState(null);
+    const [uploadingExtraImage, setUploadingExtraImage] = useState(false);
+
+    const handleMetadataChange = (key, value) => {
+        setFormData(prev => ({
+            ...prev,
+            metadata: {
+                ...(prev?.metadata || {}),
+                [key]: value
+            }
+        }));
+    };
 
     // Service-Specialist Assignments
     const [serviceSpecialists, setServiceSpecialists] = useState({}); // { serviceId: [specialistId1, ...] }
@@ -80,14 +105,19 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
     useEffect(() => {
         if (business) {
-            // Only update form data if we switched to a different business
-            // or if it's the first load. We compare IDs.
             setFormData(prev => {
-                if (prev.id === business.id) return prev; // Don't overwrite local changes if same business
+                if (prev.id === business.id) return prev;
+                const meta = business?.metadata || {};
                 return {
                     ...business,
-                    // Initialize gallery_highlights if it doesn't exist
-                    gallery_highlights: business.gallery_highlights || []
+                    store_enabled: business.store_enabled !== undefined ? business.store_enabled : (business.slug === 'cancha-apolo'),
+                    gallery_highlights: business?.gallery_highlights || [],
+                    metadata: {
+                        ...meta,
+                        store_banner_title: meta.store_banner_title || '',
+                        store_banner_subtitle: meta.store_banner_subtitle || '',
+                        store_products: meta.store_products || []
+                    }
                 };
             });
         }
@@ -215,6 +245,24 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         setEditingHighlight(newHighlight);
     };
 
+    const createStory = () => {
+        const highlights = formData.gallery_highlights || [];
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const newStory = {
+            id: `story_${Date.now()}`,
+            title: 'Historia',
+            cover_image: null,
+            images: [],
+            is_story: true,
+            created_at: now.toISOString(),
+            expires_at: expiresAt.toISOString(),
+            order: 0
+        };
+
+        setEditingHighlight(newStory);
+    };
+
     const saveHighlight = async (highlight) => {
         const highlights = formData.gallery_highlights || [];
         const existingIndex = highlights.findIndex(h => h.id === highlight.id);
@@ -316,14 +364,25 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
             // Validate subscription limits for specialists or courts
             if (dataToSave.specialists || dataToSave.courts) {
-                const businessType = formData.type || business.type;
+                const businessType = formData?.type || business?.type;
                 const resourceCount = dataToSave.specialists?.length || dataToSave.courts?.length || 0;
 
-                if (resourceCount > 0) {
+                if (resourceCount > 0 && business?.id) {
                     try {
                         const currentSub = await serviceAdapter.getSubscription(business.id);
 
-                        if (currentSub && resourceCount > currentSub.spaces_included) {
+                        const allowedSpaces = Math.max(
+                            currentSub?.spaces_included || 0,
+                            business?.capacity || 0,
+                            business?.resources_count || 0,
+                            business?.courts?.length || 0,
+                            business?.specialists?.length || 0,
+                            formData?.courts?.length || 0,
+                            formData?.specialists?.length || 0,
+                            2
+                        );
+
+                        if (currentSub && resourceCount > allowedSpaces) {
                             // Calculate suggested plan
                             const plans = await serviceAdapter.getSubscriptionPlans(businessType);
                             const nextPlan = plans.find(p => p.spaces >= resourceCount);
@@ -393,27 +452,30 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         }
     };
 
+    const categoryName = (formData?.categories?.name || formData?.category || business?.categories?.name || '').toLowerCase();
+    const subcatName = (formData?.subcategories?.[0]?.name || formData?.subcategories?.[0]?.slug || '').toLowerCase();
+    const bType = (formData?.type || business?.type || '').toLowerCase();
+
+    const isSport = bType === 'sport' || categoryName.includes('deporte') || subcatName.includes('futbol') || subcatName.includes('padel') || ((formData?.courts?.length || 0) > 0);
+    const isServiceBusiness = bType === 'service' || categoryName.includes('belleza') || categoryName.includes('salud') || ((formData?.specialists?.length || 0) > 0);
+    const isRentalBusiness = (bType === 'venue' || bType === 'alquiler' || categoryName.includes('alquiler')) && !isSport && !isServiceBusiness;
+
     const getResourceLabel = () => {
-        const type = formData.type || business.type;
-        if (type === 'sport') return 'Canchas / Espacios';
+        if (isSport) return 'Canchas / Espacios';
         return 'Profesionales / Staff';
     };
-
-    const isServiceBusiness = (formData.type || business.type) === 'service';
-    const isRentalBusiness = (formData.type || business.type) === 'venue' || (formData.type || business.type) === 'alquiler';
 
     const tabs = [
         { id: 'general', label: 'General', icon: '🏢' },
         { id: 'design', label: 'Diseño', icon: '🎨' },
-        { id: 'subscription', label: 'Suscripción', icon: '💳' },
-        ...(!isRentalBusiness ? [{ id: 'resources', label: getResourceLabel(), icon: '👥' }] : []),
+        { id: 'subscription', label: isSport ? 'Plan y Canchas' : (isServiceBusiness ? 'Plan y Especialistas' : 'Suscripción'), icon: '💳' },
         ...(isServiceBusiness ? [{ id: 'services', label: 'Servicios', icon: '💼' }] : []),
         ...(isRentalBusiness ? [{ id: 'rental', label: 'Alquiler', icon: '🔑' }] : []),
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
         { id: 'policies_and_payments', label: 'Políticas y Pagos', icon: '📜' },
-
         { id: 'special_days', label: 'Días Especiales', icon: '📅' },
-        { id: 'gallery', label: 'Galería', icon: '📸' }
+        { id: 'gallery', label: 'Galería', icon: '📸' },
+        { id: 'store', label: 'Tienda', icon: '🛒' }
     ];
 
     const daysTranslation = {
@@ -446,8 +508,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     };
 
     const getCurrentCapacity = () => {
-        // Use subscription spaces if available, otherwise fallback to business capacity_limit or default to 2
-        return subscription?.spaces_included || business.capacity_limit || 2;
+        const isSport = (formData?.type || business?.type) === 'sport' || (formData?.type || business?.type) === 'venue';
+        const activeCount = isSport ? (formData?.courts?.length || 0) : (formData?.specialists?.length || 0);
+        const subSpaces = subscription?.spaces_included || business?.capacity_limit || 2;
+        return Math.max(subSpaces, activeCount, 2);
     };
 
     const handlePlanChange = async (newCapacity) => {
@@ -1076,20 +1140,45 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     </div>
                 );
 
-            case 'resources':
-                const isSport = (formData.type || business.type) === 'sport' || (formData.type || business.type) === 'venue';
-                const resources = isSport ? (formData.courts || []) : (formData.specialists || []);
-                const resourceLabel = isSport ? 'Cancha' : 'Profesional';
-                const resourceKey = isSport ? 'courts' : 'specialists';
+            /* resources tab removed — merged into subscription */
+            case '__removed_resources__':
+                const categoryNameRes = (formData?.categories?.name || formData?.category || business?.categories?.name || '').toLowerCase();
+                const subcatNameRes = (formData?.subcategories?.[0]?.name || formData?.subcategories?.[0]?.slug || '').toLowerCase();
+                const bTypeRes = (formData?.type || business?.type || '').toLowerCase();
+
+                const isSportRes = bTypeRes === 'sport' || categoryNameRes.includes('deporte') || subcatNameRes.includes('futbol') || subcatNameRes.includes('padel') || ((formData?.courts?.length || 0) > 0);
+                const resourceLabel = isSportRes ? 'Cancha' : 'Profesional';
+                const resourceKey = isSportRes ? 'courts' : 'specialists';
+
+                const expectedCount = Math.max(
+                    subscription?.spaces_included || 0,
+                    formData.capacity_limit || 0,
+                    formData.capacity || 0,
+                    formData.courts?.length || 0,
+                    formData.specialists?.length || 0,
+                    1
+                );
+
+                let rawResources = isSportRes ? (formData.courts || []) : (formData.specialists || []);
+                if (rawResources.length < expectedCount) {
+                    rawResources = Array.from({ length: expectedCount }, (_, i) => {
+                        return rawResources[i] || {
+                            id: `temp-${resourceKey}-${i + 1}`,
+                            name: `${resourceLabel} ${i + 1}`,
+                            active: true
+                        };
+                    });
+                }
+                const resources = rawResources;
 
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
                         <div>
                             <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                                {isSport ? 'Gestionar Canchas' : 'Gestionar Profesionales'}
+                                {isSport ? 'Canchas Asignadas' : 'Profesionales Asignados'}
                             </h3>
                             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-                                Agrega o elimina {isSport ? 'canchas' : 'profesionales'} para definir tu capacidad máxima por horario.
+                                Podés personalizar los nombres y habilitar o deshabilitar cada espacio. La cantidad total de espacios es administrada por la plataforma (SuperAdmin).
                             </p>
 
                             <div style={{ display: 'grid', gap: '12px' }}>
@@ -1101,7 +1190,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         padding: '12px 16px',
                                         background: 'var(--bg-main)',
                                         borderRadius: '12px',
-                                        border: '1px solid var(--border)'
+                                        border: '1px solid var(--border)',
+                                        opacity: resource.active === false ? 0.7 : 1
                                     }}>
                                         {/* Specialist Photo Upload */}
                                         {!isSport && (
@@ -1182,7 +1272,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                 justifyContent: 'center',
                                                 fontSize: '16px'
                                             }}>
-                                                {isSport ? '🏟️' : '👤'}
+                                                🏟️
                                             </div>
                                         )}
                                         <div style={{ flex: 1, display: 'grid', gap: '8px' }}>
@@ -1194,7 +1284,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                     newResources[index] = { ...resource, name: e.target.value };
                                                     handleInputChange(resourceKey, newResources);
                                                 }}
-                                                placeholder="Nombre del profesional"
+                                                placeholder={`Nombre de ${resourceLabel.toLowerCase()}`}
                                                 style={{
                                                     ...inputStyle,
                                                     border: 'none',
@@ -1224,103 +1314,56 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                 />
                                             )}
                                         </div>
+
+                                        {/* State Toggle: Habilitar / Deshabilitar */}
                                         <button
-                                            onClick={async () => {
-                                                if (resources.length <= 1) {
-                                                    showToast(`Debe haber al menos un ${resourceLabel.toLowerCase()}`, 'warning');
-                                                    return;
-                                                }
-                                                const confirmed = await showConfirm(
-                                                    '¿Eliminar recurso?',
-                                                    `¿Estás seguro de que deseas eliminar "${resource.name}"?`,
-                                                    'Eliminar',
-                                                    'Cancelar'
-                                                );
-                                                if (confirmed) {
-                                                    const newResources = resources.filter((_, i) => i !== index);
-                                                    handleInputChange(resourceKey, newResources);
-                                                }
+                                            onClick={() => {
+                                                const newResources = [...resources];
+                                                const newActive = resource.active === false ? true : false;
+                                                newResources[index] = { ...resource, active: newActive };
+                                                handleInputChange(resourceKey, newResources);
+                                                showToast(`${resourceLabel} ${resource.name} ${newActive ? 'habilitado' : 'deshabilitado'}`, newActive ? 'success' : 'info');
                                             }}
-                                            disabled={resources.length <= 1}
                                             style={{
-                                                background: 'transparent',
-                                                border: 'none',
-                                                color: resources.length <= 1 ? '#9ca3af' : '#ef4444',
-                                                cursor: resources.length <= 1 ? 'not-allowed' : 'pointer',
-                                                padding: '8px',
+                                                padding: '6px 12px',
                                                 borderRadius: '8px',
+                                                border: 'none',
+                                                background: resource.active === false ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                                color: resource.active === false ? '#ef4444' : '#10b981',
+                                                fontWeight: '700',
+                                                fontSize: '12px',
+                                                cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                justifyContent: 'center',
-                                                opacity: resources.length <= 1 ? 0.5 : 1
+                                                gap: '4px',
+                                                whiteSpace: 'nowrap'
                                             }}
-                                            title={resources.length <= 1 ? `Debe haber al menos un ${resourceLabel.toLowerCase()}` : "Eliminar"}
+                                            title={resource.active === false ? "Haz clic para habilitar espacio" : "Haz clic para deshabilitar espacio temporalmente"}
                                         >
-                                            🗑️
+                                            {resource.active === false ? '🔴 Inactivo' : '🟢 Activo'}
                                         </button>
                                     </div>
                                 ))}
                             </div>
 
-                            <button
-                                onClick={async () => {
-                                    // Check capacity limit
-                                    const currentCapacity = getCurrentCapacity();
-                                    if (resources.length >= currentCapacity) {
-                                        const confirmed = await showConfirm(
-                                            'Límite de plan alcanzado',
-                                            `Has alcanzado el límite de tu plan (${currentCapacity} espacio${currentCapacity > 1 ? 's' : ''}).\n\nPara agregar más ${isSport ? 'canchas' : 'profesionales'}, actualiza tu plan en la pestaña "Suscripción".`,
-                                            'Ir a Suscripción',
-                                            'Cancelar'
-                                        );
-                                        if (confirmed) {
-                                            setActiveTab('subscription');
-                                        }
-                                        return;
-                                    }
-
-                                    // Generate a proper UUID v4 to satisfy database constraints
-                                    const generateUUID = () => {
-                                        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                                            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                                            return v.toString(16);
-                                        });
-                                    };
-
-                                    const newResource = {
-                                        id: generateUUID(),
-                                        name: `${resourceLabel} ${resources.length + 1}`,
-                                        type: isSport ? 'court' : 'specialist',
-                                        ...(isSport ? { sport: 'Fútbol', price: 0 } : { role: '', avatar_url: null })
-                                    };
-                                    const updatedResources = [...resources, newResource];
-                                    handleInputChange(resourceKey, updatedResources);
-                                }}
-                                style={{
-                                    marginTop: '16px',
-                                    padding: '12px',
-                                    width: '100%',
-                                    borderRadius: '12px',
-                                    border: '1px dashed var(--border)',
-                                    background: 'transparent',
-                                    color: 'var(--text-secondary)',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={e => {
-                                    e.currentTarget.style.background = 'rgba(0,0,0,0.02)';
-                                    e.currentTarget.style.borderColor = 'var(--text-primary)';
-                                    e.currentTarget.style.color = 'var(--text-primary)';
-                                }}
-                                onMouseLeave={e => {
-                                    e.currentTarget.style.background = 'transparent';
-                                    e.currentTarget.style.borderColor = 'var(--border)';
-                                    e.currentTarget.style.color = 'var(--text-secondary)';
-                                }}
-                            >
-                                + Agregar {resourceLabel}
-                            </button>
+                            {/* Informational banner explaining SuperAdmin quantity control */}
+                            <div style={{
+                                marginTop: '16px',
+                                padding: '14px 16px',
+                                background: 'rgba(99, 102, 241, 0.08)',
+                                border: '1px solid rgba(99, 102, 241, 0.2)',
+                                borderRadius: '12px',
+                                color: 'var(--text-secondary)',
+                                fontSize: '13px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                            }}>
+                                <span style={{ fontSize: '18px' }}>ℹ️</span>
+                                <span>
+                                    La cantidad total de {isSport ? 'canchas' : 'especialistas'} (<strong>{resources.length} espacio{resources.length !== 1 ? 's' : ''}</strong>) es administrada desde la plataforma SuperAdmin. Para sumar o reducir espacios, solicitá la modificación a soporte.
+                                </span>
+                            </div>
                         </div>
 
                         <button
@@ -1328,7 +1371,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             style={saveButtonStyle}
                             disabled={saving}
                         >
-                            {saving ? 'Guardando...' : `Guardar ${isSport ? 'Canchas' : 'Profesionales'}`}
+                            {saving ? 'Guardando...' : `Guardar Nombres de ${isSport ? 'Canchas' : 'Profesionales'}`}
                         </button>
                     </div>
                 );
@@ -1431,7 +1474,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             <div style={{ marginTop: '16px' }}>
                                 <label style={{ ...labelStyle, fontSize: '13px', color: 'var(--text-secondary)' }}>Ubicación en el Mapa (Click para marcar)</label>
                                 <div style={{ height: '300px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px', border: '1px solid var(--border)', zIndex: 0 }}>
-                                    <MapContainer key={`${mapCenter[0]}-${mapCenter[1]}`} center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+                                    <MapContainer key={`${mapCenter[0]}-${mapCenter[1]}`} center={mapCenter} zoom={13} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
                                         <TileLayer
                                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -1550,9 +1593,15 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
             case 'subscription':
                 return (
                     <SubscriptionManager
-                        businessId={business.id}
-                        businessType={business.type}
+                        businessId={business?.id}
+                        businessType={business?.type}
                         business={business}
+                        formData={formData}
+                        onResourcesChange={handleInputChange}
+                        onSave={handleSave}
+                        saving={saving}
+                        serviceAdapter={serviceAdapter}
+                        showToast={showToast}
                     />
                 );
 
@@ -1627,7 +1676,9 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         <button
                             onClick={() => handleSave({
                                 logo: formData.logo,
-                                banner_image: formData.banner_image
+                                logo_url: formData.logo || formData.logo_url,
+                                banner_image: formData.banner_image,
+                                banner_url: formData.banner_image || formData.banner_url
                             })}
                             style={saveButtonStyle}
                             disabled={saving}
@@ -1666,8 +1717,13 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                     checked={isOpen}
                                                     onChange={(e) => {
                                                         const newHours = { ...formData.hours };
-                                                        if (!newHours[day]) newHours[day] = { open: '08:00', close: '23:00' };
-                                                        newHours[day] = { ...newHours[day], isOpen: e.target.checked };
+                                                        if (!newHours[day]) newHours[day] = {};
+                                                        newHours[day] = {
+                                                            open: newHours[day].open || '08:00',
+                                                            close: newHours[day].close || '23:00',
+                                                            ...newHours[day],
+                                                            isOpen: e.target.checked
+                                                        };
                                                         handleInputChange('hours', newHours);
                                                     }}
                                                     style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary-paddle)' }}
@@ -1800,7 +1856,25 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             })}
                         </div>
                         <button
-                            onClick={() => handleSave({ hours: formData.hours })}
+                            onClick={() => {
+                                const normalizedHours = {};
+                                orderedDays.forEach(day => {
+                                    const current = formData.hours?.[day] || {};
+                                    normalizedHours[day] = {
+                                        isOpen: current.isOpen !== false,
+                                        isSplit: !!current.isSplit,
+                                        open: current.open || '18:00',
+                                        close: current.close || '23:00',
+                                        breakStart: current.breakStart || null,
+                                        breakEnd: current.breakEnd || null
+                                    };
+                                });
+                                if (formData.special_days) {
+                                    normalizedHours.special_days = formData.special_days;
+                                }
+                                handleInputChange('hours', normalizedHours);
+                                handleSave({ hours: normalizedHours });
+                            }}
                             style={saveButtonStyle}
                             disabled={saving}
                         >
@@ -1986,150 +2060,226 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
             case 'gallery':
                 const highlights = formData.gallery_highlights || [];
+                const stories24h = highlights.filter(h => h.is_story);
+                const permanentHighlightsList = highlights.filter(h => !h.is_story);
+
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
                         {/* Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                             <div>
                                 <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '4px', color: 'var(--text-primary)' }}>
-                                    Destacadas ({highlights.length}/10)
+                                    Historias y Destacadas ({highlights.length}/20)
                                 </h3>
-                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                                    Crea categorías de fotos estilo Instagram
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                    Publica historias de 24hs o álbumes destacados tipo Instagram.
                                 </p>
                             </div>
-                            <button
-                                onClick={createHighlight}
-                                disabled={highlights.length >= 10}
-                                style={{
-                                    ...saveButtonStyle,
-                                    width: 'auto',
-                                    margin: 0,
-                                    padding: '8px 16px',
-                                    fontSize: '13px',
-                                    opacity: highlights.length >= 10 ? 0.5 : 1,
-                                    cursor: highlights.length >= 10 ? 'not-allowed' : 'pointer'
-                                }}
-                            >
-                                ＋ Nueva Destacada
-                            </button>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={createStory}
+                                    style={{
+                                        padding: '10px 16px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                                        color: '#fff',
+                                        fontWeight: '700',
+                                        fontSize: '13px',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(220, 39, 67, 0.3)'
+                                    }}
+                                >
+                                    ⚡ Publicar Historia (24hs)
+                                </button>
+                                <button
+                                    onClick={createHighlight}
+                                    disabled={highlights.length >= 20}
+                                    style={{
+                                        padding: '10px 16px',
+                                        borderRadius: '12px',
+                                        border: '1px solid var(--border)',
+                                        background: 'var(--bg-main)',
+                                        color: 'var(--text-primary)',
+                                        fontWeight: '700',
+                                        fontSize: '13px',
+                                        opacity: highlights.length >= 20 ? 0.5 : 1,
+                                        cursor: highlights.length >= 20 ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    ⭐ Nueva Destacada
+                                </button>
+                            </div>
                         </div>
 
-                        {/* Highlights List */}
-                        {highlights.length === 0 ? (
-                            <div style={{
-                                padding: '40px',
-                                border: '2px dashed var(--border)',
-                                borderRadius: '16px',
-                                textAlign: 'center',
-                                background: 'var(--bg-main)'
-                            }}>
-                                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📸</div>
-                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                    Aún no has creado destacadas
-                                </p>
-                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                    Crea categorías como "Manicura", "Pedicura", etc.
-                                </p>
+                        {/* Section 1: Historias de 24 Horas */}
+                        <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                <div>
+                                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                        ⚡ Historias de 24 Horas ({stories24h.length})
+                                    </h4>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                                        Activan el anillo de color en la foto de perfil del negocio y expiran automáticamente.
+                                    </p>
+                                </div>
                             </div>
-                        ) : (
-                            <div style={{ display: 'grid', gap: '12px' }}>
-                                {highlights.map((highlight, index) => (
-                                    <div
-                                        key={highlight.id}
-                                        style={{
-                                            background: 'var(--bg-main)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: '12px',
-                                            padding: '16px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '16px'
-                                        }}
-                                    >
-                                        {/* Thumbnail */}
-                                        <div style={{
-                                            width: '60px',
-                                            height: '60px',
-                                            borderRadius: '50%',
-                                            overflow: 'hidden',
-                                            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                                            padding: '3px',
-                                            flexShrink: 0
-                                        }}>
-                                            <div style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                borderRadius: '50%',
+
+                            {stories24h.length === 0 ? (
+                                <div style={{ padding: '24px', border: '1px dashed var(--border)', borderRadius: '12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                    <p style={{ margin: 0, fontSize: '13px' }}>No hay historias de 24hs activas actualmente.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gap: '10px' }}>
+                                    {stories24h.map((story) => {
+                                        const now = new Date();
+                                        const expDate = story.expires_at ? new Date(story.expires_at) : null;
+                                        const diffHours = expDate ? Math.max(0, Math.round((expDate - now) / (1000 * 60 * 60))) : 24;
+
+                                        return (
+                                            <div
+                                                key={story.id}
+                                                style={{
+                                                    background: 'var(--bg-card)',
+                                                    border: '1px solid var(--border)',
+                                                    borderRadius: '12px',
+                                                    padding: '12px 16px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '14px'
+                                                }}
+                                            >
+                                                {/* Thumbnail with Instagram ring */}
+                                                <div style={{
+                                                    width: '50px',
+                                                    height: '50px',
+                                                    borderRadius: '50%',
+                                                    background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                                                    padding: '2px',
+                                                    flexShrink: 0
+                                                }}>
+                                                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--bg-main)', padding: '2px' }}>
+                                                        <img
+                                                            src={story.cover_image || story.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
+                                                            alt={story.title}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                                        {story.title || 'Historia'}
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--primary-paddle)', fontWeight: '600', marginTop: '2px' }}>
+                                                        ⏱ Expira en ~{diffHours}hs ({story.images?.length || 0} foto{story.images?.length !== 1 ? 's' : ''})
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => setEditingHighlight(story)}
+                                                        style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px' }}
+                                                    >
+                                                        Editar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deleteHighlight(story.id)}
+                                                        style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px', background: 'rgba(255, 68, 68, 0.1)', color: '#ff4444' }}
+                                                    >
+                                                        Borrar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Section 2: Destacadas Permanentes */}
+                        <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                <div>
+                                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                        ⭐ Destacadas Permanentes ({permanentHighlightsList.length})
+                                    </h4>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                                        Aparecen como álbumes fijados abajo del perfil (ej: "Torneos", "Ubicación", "Reglas").
+                                    </p>
+                                </div>
+                            </div>
+
+                            {permanentHighlightsList.length === 0 ? (
+                                <div style={{ padding: '24px', border: '1px dashed var(--border)', borderRadius: '12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                    <p style={{ margin: 0, fontSize: '13px' }}>Aún no creaste destacadas permanentes.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gap: '10px' }}>
+                                    {permanentHighlightsList.map((highlight) => (
+                                        <div
+                                            key={highlight.id}
+                                            style={{
                                                 background: 'var(--bg-card)',
-                                                padding: '2px',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '12px',
+                                                padding: '12px 16px',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                justifyContent: 'center'
+                                                gap: '14px'
+                                            }}
+                                        >
+                                            <div style={{
+                                                width: '50px',
+                                                height: '50px',
+                                                borderRadius: '50%',
+                                                border: '1px solid var(--border)',
+                                                padding: '2px',
+                                                flexShrink: 0
                                             }}>
-                                                {highlight.cover_image ? (
-                                                    <img
-                                                        src={highlight.cover_image}
-                                                        alt={highlight.title}
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            objectFit: 'cover',
-                                                            borderRadius: '50%'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <span style={{ fontSize: '24px' }}>📷</span>
-                                                )}
+                                                <img
+                                                    src={highlight.cover_image || highlight.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
+                                                    alt={highlight.title}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                                />
                                             </div>
-                                        </div>
 
-                                        {/* Info */}
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>
-                                                {highlight.title}
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                                    {highlight.title}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                                    {highlight.images?.length || 0} foto{highlight.images?.length !== 1 ? 's' : ''}
+                                                </div>
                                             </div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                {highlight.images.length} foto{highlight.images.length !== 1 ? 's' : ''}
-                                            </div>
-                                        </div>
 
-                                        {/* Actions */}
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button
-                                                onClick={() => setEditingHighlight(highlight)}
-                                                style={{
-                                                    ...buttonSecondaryStyle,
-                                                    padding: '6px 12px',
-                                                    fontSize: '12px'
-                                                }}
-                                            >
-                                                Editar
-                                            </button>
-                                            <button
-                                                onClick={() => deleteHighlight(highlight.id)}
-                                                style={{
-                                                    ...buttonSecondaryStyle,
-                                                    padding: '6px 12px',
-                                                    fontSize: '12px',
-                                                    background: 'rgba(255, 68, 68, 0.1)',
-                                                    color: '#ff4444'
-                                                }}
-                                            >
-                                                Borrar
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => setEditingHighlight(highlight)}
+                                                    style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px' }}
+                                                >
+                                                    Editar
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteHighlight(highlight.id)}
+                                                    style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px', background: 'rgba(255, 68, 68, 0.1)', color: '#ff4444' }}
+                                                >
+                                                    Borrar
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Edit Modal */}
                         {editingHighlight && (
                             <div style={{
                                 position: 'fixed',
                                 inset: 0,
-                                background: 'rgba(0,0,0,0.5)',
+                                background: 'rgba(0,0,0,0.6)',
+                                backdropFilter: 'blur(4px)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -2141,18 +2291,20 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 <div
                                     style={{
                                         background: 'var(--bg-card)',
-                                        borderRadius: '16px',
+                                        borderRadius: '20px',
                                         padding: '24px',
                                         maxWidth: '600px',
                                         width: '100%',
                                         maxHeight: '90vh',
-                                        overflow: 'auto'
+                                        overflow: 'auto',
+                                        border: '1px solid var(--border)',
+                                        boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
                                     }}
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                         <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                                            {editingHighlight.images.length > 0 ? 'Editar' : 'Nueva'} Destacada
+                                            {editingHighlight.is_story ? '⚡ Publicar Historia (24hs)' : (editingHighlight.images?.length > 0 ? 'Editar Destacada' : 'Nueva Destacada')}
                                         </h3>
                                         <button
                                             onClick={() => setEditingHighlight(null)}
@@ -2166,6 +2318,35 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         >
                                             ×
                                         </button>
+                                    </div>
+
+                                    {/* 24h Story Switch */}
+                                    <div style={{ marginBottom: '20px', background: 'var(--bg-main)', padding: '14px', borderRadius: '14px', border: '1px solid var(--border)' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={!!editingHighlight.is_story}
+                                                onChange={(e) => {
+                                                    const isStory = e.target.checked;
+                                                    const now = new Date();
+                                                    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                                                    setEditingHighlight({
+                                                        ...editingHighlight,
+                                                        is_story: isStory,
+                                                        expires_at: isStory ? expiresAt.toISOString() : null
+                                                    });
+                                                }}
+                                                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                            />
+                                            <div>
+                                                <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                    ⚡ Publicar como Historia de 24 Horas
+                                                </span>
+                                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                                                    Activa el anillo con gradiente de Instagram en el logo del negocio. Expira en 24hs.
+                                                </p>
+                                            </div>
+                                        </label>
                                     </div>
 
                                     {/* Title Input */}
@@ -2331,6 +2512,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 const methods = paymentSettings.methods || [{ type: 'cash', enabled: true }];
                 const instructions = paymentSettings.instructions || '';
                 const bankDetails = paymentSettings.bank_details || { bank_name: '', account_holder: '', cbu: '', alias: '' };
+                const whatsappTemplate = paymentSettings.whatsapp_template || '';
 
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
@@ -2721,6 +2903,39 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                                             Información extra que quieras mostrar al cliente.
                                         </p>
+                                    </div>
+
+                                    {/* WhatsApp Message Template */}
+                                    <div style={{ marginBottom: '24px', padding: '20px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                                        <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                                            💬 Plantilla de Mensaje de WhatsApp (Pedir Seña)
+                                        </h4>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: '1.4' }}>
+                                            Personaliza el mensaje que se abrirá en WhatsApp para pedir la seña. Puedes usar las siguientes variables dentro del texto:
+                                            <br />
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', marginRight: '6px', display: 'inline-block', marginTop: '6px' }}>{`{cliente}`}</code>
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', marginRight: '6px', display: 'inline-block', marginTop: '6px' }}>{`{fecha}`}</code>
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', marginRight: '6px', display: 'inline-block', marginTop: '6px' }}>{`{hora}`}</code>
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', marginRight: '6px', display: 'inline-block', marginTop: '6px' }}>{`{negocio}`}</code>
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', marginRight: '6px', display: 'inline-block', marginTop: '6px' }}>{`{seña}`}</code>
+                                            <code style={{ background: 'var(--bg-card)', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '11px', display: 'inline-block', marginTop: '6px' }}>{`{datos_bancarios}`}</code>
+                                        </p>
+                                        <textarea
+                                            value={whatsappTemplate}
+                                            onChange={(e) => handleInputChange('payment_settings', {
+                                                ...paymentSettings,
+                                                whatsapp_template: e.target.value
+                                            })}
+                                            placeholder="Ej: Hola {cliente}, te recordamos realizar {seña} para confirmar tu turno del {fecha} en {negocio}.{datos_bancarios}"
+                                            style={{
+                                                ...inputStyle,
+                                                minHeight: '120px',
+                                                resize: 'vertical',
+                                                fontFamily: 'inherit',
+                                                fontSize: '14px',
+                                                lineHeight: '1.5'
+                                            }}
+                                        />
                                     </div>
 
                                     {/* Save Button */}
@@ -3228,177 +3443,6 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     </div>
                 );
 
-            case 'policies':
-                return (
-                    <div style={{ display: 'grid', gap: '24px' }}>
-                        <div>
-                            <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                                Políticas de Reserva
-                            </h3>
-                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-                                Configura las reglas de anticipación, cancelación y señas.
-                            </p>
-                        </div>
-
-                        {/* Advance Booking Rules */}
-                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                            <div>
-                                <label style={labelStyle}>Anticipación Mínima (horas)</label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={formData.min_advance_hours ?? 0}
-                                    onChange={(e) => handleInputChange('min_advance_hours', parseInt(e.target.value) || 0)}
-                                    style={inputStyle}
-                                />
-                                <p style={hintStyle}>Ej: 2 horas = no pueden reservar con menos de 2hs de anticipación</p>
-                            </div>
-                            <div>
-                                <label style={labelStyle}>Ventana Máxima (días)</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={formData.max_advance_days ?? 30}
-                                    onChange={(e) => handleInputChange('max_advance_days', parseInt(e.target.value) || 30)}
-                                    style={inputStyle}
-                                />
-                                <p style={hintStyle}>Ej: 30 días = pueden reservar hasta 30 días adelante</p>
-                            </div>
-                        </div>
-
-                        {/* Cancellation Policy */}
-                        <div>
-                            <label style={labelStyle}>Política de Cancelación (horas)</label>
-                            <input
-                                type="number"
-                                min="0"
-                                value={formData.cancellation_limit_hours ?? 24}
-                                onChange={(e) => handleInputChange('cancellation_limit_hours', parseInt(e.target.value) || 24)}
-                                style={inputStyle}
-                            />
-                            <p style={hintStyle}>Tiempo límite para que el cliente cancele sin penalización</p>
-                        </div>
-
-                        <div>
-                            <label style={labelStyle}>Texto de Política de Cancelación</label>
-                            <textarea
-                                value={formData.cancellation_policy ?? ''}
-                                onChange={(e) => handleInputChange('cancellation_policy', e.target.value)}
-                                placeholder="Ej: Cancelaciones gratuitas hasta 24hs antes. Después de ese plazo, se pierde la seña."
-                                style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }}
-                            />
-                            <p style={hintStyle}>Este texto se mostrará a los clientes al reservar</p>
-                        </div>
-
-                        {/* Deposit Configuration */}
-                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
-                            <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                                Configuración de Seña/Depósito
-                            </h4>
-
-                            <div>
-                                <label style={labelStyle}>Tipo de Seña</label>
-                                <select
-                                    value={formData.payment_settings?.deposit?.type || 'none'}
-                                    onChange={(e) => {
-                                        const currentSettings = formData.payment_settings || {};
-                                        const currentDeposit = currentSettings.deposit || { enabled: false, type: 'none', percentage: 30, fixed_amount: 0 };
-                                        handleInputChange('payment_settings', {
-                                            ...currentSettings,
-                                            deposit: { ...currentDeposit, type: e.target.value, enabled: e.target.value !== 'none' }
-                                        });
-                                    }}
-                                    style={inputStyle}
-                                >
-                                    <option value="none">No requiere seña</option>
-                                    <option value="percentage">Porcentaje del total</option>
-                                    <option value="fixed">Monto fijo</option>
-                                </select>
-                            </div>
-
-                            {(formData.payment_settings?.deposit?.type === 'percentage') && (
-                                <div style={{ marginTop: '16px' }}>
-                                    <label style={labelStyle}>Porcentaje de Seña (%)</label>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="100"
-                                            step="5"
-                                            value={formData.payment_settings?.deposit?.percentage || 0}
-                                            onChange={(e) => {
-                                                const currentSettings = formData.payment_settings || {};
-                                                const currentDeposit = currentSettings.deposit || {};
-                                                handleInputChange('payment_settings', {
-                                                    ...currentSettings,
-                                                    deposit: { ...currentDeposit, percentage: parseInt(e.target.value) }
-                                                });
-                                            }}
-                                            style={{ flex: 1 }}
-                                        />
-                                        <span style={{ fontWeight: '700', fontSize: '18px', minWidth: '60px', textAlign: 'right' }}>
-                                            {formData.payment_settings?.deposit?.percentage || 0}%
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {(formData.payment_settings?.deposit?.type === 'fixed') && (
-                                <div style={{ marginTop: '16px' }}>
-                                    <label style={labelStyle}>Monto Fijo de Seña ($)</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={formData.payment_settings?.deposit?.fixed_amount || 0}
-                                        onChange={(e) => {
-                                            const currentSettings = formData.payment_settings || {};
-                                            const currentDeposit = currentSettings.deposit || {};
-                                            handleInputChange('payment_settings', {
-                                                ...currentSettings,
-                                                deposit: { ...currentDeposit, fixed_amount: parseInt(e.target.value) || 0 }
-                                            });
-                                        }}
-                                        style={inputStyle}
-                                    />
-                                </div>
-                            )}
-
-                            {formData.payment_settings?.deposit?.enabled && (
-                                <div style={{ marginTop: '16px' }}>
-                                    <label style={labelStyle}>Instrucciones de Pago</label>
-                                    <textarea
-                                        value={formData.payment_settings?.instructions || ''}
-                                        onChange={(e) => {
-                                            const currentSettings = formData.payment_settings || {};
-                                            handleInputChange('payment_settings', {
-                                                ...currentSettings,
-                                                instructions: e.target.value
-                                            });
-                                        }}
-                                        placeholder="Ej: Transferir al Alias: MI.ALIAS.OK o CBU: 1234567890. Enviar comprobante por WhatsApp."
-                                        style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }}
-                                    />
-                                    <p style={hintStyle}>Incluye datos bancarios, alias, CBU, links de MercadoPago, etc.</p>
-                                </div>
-                            )}
-                        </div>
-
-                        <button
-                            onClick={() => handleSave({
-                                min_advance_hours: formData.min_advance_hours,
-                                max_advance_days: formData.max_advance_days,
-                                cancellation_limit_hours: formData.cancellation_limit_hours,
-                                cancellation_policy: formData.cancellation_policy,
-                                payment_settings: formData.payment_settings // Save full payment settings object
-                            })}
-                            style={saveButtonStyle}
-                            disabled={saving}
-                        >
-                            {saving ? 'Guardando...' : 'Guardar Políticas'}
-                        </button>
-                    </div>
-                );
-
             case 'special_days':
                 const specialDays = formData.special_days || [];
 
@@ -3430,20 +3474,64 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     </div>
                                     <div>
                                         <label style={{ ...labelStyle, marginBottom: '4px' }}>Tipo</label>
-                                        <select id="new-special-day-type" style={inputStyle}>
-                                            <option value="closed">Cerrado</option>
-                                            <option value="holiday">Feriado</option>
-                                            <option value="special_hours">Horario Especial</option>
-                                            <option value="special_price">Precio Especial</option>
+                                        <select
+                                            id="new-special-day-type"
+                                            style={inputStyle}
+                                            onChange={(e) => {
+                                                const type = e.target.value;
+                                                const hoursContainer = document.getElementById('special-hours-fields');
+                                                const priceContainer = document.getElementById('special-price-fields');
+                                                if (hoursContainer) hoursContainer.style.display = (type === 'special_hours') ? 'grid' : 'none';
+                                                if (priceContainer) priceContainer.style.display = (type === 'special_price') ? 'grid' : 'none';
+                                            }}
+                                        >
+                                            <option value="closed">🚫 Cerrado (No se aceptan reservas)</option>
+                                            <option value="holiday">🎉 Feriado</option>
+                                            <option value="special_hours">🕐 Horario Especial</option>
+                                            <option value="special_price">💰 Precio Especial / Recargo</option>
                                         </select>
                                     </div>
                                 </div>
+
+                                {/* Dynamic Fields: Horario Especial */}
+                                <div
+                                    id="special-hours-fields"
+                                    style={{ display: 'none', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                >
+                                    <div>
+                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Apertura Especial</label>
+                                        <input type="time" id="new-special-day-open" defaultValue="09:00" style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Cierre Especial</label>
+                                        <input type="time" id="new-special-day-close" defaultValue="18:00" style={inputStyle} />
+                                    </div>
+                                </div>
+
+                                {/* Dynamic Fields: Precio Especial */}
+                                <div
+                                    id="special-price-fields"
+                                    style={{ display: 'none', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                >
+                                    <div>
+                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Variación de Precio</label>
+                                        <select id="new-special-day-price-mode" style={inputStyle}>
+                                            <option value="fixed">Precio Fijo ($)</option>
+                                            <option value="multiplier">Porcentaje Extra (%)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Valor</label>
+                                        <input type="number" id="new-special-day-price-val" placeholder="Ej: 15000 o 20" style={inputStyle} />
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <label style={{ ...labelStyle, marginBottom: '4px' }}>Descripción</label>
+                                    <label style={{ ...labelStyle, marginBottom: '4px' }}>Descripción / Motivo</label>
                                     <input
                                         type="text"
                                         id="new-special-day-description"
-                                        placeholder="Ej: Navidad, Año Nuevo, Promoción Especial"
+                                        placeholder="Ej: Navidad, Año Nuevo, Promoción Feriado"
                                         style={inputStyle}
                                     />
                                 </div>
@@ -3458,11 +3546,21 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                             return;
                                         }
 
+                                        const type = typeInput.value;
+                                        const openInput = document.getElementById('new-special-day-open');
+                                        const closeInput = document.getElementById('new-special-day-close');
+                                        const priceModeInput = document.getElementById('new-special-day-price-mode');
+                                        const priceValInput = document.getElementById('new-special-day-price-val');
+
                                         const newSpecialDay = {
                                             id: `special_${Date.now()}`,
                                             date: dateInput.value,
-                                            type: typeInput.value,
-                                            description: descInput.value || typeInput.options[typeInput.selectedIndex].text
+                                            type: type,
+                                            description: descInput.value || typeInput.options[typeInput.selectedIndex].text,
+                                            open: type === 'special_hours' ? openInput?.value : null,
+                                            close: type === 'special_hours' ? closeInput?.value : null,
+                                            priceMode: type === 'special_price' ? priceModeInput?.value : null,
+                                            priceVal: type === 'special_price' ? parseFloat(priceValInput?.value) || 0 : null
                                         };
 
                                         const updatedDays = [...specialDays, newSpecialDay];
@@ -3472,6 +3570,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         dateInput.value = '';
                                         typeInput.value = 'closed';
                                         descInput.value = '';
+                                        const hoursContainer = document.getElementById('special-hours-fields');
+                                        const priceContainer = document.getElementById('special-price-fields');
+                                        if (hoursContainer) hoursContainer.style.display = 'none';
+                                        if (priceContainer) priceContainer.style.display = 'none';
 
                                         showToast('Día especial agregado', 'success');
                                     }}
@@ -3486,7 +3588,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                         fontSize: '14px'
                                     }}
                                 >
-                                    + Agregar
+                                    + Agregar Día Especial
                                 </button>
                             </div>
                         </div>
@@ -3539,9 +3641,19 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                         }}>
                                                             {typeInfo.label}
                                                         </span>
+                                                        {day.type === 'special_hours' && day.open && day.close && (
+                                                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#3b82f6' }}>
+                                                                {day.open} - {day.close} hs
+                                                            </span>
+                                                        )}
+                                                        {day.type === 'special_price' && day.priceVal !== undefined && (
+                                                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>
+                                                                {day.priceMode === 'multiplier' ? `+${day.priceVal}%` : `$${day.priceVal.toLocaleString('es-AR')}`}
+                                                            </span>
+                                                        )}
                                                         {day.description && (
                                                             <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                                                {day.description}
+                                                                ({day.description})
                                                             </span>
                                                         )}
                                                     </div>
@@ -3760,6 +3872,322 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     </div>
                 );
 
+            case 'store':
+                return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* Store Switch & Banner Config */}
+                        <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>Configuración de la Tienda</h3>
+                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                                        Activa tu e-commerce y personaliza el banner promocional.
+                                    </p>
+                                </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: 'var(--bg-main)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: '700', color: formData.store_enabled ? 'var(--primary-paddle)' : 'var(--text-secondary)' }}>
+                                        {formData.store_enabled ? '🟢 Tienda Habilitada' : '⚪ Tienda Deshabilitada'}
+                                    </span>
+                                    <input
+                                        type="checkbox"
+                                        checked={!!formData.store_enabled}
+                                        onChange={e => handleInputChange('store_enabled', e.target.checked)}
+                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    />
+                                </label>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Título del Banner Promocional</label>
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        value={formData.metadata?.store_banner_title || ''}
+                                        placeholder=""
+                                        onChange={e => handleMetadataChange('store_banner_title', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Subtítulo del Banner Promocional</label>
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        value={formData.metadata?.store_banner_subtitle || ''}
+                                        placeholder=""
+                                        onChange={e => handleMetadataChange('store_banner_subtitle', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => handleSave({ store_enabled: formData.store_enabled, metadata: formData.metadata })}
+                                style={{ ...saveButtonStyle, marginTop: '20px' }}
+                                disabled={saving}
+                            >
+                                {saving ? 'Guardando...' : 'Guardar Ajustes de Tienda'}
+                            </button>
+                        </div>
+
+                        {/* Product Catalog Management */}
+                        <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>Catálogo de Productos</h3>
+                                <button
+                                    onClick={() => {
+                                        setEditingProduct({ id: Date.now().toString(), name: '', price: '', category: 'General', desc: '', image: '', is_active: true });
+                                        setIsProductModalOpen(true);
+                                    }}
+                                    style={{
+                                        padding: '10px 20px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        background: 'var(--primary-paddle)',
+                                        color: '#000',
+                                        fontWeight: '700',
+                                        fontSize: '14px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    + Agregar Producto
+                                </button>
+                            </div>
+
+                            {/* Products Grid / List */}
+                            {(!formData.metadata?.store_products || formData.metadata.store_products.length === 0) ? (
+                                <div style={{ textAlign: 'center', padding: '32px', border: '1px dashed var(--border)', borderRadius: '16px', color: 'var(--text-secondary)' }}>
+                                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>🛒</div>
+                                    <p style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Aún no tienes productos cargados en tu catálogo.</p>
+                                    <button
+                                        onClick={() => {
+                                            setEditingProduct({ id: Date.now().toString(), name: '', price: '', category: 'General', desc: '', image: '', is_active: true });
+                                            setIsProductModalOpen(true);
+                                        }}
+                                        style={{
+                                            padding: '10px 20px',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--primary-paddle)',
+                                            background: 'transparent',
+                                            color: 'var(--text-primary)',
+                                            fontWeight: '700',
+                                            fontSize: '13px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        + Agregar Primer Producto
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+                                    {(formData.metadata.store_products || []).map((prod, idx) => (
+                                        <div
+                                            key={prod.id || idx}
+                                            style={{
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '16px',
+                                                padding: '14px',
+                                                backgroundColor: 'var(--bg-main)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'space-between',
+                                                gap: '12px'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                <img
+                                                    src={prod.image || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&q=80'}
+                                                    alt={prod.name}
+                                                    style={{ width: '52px', height: '52px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                                                />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary-paddle)', textTransform: 'uppercase' }}>
+                                                        {prod.category || 'General'}
+                                                    </div>
+                                                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {prod.name}
+                                                    </div>
+                                                    <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>
+                                                        ${Number(prod.price).toLocaleString('es-AR')}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={prod.is_active !== false}
+                                                        onChange={async (e) => {
+                                                            const updated = (formData.metadata?.store_products || []).map((p, i) =>
+                                                                i === idx ? { ...p, is_active: e.target.checked } : p
+                                                            );
+                                                            handleMetadataChange('store_products', updated);
+                                                            await handleSave({ metadata: { ...formData.metadata, store_products: updated } });
+                                                        }}
+                                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                    />
+                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: prod.is_active !== false ? '#10b981' : 'var(--text-secondary)' }}>
+                                                        {prod.is_active !== false ? 'Visible' : 'Oculto'}
+                                                    </span>
+                                                </label>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingProduct({ ...prod });
+                                                            setIsProductModalOpen(true);
+                                                        }}
+                                                        style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer', color: 'var(--text-primary)' }}
+                                                    >
+                                                        ✏️ Editar
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            const updated = (formData.metadata.store_products || []).filter((_, i) => i !== idx);
+                                                            handleMetadataChange('store_products', updated);
+                                                            await handleSave({ metadata: { ...formData.metadata, store_products: updated } });
+                                                        }}
+                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '14px', cursor: 'pointer' }}
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Section 2: Adicionales para Reservas de Turnos */}
+                        <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border)', marginTop: '24px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>⚡ Adicionales para Reservas de Turnos</h3>
+                                <button
+                                    onClick={() => {
+                                        setEditingExtra({ id: Date.now().toString(), name: '', price: '', desc: '', image: '', is_active: true });
+                                        setIsExtraModalOpen(true);
+                                    }}
+                                    style={{
+                                        padding: '10px 20px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        background: 'var(--primary-paddle)',
+                                        color: '#000',
+                                        fontWeight: '700',
+                                        fontSize: '14px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    + Agregar Adicional de Turno
+                                </button>
+                            </div>
+
+                            {(!formData.additional_services || formData.additional_services.length === 0) ? (
+                                <div style={{ textAlign: 'center', padding: '32px', border: '1px dashed var(--border)', borderRadius: '16px', color: 'var(--text-secondary)', marginTop: '16px' }}>
+                                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>⚡</div>
+                                    <p style={{ margin: '0 0 12px 0', fontSize: '14px' }}>No tienes adicionales de turno cargados.</p>
+                                    <button
+                                        onClick={() => {
+                                            setEditingExtra({ id: Date.now().toString(), name: '', price: '', desc: '', image: '', is_active: true });
+                                            setIsExtraModalOpen(true);
+                                        }}
+                                        style={{
+                                            padding: '10px 20px',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--bg-main)',
+                                            color: 'var(--text-primary)',
+                                            fontWeight: '700',
+                                            fontSize: '13px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        + Agregar Primer Adicional
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                                    {(formData.additional_services || []).map((extra, idx) => (
+                                        <div
+                                            key={extra.id || idx}
+                                            style={{
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '16px',
+                                                padding: '14px',
+                                                backgroundColor: 'var(--bg-main)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'space-between',
+                                                gap: '12px'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                <img
+                                                    src={extra.image || extra.image_url || 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=200&q=80'}
+                                                    alt={extra.name}
+                                                    style={{ width: '52px', height: '52px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                                                />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary-paddle)', textTransform: 'uppercase' }}>
+                                                        Adicional Turno
+                                                    </div>
+                                                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {extra.name}
+                                                    </div>
+                                                    <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)', marginTop: '2px' }}>
+                                                        ${Number(extra.price).toLocaleString('es-AR')}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={extra.is_active !== false}
+                                                        onChange={async (e) => {
+                                                            const updated = (formData.additional_services || []).map((ex, i) =>
+                                                                i === idx ? { ...ex, is_active: e.target.checked } : ex
+                                                            );
+                                                            handleInputChange('additional_services', updated);
+                                                            await handleSave({ additional_services: updated });
+                                                        }}
+                                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                                    />
+                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: extra.is_active !== false ? '#10b981' : 'var(--text-secondary)' }}>
+                                                        {extra.is_active !== false ? 'Activo' : 'Inactivo'}
+                                                    </span>
+                                                </label>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingExtra({ ...extra });
+                                                            setIsExtraModalOpen(true);
+                                                        }}
+                                                        style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer', color: 'var(--text-primary)' }}
+                                                    >
+                                                        ✏️ Editar
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            const updated = (formData.additional_services || []).filter((_, i) => i !== idx);
+                                                            handleInputChange('additional_services', updated);
+                                                            await handleSave({ additional_services: updated });
+                                                        }}
+                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '14px', cursor: 'pointer' }}
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+
             default:
                 return null;
         }
@@ -3842,42 +4270,48 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 </div>
             ) : (
                 // Desktop: Sidebar + Content
-                <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+                <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
                     {/* Desktop Sidebar */}
                     <div style={{
                         width: '240px',
+                        flexShrink: 0,
                         borderRight: '1px solid var(--border)',
-                        padding: '12px',
+                        padding: '16px 12px',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '4px',
-                        backgroundColor: 'rgba(0,0,0,0.01)'
+                        gap: '6px',
+                        backgroundColor: 'rgba(0,0,0,0.02)',
+                        overflowY: 'auto'
                     }}>
-                        {tabs.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    padding: '12px 16px',
-                                    borderRadius: '12px',
-                                    border: 'none',
-                                    background: activeTab === tab.id ? 'rgba(0,0,0,0.05)' : 'transparent',
-                                    color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                    cursor: 'pointer',
-                                    fontWeight: activeTab === tab.id ? '700' : '600',
-                                    fontSize: '14px',
-                                    textAlign: 'left',
-                                    whiteSpace: 'nowrap',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                <span style={{ fontSize: '18px' }}>{tab.icon}</span>
-                                {tab.label}
-                            </button>
-                        ))}
+                        {tabs.map(tab => {
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        padding: '12px 16px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        background: isActive ? 'var(--primary-paddle)' : 'transparent',
+                                        color: isActive ? '#000000' : 'var(--text-primary)',
+                                        cursor: 'pointer',
+                                        fontWeight: isActive ? '800' : '600',
+                                        fontSize: '14px',
+                                        textAlign: 'left',
+                                        whiteSpace: 'nowrap',
+                                        transition: 'all 0.15s ease',
+                                        boxShadow: isActive ? '0 4px 12px rgba(0,230,118,0.25)' : 'none'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '18px' }}>{tab.icon}</span>
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* Desktop Content Panel */}
@@ -3889,6 +4323,409 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
             {/* Render Plan Management Modal */}
             {showPlanModal && <PlanManagementModal />}
+
+            {/* Modal de Crear/Editar Producto */}
+            {isProductModalOpen && editingProduct && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 1100,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '20px',
+                        padding: '24px',
+                        maxWidth: '480px',
+                        width: '100%',
+                        border: '1px solid var(--border)',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '16px'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                {formData.metadata?.store_products?.some(p => p.id === editingProduct.id) ? 'Editar Producto' : 'Nuevo Producto'}
+                            </h3>
+                            <button
+                                onClick={() => setIsProductModalOpen(false)}
+                                style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Nombre del Producto</label>
+                            <input
+                                type="text"
+                                style={inputStyle}
+                                value={editingProduct.name || ''}
+                                placeholder=""
+                                onChange={e => setEditingProduct(prev => ({ ...prev, name: e.target.value }))}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={labelStyle}>Precio ($)</label>
+                                <input
+                                    type="number"
+                                    style={inputStyle}
+                                    value={editingProduct.price || ''}
+                                    placeholder=""
+                                    onChange={e => setEditingProduct(prev => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
+                                />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label style={labelStyle}>Categoría</label>
+                                <input
+                                    type="text"
+                                    style={inputStyle}
+                                    value={editingProduct.category || ''}
+                                    placeholder=""
+                                    list="store-categories-list"
+                                    onChange={e => setEditingProduct(prev => ({ ...prev, category: e.target.value }))}
+                                />
+                                <datalist id="store-categories-list">
+                                    {Array.from(new Set(['General', 'Equipamiento', 'Bebidas', 'Indumentaria', 'Alquileres', 'Accesorios', ...(formData.metadata?.store_products || []).map(p => p.category).filter(Boolean)])).map(cat => (
+                                        <option key={cat} value={cat} />
+                                    ))}
+                                </datalist>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Descripción corta</label>
+                            <input
+                                type="text"
+                                style={inputStyle}
+                                value={editingProduct.desc || ''}
+                                placeholder=""
+                                onChange={e => setEditingProduct(prev => ({ ...prev, desc: e.target.value }))}
+                            />
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Imágenes del Producto (Podés subir varias)</label>
+                            
+                            {/* Grid of uploaded images */}
+                            {((Array.isArray(editingProduct.images) && editingProduct.images.length > 0) || editingProduct.image) && (
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                    {(Array.isArray(editingProduct.images) && editingProduct.images.length > 0
+                                        ? editingProduct.images
+                                        : [editingProduct.image]
+                                    ).filter(Boolean).map((imgUrl, iIdx) => (
+                                        <div key={iIdx} style={{ position: 'relative', width: '60px', height: '60px' }}>
+                                            <img
+                                                src={imgUrl}
+                                                alt={`Foto ${iIdx + 1}`}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    borderRadius: '12px',
+                                                    objectFit: 'cover',
+                                                    border: (editingProduct.image === imgUrl || (!editingProduct.image && iIdx === 0)) ? '2px solid var(--primary-paddle)' : '1px solid var(--border)'
+                                                }}
+                                            />
+                                            {/* Delete button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const currentList = Array.isArray(editingProduct.images) && editingProduct.images.length > 0
+                                                        ? editingProduct.images
+                                                        : [editingProduct.image];
+                                                    const newImgs = currentList.filter((_, idx) => idx !== iIdx);
+                                                    setEditingProduct(prev => ({
+                                                        ...prev,
+                                                        images: newImgs,
+                                                        image: newImgs[0] || null
+                                                    }));
+                                                }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '-6px',
+                                                    right: '-6px',
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    borderRadius: '50%',
+                                                    background: '#ef4444',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    fontSize: '11px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                }}
+                                                title="Eliminar foto"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <label style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                width: '100%',
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                border: '1px dashed var(--border)',
+                                background: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: uploadingProductImage ? 'wait' : 'pointer'
+                            }}>
+                                {uploadingProductImage ? '⏳ Subiendo imágenes...' : '📷 Subir Imágenes (Seleccionar 1 o varias)'}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    disabled={uploadingProductImage}
+                                    style={{ display: 'none' }}
+                                    onChange={async (e) => {
+                                        const files = Array.from(e.target.files || []);
+                                        if (files.length === 0) return;
+                                        try {
+                                            setUploadingProductImage(true);
+                                            const uploadPromises = files.map(file => serviceAdapter.uploadImage(file));
+                                            const uploadedUrls = await Promise.all(uploadPromises);
+
+                                            setEditingProduct(prev => {
+                                                const existingImages = Array.isArray(prev.images) && prev.images.length > 0
+                                                    ? prev.images
+                                                    : (prev.image ? [prev.image] : []);
+                                                const combined = [...existingImages, ...uploadedUrls];
+                                                return {
+                                                    ...prev,
+                                                    images: combined,
+                                                    image: combined[0] || null
+                                                };
+                                            });
+                                            showToast(`${uploadedUrls.length} imagen(es) subida(s)`, 'success');
+                                        } catch (err) {
+                                            console.error('Error uploading product images:', err);
+                                            showToast('Error al subir imágenes', 'error');
+                                        } finally {
+                                            setUploadingProductImage(false);
+                                        }
+                                    }}
+                                />
+                            </label>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                            <button
+                                onClick={() => setIsProductModalOpen(false)}
+                                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!editingProduct.name) {
+                                        showToast('Ingresá el nombre del producto', 'error');
+                                        return;
+                                    }
+                                    const finalImages = Array.isArray(editingProduct.images) && editingProduct.images.length > 0
+                                        ? editingProduct.images
+                                        : (editingProduct.image ? [editingProduct.image] : []);
+                                    const prodToSave = {
+                                        ...editingProduct,
+                                        images: finalImages,
+                                        image: finalImages[0] || editingProduct.image || null
+                                    };
+
+                                    const currentProducts = formData.metadata?.store_products || [];
+                                    const existingIdx = currentProducts.findIndex(p => p.id === prodToSave.id);
+                                    let updated;
+                                    if (existingIdx >= 0) {
+                                        updated = [...currentProducts];
+                                        updated[existingIdx] = prodToSave;
+                                    } else {
+                                        updated = [...currentProducts, { ...prodToSave, id: Date.now().toString() }];
+                                    }
+                                    handleMetadataChange('store_products', updated);
+                                    setIsProductModalOpen(false);
+                                    await handleSave({ metadata: { ...formData.metadata, store_products: updated } });
+                                }}
+                                style={{ flex: 2, ...saveButtonStyle, marginTop: 0 }}
+                            >
+                                Guardar Producto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Crear/Editar Adicional de Turno */}
+            {isExtraModalOpen && editingExtra && (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 1100,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: '20px',
+                        padding: '24px',
+                        maxWidth: '480px',
+                        width: '100%',
+                        border: '1px solid var(--border)',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '16px'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                {formData.additional_services?.some(e => e.id === editingExtra.id) ? 'Editar Adicional' : 'Nuevo Adicional de Turno'}
+                            </h3>
+                            <button
+                                onClick={() => setIsExtraModalOpen(false)}
+                                style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Nombre del Adicional</label>
+                            <input
+                                type="text"
+                                style={inputStyle}
+                                value={editingExtra.name || ''}
+                                placeholder=""
+                                onChange={e => setEditingExtra(prev => ({ ...prev, name: e.target.value }))}
+                            />
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Precio ($)</label>
+                            <input
+                                type="number"
+                                style={inputStyle}
+                                value={editingExtra.price || ''}
+                                placeholder=""
+                                onChange={e => setEditingExtra(prev => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
+                            />
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Descripción corta (opcional)</label>
+                            <input
+                                type="text"
+                                style={inputStyle}
+                                value={editingExtra.desc || ''}
+                                placeholder=""
+                                onChange={e => setEditingExtra(prev => ({ ...prev, desc: e.target.value }))}
+                            />
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Imagen del Adicional</label>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                {editingExtra.image && (
+                                    <img
+                                        src={editingExtra.image}
+                                        alt="Preview"
+                                        style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                                    />
+                                )}
+                                <label style={{
+                                    flex: 1,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    padding: '10px 16px',
+                                    borderRadius: '12px',
+                                    border: '1px dashed var(--border)',
+                                    background: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: uploadingExtraImage ? 'wait' : 'pointer'
+                                }}>
+                                    {uploadingExtraImage ? '⏳ Subiendo...' : (editingExtra.image ? '📷 Cambiar Imagen' : '📷 Subir Imagen')}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        disabled={uploadingExtraImage}
+                                        style={{ display: 'none' }}
+                                        onChange={async (e) => {
+                                            const file = e.target.files[0];
+                                            if (!file) return;
+                                            try {
+                                                setUploadingExtraImage(true);
+                                                const publicUrl = await serviceAdapter.uploadImage(file);
+                                                setEditingExtra(prev => ({ ...prev, image: publicUrl }));
+                                                showToast('Imagen subida correctamente', 'success');
+                                            } catch (err) {
+                                                console.error('Error uploading extra image:', err);
+                                                showToast('Error al subir imagen', 'error');
+                                            } finally {
+                                                setUploadingExtraImage(false);
+                                            }
+                                        }}
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                            <button
+                                onClick={() => setIsExtraModalOpen(false)}
+                                style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!editingExtra.name) {
+                                        showToast('Ingresá el nombre del adicional', 'error');
+                                        return;
+                                    }
+                                    const currentExtras = formData.additional_services || [];
+                                    const existingIdx = currentExtras.findIndex(e => e.id === editingExtra.id);
+                                    let updated;
+                                    if (existingIdx >= 0) {
+                                        updated = [...currentExtras];
+                                        updated[existingIdx] = editingExtra;
+                                    } else {
+                                        updated = [...currentExtras, { ...editingExtra, id: Date.now().toString() }];
+                                    }
+                                    handleInputChange('additional_services', updated);
+                                    setIsExtraModalOpen(false);
+                                    await handleSave({ additional_services: updated });
+                                }}
+                                style={{ flex: 2, ...saveButtonStyle, marginTop: 0 }}
+                            >
+                                Guardar Adicional
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -3925,26 +4762,29 @@ const hintStyle = {
 const saveButtonStyle = {
     marginTop: '20px',
     padding: '12px 24px',
-    borderRadius: '12px',
+    borderRadius: '6px',
     border: 'none',
-    background: 'var(--primary-paddle)',
-    color: '#000',
-    fontWeight: '700',
-    fontSize: '15px',
+    background: '#3ECF8E',
+    color: '#121212',
+    fontWeight: '600',
+    fontSize: '14px',
     cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(0,230,118,0.2)',
+    boxShadow: 'none',
     width: '100%',
-    textAlign: 'center'
+    textAlign: 'center',
+    transition: 'all 0.15s ease'
 };
 
 const buttonSecondaryStyle = {
     display: 'inline-block',
     padding: '8px 16px',
-    borderRadius: '10px',
-    border: '1px solid var(--border)',
-    background: 'var(--bg-main)',
-    color: 'var(--text-primary)',
+    borderRadius: '6px',
+    border: '1px solid #2E2E2E',
+    background: '#242424',
+    color: '#EDEDED',
     fontSize: '13px',
-    fontWeight: '700',
-    cursor: 'pointer'
+    fontWeight: '600',
+    cursor: 'pointer',
+    boxShadow: 'none',
+    transition: 'all 0.15s ease'
 };

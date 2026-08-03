@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion'; // Added AnimatePresence import
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -19,6 +19,7 @@ const BusinessPortal = lazy(() => import('./pages/BusinessPortal'));
 const Ayuda = lazy(() => import('./pages/Ayuda'));
 const Negocios = lazy(() => import('./pages/Negocios'));
 const Colaboradores = lazy(() => import('./pages/Colaboradores'));
+const BusinessStore = lazy(() => import('./pages/BusinessStore'));
 
 // Seller Portal Components
 const SellerLogin = lazy(() => import('./components/seller/SellerLogin'));
@@ -35,7 +36,8 @@ const LoadingFallback = () => (
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    height: '100vh',
+    flex: 1,
+    minHeight: '60vh',
     backgroundColor: 'var(--bg-main)',
     color: 'var(--text-primary)'
   }}>
@@ -58,20 +60,68 @@ const LoadingFallback = () => (
   </div>
 );
 
+import { getSubdomain } from './utils/utils';
+
 function AppContent() {
   const location = useLocation();
+  const subdomain = getSubdomain();
+
   const isHome = location.pathname === '/';
   const isBusinessPortal = location.pathname.startsWith('/portal');
   const isAdmin = location.pathname.startsWith('/admin');
-  // Determine if it's a LinkBio page (e.g. /my-business) but EXCLUDE known public routes
-  const isPublicRoute = ['/', '/ayuda', '/negocios', '/colaboradores', '/for-business', '/help'].includes(location.pathname) || location.pathname.endsWith('/turnos');
-  const isLinkBio = !isAdmin && !isBusinessPortal && !isPublicRoute;
+  const isLinkBio = (subdomain && location.pathname === '/') || location.pathname.endsWith('/bio');
+  const isBusinessPage = isLinkBio || location.pathname.endsWith('/turnos') || location.pathname.endsWith('/tienda') || (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda'));
+
+  if (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda')) {
+    return (
+      <div className="app-container" style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column'
+      }}>
+        <Header showSearch={false} />
+        <main style={{ 
+          flex: 1, 
+          minHeight: 'calc(100vh - 70px)', 
+          display: 'flex', 
+          flexDirection: 'column'
+        }}>
+          <Suspense fallback={<LoadingFallback />}>
+            {location.pathname === '/tienda' ? (
+              <BusinessStore overrideSlug={subdomain} />
+            ) : location.pathname === '/' ? (
+              <LinkBio overrideSlug={subdomain} />
+            ) : (
+              <BusinessProfileRouter overrideSlug={subdomain} />
+            )}
+          </Suspense>
+        </main>
+        <Footer minimal={true} />
+        <Toast />
+        <ConfirmDialog />
+        <AlertDialog />
+      </div>
+    );
+  }
 
   return (
-    <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="app-container" style={{ 
+      height: isLinkBio ? '100vh' : 'auto',
+      minHeight: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column',
+      overflow: isLinkBio ? 'hidden' : 'visible'
+    }}>
       {!isAdmin && !isLinkBio && !isBusinessPortal && <Header showSearch={isHome} />}
 
-      <main style={{ flex: 1 }}>
+      <main style={{ 
+        flex: 1, 
+        minHeight: isLinkBio ? '0' : 'calc(100vh - 70px)', 
+        height: isLinkBio ? 'calc(100vh - 60px)' : 'auto',
+        display: 'flex', 
+        flexDirection: 'column',
+        overflow: isLinkBio ? 'hidden' : 'visible'
+      }}>
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
@@ -83,9 +133,11 @@ function AppContent() {
               <Route path="/login" element={<SellerLogin />} />
               <Route path="/portal" element={<BusinessPortal />} />
               <Route path="/business-portal" element={<BusinessPortal />} />
-              {/* Keep old routes temporarily for compatibility if needed, or remove them */}
-              <Route path="/:businessSlug" element={<LinkBio />} />
+              {/* /:businessSlug now goes directly to the reservation / booking page */}
+              <Route path="/:businessSlug" element={<BusinessProfileRouter />} />
               <Route path="/:businessSlug/turnos" element={<BusinessProfileRouter />} />
+              <Route path="/:businessSlug/tienda" element={<BusinessStore />} />
+              <Route path="/:businessSlug/bio" element={<LinkBio />} />
               <Route path="/admin" element={<Navigate to="/login" replace />} />
               <Route path="/admin/login" element={<Navigate to="/login" replace />} />
 
@@ -101,7 +153,7 @@ function AppContent() {
         </Suspense>
       </main>
 
-      {!isAdmin && !isLinkBio && !isBusinessPortal && <Footer />}
+      {!isAdmin && !isBusinessPortal && <Footer minimal={isBusinessPage} />}
 
       {/* Notification Components */}
       <Toast />
@@ -111,9 +163,20 @@ function AppContent() {
   );
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <Router>
+      <ScrollToTop />
       <NotificationProvider>
         <AppContent />
       </NotificationProvider>

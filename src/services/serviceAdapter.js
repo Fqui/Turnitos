@@ -56,7 +56,7 @@ class ServiceAdapter {
             // For Supabase, we need to get all businesses and filter by slug
             const businesses = await this.service.getBusinesses();
             const { generateSlug } = await import('../utils/utils');
-            return businesses.find(b => generateSlug(b.name) === slug);
+            return businesses.find(b => b.slug === slug || generateSlug(b.name) === slug);
         }
     }
 
@@ -108,6 +108,10 @@ class ServiceAdapter {
 
     async getPromotions() {
         return this.service.getPromotions();
+    }
+
+    async getPromotionById(promoId) {
+        return this.service.getPromotionById(promoId);
     }
 
     async createPromotion(promotionData) {
@@ -237,8 +241,39 @@ class ServiceAdapter {
         }
         return this.service.uploadImage(file);
     }
+
+    // --- Store Product Methods ---
+
+    async getStoreProducts(businessId, onlyActive = false) {
+        if (this.service.getStoreProducts) {
+            return this.service.getStoreProducts(businessId, onlyActive);
+        }
+        return [];
+    }
+
+    async createStoreProduct(productData) {
+        if (this.service.createStoreProduct) {
+            return this.service.createStoreProduct(productData);
+        }
+        throw new Error('createStoreProduct not supported');
+    }
+
+    async updateStoreProduct(id, productData) {
+        if (this.service.updateStoreProduct) {
+            return this.service.updateStoreProduct(id, productData);
+        }
+        throw new Error('updateStoreProduct not supported');
+    }
+
+    async deleteStoreProduct(id) {
+        if (this.service.deleteStoreProduct) {
+            return this.service.deleteStoreProduct(id);
+        }
+        throw new Error('deleteStoreProduct not supported');
+    }
 }
 
 // Export singleton instance
 const serviceAdapter = new ServiceAdapter();
 export default serviceAdapter;
+

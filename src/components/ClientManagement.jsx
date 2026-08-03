@@ -120,7 +120,8 @@ export default function ClientManagement({ businessId, isMobile }) {
 
     const filteredCustomers = customers.filter(c =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.phone.includes(searchTerm)
+        c.phone.includes(searchTerm) ||
+        (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     const getStatusColor = (status) => {
@@ -206,6 +207,7 @@ export default function ClientManagement({ businessId, isMobile }) {
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.02)' }}>
                                 <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Cliente</th>
+                                <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Contacto</th>
                                 <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Última Visita</th>
                                 <th style={{ padding: '16px 20px', textAlign: 'right' }}></th>
                             </tr>
@@ -220,11 +222,17 @@ export default function ClientManagement({ businessId, isMobile }) {
                                         cursor: 'pointer',
                                         transition: 'background 0.2s'
                                     }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.01)'}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--sidebar-hover-bg)'}
                                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                 >
                                     <td style={{ padding: '16px 20px' }}>
                                         <div style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '15px' }}>{customer.name}</div>
+                                    </td>
+                                    <td style={{ padding: '16px 20px' }}>
+                                        <div style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{customer.phone}</div>
+                                        {customer.email && (
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{customer.email}</div>
+                                        )}
                                     </td>
                                     <td style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontSize: '14px' }}>
                                         {allCustomerBookings[customer.phone] ? formatDisplayDate(allCustomerBookings[customer.phone]) : 'Sin visitas'}
@@ -236,14 +244,14 @@ export default function ClientManagement({ businessId, isMobile }) {
                                                 handleCustomerClick(customer);
                                             }}
                                             style={{
-                                                background: 'var(--primary-paddle)',
+                                                background: 'var(--primary)',
                                                 border: 'none',
                                                 padding: '8px 16px',
                                                 borderRadius: '8px',
                                                 fontSize: '13px',
                                                 fontWeight: '700',
                                                 cursor: 'pointer',
-                                                color: '#000',
+                                                color: '#fff',
                                                 transition: 'all 0.2s'
                                             }}
                                             onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
@@ -311,7 +319,10 @@ export default function ClientManagement({ businessId, isMobile }) {
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>{selectedCustomer.name}</div>
-                                    <div style={{ color: 'var(--text-secondary)' }}>{selectedCustomer.phone}</div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>📱 {selectedCustomer.phone}</div>
+                                    {selectedCustomer.email && (
+                                        <div style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '2px' }}>📧 {selectedCustomer.email}</div>
+                                    )}
                                 </div>
                             </div>
 

@@ -20,7 +20,8 @@ import BusinessPortalSidebar from '../components/business/BusinessPortalSidebar'
 import BookingDetailsModal from '../components/business/BookingDetailsModal';
 import NewBookingModal from '../components/business/NewBookingModal';
 import BlockSlotModal from '../components/business/BlockSlotModal';
-import ChangePasswordModal from '../components/ChangePasswordModal';
+import ChangePasswordModal from '../components/seller/ChangePasswordModal';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 export default function BusinessPortal() {
     const [businesses, setBusinesses] = useState([]);
@@ -39,6 +40,8 @@ export default function BusinessPortal() {
 
     useEffect(() => {
         const checkAutoLogin = async () => {
+            const mustChangePassword = localStorage.getItem('turnitos_must_change_password') === 'true';
+
             // New format (from the unified /admin/login)
             const storedBusiness = localStorage.getItem('business');
             if (storedBusiness) {
@@ -48,6 +51,14 @@ export default function BusinessPortal() {
                         const businessesData = await serviceAdapter.getBusinesses();
                         const fullBiz = businessesData.find(b => b.id === biz.id);
                         if (fullBiz) {
+                            if (mustChangePassword || fullBiz.password_changed === false) {
+                                setRequirePasswordChange(true);
+                                setCurrentBusinessId(fullBiz.id);
+                                setSelectedBusinessId(fullBiz.id);
+                                setBusinesses(businessesData);
+                                setLoginEmail(fullBiz.email);
+                                return;
+                            }
                             setSelectedBusinessId(fullBiz.id);
                             setBusinesses(businessesData);
                             setIsLoggedIn(true);
@@ -69,6 +80,13 @@ export default function BusinessPortal() {
                     const businessesData = await serviceAdapter.getBusinesses();
                     const biz = businessesData.find(b => b.email === storedEmail);
                     if (biz) {
+                        if (mustChangePassword || biz.password_changed === false) {
+                            setRequirePasswordChange(true);
+                            setCurrentBusinessId(biz.id);
+                            setSelectedBusinessId(biz.id);
+                            setBusinesses(businessesData);
+                            return;
+                        }
                         setSelectedBusinessId(biz.id);
                         setBusinesses(businessesData);
                         setIsLoggedIn(true);
@@ -82,6 +100,11 @@ export default function BusinessPortal() {
     }, []);
 
     const [viewMode, setViewMode] = useState('calendar'); // 'calendar', 'list', 'analytics', 'settings'
+
+    // Scroll to top of page whenever switching view modes (e.g. entering settings)
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [viewMode]);
 
     // Analytics state
     const [metrics, setMetrics] = useState(null);
@@ -104,6 +127,7 @@ export default function BusinessPortal() {
     });
 
     const [reschedulingBooking, setReschedulingBooking] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Calendar state (lifted for stats synchronization)
     const [calendarViewMode, setCalendarViewMode] = useState('day');
@@ -199,14 +223,11 @@ export default function BusinessPortal() {
                     localStorage.removeItem('turnitos_business_email');
                 }
 
-                // --- Solicitar permiso y token de notificaciones (Desactivado para desarrollo local sin HTTPS) ---
-                /*
                 try {
                     await pushService.requestPermissionAndGetToken(business.id);
                 } catch (pushError) {
                     console.warn('No se pudieron activar las notificaciones push:', pushError);
                 }
-                */
             }
         } catch (error) {
             console.error('Login error:', error);
@@ -316,6 +337,19 @@ export default function BusinessPortal() {
             'completed': 'Finalizado'
         };
         return labels[status] || status;
+    };
+
+    const getStatusStyle = (status) => {
+        const styles = {
+            pending:      { bg: 'var(--status-pending-bg)',   color: 'var(--status-pending)' },
+            confirmed:    { bg: 'var(--status-confirmed-bg)', color: 'var(--status-confirmed)' },
+            cancelled:    { bg: 'var(--status-cancelled-bg)', color: 'var(--status-cancelled)' },
+            deposit_paid: { bg: 'var(--status-deposit-bg)',   color: 'var(--status-deposit)' },
+            completed:    { bg: 'var(--status-completed-bg)', color: 'var(--status-completed)' },
+            attended:     { bg: 'var(--status-attended-bg)',   color: 'var(--status-attended)' },
+            blocked:      { bg: 'var(--status-blocked-bg)',    color: 'var(--status-blocked)' }
+        };
+        return styles[status] || { bg: 'var(--status-pending-bg)', color: 'var(--status-pending)' };
     };
 
     const handleMoveBooking = async (bookingId, newDate, newTime, newItemId) => {
@@ -492,7 +526,7 @@ export default function BusinessPortal() {
         }
     };
 
-    const handleBlockSlot = async (date, time) => {
+    const handleBlockSlot = async (date, time, resource = null) => {
         let dateStr, timeStr;
 
         if (date && time) {
@@ -508,27 +542,34 @@ export default function BusinessPortal() {
             dateStr = now.toISOString().split('T')[0];
         }
 
-        setPendingBlockData({ date: dateStr, time: timeStr });
+        // resource can be a court object or specialist object
+        const resourceId = resource ? (resource.id || resource) : null;
+        const resourceName = resource ? (resource.name || null) : null;
+
+        setPendingBlockData({ date: dateStr, time: timeStr, resourceId, resourceName });
         setShowBlockModal(true);
     };
 
     const confirmBlockSlot = async (reason) => {
         if (!pendingBlockData) return;
 
-        const { date, time } = pendingBlockData;
+        const { date, time, resourceId, resourceName } = pendingBlockData;
 
         const calendarType = getCalendarType(currentBusiness);
         const slotConfig = getSlotConfig(calendarType);
         const blockDuration = slotConfig.slotSize || 60;
 
+        const isSport = calendarType === 'futbol' || calendarType === 'padel' || calendarType === 'tenis';
+
         const bookingData = {
             businessId: selectedBusinessId,
             serviceId: null,
-            courtId: null,
+            courtId: isSport ? resourceId : null,
+            specialistId: !isSport ? resourceId : null,
             date: date,
             time: time,
             duration: blockDuration,
-            customerName: reason || 'BLOQUEADO POR ADMIN', // Use reason as name/label
+            customerName: reason ? `BLOQUEADO: ${reason}` : (resourceName ? `BLOQUEADO (${resourceName})` : 'BLOQUEADO POR ADMIN'),
             customerEmail: '-',
             customerPhone: '-',
             status: 'blocked',
@@ -555,18 +596,22 @@ export default function BusinessPortal() {
     };
 
     const handleUnblockSlot = async (booking) => {
-        if (!window.confirm('¿Estás seguro de que deseas desbloquear este horario?')) {
-            return;
-        }
-
-        try {
-            await serviceAdapter.deleteBooking(booking.id);
-            // Refresh bookings
-            fetchBookings();
-        } catch (error) {
-            console.error('Error unblocking slot:', error);
-            alert('Error al desbloquear horario. Por favor intenta nuevamente.');
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: 'Desbloquear Horario',
+            message: '¿Estás seguro de que deseas desbloquear este horario?',
+            confirmText: 'Desbloquear',
+            isDanger: true,
+            onConfirm: async () => {
+                try {
+                    await serviceAdapter.deleteBooking(booking.id);
+                    fetchBookings();
+                } catch (error) {
+                    console.error('Error unblocking slot:', error);
+                    alert('Error al desbloquear horario. Por favor intenta nuevamente.');
+                }
+            }
+        });
     };
 
     const handleBookingClick = (booking) => {
@@ -683,6 +728,32 @@ export default function BusinessPortal() {
 
     // Check for forced password change FIRST
     if (requirePasswordChange) {
+        const targetBusinessId = currentBusinessId || selectedBusinessId;
+        const targetEmail = loginEmail || (businesses.find(b => b.id === targetBusinessId)?.email) || '';
+
+        const handlePasswordSuccess = async () => {
+            localStorage.removeItem('turnitos_must_change_password');
+            setRequirePasswordChange(false);
+            setLoading(true);
+            try {
+                if (targetBusinessId) {
+                    const fullBusiness = await serviceAdapter.getBusinessById(targetBusinessId);
+                    setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
+                    setSelectedBusinessId(targetBusinessId);
+                }
+                setIsLoggedIn(true);
+
+                if (rememberMe && targetEmail) {
+                    localStorage.setItem('turnitos_business_email', targetEmail);
+                }
+            } catch (err) {
+                console.error("Error finalizing login:", err);
+                setIsLoggedIn(true);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         return (
             <div style={{
                 display: 'flex',
@@ -693,26 +764,10 @@ export default function BusinessPortal() {
                 padding: '20px'
             }}>
                 <ChangePasswordModal
-                    businessId={currentBusinessId}
-                    onPasswordChanged={async () => {
-                        setRequirePasswordChange(false);
-                        setLoading(true);
-                        try {
-                            const fullBusiness = await serviceAdapter.getBusinessById(currentBusinessId);
-                            setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
-                            setSelectedBusinessId(currentBusinessId);
-                            setIsLoggedIn(true);
-
-                            if (rememberMe) {
-                                localStorage.setItem('turnitos_business_email', loginEmail);
-                            }
-                        } catch (err) {
-                            console.error("Error finalizing login:", err);
-                            alert("Error al finalizar el inicio de sesión");
-                        } finally {
-                            setLoading(false);
-                        }
-                    }}
+                    businessId={targetBusinessId}
+                    userEmail={targetEmail}
+                    onSuccess={handlePasswordSuccess}
+                    onPasswordChanged={handlePasswordSuccess}
                 />
             </div>
         );
@@ -740,7 +795,7 @@ export default function BusinessPortal() {
             {/* Mobile Header */}
             {isMobile && (
                 <div style={{
-                    padding: '16px 20px',
+                    padding: '12px 20px',
                     background: 'var(--bg-card)',
                     borderBottom: '1px solid var(--border)',
                     display: 'flex',
@@ -748,26 +803,33 @@ export default function BusinessPortal() {
                     alignItems: 'center',
                     position: 'sticky',
                     top: 0,
-                    zIndex: 100
+                    zIndex: 100,
+                    boxShadow: 'var(--shadow-sm)'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         {(currentBusiness?.logo || currentBusiness?.image) && (
                             <img
                                 src={currentBusiness.logo || currentBusiness.image}
                                 alt="Logo"
-                                style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                                style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }}
                             />
                         )}
-                        <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                        <h1 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
                             {currentBusiness?.name || 'Portal Socios'}
                         </h1>
                     </div>
                     <button
                         onClick={() => setShowSidebar(!showSidebar)}
                         style={{
-                            background: 'transparent',
-                            border: 'none',
-                            fontSize: '24px',
+                            background: 'var(--bg-main)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                            width: '36px',
+                            height: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '18px',
                             cursor: 'pointer',
                             color: 'var(--text-primary)'
                         }}
@@ -788,7 +850,12 @@ export default function BusinessPortal() {
                 toggleTheme={toggleTheme}
                 theme={theme}
                 currentBusiness={currentBusiness}
-                onLogout={() => setIsLoggedIn(false)}
+                pendingCount={bookings.filter(b => b.status === 'pending').length}
+                onCreateBooking={(e) => handleCreateBooking(e)}
+                onLogout={async () => {
+                    await supabaseService.logout();
+                    setIsLoggedIn(false);
+                }}
             />
 
             {/* Main Content Area */}
@@ -805,9 +872,15 @@ export default function BusinessPortal() {
                 minHeight: 0
             }}>
                 {loading ? (
-                    <div style={{ textAlign: 'center', padding: '100px' }}>
-                        <div style={{ fontSize: '40px', marginBottom: '20px', animation: 'spin 2s linear infinite' }}>⏳</div>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '18px' }}>Cargando información...</p>
+                    <div style={{ textAlign: 'center', padding: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                        <div style={{
+                            width: '40px', height: '40px',
+                            border: '3px solid var(--border)',
+                            borderTopColor: 'var(--primary)',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite'
+                        }} />
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '15px', fontWeight: '500' }}>Cargando información...</p>
                     </div>
                 ) : (
                     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
@@ -1108,47 +1181,29 @@ export default function BusinessPortal() {
                                 <div style={{
                                     display: 'flex',
                                     flexWrap: 'wrap',
-                                    gap: '16px',
-                                    marginBottom: '20px',
-                                    padding: '12px 16px',
+                                    gap: '12px',
+                                    marginBottom: '16px',
+                                    padding: '10px 16px',
                                     background: 'var(--bg-card)',
-                                    borderRadius: '16px',
+                                    borderRadius: 'var(--radius-md)',
                                     border: '1px solid var(--border)',
                                     fontSize: '12px',
                                     fontWeight: '600',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                    boxShadow: 'var(--shadow-sm)'
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#9CA3AF' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Pendiente</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#F59E0B' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Señado</span>
-                                    </div>
-                                    {(currentBusiness?.type === 'sport' || currentBusiness?.type === 'venue') ? (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#059669' }}></div>
-                                            <span style={{ color: 'var(--text-secondary)' }}>Confirmado</span>
+                                    {[
+                                        { label: 'Pendiente', color: 'var(--status-pending)' },
+                                        { label: 'Señado', color: 'var(--status-deposit)' },
+                                        { label: 'Confirmado', color: 'var(--status-confirmed)' },
+                                        { label: 'Finalizado', color: 'var(--status-completed)' },
+                                        { label: 'Cancelado', color: 'var(--status-cancelled)' },
+                                        { label: 'Bloqueado', color: 'var(--status-blocked)' }
+                                    ].map(s => (
+                                        <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: s.color }} />
+                                            <span style={{ color: 'var(--text-secondary)' }}>{s.label}</span>
                                         </div>
-                                    ) : (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#2563EB' }}></div>
-                                            <span style={{ color: 'var(--text-secondary)' }}>Confirmado</span>
-                                        </div>
-                                    )}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#10B981' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Finalizado</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#DC2626' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Cancelado</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#374151' }}></div>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Bloqueado</span>
-                                    </div>
+                                    ))}
                                 </div>
                                 {reschedulingBooking && (
                                     <div style={{
@@ -1205,26 +1260,13 @@ export default function BusinessPortal() {
                                 </div>
                             </div>
                         ) : viewMode === 'settings' ? (
-                            (currentBusiness?.type === 'venue' || currentBusiness?.type === 'alquiler') ? (
-                                <VenueSettings
-                                    business={currentBusiness}
-                                    isMobile={isMobile}
-                                    onUpdate={(updated) => {
-                                        setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
-                                        // Also update currentBusiness to reflect changes immediately
-                                        // This is handled by React state update in setBusinesses trigger re-render
-                                    }}
-                                />
-                            ) : (
-                                <BusinessSettings
-                                    business={currentBusiness}
-                                    isMobile={isMobile}
-                                    onUpdate={(updated) => {
-                                        // Update in the list of businesses too
-                                        setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
-                                    }}
-                                />
-                            )
+                            <BusinessSettings
+                                business={currentBusiness}
+                                isMobile={isMobile}
+                                onUpdate={(updated) => {
+                                    setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
+                                }}
+                            />
                         ) : (
                             <div style={{
                                 background: 'var(--bg-card)',
@@ -1373,16 +1415,13 @@ export default function BusinessPortal() {
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                                                                 <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{booking.time} hs</span>
                                                                 <span style={{
-                                                                    padding: '4px 8px',
-                                                                    borderRadius: '6px',
-                                                                    fontSize: '11px',
+                                                                    padding: '4px 10px',
+                                                                    borderRadius: 'var(--radius-full)',
+                                                                    fontSize: '10px',
                                                                     fontWeight: '700',
-                                                                    background: booking.status === 'confirmed' ? 'rgba(0,230,118,0.1)' :
-                                                                        (booking.status === 'cancelled' ? 'rgba(255,68,68,0.1)' :
-                                                                            (booking.status === 'deposit_paid' ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.05)')),
-                                                                    color: booking.status === 'confirmed' ? '#00E676' :
-                                                                        (booking.status === 'cancelled' ? '#ff4444' :
-                                                                            (booking.status === 'deposit_paid' ? '#F59E0B' : 'var(--text-secondary)'))
+                                                                    letterSpacing: '0.03em',
+                                                                    background: getStatusStyle(booking.status).bg,
+                                                                    color: getStatusStyle(booking.status).color
                                                                 }}>
                                                                     {getStatusLabel(booking.status).toUpperCase()}
                                                                 </span>
@@ -1440,15 +1479,13 @@ export default function BusinessPortal() {
                                                                 </td>
                                                                 <td style={{ padding: '16px' }}>
                                                                     <span style={{
-                                                                        padding: '4px 8px',
-                                                                        borderRadius: '4px',
-                                                                        fontSize: '12px',
-                                                                        background: booking.status === 'confirmed' ? 'rgba(0,230,118,0.1)' :
-                                                                            (booking.status === 'cancelled' ? 'rgba(255,68,68,0.1)' :
-                                                                                (booking.status === 'deposit_paid' ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.05)')),
-                                                                        color: booking.status === 'confirmed' ? '#00E676' :
-                                                                            (booking.status === 'cancelled' ? '#ff4444' :
-                                                                                (booking.status === 'deposit_paid' ? '#F59E0B' : 'var(--text-secondary)'))
+                                                                        padding: '4px 10px',
+                                                                        borderRadius: 'var(--radius-full)',
+                                                                        fontSize: '10px',
+                                                                        fontWeight: '700',
+                                                                        letterSpacing: '0.03em',
+                                                                        background: getStatusStyle(booking.status).bg,
+                                                                        color: getStatusStyle(booking.status).color
                                                                     }}>
                                                                         {getStatusLabel(booking.status).toUpperCase()}
                                                                     </span>
@@ -1595,21 +1632,29 @@ export default function BusinessPortal() {
             {/* Change Password Modal (First Login) */}
             {requirePasswordChange && (
                 <ChangePasswordModal
-                    businessId={currentBusinessId}
-                    onPasswordChanged={async () => {
+                    userEmail={loginEmail || currentBusiness?.email || (businesses.find(b => b.id === (selectedBusinessId || currentBusinessId))?.email) || ''}
+                    businessId={selectedBusinessId || currentBusinessId || currentBusiness?.id || ''}
+                    onSuccess={() => {
                         setRequirePasswordChange(false);
-                        // Reload business data and proceed with login
-                        const fullBusiness = await serviceAdapter.getBusinessById(currentBusinessId);
-                        setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
-                        setSelectedBusinessId(currentBusinessId);
-                        setIsLoggedIn(true);
-
-                        if (rememberMe) {
-                            localStorage.setItem('turnitos_business_email', loginEmail);
-                        }
+                        localStorage.removeItem('turnitos_must_change_password');
+                    }}
+                    onPasswordChanged={() => {
+                        setRequirePasswordChange(false);
+                        localStorage.removeItem('turnitos_must_change_password');
                     }}
                 />
             )}
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                cancelText={confirmModal.cancelText}
+                isDanger={confirmModal.isDanger}
+                onConfirm={() => confirmModal.onConfirm && confirmModal.onConfirm()}
+                onClose={() => setConfirmModal({ isOpen: false })}
+            />
         </div >
     );
 }
