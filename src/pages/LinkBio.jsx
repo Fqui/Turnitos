@@ -665,7 +665,7 @@ export default function LinkBio({ overrideSlug }) {
                         onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.location)}`, '_blank')}
                         style={{
                             width: '100%',
-                            padding: isDesktop ? '10px 14px' : '12px 16px',
+                            padding: isDesktop ? '8px 12px' : '12px 16px',
                             borderRadius: '20px',
                             border: '1px solid var(--border)',
                             backgroundColor: 'var(--bg-card)',
