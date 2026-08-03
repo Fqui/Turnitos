@@ -73,28 +73,23 @@ function AppContent() {
   const isBusinessPage = isLinkBio || location.pathname.endsWith('/turnos') || location.pathname.endsWith('/tienda') || (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda'));
 
   if (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda')) {
-    const isMainSubdomainPage = location.pathname === '/';
     return (
       <div className="app-container" style={{ 
-        height: isMainSubdomainPage ? '100vh' : 'auto',
         minHeight: '100vh', 
         display: 'flex', 
-        flexDirection: 'column',
-        overflow: isMainSubdomainPage ? 'hidden' : 'visible'
+        flexDirection: 'column'
       }}>
         <Header showSearch={false} />
         <main style={{ 
           flex: 1, 
-          minHeight: isMainSubdomainPage ? '0' : 'calc(100vh - 70px)', 
-          height: isMainSubdomainPage ? 'calc(100vh - 130px)' : 'auto',
+          minHeight: 'calc(100vh - 70px)', 
           display: 'flex', 
-          flexDirection: 'column',
-          overflow: isMainSubdomainPage ? 'hidden' : 'visible'
+          flexDirection: 'column'
         }}>
           <Suspense fallback={<LoadingFallback />}>
             {location.pathname === '/tienda' ? (
               <BusinessStore overrideSlug={subdomain} />
-            ) : isMainSubdomainPage ? (
+            ) : location.pathname === '/' ? (
               <LinkBio overrideSlug={subdomain} />
             ) : (
               <BusinessProfileRouter overrideSlug={subdomain} />
