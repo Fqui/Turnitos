@@ -381,8 +381,8 @@ class SupabaseService {
                     finalSlug = baseSlug;
                 }
             } catch (e) {
-                const randomSuffix = Math.random().toString(36).substring(2, 6);
-                finalSlug = `${baseSlug}-${randomSuffix}`;
+                // Default to clean baseSlug if query check fails
+                finalSlug = baseSlug;
             }
         }
         finalSlug = finalSlug || `business-${Date.now()}`;
