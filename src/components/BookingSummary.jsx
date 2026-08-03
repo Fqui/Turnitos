@@ -308,10 +308,10 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                     {(() => {
                                         const effectiveExtras = (availableExtras && availableExtras.length > 0)
                                             ? availableExtras
-                                            : (business?.metadata?.store_products && business.metadata.store_products.length > 0)
-                                                ? business.metadata.store_products.filter(p => p.is_active !== false)
-                                                : (business?.additional_services && business.additional_services.length > 0)
-                                                    ? business.additional_services
+                                            : (business?.additional_services && business.additional_services.length > 0)
+                                                ? business.additional_services.filter(s => s.is_active !== false)
+                                                : (business?.metadata?.additional_services && business.metadata.additional_services.length > 0)
+                                                    ? business.metadata.additional_services.filter(s => s.is_active !== false)
                                                     : [];
 
                                         if (effectiveExtras.length === 0) {
