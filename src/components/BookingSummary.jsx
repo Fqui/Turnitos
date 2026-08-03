@@ -71,7 +71,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
     const [selectedExtras, setSelectedExtras] = useState(bookingDetails.extras || []);
 
     const { date, time, courtName, serviceName, price: basePrice, specialistName, duration } = bookingDetails;
-    const price = basePrice + selectedExtras.reduce((sum, e) => sum + Number(e.price), 0);
+    const price = basePrice + selectedExtras.reduce((sum, e) => sum + (Number(e.price) * (e.quantity || 1)), 0);
 
     // 🎫 Calculate promo discount (based on slot base price only)
     let promoDiscount = 0;
@@ -85,10 +85,11 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             promoLabel = `Cupón ${activePromotion.discount_value}% OFF`;
         }
     }
+
     const finalPrice = price - promoDiscount;
 
     // Calculate deposit (based on basePriceAfterPromo, NOT including extras!)
-    const basePriceAfterPromo = basePrice - promoDiscount;
+    const basePriceAfterPromo = Math.max(0, basePrice - promoDiscount);
     let depositAmount = 0;
     let depositLabel = 'Seña';
 
@@ -323,22 +324,37 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                         }
 
                                         return effectiveExtras.map((extra, idx) => {
-                                            const isSelected = selectedExtras.some(e => e.name === extra.name);
+                                            const selectedItem = selectedExtras.find(e => e.name === extra.name);
+                                            const isSelected = !!selectedItem;
+                                            const qty = selectedItem?.quantity || 1;
                                             const extraImage = extra.image || extra.image_url || (
                                                 extra.name.includes('Pala') ? 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=200&q=80' :
                                                 extra.name.includes('Pelotas') ? 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=200&q=80' :
                                                 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=200&q=80'
                                             );
+
+                                            const handleAdd = () => {
+                                                setSelectedExtras(prev => [...prev, { ...extra, quantity: 1 }]);
+                                            };
+
+                                            const handleIncrement = () => {
+                                                setSelectedExtras(prev => prev.map(e => e.name === extra.name ? { ...e, quantity: (e.quantity || 1) + 1 } : e));
+                                            };
+
+                                            const handleDecrement = () => {
+                                                setSelectedExtras(prev => {
+                                                    const existing = prev.find(e => e.name === extra.name);
+                                                    if (!existing) return prev;
+                                                    if ((existing.quantity || 1) <= 1) {
+                                                        return prev.filter(e => e.name !== extra.name);
+                                                    }
+                                                    return prev.map(e => e.name === extra.name ? { ...e, quantity: e.quantity - 1 } : e);
+                                                });
+                                            };
+
                                             return (
                                                 <div
                                                     key={idx}
-                                                    onClick={() => {
-                                                        if (isSelected) {
-                                                            setSelectedExtras(prev => prev.filter(e => e.name !== extra.name));
-                                                        } else {
-                                                            setSelectedExtras(prev => [...prev, extra]);
-                                                        }
-                                                    }}
                                                     style={{
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -347,7 +363,6 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                         borderRadius: '16px',
                                                         border: isSelected ? `2px solid ${sportColor}` : '1px solid var(--border)',
                                                         backgroundColor: isSelected ? `${sportColor}08` : 'var(--bg-card)',
-                                                        cursor: 'pointer',
                                                         transition: 'all 0.2s',
                                                         boxShadow: isSelected ? `0 4px 12px ${sportColor}15` : 'none'
                                                     }}
@@ -363,13 +378,49 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                             {extra.desc || extra.category || (extra.name.includes('Alquiler') ? 'Alquiler para el partido' : 'Adicional para tu turno')}
                                                         </div>
                                                     </div>
-                                                    <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                                                         <div style={{ fontSize: '13px', fontWeight: '800', color: isSelected ? sportColor : 'var(--text-primary)' }}>
-                                                            +${Number(extra.price).toLocaleString('es-AR')}
+                                                            +${(Number(extra.price) * qty).toLocaleString('es-AR')}
                                                         </div>
-                                                        <div style={{ fontSize: '10px', color: isSelected ? sportColor : 'var(--text-secondary)', fontWeight: '700', marginTop: '2px' }}>
-                                                            {isSelected ? 'Sumado ✓' : 'Agregar'}
-                                                        </div>
+
+                                                        {isSelected ? (
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '12px', border: `1px solid ${sportColor}` }}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleDecrement}
+                                                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 4px' }}
+                                                                >
+                                                                    -
+                                                                </button>
+                                                                <span style={{ fontSize: '12px', fontWeight: '800', color: sportColor, minWidth: '16px', textAlign: 'center' }}>
+                                                                    {qty}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleIncrement}
+                                                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 4px' }}
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleAdd}
+                                                                style={{
+                                                                    fontSize: '11px',
+                                                                    color: '#000',
+                                                                    backgroundColor: sportColor,
+                                                                    fontWeight: '700',
+                                                                    padding: '4px 10px',
+                                                                    borderRadius: '12px',
+                                                                    border: 'none',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                ＋ Agregar
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             );
