@@ -146,12 +146,12 @@ export default function LinkBio({ overrideSlug }) {
                 business.type === 'venue' ? 'Ver Disponibilidad' : 'Reservar Turno',
             subtitle: 'Reserva tu lugar en segundos',
             icon: '📅',
-            action: () => navigate(getBookingPath('#servicios')),
+            action: () => navigate(getBookingPath()),
             highlight: true
         },
         ...(business.store_enabled ? [{
-            title: 'Ver Tienda / Productos',
-            subtitle: business.metadata?.store_banner_subtitle || 'Conocé nuestros productos y artículos',
+            title: `Tienda ${business.name}`,
+            subtitle: business.metadata?.store_banner_title || business.metadata?.store_banner_subtitle || 'Conocé nuestros productos',
             icon: '🛒',
             action: () => navigate(getStorePath()),
             highlight: false
