@@ -217,70 +217,22 @@ export default function PromotionsHero({ promotions, businesses }) {
                 {promotions.length > 1 && (
                     <>
                         <button
-                            className="desktop-only-arrow"
+                            className="desktop-only-arrow promo-arrow-prev"
                             onClick={handlePrev}
-                            style={{
-                                position: 'absolute',
-                                left: '20px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                width: '44px',
-                                height: '44px',
-                                borderRadius: '50%',
-                                background: 'rgba(255, 255, 255, 0.9)',
-                                border: 'none',
-                                cursor: 'pointer',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '20px',
-                                zIndex: 10,
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                transition: 'all 0.2s',
-                                backdropFilter: 'blur(10px)'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
-                                e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
-                                e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-                            }}
+                            aria-label="Anterior promoción"
                         >
-                            ‹
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
                         </button>
                         <button
-                            className="desktop-only-arrow"
+                            className="desktop-only-arrow promo-arrow-next"
                             onClick={handleNext}
-                            style={{
-                                position: 'absolute',
-                                right: '20px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                width: '44px',
-                                height: '44px',
-                                borderRadius: '50%',
-                                background: 'rgba(255, 255, 255, 0.9)',
-                                border: 'none',
-                                cursor: 'pointer',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '20px',
-                                zIndex: 10,
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                transition: 'all 0.2s',
-                                backdropFilter: 'blur(10px)'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 1)';
-                                e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
-                                e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-                            }}
+                            aria-label="Siguiente promoción"
                         >
-                            ›
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
                         </button>
                     </>
                 )}
