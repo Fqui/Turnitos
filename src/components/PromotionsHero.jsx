@@ -240,10 +240,10 @@ export default function PromotionsHero({ promotions, businesses }) {
                 {/* Indicators */}
                 <div style={{
                     position: 'absolute',
-                    bottom: '20px',
-                    right: '20px',
+                    bottom: '18px',
+                    right: '18px',
                     display: 'flex',
-                    gap: '8px',
+                    gap: '6px',
                     zIndex: 10
                 }}>
                     {promotions.map((_, idx) => (
