@@ -77,14 +77,12 @@ export default function LinkBio({ overrideSlug }) {
                 root.style.setProperty('--text-primary', '#1A1A1A');
                 root.style.setProperty('--text-secondary', '#4A4A4A');
                 root.style.setProperty('--border', '#E0E0E0');
-                body.style.backgroundImage = 'radial-gradient(#E0E0E0 1.5px, transparent 1.5px)';
             } else {
                 root.style.setProperty('--bg-main', '#121212');
                 root.style.setProperty('--bg-card', '#1E1E1E');
                 root.style.setProperty('--text-primary', '#FFFFFF');
                 root.style.setProperty('--text-secondary', '#A0A0A0');
                 root.style.setProperty('--border', '#333333');
-                body.style.backgroundImage = 'radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px)';
             }
         }
     }, [business]);
@@ -164,8 +162,6 @@ export default function LinkBio({ overrideSlug }) {
     return (
         <div className="linkbio-container" style={{
             backgroundColor: 'var(--bg-main)',
-            backgroundImage: 'radial-gradient(var(--border) 1.5px, transparent 1.5px)',
-            backgroundSize: '24px 24px',
             height: isDesktop ? '100vh' : 'auto',
             minHeight: isDesktop ? 'auto' : '100vh',
             overflow: isDesktop ? 'hidden' : 'visible',
