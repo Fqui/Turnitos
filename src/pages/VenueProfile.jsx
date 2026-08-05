@@ -411,7 +411,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                 alignItems: 'start',
                 position: 'relative',
                 zIndex: 10,
-                marginTop: '-60px'
+                marginTop: windowWidth < 768 ? '0px' : '-30px'
             }}>
                 {/* Left Column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
