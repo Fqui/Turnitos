@@ -258,7 +258,9 @@ export default function VenueProfile({ business: initialBusiness }) {
                 height: '50vh',
                 minHeight: '400px',
                 background: 'linear-gradient(135deg, #2D3748 0%, #1A202C 100%)',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'flex-end'
             }}>
                 <img
                     src={business.banner_image || business.banner_url || business.image || galleryImages[0]?.url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200'}
@@ -279,7 +281,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%)'
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 100%)'
                 }} />
                 {/* Content Container */}
                 <div style={{
@@ -288,7 +290,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-end',
-                    padding: windowWidth < 768 ? '16px' : '32px',
+                    padding: windowWidth < 768 ? '24px 16px' : '36px 32px',
                     color: 'white',
                     maxWidth: '1400px',
                     width: '100%',
