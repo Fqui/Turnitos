@@ -825,108 +825,80 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         )}
                     </div>
                 </div>
-            </div>
-        </div>
 
-                {/* Specialists Showcase - High Priority for Services (Only show if more than 1) */}
-                {business.type === 'service' && business.specialists && business.specialists.length > 1 && (
-                    <SpecialistsShowcase
-                        specialists={business.specialists}
-                        businessType={business.type}
-                    />
-                )}
-
-                {/* Instagram-Style Highlights */}
-                {business && (
-                    (() => {
-                        // Use gallery_highlights if available, otherwise convert gallery_images
-                        const highlights = business.gallery_highlights && business.gallery_highlights.length > 0
-                            ? business.gallery_highlights
-                            : (business.gallery_images && business.gallery_images.length > 0
-                                ? [{
-                                    id: 'legacy_gallery',
-                                    title: 'Galería',
-                                    cover_image: business.gallery_images[0],
-                                    images: business.gallery_images,
-                                    order: 0
-                                }]
-                                : []);
-
-                        if (permanentHighlights.length === 0) return null;
-
-                        return (
-                            <div id="galeria" style={{ marginBottom: '20px', animation: 'slideUp 0.4s ease' }}>
-                                <div className="highlights-container">
-                                    {permanentHighlights.map((highlight, index) => (
-                                        <div
-                                            key={highlight.id || index}
-                                            onClick={() => {
-                                                setStoryViewerList(permanentHighlights);
-                                                setSelectedPhotoIndex(0);
-                                                setSelectedHighlight(index);
-                                            }}
-                                            style={{
-                                                flexShrink: 0,
-                                                scrollSnapAlign: 'start',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '8px'
-                                            }}
-                                        >
-                                            {/* Circular thumbnail with clean subtle border */}
-                                            <div style={{
-                                                width: '90px',
-                                                height: '90px',
-                                                borderRadius: '50%',
-                                                padding: '2px',
-                                                background: 'var(--border)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}>
-                                                <div style={{
+                {/* Instagram-Style Highlights Sub-bar */}
+                {permanentHighlights && permanentHighlights.length > 0 && (
+                    <div className="instagram-stories-bar" id="galeria">
+                        <div className="highlights-container">
+                            {permanentHighlights.map((highlight, index) => (
+                                <div
+                                    key={highlight.id || index}
+                                    className="highlight-item"
+                                    onClick={() => {
+                                        setStoryViewerList(permanentHighlights);
+                                        setSelectedPhotoIndex(0);
+                                        setSelectedHighlight(index);
+                                    }}
+                                    style={{
+                                        flexShrink: 0,
+                                        scrollSnapAlign: 'start',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '8px'
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '84px',
+                                        height: '84px',
+                                        borderRadius: '50%',
+                                        padding: '2px',
+                                        background: 'var(--border)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <div style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            borderRadius: '50%',
+                                            padding: '2px',
+                                            background: 'var(--bg-card)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <img
+                                                src={highlight.cover_image || highlight.images[0]}
+                                                alt={highlight.title}
+                                                style={{
                                                     width: '100%',
                                                     height: '100%',
-                                                    borderRadius: '50%',
-                                                    padding: '2px',
-                                                    background: 'var(--bg-card)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <img
-                                                        src={highlight.cover_image || highlight.images[0]}
-                                                        alt={highlight.title}
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            objectFit: 'cover',
-                                                            borderRadius: '50%'
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                            {/* Highlight title */}
-                                            <span style={{
-                                                fontSize: '12px',
-                                                color: 'var(--text-secondary)',
-                                                maxWidth: '90px',
-                                                textAlign: 'center',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap'
-                                            }}>
-                                                 {highlight.title}
-                                            </span>
+                                                    objectFit: 'cover',
+                                                    borderRadius: '50%'
+                                                }}
+                                            />
                                         </div>
-                                    ))}
+                                    </div>
+                                    <span style={{
+                                        fontSize: '12px',
+                                        color: 'var(--text-secondary)',
+                                        maxWidth: '84px',
+                                        textAlign: 'center',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    }}>
+                                        {highlight.title}
+                                    </span>
                                 </div>
-                            </div>
-                        );
-                    })()
+                            ))}
+                        </div>
+                    </div>
                 )}
+            </div>
+        </div>
 
                 {/* 3. Booking Flow Steps */}
 

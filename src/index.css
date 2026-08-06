@@ -622,6 +622,34 @@ button, input, select, textarea {
   margin-top: 4px;
 }
 
+.instagram-stories-bar {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+
+.highlights-container {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.highlights-container::-webkit-scrollbar {
+  display: none;
+}
+
+.highlight-item {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.highlight-item:hover {
+  transform: translateY(-4px);
+}
+
 @media (min-width: 769px) {
   .business-profile-page {
     padding-top: 32px !important;
@@ -651,7 +679,7 @@ button, input, select, textarea {
     border: none !important;
     box-shadow: none !important;
     margin-top: 0 !important;
-    padding: 0 36px 10px !important;
+    padding: 0 0 10px !important;
     margin-bottom: 0 !important;
     background: transparent !important;
     text-align: left !important;
@@ -664,6 +692,7 @@ button, input, select, textarea {
     gap: 24px !important;
     margin-top: -50px !important;
     margin-bottom: 0 !important;
+    padding: 0 36px !important;
   }
 
   .business-avatar-container {
@@ -710,6 +739,20 @@ button, input, select, textarea {
     margin-top: 0 !important;
     gap: 10px !important;
     flex-shrink: 0 !important;
+  }
+
+  /* Instagram Web-style Stories Bar on Desktop */
+  .instagram-stories-bar {
+    margin-top: 24px !important;
+    padding: 20px 36px 16px !important;
+    border-top: 1px solid var(--border) !important;
+    background: transparent !important;
+  }
+
+  .highlights-container {
+    gap: 28px !important;
+    justify-content: flex-start !important;
+    padding: 0 !important;
   }
 }
 
