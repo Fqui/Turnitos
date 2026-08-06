@@ -659,11 +659,15 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             </div>
 
                             <div className="business-header-text-group">
-                                <div className="business-title-row">
+                                <div className="business-title-info-block">
                                     <h1 className="business-profile-title" style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 }}>{business.name}</h1>
+                                    <div className="business-location-row" style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
+                                        <span>📍 {business.location}</span>
+                                    </div>
+                                </div>
 
-                                    {/* Social Media Buttons */}
-                                    <div className="business-header-socials" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                {/* Social Media Buttons */}
+                                <div className="business-header-socials" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         {/* Instagram */}
                         {business.instagram && (
                             <a
@@ -819,14 +823,10 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                 </svg>
                             </a>
                         )}
-                                    </div>
-                                </div>
-                                <div className="business-location-row" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                                    <span>📍 {business.location}</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
+                </div>
+            </div>
+        </div>
 
                 {/* Specialists Showcase - High Priority for Services (Only show if more than 1) */}
                 {business.type === 'service' && business.specialists && business.specialists.length > 1 && (

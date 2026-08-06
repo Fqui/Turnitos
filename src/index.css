@@ -611,17 +611,15 @@ button, input, select, textarea {
   width: 100%;
 }
 
-.business-title-row {
+.business-title-info-block {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  width: 100%;
+  margin-bottom: 12px;
 }
 
 .business-location-row {
-  margin-top: 6px;
-  margin-bottom: 12px;
+  margin-top: 4px;
 }
 
 @media (min-width: 769px) {
@@ -678,18 +676,21 @@ button, input, select, textarea {
 
   .business-header-text-group {
     flex: 1 !important;
-    align-items: flex-start !important;
-    text-align: left !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
     padding-top: 68px !important;
   }
 
-  .business-title-row {
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 16px !important;
-    flex-wrap: wrap !important;
-    margin-bottom: 6px !important;
+  .business-title-info-block {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    max-width: 65% !important;
+    margin-bottom: 0 !important;
   }
 
   .business-profile-title {
@@ -699,15 +700,16 @@ button, input, select, textarea {
     line-height: 1.2 !important;
   }
 
-  .business-header-socials {
-    justify-content: flex-start !important;
-    margin-top: 0 !important;
-    gap: 10px !important;
+  .business-location-row {
+    margin-top: 4px !important;
+    margin-bottom: 0 !important;
   }
 
-  .business-location-row {
+  .business-header-socials {
+    justify-content: flex-end !important;
     margin-top: 0 !important;
-    margin-bottom: 16px !important;
+    gap: 10px !important;
+    flex-shrink: 0 !important;
   }
 }
 
