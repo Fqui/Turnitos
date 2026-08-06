@@ -365,7 +365,7 @@ export default function Home() {
 
     // Handle Nav to Business from Suggestion
     const handleSelectSuggestion = (business) => {
-        navigate(`/${generateSlug(business.name)}/turnos`, { state: { business } });
+        navigate(`/${generateSlug(business.name)}`, { state: { business } });
         setShowSuggestions(false);
     };
 
@@ -715,7 +715,7 @@ export default function Home() {
                             {filteredBusinesses.map(business => (
                                 <div
                                     key={business.id}
-                                    onClick={() => navigate(`/${generateSlug(business.name)}/turnos`, { state: { business } })}
+                                    onClick={() => navigate(`/${generateSlug(business.name)}`, { state: { business } })}
                                     style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                                 >
                                     <motion.div
