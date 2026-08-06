@@ -490,7 +490,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
     // 🆕 Compact layout width for Desktop ONLY
     const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
-    const containerWidth = hasPadelCourts ? '740px' : '660px';
+    const containerWidth = hasPadelCourts ? '920px' : '860px';
 
     const now = new Date();
     const rawHighlights = business?.gallery_highlights && business.gallery_highlights.length > 0
@@ -547,9 +547,9 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 {/* Header / Banner */}
                 <div className="business-profile-banner" style={{
                     position: 'relative',
-                    height: window.innerWidth <= 768 ? '25vh' : '180px',
-                    minHeight: '160px',
-                    maxHeight: '220px',
+                    height: window.innerWidth <= 768 ? '25vh' : '260px',
+                    minHeight: '180px',
+                    maxHeight: '300px',
                     overflow: 'hidden'
                 }}>
                     <motion.img
