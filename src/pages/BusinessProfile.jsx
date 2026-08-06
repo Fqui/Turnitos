@@ -899,7 +899,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     </div>
                 )}
             </div>
-        </div>
 
                 {/* 3. Booking Flow Steps */}
 
@@ -2276,6 +2275,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     />
                 )}
             </div>
+        </div>
 
             {/* Instagram-Style Highlight Viewer */}
             <AnimatePresence>
