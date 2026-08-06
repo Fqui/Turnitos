@@ -650,11 +650,6 @@ button, input, select, textarea {
   transform: translateY(-4px);
 }
 
-.business-profile-body-content {
-  width: 100%;
-  box-sizing: border-box;
-}
-
 /* Mobile Responsive Layout Margins */
 @media (max-width: 768px) {
   .business-profile-page {
@@ -672,15 +667,10 @@ button, input, select, textarea {
   }
 
   .container {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
     width: 100% !important;
     box-sizing: border-box !important;
-  }
-
-  .business-profile-body-content {
-    padding-left: 18px !important;
-    padding-right: 18px !important;
   }
 
   .business-info-main-card {
@@ -692,11 +682,6 @@ button, input, select, textarea {
 }
 
 @media (min-width: 769px) {
-  .business-profile-body-content {
-    padding-left: 36px !important;
-    padding-right: 36px !important;
-    padding-bottom: 36px !important;
-  }
   .business-profile-page {
     padding-top: 32px !important;
     padding-bottom: 80px !important;

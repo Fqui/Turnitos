@@ -902,9 +902,9 @@ export default function BusinessProfile({ business: initialBusiness }) {
         </div>
 
                 {/* 3. Booking Flow Steps */}
-                <div className="business-profile-body-content">
-                    {/* Venue: Pricing & Services Info (Step 0) */}
-                    {business.type === 'venue' && (
+
+                {/* Venue: Pricing & Services Info (Step 0) */}
+                {business.type === 'venue' && (
                     <>
                         {/* Pricing Card */}
                         <section style={{ marginBottom: '30px' }}>
@@ -2245,7 +2245,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         </div>
                     </div>
                 </section>
-                </div>
 
 
 
