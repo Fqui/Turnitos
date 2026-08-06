@@ -595,8 +595,22 @@ button, input, select, textarea {
 }
 
 /* ═══════════════════════════════════════════
-   Business Profile Desktop Styling Shell
+   Business Profile Styling Shell & Layout
    ═══════════════════════════════════════════ */
+.business-header-facebook-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.business-header-text-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+
 @media (min-width: 769px) {
   .business-profile-page {
     padding-top: 32px !important;
@@ -605,7 +619,7 @@ button, input, select, textarea {
   }
 
   .business-profile-card-shell {
-    max-width: 960px;
+    max-width: 980px;
     margin: 0 auto;
     background: var(--bg-card);
     border-radius: 24px;
@@ -615,9 +629,9 @@ button, input, select, textarea {
   }
 
   .business-profile-banner {
-    height: 260px !important;
-    min-height: 260px !important;
-    max-height: 300px !important;
+    height: 280px !important;
+    min-height: 280px !important;
+    max-height: 320px !important;
     border-top-left-radius: 24px;
     border-top-right-radius: 24px;
   }
@@ -626,18 +640,44 @@ button, input, select, textarea {
     border: none !important;
     box-shadow: none !important;
     margin-top: 0 !important;
-    padding: 24px 32px 32px !important;
+    padding: 0 36px 28px !important;
     background: transparent !important;
+    text-align: left !important;
+  }
+
+  /* Facebook Profile Header Style for Desktop */
+  .business-header-facebook-layout {
+    flex-direction: row !important;
+    align-items: flex-end !important;
+    gap: 28px !important;
+    margin-top: -65px !important;
+    margin-bottom: 20px !important;
   }
 
   .business-avatar-container {
-    width: 108px !important;
-    height: 108px !important;
-    margin: -60px auto 14px !important;
+    width: 140px !important;
+    height: 140px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  .business-header-text-group {
+    flex: 1 !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    padding-bottom: 6px !important;
   }
 
   .business-profile-title {
-    font-size: 26px !important;
+    font-size: 30px !important;
+    text-align: left !important;
+    margin-bottom: 4px !important;
+  }
+
+  .business-header-socials {
+    justify-content: flex-start !important;
+    margin-top: 12px !important;
   }
 }
 
