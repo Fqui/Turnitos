@@ -825,6 +825,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         )}
                     </div>
                 </div>
+            </div>
 
                 {/* Instagram-Style Highlights Sub-bar */}
                 {permanentHighlights && permanentHighlights.length > 0 && (
@@ -2275,7 +2276,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     />
                 )}
             </div>
-            </div> {/* End of business-profile-card-shell */}
 
             {/* Instagram-Style Highlight Viewer */}
             <AnimatePresence>
