@@ -386,7 +386,7 @@ export default function Home() {
                     <div style={{ position: 'relative', width: '100%', maxWidth: '600px' }}>
                         <input
                             type="text"
-                            placeholder="Buscar por negocio, fútbol, pádel, kinesiología, barbería..."
+                            placeholder="¿Qué querés reservar hoy?"
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
