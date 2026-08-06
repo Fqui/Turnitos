@@ -659,13 +659,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             </div>
 
                             <div className="business-header-text-group">
-                                <h1 className="business-profile-title" style={{ fontSize: '24px', fontWeight: '900', marginBottom: '8px', color: 'var(--text-primary)' }}>{business.name}</h1>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>
-                                    <span>📍 {business.location}</span>
-                                </div>
+                                <div className="business-title-row">
+                                    <h1 className="business-profile-title" style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-primary)', margin: 0 }}>{business.name}</h1>
 
-                                {/* Social Media Buttons */}
-                                <div className="business-header-socials" style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
+                                    {/* Social Media Buttons */}
+                                    <div className="business-header-socials" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         {/* Instagram */}
                         {business.instagram && (
                             <a
@@ -820,11 +818,14 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
                                 </svg>
                             </a>
-                        )}
-                    </div>
+                                    </div>
+                                </div>
+                                <div className="business-location-row" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                    <span>📍 {business.location}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
                 {/* Specialists Showcase - High Priority for Services (Only show if more than 1) */}
                 {business.type === 'service' && business.specialists && business.specialists.length > 1 && (

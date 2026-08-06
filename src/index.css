@@ -611,6 +611,19 @@ button, input, select, textarea {
   width: 100%;
 }
 
+.business-title-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.business-location-row {
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
 @media (min-width: 769px) {
   .business-profile-page {
     padding-top: 32px !important;
@@ -670,18 +683,30 @@ button, input, select, textarea {
     padding-top: 56px !important;
   }
 
+  .business-title-row {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 16px !important;
+    flex-wrap: wrap !important;
+  }
+
   .business-profile-title {
     font-size: 26px !important;
     text-align: left !important;
-    margin-bottom: 4px !important;
-    margin-top: 0 !important;
+    margin: 0 !important;
     line-height: 1.2 !important;
   }
 
   .business-header-socials {
     justify-content: flex-start !important;
-    margin-top: 8px !important;
-    gap: 12px !important;
+    margin-top: 0 !important;
+    gap: 10px !important;
+  }
+
+  .business-location-row {
+    margin-top: 4px !important;
+    margin-bottom: 0 !important;
   }
 }
 
