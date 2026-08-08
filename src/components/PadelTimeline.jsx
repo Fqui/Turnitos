@@ -28,30 +28,36 @@ const PadelTimeline = ({
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     };
 
-    // 🆕 Helper: Check if a time slot falls within operating hours (respects split shifts)
+    // 🆕 Helper: Check if a time slot falls within operating hours (respects split shifts & midnight wraparound)
     const isWithinOperatingHours = (slotMinutes) => {
+        const checkSlot = (sMin, openStr, closeStr) => {
+            const openMin = timeToMinutes(openStr);
+            let closeMin = timeToMinutes(closeStr);
+
+            if (closeMin <= openMin) {
+                closeMin += 1440;
+            }
+
+            let normalizedSlot = sMin;
+            if (normalizedSlot < openMin && closeMin > 1440) {
+                normalizedSlot += 1440;
+            }
+
+            return normalizedSlot >= openMin && normalizedSlot < closeMin;
+        };
+
         if (!timeRanges || timeRanges.length === 0) {
-            // Simple continuous hours
-            const start = timeToMinutes(openingTime);
-            const close = timeToMinutes(closingTime);
-            const end = close < start ? close + 1440 : close;
-            return slotMinutes >= start && slotMinutes < end;
+            return checkSlot(slotMinutes, openingTime, closingTime);
         }
 
-        // Check if slot falls within any of the time ranges (for split shifts)
-        return timeRanges.some(range => {
-            const rangeStart = timeToMinutes(range.open);
-            const rangeClose = timeToMinutes(range.close);
-            const rangeEnd = rangeClose < rangeStart ? rangeClose + 1440 : rangeClose;
-            return slotMinutes >= rangeStart && slotMinutes < rangeEnd;
-        });
+        return timeRanges.some(range => checkSlot(slotMinutes, range.open, range.close));
     };
 
     // Helper: Calculate end time
     const calculateEndTime = (startTime, durationMinutes) => {
         const startMinutes = timeToMinutes(startTime);
         const endMinutes = startMinutes + durationMinutes;
-        return minutesToTime(endMinutes);
+        return minutesToTime(endMinutes % 1440);
     };
 
     // Helper: Check if time slot is occupied
@@ -62,8 +68,13 @@ const PadelTimeline = ({
             ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
             : selectedDate;
 
-        const startMinutes = timeToMinutes(startTime);
-        const endMinutes = timeToMinutes(endTime);
+        const openMinutes = timeToMinutes(openingTime);
+
+        let startMinutes = timeToMinutes(startTime);
+        let endMinutes = timeToMinutes(endTime);
+
+        if (startMinutes < openMinutes) startMinutes += 1440;
+        if (endMinutes <= startMinutes) endMinutes += 1440;
 
         return existingBookings.some(booking => {
             const matchesResource = booking.resource_id === courtId || booking.court_id === courtId;
@@ -75,8 +86,9 @@ const PadelTimeline = ({
             const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
             if (bookingDate !== slotDate) return false;
 
-            const bookingStartMinutes = timeToMinutes(booking.time);
-            const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
+            let bookingStartMinutes = timeToMinutes(booking.time);
+            if (bookingStartMinutes < openMinutes) bookingStartMinutes += 1440;
+            let bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
 
             return (startMinutes < bookingEndMinutes) && (endMinutes > bookingStartMinutes);
         });
@@ -87,26 +99,26 @@ const PadelTimeline = ({
         const durations = [60, 90, 120];
         const availableDurations = [];
 
-        let closeMinutes = timeToMinutes(closingTime);
-        const startMinutes = timeToMinutes(startTime);
         const openMinutes = timeToMinutes(openingTime);
+        let closeMinutes = timeToMinutes(closingTime);
 
-        if (closeMinutes < openMinutes) {
+        if (closeMinutes <= openMinutes) {
             closeMinutes += 1440;
         }
 
-        durations.forEach(duration => {
-            const endTime = calculateEndTime(startTime, duration);
-            let endMinutes = timeToMinutes(endTime);
+        let startMinutes = timeToMinutes(startTime);
+        if (startMinutes < openMinutes && closeMinutes > 1440) {
+            startMinutes += 1440;
+        }
 
-            if (endMinutes < startMinutes) {
-                endMinutes += 1440;
-            }
+        durations.forEach(duration => {
+            const endMinutes = startMinutes + duration;
 
             if (endMinutes > closeMinutes) {
                 return;
             }
 
+            const endTime = minutesToTime(endMinutes % 1440);
             const hasConflict = isTimeSlotOccupied(courtId, startTime, endTime);
 
             if (!hasConflict) {
@@ -117,7 +129,7 @@ const PadelTimeline = ({
         return availableDurations;
     };
 
-    // Generate time slots array (every 30 minutes) - 🆕 Now filters by timeRanges
+    // Generate time slots array (1 column per HOUR for perfect grid alignment like ATC Sports)
     const hours = useMemo(() => {
         const startMinutes = timeToMinutes(openingTime);
         let endMinutes = timeToMinutes(closingTime);
@@ -127,18 +139,13 @@ const PadelTimeline = ({
         }
 
         const hoursArray = [];
-        for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
+        const startHourMinutes = Math.floor(startMinutes / 60) * 60;
+        for (let minutes = startHourMinutes; minutes < endMinutes; minutes += 60) {
             const normalizedMinutes = minutes % 1440;
-
-            // 🆕 Skip if not within operating hours (handles split shifts)
-            if (!isWithinOperatingHours(normalizedMinutes)) {
-                continue;
-            }
-
             hoursArray.push(minutesToTime(normalizedMinutes));
         }
         return hoursArray;
-    }, [openingTime, closingTime, timeRanges]);
+    }, [openingTime, closingTime]);
 
     // Get bookings for a specific court
     const getCourtBookings = (courtId) => {
@@ -201,213 +208,212 @@ const PadelTimeline = ({
 
     return (
         <div style={{
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '16px',
-            padding: '20px',
-            marginTop: '20px'
+            position: 'relative',
+            width: '100%'
         }}>
-            <h3 style={{
-                fontSize: '18px',
-                fontWeight: '700',
-                marginBottom: '16px',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
+            {/* Top Toolbar Header */}
+            <div style={{
+                marginBottom: '20px'
             }}>
-                <span>📅</span> Selecciona tu turno
-            </h3>
+                <h3 style={{
+                    fontSize: '22px',
+                    fontWeight: '700',
+                    color: 'var(--text-primary)',
+                    margin: 0
+                }}>
+                    Elige tu turno
+                </h3>
+            </div>
 
-            {/* Timeline Container with Custom Scrollbar */}
+            {/* Main Timeline Grid (ATC Sports Layout) */}
             <div
                 className="custom-scrollbar"
                 style={{
                     overflowX: 'auto',
                     overflowY: 'visible',
-                    marginBottom: '12px',
                     WebkitOverflowScrolling: 'touch',
-                    paddingBottom: '8px'
+                    borderRadius: '16px',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--bg-main)',
+                    width: '100%'
                 }}
             >
                 <style>
                     {`
                         .custom-scrollbar::-webkit-scrollbar {
-                            height: 6px;
+                            height: 7px;
                             background-color: transparent;
                         }
                         .custom-scrollbar::-webkit-scrollbar-track {
-                            background-color: rgba(0,0,0,0.05); /* Very subtle track */
-                            border-radius: 3px;
+                            background-color: rgba(0,0,0,0.05);
+                            border-radius: 4px;
                         }
                         .custom-scrollbar::-webkit-scrollbar-thumb {
-                            background-color: rgba(156, 163, 175, 0.4); /* Subtle grey thumb */
-                            border-radius: 3px;
-                            border: 1px solid transparent;
-                            background-clip: content-box;
+                            background-color: rgba(156, 163, 175, 0.4);
+                            border-radius: 4px;
                         }
                         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                            background-color: rgba(156, 163, 175, 0.6);
+                            background-color: rgba(156, 163, 175, 0.7);
+                        }
+                        .atc-slot-hover:hover {
+                            background-color: ${sportColor}38 !important;
+                            cursor: pointer !important;
                         }
                     `}
                 </style>
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: `140px repeat(${hours.length}, 40px)`,
+                    gridTemplateColumns: `210px repeat(${hours.length}, minmax(50px, 1fr))`,
                     rowGap: '0',
                     columnGap: '0',
-                    minWidth: 'fit-content'
+                    width: '100%',
+                    minWidth: '100%'
                 }}>
-                    {/* Header Row - Hours */}
-                    <div style={{ padding: '8px', borderBottom: '1px solid var(--border)' }}></div>
-                    {hours.map((hour, index) => {
-                        const isFullHour = hour.endsWith(':00');
+                    {/* Corner Sticky Header */}
+                    <div style={{
+                        padding: '12px 16px',
+                        borderBottom: '1px solid var(--border)',
+                        borderRight: '1px solid var(--border)',
+                        position: 'sticky',
+                        left: 0,
+                        backgroundColor: 'var(--bg-card)',
+                        zIndex: 15
+                    }} />
 
-                        if (isFullHour) {
-                            return (
-                                <div key={hour} style={{
-                                    padding: '8px 4px',
-                                    textAlign: 'left',
-                                    fontSize: '12px',
-                                    fontWeight: '700',
-                                    color: 'var(--text-secondary)',
-                                    gridColumn: 'span 2',
-                                    borderBottom: '1px solid var(--border)',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                }}>
-                                    {hour.split(':')[0]}
-                                </div>
-                            );
-                        }
+                    {/* Hours Header Row - 1 column per hour, 100% aligned with vertical grid lines */}
+                    {hours.map((hour) => (
+                        <div
+                            key={hour}
+                            style={{
+                                padding: '12px 0',
+                                textAlign: 'center',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: 'var(--text-primary)',
+                                borderBottom: '1px solid var(--border)',
+                                borderRight: '1px solid var(--border)',
+                                backgroundColor: 'var(--bg-card)'
+                            }}
+                        >
+                            {hour.split(':')[0]}
+                        </div>
+                    ))}
 
-                        // First slot placeholder logic
-                        if (index === 0 && !isFullHour) {
-                            return <div key={hour} style={{
-                                borderBottom: '1px solid var(--border)'
-                            }} />;
-                        }
-
-                        return null;
-                    })}
-
-                    {/* Court Rows */}
-                    {courts.map(court => {
+                    {/* Court Rows - Direct children of parent grid for 100% pixel-perfect column alignment */}
+                    {courts.map((court, cIdx) => {
                         const courtBookings = getCourtBookings(court.id);
+                        const isLastCourt = cIdx === courts.length - 1;
 
                         return (
                             <React.Fragment key={court.id}>
-                                {/* Court Name */}
+                                {/* Sticky Left Court Column */}
                                 <div style={{
-                                    padding: '12px 12px',
+                                    padding: '0 18px',
                                     display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'center',
+                                    alignItems: 'center',
                                     borderRight: '1px solid var(--border)',
-                                    borderBottom: '1px solid var(--border)',
+                                    borderBottom: isLastCourt ? 'none' : '1px solid var(--border)',
                                     position: 'sticky',
                                     left: 0,
-                                    background: 'var(--bg-card)',
-                                    zIndex: 10
+                                    backgroundColor: 'var(--bg-card)',
+                                    zIndex: 12,
+                                    height: '56px',
+                                    minHeight: '56px',
+                                    maxHeight: '56px'
                                 }}>
                                     <div style={{
-                                        fontSize: '13px',
-                                        fontWeight: '600',
+                                        fontSize: '14px',
+                                        fontWeight: '700',
                                         color: 'var(--text-primary)',
-                                        marginBottom: '2px'
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
                                     }}>
                                         {court.name}
                                     </div>
-                                    {court.features && court.features.length > 0 && (
-                                        <div style={{
-                                            fontSize: '10px',
-                                            color: 'var(--text-secondary)',
-                                            whiteSpace: 'nowrap',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis'
-                                        }}>
-                                            {court.features.join(' | ')}
-                                        </div>
-                                    )}
                                 </div>
 
-                                {/* Time Slots */}
-                                {hours.map((hour, index) => {
+                                {/* Direct Grid Children for every hour cell in this row */}
+                                {hours.map((hour, hIdx) => {
                                     const hourMinutes = timeToMinutes(hour);
+                                    const slot00Time = hour;
+                                    const slot30Time = minutesToTime(hourMinutes + 30);
 
-                                    // Find booking
+                                    const is00Available = isWithinOperatingHours(hourMinutes) && getAvailableDurations(court.id, slot00Time).length > 0;
+                                    const is30Available = isWithinOperatingHours(hourMinutes + 30) && getAvailableDurations(court.id, slot30Time).length > 0;
+
+                                    const borderBottom = isLastCourt ? 'none' : '1px solid var(--border)';
+                                    const borderRight = '1px solid var(--border)';
+
+                                    // Find if there is a booking overlapping this cell
                                     const booking = courtBookings.find(b => {
-                                        const bookingStart = timeToMinutes(b.time);
-                                        const bookingEnd = bookingStart + (b.duration || 60);
-                                        return hourMinutes >= bookingStart && hourMinutes < bookingEnd;
+                                        const bStart = timeToMinutes(b.time);
+                                        const bEnd = bStart + (b.duration || 60);
+                                        return hourMinutes >= bStart && hourMinutes < bEnd;
                                     });
 
-                                    const isOccupied = !!booking;
-                                    const isAvailable = !isOccupied && getAvailableDurations(court.id, hour).length > 0;
-
-                                    // Borders: Only bottom and right. No top border to avoid double lines.
-                                    let borderBottom = '1px solid var(--border)';
-                                    let borderLeft = 'none';
-                                    let borderRight = '1px solid var(--border)';
-
-                                    // Left border for first column only
-                                    if (index === 0) borderLeft = '1px solid var(--border)';
-
-                                    let borderRadius = '0';
-                                    let bg = 'var(--bg-main)';
-                                    let cursor = 'not-allowed';
-
-                                    if (isOccupied) {
-                                        // Occupied style
-                                        bg = '#4A5568'; // Darker grey for better contrast
-                                        // Match borders to bg to hide them, or keep them consistent?
-                                        // The user wants "melted", so internal borders should be hidden.
-                                        borderBottom = '1px solid #4A5568';
-                                        borderRight = '1px solid #4A5568';
-                                        if (index === 0) borderLeft = '1px solid #4A5568';
-
-                                        if (booking) {
-                                            const bookingStart = timeToMinutes(booking.time);
-                                            const bookingEnd = bookingStart + (booking.duration || 60);
-
-                                            const isStart = hourMinutes === bookingStart;
-                                            const isEnd = (hourMinutes + 30) === bookingEnd;
-
-                                            if (isStart) borderRadius = '6px 0 0 6px';
-                                            if (isEnd && !isStart) borderRadius = '0 6px 6px 0';
-                                            if (isStart && isEnd) borderRadius = '6px';
-
-                                            // Ensure internal borders are definitely hidden
-                                            if (!isEnd) borderRight = 'none';
-                                        }
-                                    } else if (isAvailable) {
-                                        bg = 'transparent';
-                                        cursor = 'pointer';
-                                        borderRight = '1px dashed var(--border)';
-                                        if (index === 0) borderLeft = '1px dashed var(--border)';
-                                    }
-
                                     return (
-                                        <motion.div
+                                        <div
                                             key={hour}
-                                            onClick={() => isAvailable && handleSlotClick(court, hour)}
-                                            whileHover={isAvailable ? { backgroundColor: `${sportColor}10` } : {}}
                                             style={{
-                                                height: '45px',
-                                                backgroundColor: bg,
+                                                height: '56px',
+                                                backgroundColor: 'transparent',
                                                 borderBottom,
-                                                borderLeft,
                                                 borderRight,
-                                                borderRadius,
-                                                cursor,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                transition: 'all 0.2s',
                                                 position: 'relative',
-                                                opacity: isOccupied ? 1 : 1, // Full opacity for bolder look
-                                                zIndex: isOccupied ? 2 : 1
+                                                display: 'flex',
+                                                alignItems: 'center'
                                             }}
-                                        />
+                                        >
+                                            {/* Booking capsule segment if occupied - Overlaps cell borders cleanly */}
+                                            {booking && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    left: (timeToMinutes(booking.time) === hourMinutes + 30) ? '50%' : '-1px',
+                                                    right: (timeToMinutes(booking.time) + (booking.duration || 60) === hourMinutes + 30) ? '50%' : '-1px',
+                                                    top: '8px',
+                                                    bottom: '8px',
+                                                    backgroundColor: '#607D8B', // ATC Slate Blue-Gray
+                                                    borderTopLeftRadius: (timeToMinutes(booking.time) === hourMinutes) ? '8px' : ((timeToMinutes(booking.time) === hourMinutes + 30) ? '8px' : '0'),
+                                                    borderBottomLeftRadius: (timeToMinutes(booking.time) === hourMinutes) ? '8px' : ((timeToMinutes(booking.time) === hourMinutes + 30) ? '8px' : '0'),
+                                                    borderTopRightRadius: (timeToMinutes(booking.time) + (booking.duration || 60) === hourMinutes + 60) ? '8px' : ((timeToMinutes(booking.time) + (booking.duration || 60) === hourMinutes + 30) ? '8px' : '0'),
+                                                    borderBottomRightRadius: (timeToMinutes(booking.time) + (booking.duration || 60) === hourMinutes + 60) ? '8px' : ((timeToMinutes(booking.time) + (booking.duration || 60) === hourMinutes + 30) ? '8px' : '0'),
+                                                    zIndex: 15,
+                                                    boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                                                }} />
+                                            )}
+
+                                            {/* Left half (:00 - :30) */}
+                                            <div
+                                                onClick={() => is00Available && handleSlotClick(court, slot00Time)}
+                                                className={is00Available ? "atc-slot-hover" : ""}
+                                                style={{
+                                                    position: 'absolute',
+                                                    left: 0,
+                                                    top: 0,
+                                                    bottom: 0,
+                                                    width: '50%',
+                                                    cursor: is00Available ? 'pointer' : 'not-allowed',
+                                                    borderRight: '1px dashed rgba(255, 255, 255, 0.05)',
+                                                    zIndex: booking ? 1 : 2
+                                                }}
+                                            />
+
+                                            {/* Right half (:30 - :00) */}
+                                            <div
+                                                onClick={() => is30Available && handleSlotClick(court, slot30Time)}
+                                                className={is30Available ? "atc-slot-hover" : ""}
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: 0,
+                                                    top: 0,
+                                                    bottom: 0,
+                                                    width: '50%',
+                                                    cursor: is30Available ? 'pointer' : 'not-allowed',
+                                                    zIndex: booking ? 1 : 2
+                                                }}
+                                            />
+                                        </div>
                                     );
                                 })}
                             </React.Fragment>
@@ -416,31 +422,37 @@ const PadelTimeline = ({
                 </div>
             </div>
 
-            {/* Legend */}
+            {/* Bottom Footer Legend */}
             <div style={{
                 display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
                 gap: '16px',
+                marginTop: '18px',
                 fontSize: '12px',
-                color: 'var(--text-secondary)',
-                marginTop: '16px'
+                color: 'var(--text-secondary)'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{
-                        width: '16px',
-                        height: '16px',
-                        backgroundColor: '#4A5568',
-                        borderRadius: '4px'
-                    }}></div>
-                    <span>Ocupado</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{
-                        width: '16px',
-                        height: '16px',
-                        border: `2px dashed ${sportColor}40`,
-                        borderRadius: '4px'
-                    }}></div>
-                    <span>Disponible</span>
+                {/* Legend Badges */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{
+                            width: '14px',
+                            height: '14px',
+                            backgroundColor: '#607D8B',
+                            borderRadius: '4px'
+                        }} />
+                        <span>No disponible</span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{
+                            width: '14px',
+                            height: '14px',
+                            backgroundColor: sportColor,
+                            borderRadius: '4px'
+                        }} />
+                        <span>Tu reserva</span>
+                    </div>
                 </div>
             </div>
 
