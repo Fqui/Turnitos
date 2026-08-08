@@ -406,9 +406,10 @@ export default function Home() {
                             style={{
                                 width: '100%',
                                 padding: '16px 20px',
-                                paddingLeft: '50px',
+                                paddingLeft: '56px',
                                 paddingRight: searchTerm ? '45px' : '20px',
                                 fontSize: '15px',
+                                textAlign: 'left',
                                 borderRadius: '24px',
                                 border: '1px solid var(--border)',
                                 backgroundColor: 'var(--bg-card)',
