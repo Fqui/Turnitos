@@ -488,9 +488,9 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const { open, close, ranges } = getBusinessHours(selectedDate);
     const interval = selectedItem?.duration || 60; // Use service duration or default 60 min
 
-    // 🆕 Compact layout width for Desktop ONLY
+    // 🆕 Expanded desktop layout width with clean margins
     const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
-    const containerWidth = hasPadelCourts ? '920px' : '860px';
+    const containerWidth = hasPadelCourts ? '1320px' : '1200px';
 
     const now = new Date();
     const rawHighlights = business?.gallery_highlights && business.gallery_highlights.length > 0
@@ -542,7 +542,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
             className="business-profile-page"
             style={{ paddingBottom: '80px', width: '100%', overflowX: 'clip' }}
         >
-            <div className="business-profile-card-shell">
+            <div className="business-profile-card-shell" style={{ maxWidth: containerWidth }}>
                 {/* 1. Immersive Hero Section */}
                 {/* Header / Banner */}
                 <div className="business-profile-banner" style={{
@@ -593,7 +593,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     </button>
                 </div>
 
-                <div className="container" style={{ maxWidth: containerWidth, margin: '0 auto', padding: '0 16px', position: 'relative', zIndex: 2 }}>
+                <div className="container" style={{ maxWidth: containerWidth, margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 2 }}>
 
                     {/* 2. Business Info Card */}
                     <div className="business-info-main-card" style={{
