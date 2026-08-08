@@ -827,6 +827,16 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 </div>
             </div>
 
+                {/* Clean horizontal divider line after business name info */}
+                {(!permanentHighlights || permanentHighlights.length === 0) && (
+                    <div style={{
+                        width: '100%',
+                        height: '1px',
+                        backgroundColor: 'var(--border)',
+                        marginTop: '20px'
+                    }} />
+                )}
+
                 {/* Instagram-Style Highlights Sub-bar */}
                 {permanentHighlights && permanentHighlights.length > 0 && (
                     <div className="instagram-stories-bar" id="galeria">
@@ -1079,7 +1089,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 {business.type === 'service' && (
                     <section id="servicios" style={{ marginBottom: '30px' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                            1. Elige un servicio
+                            Nuestros Servicios
                         </h3>
                         <ServiceSelector
                             services={business.services}
@@ -1207,7 +1217,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}
                     >
                         <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                            {business.type === 'service' ? '2. Selecciona una fecha' : '1. Selecciona una fecha'}
+                            {business.type === 'service' ? 'Selecciona una fecha' : '1. Selecciona una fecha'}
                         </h3>
                         <div style={{
                             backgroundColor: 'var(--bg-card)',
