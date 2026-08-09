@@ -549,36 +549,47 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                         </div>
                     </div>
 
-                    {/* Cantidad de Canchas / Especialistas */}
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
-                            ⚙️ Cantidad de Canchas / Especialistas
-                        </label>
-                        <input
-                            type="number"
-                            min="1"
-                            max="30"
-                            value={formData.resources_count || 2}
-                            onChange={(e) => setFormData({ ...formData, resources_count: parseInt(e.target.value) || 1 })}
-                            style={{
-                                width: '100%',
-                                padding: '14px',
-                                background: 'rgba(99, 102, 241, 0.08)',
-                                border: '1px solid rgba(99, 102, 241, 0.4)',
-                                borderRadius: '12px',
-                                color: '#818CF8',
-                                fontWeight: '700',
-                                fontSize: '16px',
-                                outline: 'none'
-                            }}
-                        />
-                        <small style={{ display: 'block', marginTop: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
-                            {business
-                                ? 'Modificar este valor ajustará automáticamente la cantidad de canchas/especialistas creados en el sistema.'
-                                : 'Se generarán automáticamente al crear el negocio (ej: Cancha 1, Cancha 2, etc.)'
-                            }
-                        </small>
-                    </div>
+                    {/* Cantidad de Canchas / Especialistas (Solo para Deportes y Servicios, NO para Alquileres) */}
+                    {(() => {
+                        const selectedCatObj = categories.find(c => c.id === formData.category_id);
+                        const isRental = selectedCatObj
+                            ? (selectedCatObj.name === 'Alquileres' || selectedCatObj.type === 'venue' || selectedCatObj.type === 'alquiler')
+                            : (formData.type === 'venue' || formData.type === 'alquiler');
+
+                        if (isRental) return null;
+
+                        return (
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
+                                    ⚙️ Cantidad de Canchas / Especialistas
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="30"
+                                    value={formData.resources_count || 2}
+                                    onChange={(e) => setFormData({ ...formData, resources_count: parseInt(e.target.value) || 1 })}
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px',
+                                        background: 'rgba(99, 102, 241, 0.08)',
+                                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                                        borderRadius: '12px',
+                                        color: '#818CF8',
+                                        fontWeight: '700',
+                                        fontSize: '16px',
+                                        outline: 'none'
+                                    }}
+                                />
+                                <small style={{ display: 'block', marginTop: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+                                    {business
+                                        ? 'Modificar este valor ajustará automáticamente la cantidad de canchas/especialistas creados en el sistema.'
+                                        : 'Se generarán automáticamente al crear el negocio (ej: Cancha 1, Cancha 2, etc.)'
+                                    }
+                                </small>
+                            </div>
+                        );
+                    })()}
 
                     {/* Vendedor */}
                     <div ref={sellerRef} style={{ position: 'relative' }}>
