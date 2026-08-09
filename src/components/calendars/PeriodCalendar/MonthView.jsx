@@ -16,16 +16,16 @@ export default function MonthView({
         <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(7, 1fr)',
-            gap: '8px',
+            gap: '6px',
             maxWidth: '1200px',
             margin: '0 auto'
         }}>
             {/* Day Names Header */}
             {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
                 <div key={day} style={{
-                    padding: '12px',
+                    padding: '6px',
                     textAlign: 'center',
-                    fontSize: '12px',
+                    fontSize: '11px',
                     fontWeight: '700',
                     color: 'var(--text-secondary)',
                     textTransform: 'uppercase',

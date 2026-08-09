@@ -41,15 +41,16 @@ export default function DayCell({
             }}
             style={{
                 backgroundColor: isCurrentMonth ? 'var(--bg-card)' : 'rgba(0,0,0,0.02)',
-                padding: '16px',
-                minHeight: isMobile ? '100px' : '140px',
+                padding: '8px 10px',
+                minHeight: isMobile ? '65px' : '72px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                opacity: isCurrentMonth ? 1 : 0.5,
+                opacity: isCurrentMonth ? 1 : 0.4,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px',
-                borderRadius: '12px',
+                justifyContent: 'space-between',
+                gap: '4px',
+                borderRadius: '10px',
                 border: '2px solid',
                 borderColor: isTodayDay ? 'var(--primary-paddle)' : 'var(--border)',
                 position: 'relative',
@@ -66,36 +67,36 @@ export default function DayCell({
                 e.currentTarget.style.boxShadow = 'none';
             }}
         >
-            {/* Día del mes */}
+            {/* Top row: Date Number */}
             <div style={{
-                fontSize: '18px',
-                fontWeight: isTodayDay ? '800' : '600',
-                color: isTodayDay ? 'var(--primary-paddle)' : 'var(--text-primary)',
-                width: '36px',
-                height: '36px',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%',
-                background: isTodayDay ? 'rgba(0, 230, 118, 0.1)' : 'transparent'
+                justifyContent: 'space-between',
+                alignItems: 'center'
             }}>
-                {day.getDate()}
+                <div style={{
+                    fontSize: '14px',
+                    fontWeight: isTodayDay ? '800' : '700',
+                    color: isTodayDay ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                    width: '26px',
+                    height: '26px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '50%',
+                    background: isTodayDay ? 'rgba(0, 230, 118, 0.15)' : 'transparent'
+                }}>
+                    {day.getDate()}
+                </div>
             </div>
 
             {/* Estado de disponibilidad */}
             {isCurrentMonth && (
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: 1
-                }}>
+                <div style={{ width: '100%' }}>
                     {isBooked ? (
                         (() => {
                             const booking = bookings[0];
                             const status = booking.status;
 
-                            // Definir colores y etiquetas según el estado
                             const statusConfig = {
                                 pending: {
                                     bg: '#FEF3C7',
@@ -113,7 +114,7 @@ export default function DayCell({
                                     bg: '#FED7AA',
                                     color: '#EA580C',
                                     icon: '💰',
-                                    label: 'Seña Pagada'
+                                    label: 'Señado'
                                 },
                                 cancelled: {
                                     bg: '#FEE2E2',
@@ -141,50 +142,24 @@ export default function DayCell({
                                 <div style={{
                                     width: '100%',
                                     background: config.bg,
-                                    borderRadius: '8px',
-                                    padding: '12px 8px',
-                                    textAlign: 'center'
+                                    borderRadius: '6px',
+                                    padding: '5px 6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '4px'
                                 }}>
-                                    <div style={{
-                                        fontSize: '24px',
-                                        marginBottom: '4px'
-                                    }}>{config.icon}</div>
-                                    <div style={{
+                                    <span style={{ fontSize: '11px' }}>{config.icon}</span>
+                                    <span style={{
                                         fontSize: '11px',
-                                        fontWeight: '600',
+                                        fontWeight: '700',
                                         color: config.color,
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis'
                                     }}>
-                                        {config.label}
-                                    </div>
-                                    {booking.customer_name && (
-                                        <div style={{
-                                            fontSize: '10px',
-                                            color: config.color,
-                                            marginTop: '2px',
-                                            whiteSpace: 'nowrap',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            opacity: 0.8
-                                        }}>
-                                            {booking.customer_name}
-                                        </div>
-                                    )}
-                                    {booking.metadata?.eventName && (
-                                        <div style={{
-                                            fontSize: '10px',
-                                            color: config.color,
-                                            marginTop: '2px',
-                                            whiteSpace: 'nowrap',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            opacity: 0.7
-                                        }}>
-                                            {booking.metadata.eventName}
-                                        </div>
-                                    )}
+                                        {booking.customer_name || config.label}
+                                    </span>
                                 </div>
                             );
                         })()
@@ -192,21 +167,21 @@ export default function DayCell({
                         <div style={{
                             width: '100%',
                             background: '#D1FAE5',
-                            borderRadius: '8px',
-                            padding: '12px 8px',
-                            textAlign: 'center'
+                            borderRadius: '6px',
+                            padding: '5px 6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px'
                         }}>
-                            <div style={{
-                                fontSize: '24px',
-                                marginBottom: '4px'
-                            }}>✓</div>
-                            <div style={{
+                            <span style={{ fontSize: '11px', color: '#059669' }}>✓</span>
+                            <span style={{
                                 fontSize: '11px',
-                                fontWeight: '600',
+                                fontWeight: '700',
                                 color: '#059669'
                             }}>
                                 Disponible
-                            </div>
+                            </span>
                         </div>
                     )}
                 </div>

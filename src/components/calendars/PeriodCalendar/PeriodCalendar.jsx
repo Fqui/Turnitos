@@ -76,7 +76,7 @@ export default function PeriodCalendar({
             />
 
             {/* Vista del calendario */}
-            <div style={{ flex: 1, overflow: 'auto', position: 'relative', padding: '20px' }}>
+            <div style={{ flex: 1, overflow: 'auto', position: 'relative', padding: '12px 16px' }}>
                 {viewMode === 'month' && (
                     <MonthView
                         business={business}
