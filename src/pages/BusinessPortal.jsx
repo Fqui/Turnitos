@@ -1191,17 +1191,6 @@ export default function BusinessPortal() {
                             />
                         ) : viewMode === 'calendar' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                                {/* Stats Row - Only in Calendar View */}
-                                <div style={{ marginBottom: '20px', flexShrink: 0 }}>
-                                    <DashboardStats
-                                        bookings={bookings}
-                                        viewMode={calendarViewMode}
-                                        currentDate={calendarDate}
-                                        isMobile={isMobile}
-                                        theme={theme}
-                                        toggleTheme={toggleTheme}
-                                    />
-                                </div>
 
                                 {/* Booking Status Legend */}
                                 <div style={{

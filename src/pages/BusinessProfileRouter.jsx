@@ -8,14 +8,33 @@ export default function BusinessProfileRouter({ overrideSlug }) {
     const { businessSlug: routeSlug } = useParams();
     const businessSlug = overrideSlug || routeSlug;
     const location = useLocation();
-    const [business, setBusiness] = useState(location.state?.business || null);
-    const [loading, setLoading] = useState(!location.state?.business);
+
+    const getInitialBusiness = () => {
+        const navBiz = location.state?.business;
+        try {
+            const raw = localStorage.getItem('business');
+            if (raw) {
+                const storedBiz = JSON.parse(raw);
+                if (navBiz && (String(navBiz.id) === String(storedBiz.id) || navBiz.slug === storedBiz.slug)) {
+                    return { ...navBiz, ...storedBiz };
+                }
+                if (storedBiz.slug === businessSlug || storedBiz.id === businessSlug) {
+                    return storedBiz;
+                }
+            }
+        } catch (e) { }
+        return navBiz || null;
+    };
+
+    const initialBiz = getInitialBusiness();
+    const [business, setBusiness] = useState(initialBiz);
+    const [loading, setLoading] = useState(!initialBiz);
 
     useEffect(() => {
         let isMounted = true;
         const fetchBusiness = async () => {
             try {
-                if (!location.state?.business) {
+                if (!initialBiz) {
                     setLoading(true);
                 }
                 const data = await serviceAdapter.getBusinessBySlug(businessSlug);

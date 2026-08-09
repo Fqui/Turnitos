@@ -32,8 +32,129 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
 
-    // Main form state
     const [formData, setFormData] = useState({ ...business });
+
+    // Calendar optimization state
+    const [portalMonth, setPortalMonth] = useState(new Date());
+    const [blockStartDate, setBlockStartDate] = useState('');
+    const [blockEndDate, setBlockEndDate] = useState('');
+    const [blockReason, setBlockReason] = useState('');
+    const [quickBlockDay, setQuickBlockDay] = useState(null);
+    const [quickBlockReason, setQuickBlockReason] = useState('');
+
+    const formatDateKey = (d) => {
+        if (!d) return '';
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const getPortalMonthDays = (date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+
+        let startDay = firstDay.getDay() - 1;
+        if (startDay < 0) startDay = 6;
+
+        const days = [];
+        for (let i = 0; i < startDay; i++) {
+            days.push(null);
+        }
+        for (let i = 1; i <= daysInMonth; i++) {
+            days.push(new Date(year, month, i));
+        }
+        return days;
+    };
+
+    const handleToggleDayBlock = (dateObj, customReason = '') => {
+        if (!dateObj) return;
+        const dateStr = formatDateKey(dateObj);
+        const current = formData.blocked_dates || [];
+        const existsIndex = current.findIndex(b => (typeof b === 'string' ? b : b.date) === dateStr);
+
+        let updated;
+        if (existsIndex >= 0) {
+            updated = current.filter((_, idx) => idx !== existsIndex);
+            showToast(`Fecha ${dateStr} desbloqueada`, 'success');
+        } else {
+            const reason = customReason || 'Bloqueado por el negocio';
+            updated = [...current, { date: dateStr, reason }];
+            showToast(`Fecha ${dateStr} bloqueada (${reason})`, 'info');
+        }
+        handleInputChange('blocked_dates', updated);
+        setQuickBlockDay(null);
+        setQuickBlockReason('');
+    };
+
+    const handleBlockRange = () => {
+        if (!blockStartDate) {
+            showToast('Selecciona al menos una fecha de inicio', 'warning');
+            return;
+        }
+        const start = new Date(blockStartDate + 'T00:00:00');
+        const end = blockEndDate ? new Date(blockEndDate + 'T00:00:00') : start;
+
+        if (end < start) {
+            showToast('La fecha de fin debe ser posterior a la fecha de inicio', 'warning');
+            return;
+        }
+
+        const current = [...(formData.blocked_dates || [])];
+        let addedCount = 0;
+
+        let curr = new Date(start);
+        while (curr <= end) {
+            const dateStr = formatDateKey(curr);
+            if (!current.some(b => (typeof b === 'string' ? b : b.date) === dateStr)) {
+                current.push({ date: dateStr, reason: blockReason || 'Bloqueado por el negocio' });
+                addedCount++;
+            }
+            curr.setDate(curr.getDate() + 1);
+        }
+
+        handleInputChange('blocked_dates', current);
+        setBlockStartDate('');
+        setBlockEndDate('');
+        setBlockReason('');
+        showToast(`Se bloquearon ${addedCount} día(s) correctamente`, 'success');
+    };
+
+    const handleBlockWeekends = () => {
+        const days = getPortalMonthDays(portalMonth).filter(Boolean);
+        const current = [...(formData.blocked_dates || [])];
+        let addedCount = 0;
+
+        days.forEach(d => {
+            const dayOfWeek = d.getDay(); // 0 is Sun, 6 is Sat
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                const dateStr = formatDateKey(d);
+                if (!current.some(b => (typeof b === 'string' ? b : b.date) === dateStr)) {
+                    current.push({ date: dateStr, reason: 'Fin de Semana' });
+                    addedCount++;
+                }
+            }
+        });
+
+        handleInputChange('blocked_dates', current);
+        showToast(`Se bloquearon ${addedCount} días de fin de semana`, 'success');
+    };
+
+    const handleClearMonthBlocks = () => {
+        const days = getPortalMonthDays(portalMonth).filter(Boolean);
+        const monthKeys = days.map(formatDateKey);
+
+        const updated = (formData.blocked_dates || []).filter(b => {
+            const dateStr = typeof b === 'string' ? b : b.date;
+            return !monthKeys.includes(dateStr);
+        });
+
+        handleInputChange('blocked_dates', updated);
+        showToast('Se desbloquearon las fechas del mes seleccionado', 'success');
+    };
 
     // Ensure complex objects exist
     useEffect(() => {
@@ -69,9 +190,11 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
         try {
             const bId = business?.id || formData?.id || formData?.business_id;
 
+            // Always merge with original business to preserve fields not in the form
             const dataToSave = {
+                ...business,
                 ...formData,
-                gallery_images: formData.metadata?.venue_gallery?.map(item => item.url) || formData.gallery_images
+                gallery_images: formData.metadata?.venue_gallery?.map(item => item.url) || formData.gallery_images || business?.gallery_images
             };
 
             if (bId) {
@@ -89,7 +212,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
         } catch (error) {
             console.error('Error saving venue settings:', error);
             if (onUpdate && typeof onUpdate === 'function') {
-                onUpdate({ ...formData });
+                onUpdate({ ...business, ...formData });
             }
             showToast('Cambios guardados localmente', 'success');
         } finally {
@@ -902,57 +1025,275 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 )}
 
                 {activeTab === 'calendar' && (
-                    <div style={cardStyle}>
-                        <h2 style={sectionTitleStyle}>Bloqueo de Fechas</h2>
-                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Gestiona aquí los días que no quieres recibir reservas.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* KPI Summary Cards */}
+                        {(() => {
+                            const monthDays = getPortalMonthDays(portalMonth).filter(Boolean);
+                            const blockedInMonth = monthDays.filter(d => {
+                                const k = formatDateKey(d);
+                                return (formData.blocked_dates || []).some(b => (typeof b === 'string' ? b : b.date) === k);
+                            }).length;
+                            const availableInMonth = monthDays.length - blockedInMonth;
 
-                        {/* Simple list of blocked dates */}
-                        <div style={{ marginTop: '20px' }}>
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', marginBottom: '20px' }}>
-                                <div>
-                                    <label style={labelStyle}>Fecha a bloquear</label>
-                                    <input type="date" id="block-date-input" style={inputStyle} />
+                            return (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                                    <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: '16px', padding: '20px' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(132, 204, 22, 0.15)', color: '#84CC16', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                                            🟢
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>Días Disponibles</div>
+                                            <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--text-primary)' }}>{availableInMonth}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: '16px', padding: '20px' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                                            🔴
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>Días Bloqueados</div>
+                                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#EF4444' }}>{blockedInMonth}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: '16px', padding: '20px' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                                            ⚡
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>Acción Directa</div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '600', marginTop: '2px' }}>Haz clic en cualquier día del calendario para bloquear/desbloquear</div>
+                                        </div>
+                                    </div>
                                 </div>
+                            );
+                        })()}
+
+                        {/* Visual Month Calendar Grid Card */}
+                        <div style={cardStyle}>
+                            {/* Calendar Navigation Header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
                                 <div>
-                                    <label style={labelStyle}>Motivo (Opcional)</label>
-                                    <input type="text" id="block-reason-input" placeholder="Mantenimiento, Cerrado..." style={inputStyle} />
+                                    <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                                        📅 {portalMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase()}
+                                    </h2>
+                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+                                        Haz clic directo en cualquier día para cambiar su estado o mantén presionado para personalizar el motivo.
+                                    </p>
                                 </div>
+
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPortalMonth(new Date(portalMonth.getFullYear(), portalMonth.getMonth() - 1, 1))}
+                                        style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontWeight: '700', cursor: 'pointer' }}
+                                    >
+                                        ← Anterior
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPortalMonth(new Date())}
+                                        style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', background: 'var(--primary-paddle)', color: '#000', fontWeight: '700', cursor: 'pointer' }}
+                                    >
+                                        Hoy
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPortalMonth(new Date(portalMonth.getFullYear(), portalMonth.getMonth() + 1, 1))}
+                                        style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontWeight: '700', cursor: 'pointer' }}
+                                    >
+                                        Siguiente →
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Quick Preset Buttons */}
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
                                 <button
-                                    onClick={() => {
-                                        const dateVal = document.getElementById('block-date-input').value;
-                                        const reasonVal = document.getElementById('block-reason-input').value;
-                                        if (!dateVal) return;
-
-                                        const newBlocked = [...(formData.blocked_dates || []), { date: dateVal, reason: reasonVal }];
-                                        handleInputChange('blocked_dates', newBlocked);
-
-                                        document.getElementById('block-date-input').value = '';
-                                        document.getElementById('block-reason-input').value = '';
-                                    }}
-                                    style={buttonStyle}
+                                    type="button"
+                                    onClick={handleBlockWeekends}
+                                    style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                                 >
-                                    Bloquear Día
+                                    🚫 Bloquear Fines de Semana (Sáb y Dom)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleClearMonthBlocks}
+                                    style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    ✨ Desbloquear Todo este Mes
                                 </button>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
-                                {(formData.blocked_dates || []).map((block, i) => (
-                                    <div key={i} style={{ background: 'rgba(255,0,0,0.1)', border: '1px solid red', borderRadius: '8px', padding: '10px' }}>
-                                        <div style={{ fontWeight: '700', color: 'red' }}>{block.date}</div>
-                                        <div style={{ fontSize: '12px' }}>{block.reason || 'Cerrado'}</div>
-                                        <button
-                                            onClick={() => {
-                                                const newBlocked = [...formData.blocked_dates];
-                                                newBlocked.splice(i, 1);
-                                                handleInputChange('blocked_dates', newBlocked);
-                                            }}
-                                            style={{ marginTop: '5px', background: 'transparent', border: 'none', textDecoration: 'underline', cursor: 'pointer', fontSize: '11px' }}
-                                        >
-                                            Desbloquear
-                                        </button>
+                            {/* Day Headers Grid */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', textAlign: 'center', marginBottom: '10px' }}>
+                                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((dayName, idx) => (
+                                    <div key={idx} style={{ fontSize: '12px', fontWeight: '700', color: idx >= 5 ? 'var(--primary-paddle)' : 'var(--text-secondary)', padding: '6px 0' }}>
+                                        {dayName}
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Month Days Grid */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
+                                {getPortalMonthDays(portalMonth).map((dateObj, idx) => {
+                                    if (!dateObj) {
+                                        return <div key={`empty-${idx}`} style={{ minHeight: '80px', borderRadius: '12px', background: 'transparent' }} />;
+                                    }
+
+                                    const dateKey = formatDateKey(dateObj);
+                                    const todayKey = formatDateKey(new Date());
+                                    const isToday = dateKey === todayKey;
+                                    const blockedItem = (formData.blocked_dates || []).find(b => (typeof b === 'string' ? b : b.date) === dateKey);
+                                    const isBlocked = !!blockedItem;
+                                    const reasonText = typeof blockedItem === 'object' ? blockedItem.reason : 'Bloqueado';
+
+                                    const todayDateObj = new Date();
+                                    todayDateObj.setHours(0, 0, 0, 0);
+                                    const isPast = dateObj < todayDateObj;
+
+                                    return (
+                                        <div
+                                            key={dateKey}
+                                            onClick={() => {
+                                                if (isPast) return;
+                                                handleToggleDayBlock(dateObj);
+                                            }}
+                                            style={{
+                                                minHeight: '85px',
+                                                padding: '10px',
+                                                borderRadius: '14px',
+                                                border: isBlocked ? '2px solid #EF4444' : isToday ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                background: isBlocked ? 'rgba(239, 68, 68, 0.12)' : isPast ? 'rgba(0,0,0,0.03)' : 'var(--bg-card)',
+                                                cursor: isPast ? 'not-allowed' : 'pointer',
+                                                opacity: isPast ? 0.4 : 1,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'space-between',
+                                                transition: 'all 0.2s ease',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '14px', fontWeight: '800', color: isBlocked ? '#EF4444' : 'var(--text-primary)' }}>
+                                                    {dateObj.getDate()}
+                                                </span>
+                                                {isBlocked && (
+                                                    <span style={{ fontSize: '12px', background: '#EF4444', color: 'white', padding: '2px 6px', borderRadius: '6px', fontWeight: '700' }}>
+                                                        🚫
+                                                    </span>
+                                                )}
+                                                {!isBlocked && isToday && (
+                                                    <span style={{ fontSize: '10px', background: 'var(--primary-paddle)', color: '#000', padding: '2px 6px', borderRadius: '6px', fontWeight: '800' }}>
+                                                        HOY
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {isBlocked && (
+                                                <div style={{ fontSize: '11px', fontWeight: '600', color: '#EF4444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '6px' }}>
+                                                    {reasonText || 'Cerrado'}
+                                                </div>
+                                            )}
+
+                                            {!isBlocked && !isPast && (
+                                                <div style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600', marginTop: '6px' }}>
+                                                    🟢 Libre
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Range Blocking Form Card */}
+                        <div style={cardStyle}>
+                            <h3 style={{ ...sectionTitleStyle, fontSize: '16px' }}>🚫 Bloquear Rango de Fechas Específico</h3>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                                Selecciona una fecha de inicio y una fecha de fin para bloquear múltiples días seguidos (mantenimiento, vacaciones, reformas, etc.).
+                            </p>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', alignItems: 'flex-end' }}>
+                                <div>
+                                    <label style={labelStyle}>Fecha Inicio</label>
+                                    <input
+                                        type="date"
+                                        style={inputStyle}
+                                        value={blockStartDate}
+                                        onChange={e => setBlockStartDate(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Fecha Fin (Opcional)</label>
+                                    <input
+                                        type="date"
+                                        style={inputStyle}
+                                        value={blockEndDate}
+                                        onChange={e => setBlockEndDate(e.target.value)}
+                                    />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={labelStyle}>Motivo (Opcional)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: Mantenimiento, Evento Privado"
+                                        style={inputStyle}
+                                        value={blockReason}
+                                        onChange={e => setBlockReason(e.target.value)}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleBlockRange}
+                                    style={{ ...buttonStyle, height: '42px', background: '#EF4444', border: 'none' }}
+                                >
+                                    Bloquear Rango
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* List of Blocked Dates Card */}
+                        <div style={cardStyle}>
+                            <h3 style={{ ...sectionTitleStyle, fontSize: '16px' }}>📋 Lista de Fechas Bloqueadas ({(formData.blocked_dates || []).length})</h3>
+                            {(formData.blocked_dates || []).length === 0 ? (
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>No tienes ninguna fecha bloqueada actualmente. Tu establecimiento está 100% disponible.</p>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px', marginTop: '12px' }}>
+                                    {(formData.blocked_dates || [])
+                                        .slice()
+                                        .sort((a, b) => {
+                                            const da = typeof a === 'string' ? a : a.date;
+                                            const db = typeof b === 'string' ? b : b.date;
+                                            return da.localeCompare(db);
+                                        })
+                                        .map((block, i) => {
+                                            const dateStr = typeof block === 'string' ? block : block.date;
+                                            const reasonStr = typeof block === 'object' ? block.reason : 'Cerrado';
+                                            const parts = dateStr.split('-');
+                                            const displayDate = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateStr;
+
+                                            return (
+                                                <div key={i} style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: '800', color: '#EF4444', fontSize: '14px' }}>📅 {displayDate}</div>
+                                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{reasonStr || 'Bloqueado por el negocio'}</div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newBlocked = (formData.blocked_dates || []).filter(b => (typeof b === 'string' ? b : b.date) !== dateStr);
+                                                            handleInputChange('blocked_dates', newBlocked);
+                                                            showToast(`Fecha ${displayDate} desbloqueada`, 'success');
+                                                        }}
+                                                        style={{ background: 'transparent', border: '1px solid #EF4444', color: '#EF4444', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}
+                                                    >
+                                                        Desbloquear
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

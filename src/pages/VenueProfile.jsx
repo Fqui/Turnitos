@@ -27,6 +27,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const [guestCount, setGuestCount] = useState(30);
     const [duration, setDuration] = useState(4);
     const [selectedServices, setSelectedServices] = useState([]);
+    const [venueBookings, setVenueBookings] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [bookingStep, setBookingStep] = useState(1);
     const [showLightbox, setShowLightbox] = useState(false);
@@ -55,8 +56,20 @@ export default function VenueProfile({ business: initialBusiness }) {
     useEffect(() => {
         if (!business) {
             fetchBusiness();
+        } else if (business.id) {
+            fetchVenueBookings(business.id);
         }
     }, [slug, business]);
+
+    const fetchVenueBookings = async (bId) => {
+        try {
+            const res = await serviceAdapter.getBookings(bId);
+            const list = Array.isArray(res) ? res : (res && Array.isArray(res.bookings) ? res.bookings : []);
+            setVenueBookings(list);
+        } catch (err) {
+            console.error('Error fetching venue bookings:', err);
+        }
+    };
 
     const fetchBusiness = async () => {
         try {
@@ -193,11 +206,59 @@ export default function VenueProfile({ business: initialBusiness }) {
         return days;
     };
 
-    const isDateBlocked = (date) => {
-        if (!date || !business?.blocked_dates) return false;
+    const formatDateStr = (d) => {
+        if (!d) return '';
+        if (d instanceof Date) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        if (typeof d === 'string') {
+            const clean = d.trim();
+            if (clean.includes('/')) {
+                const parts = clean.split('/');
+                if (parts.length === 3) {
+                    const day = parts[0].padStart(2, '0');
+                    const month = parts[1].padStart(2, '0');
+                    const year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+                    return `${year}-${month}-${day}`;
+                }
+            }
+            if (clean.includes('-')) {
+                const datePart = clean.split('T')[0];
+                const parts = datePart.split('-');
+                if (parts.length === 3) {
+                    const year = parts[0];
+                    const month = parts[1].padStart(2, '0');
+                    const day = parts[2].padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+            }
+        }
+        return '';
+    };
 
-        const dateStr = date.toISOString().split('T')[0];
-        return business.blocked_dates.some(blocked => blocked.date === dateStr);
+    const isDateBlocked = (date) => {
+        if (!date) return false;
+        const dateStr = formatDateStr(date);
+
+        // 1. Check owner blocked dates
+        const isOwnerBlocked = (business?.blocked_dates || []).some(b => {
+            const bStr = typeof b === 'string' ? b : b.date;
+            return formatDateStr(bStr) === dateStr;
+        });
+        if (isOwnerBlocked) return true;
+
+        // 2. Check confirmed client bookings
+        const bookingsList = venueBookings.length > 0 ? venueBookings : (business?.bookings || []);
+        const isBooked = bookingsList.some(b => {
+            if (b.status === 'cancelled' || b.status === 'rejected') return false;
+            const bStr = formatDateStr(b.date || b.start_time || b.created_at);
+            return bStr === dateStr;
+        });
+
+        return isBooked;
     };
 
     const isDatePast = (date) => {
@@ -906,9 +967,9 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         style={{
                                             padding: windowWidth < 768 ? '8px 2px' : '12px',
                                             borderRadius: '12px',
-                                            background: isSelected ? primaryColor : isBlocked ? '#FEE2E2' : isPast ? subCardBg : btnBg,
+                                            background: isSelected ? primaryColor : isBlocked ? (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2') : isPast ? subCardBg : btnBg,
 
-                                            color: isSelected ? 'white' : isDisabled ? '#CBD5E1' : textColor,
+                                            color: isSelected ? 'white' : isBlocked ? (isDark ? '#EF4444' : '#DC2626') : isDisabled ? '#CBD5E1' : textColor,
                                             fontSize: windowWidth < 768 ? '13px' : '14px',
                                             fontWeight: isSelected ? '700' : '500',
                                             cursor: isDisabled ? 'not-allowed' : 'pointer',

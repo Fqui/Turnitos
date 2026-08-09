@@ -203,7 +203,7 @@ export const businesses = [
         banner_image: '/quincho_roma_banner_panoramic.png',
         location: 'Av. Circunvalación Sur 1250, La Rioja',
         rating: 4.9,
-        theme: 'dark',
+        theme: 'light',
         amenities: ['Piscina', 'Parrilla', 'WiFi', 'Aire Acondicionado', 'Quincho Cubierto', 'Sonido', 'Zona de Juegos', 'Freezer'],
         hours: 'Lunes a Domingo: 10:00 - 03:00',
         price_per_hour: 18000,
