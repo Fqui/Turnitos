@@ -530,8 +530,13 @@ class SupabaseService {
             } catch (e) { /* ignore */ }
         }
 
-        const requestedCount = parseInt(businessData.resources_count || businessData.initial_resources_count || planSpaces || 2);
-        if (requestedCount > 0 && (!businessData.courts || businessData.courts.length === 0) && (!businessData.specialists || businessData.specialists.length === 0)) {
+        const isRental = businessData.type === 'venue' || businessData.type === 'alquiler';
+        if (isRental) {
+            businessData.courts = [];
+            businessData.specialists = [];
+        } else {
+            const requestedCount = parseInt(businessData.resources_count || businessData.initial_resources_count || planSpaces || 2);
+            if (requestedCount > 0 && (!businessData.courts || businessData.courts.length === 0) && (!businessData.specialists || businessData.specialists.length === 0)) {
             const isService = businessData.type === 'service';
             if (isService) {
                 businessData.specialists = Array.from({ length: requestedCount }, (_, i) => ({
@@ -562,6 +567,7 @@ class SupabaseService {
                     price: businessData.price_per_hour || 10000
                 }));
             }
+        }
         }
 
         // 3. Insert or Update courts
