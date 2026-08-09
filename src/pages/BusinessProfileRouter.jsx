@@ -15,16 +15,40 @@ export default function BusinessProfileRouter({ overrideSlug }) {
         let isMounted = true;
         const fetchBusiness = async () => {
             try {
-                // If we don't have business passed from router state, show loading spinner
                 if (!location.state?.business) {
                     setLoading(true);
                 }
                 const data = await serviceAdapter.getBusinessBySlug(businessSlug);
-                if (data && isMounted) {
-                    setBusiness(data);
+
+                let storedBiz = null;
+                try {
+                    const raw = localStorage.getItem('business');
+                    if (raw) storedBiz = JSON.parse(raw);
+                } catch (e) { }
+
+                let finalBiz = data;
+                if (storedBiz) {
+                    // ONLY merge if storedBiz actually matches this business!
+                    const isMatch = (data && (String(data.id) === String(storedBiz.id) || data.slug === storedBiz.slug))
+                        || (!data && (storedBiz.slug === businessSlug || storedBiz.id === businessSlug));
+
+                    if (isMatch) {
+                        finalBiz = { ...(data || {}), ...storedBiz };
+                        if (storedBiz.metadata?.venue_gallery) {
+                            finalBiz.metadata = { ...(finalBiz.metadata || {}), venue_gallery: storedBiz.metadata.venue_gallery };
+                        }
+                        if (storedBiz.gallery_images) {
+                            finalBiz.gallery_images = storedBiz.gallery_images;
+                        }
+                    }
+                }
+
+                if (finalBiz && isMounted) {
+                    setBusiness(finalBiz);
                 }
             } catch (error) {
                 console.error('Error fetching business:', error);
+                if (isMounted) setLoading(false);
             } finally {
                 if (isMounted) setLoading(false);
             }
@@ -69,8 +93,16 @@ export default function BusinessProfileRouter({ overrideSlug }) {
         return <Navigate to="/" replace />;
     }
 
+    const catName = (business.categories?.name || business.category || '').toLowerCase();
+    const isVenueBusiness = business.type === 'venue' ||
+        business.type === 'alquiler' ||
+        catName.includes('alquiler') ||
+        catName.includes('quincho') ||
+        (business.slug || '').toLowerCase().includes('quincho') ||
+        (business.slug || '').toLowerCase().includes('roma');
+
     // Route to appropriate profile based on business type
-    if (business.type === 'venue' || business.type === 'alquiler') {
+    if (isVenueBusiness) {
         return <VenueProfile business={business} />;
     }
 

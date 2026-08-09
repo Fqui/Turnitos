@@ -25,7 +25,13 @@ export default function Header() {
     };
 
     return (
-        <header style={{ padding: '20px 0' }}>
+        <header style={{
+            padding: '20px 0',
+            background: 'var(--bg-card, #ffffff)',
+            color: 'var(--text-primary, inherit)',
+            borderBottom: '1px solid var(--border, transparent)',
+            transition: 'all 0.3s ease'
+        }}>
             <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <a href="/" onClick={handleLogoClick} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '-1px' }}>

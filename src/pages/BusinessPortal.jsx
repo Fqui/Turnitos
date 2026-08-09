@@ -49,22 +49,24 @@ export default function BusinessPortal() {
                     const biz = JSON.parse(storedBusiness);
                     if (biz && biz.id) {
                         const businessesData = await serviceAdapter.getBusinesses();
-                        const fullBiz = businessesData.find(b => b.id === biz.id);
-                        if (fullBiz) {
-                            if (mustChangePassword || fullBiz.password_changed === false) {
-                                setRequirePasswordChange(true);
-                                setCurrentBusinessId(fullBiz.id);
-                                setSelectedBusinessId(fullBiz.id);
-                                setBusinesses(businessesData);
-                                setLoginEmail(fullBiz.email);
-                                return;
-                            }
+                        const fullBiz = businessesData.find(b => String(b.id) === String(biz.id)) || biz;
+                        const finalBusinesses = businessesData.some(b => String(b.id) === String(fullBiz.id))
+                            ? businessesData
+                            : [...businessesData, fullBiz];
+
+                        if (mustChangePassword || fullBiz.password_changed === false) {
+                            setRequirePasswordChange(true);
+                            setCurrentBusinessId(fullBiz.id);
                             setSelectedBusinessId(fullBiz.id);
-                            setBusinesses(businessesData);
-                            setIsLoggedIn(true);
+                            setBusinesses(finalBusinesses);
                             setLoginEmail(fullBiz.email);
                             return;
                         }
+                        setSelectedBusinessId(fullBiz.id);
+                        setBusinesses(finalBusinesses);
+                        setIsLoggedIn(true);
+                        setLoginEmail(fullBiz.email);
+                        return;
                     }
                 } catch (err) {
                     // Auto-login failed silently
@@ -212,8 +214,13 @@ export default function BusinessPortal() {
                     return;
                 }
 
-                const fullBusiness = await serviceAdapter.getBusinessById(business.id);
-                setBusinesses(prev => prev.map(b => b.id === fullBusiness.id ? fullBusiness : b));
+                const fullBusiness = await serviceAdapter.getBusinessById(business.id) || business;
+                setBusinesses(prev => {
+                    const exists = prev.some(b => String(b.id) === String(fullBusiness.id));
+                    return exists
+                        ? prev.map(b => String(b.id) === String(fullBusiness.id) ? fullBusiness : b)
+                        : [...prev, fullBusiness];
+                });
                 setSelectedBusinessId(business.id);
                 setIsLoggedIn(true);
 
@@ -246,7 +253,14 @@ export default function BusinessPortal() {
             }
 
             const businessData = await serviceAdapter.getBusinessById(selectedBusinessId);
-            setBusinesses(prev => prev.map(b => b.id === businessData.id ? businessData : b));
+            if (businessData) {
+                setBusinesses(prev => {
+                    const exists = prev.some(b => String(b.id) === String(businessData.id));
+                    return exists
+                        ? prev.map(b => String(b.id) === String(businessData.id) ? businessData : b)
+                        : [...prev, businessData];
+                });
+            }
         } catch (error) {
             console.error('Error fetching bookings:', error);
             alert('Error al cargar reservas. Revisa la consola.');
@@ -782,7 +796,19 @@ export default function BusinessPortal() {
         );
     }
 
-    const currentBusiness = businesses.find(b => b.id === selectedBusinessId);
+    const storedBizObj = (() => {
+        try {
+            const raw = localStorage.getItem('business');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
+
+    const currentBusiness = businesses.find(b => String(b.id) === String(selectedBusinessId))
+        || (storedBizObj && String(storedBizObj.id) === String(selectedBusinessId) ? storedBizObj : storedBizObj)
+        || businesses[0]
+        || null;
 
     return (
         <div style={{
@@ -1260,13 +1286,49 @@ export default function BusinessPortal() {
                                 </div>
                             </div>
                         ) : viewMode === 'settings' ? (
-                            <BusinessSettings
-                                business={currentBusiness}
-                                isMobile={isMobile}
-                                onUpdate={(updated) => {
-                                    setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
-                                }}
-                            />
+                            (currentBusiness && (
+                                currentBusiness.type === 'venue' ||
+                                currentBusiness.type === 'alquiler' ||
+                                (currentBusiness.categories?.name || '').toLowerCase().includes('alquiler') ||
+                                (currentBusiness.categories?.name || '').toLowerCase().includes('quincho') ||
+                                (currentBusiness.category || '').toLowerCase().includes('quincho')
+                            )) ? (
+                                <VenueSettings
+                                    business={currentBusiness}
+                                    isMobile={isMobile}
+                                    onUpdate={(updated) => {
+                                        setBusinesses(prev => {
+                                            const exists = prev.some(b => String(b.id) === String(updated.id));
+                                            return exists
+                                                ? prev.map(b => String(b.id) === String(updated.id) ? { ...b, ...updated } : b)
+                                                : [...prev, updated];
+                                        });
+                                        try {
+                                            const currentStored = localStorage.getItem('business');
+                                            const storedObj = currentStored ? JSON.parse(currentStored) : {};
+                                            localStorage.setItem('business', JSON.stringify({ ...storedObj, ...updated }));
+                                        } catch (e) { }
+                                    }}
+                                />
+                            ) : (
+                                <BusinessSettings
+                                    business={currentBusiness}
+                                    isMobile={isMobile}
+                                    onUpdate={(updated) => {
+                                        setBusinesses(prev => {
+                                            const exists = prev.some(b => String(b.id) === String(updated.id));
+                                            return exists
+                                                ? prev.map(b => String(b.id) === String(updated.id) ? { ...b, ...updated } : b)
+                                                : [...prev, updated];
+                                        });
+                                        try {
+                                            const currentStored = localStorage.getItem('business');
+                                            const storedObj = currentStored ? JSON.parse(currentStored) : {};
+                                            localStorage.setItem('business', JSON.stringify({ ...storedObj, ...updated }));
+                                        } catch (e) { }
+                                    }}
+                                />
+                            )
                         ) : (
                             <div style={{
                                 background: 'var(--bg-card)',

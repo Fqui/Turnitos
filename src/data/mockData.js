@@ -193,27 +193,47 @@ export const businesses = [
         ]
     },
     {
-        id: 'quincho-los-amigos',
-        name: 'Quincho Los Amigos',
+        id: 'quincho-roma',
+        name: 'Quincho Roma',
+        slug: 'quincho-roma',
         category: 'quincho',
         type: 'venue',
-        image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=1000', // BBQ/Outdoor area
-        location: 'Av. Los Caudillos 500, La Rioja',
-        rating: 4.8,
-        theme: 'light',
-        amenities: ['Parrilla', 'Pileta', 'Freezer', 'Mesas y Sillas'],
-        hours: 'Lunes a Domingo: 10:00 - 02:00',
-        price_per_hour: 15000,
-        rental_duration_options: [4, 6, 8, 12],
+        logo: '/quincho_roma_logo.png',
+        image: '/quincho_roma_logo.png',
+        banner_image: '/quincho_roma_banner_panoramic.png',
+        location: 'Av. Circunvalación Sur 1250, La Rioja',
+        rating: 4.9,
+        theme: 'dark',
+        amenities: ['Piscina', 'Parrilla', 'WiFi', 'Aire Acondicionado', 'Quincho Cubierto', 'Sonido', 'Zona de Juegos', 'Freezer'],
+        hours: 'Lunes a Domingo: 10:00 - 03:00',
+        price_per_hour: 18000,
+        capacity_limit: 100,
+        pricing_tiers: [
+            { min_guests: 1, max_guests: 30, min: 1, max: 30, price: 18000 },
+            { min_guests: 31, max_guests: 60, min: 31, max: 60, price: 24000 },
+            { min_guests: 61, max_guests: 100, min: 61, max: 100, price: 32000 }
+        ],
+        rental_duration_options: [4, 6, 8, 12, 24],
         additional_services: [
-            { name: 'Limpieza Post-Evento', price: 10000, icon: '🧹' },
-            { name: 'Vajilla Completa', price: 8000, icon: '🍽️' },
-            { name: 'Castillo Inflable', price: 25000, icon: '🏰' }
+            { name: 'Limpieza Post-Evento', price: 12000, icon: '🧹', description: 'Limpieza completa del predio post-evento' },
+            { name: 'Servicio de DJ y Luces LED', price: 35000, icon: '🎧', description: 'Sonido profesional e iluminación de pista' },
+            { name: 'Vajilla y Mantelería Completa', price: 15000, icon: '🍽️', description: 'Platos, cubiertos, copas y manteles para 50 personas' },
+            { name: 'Castillo Inflable con Tobogán', price: 28000, icon: '🏰', description: 'Juego inflable grande para chicos durante todo el evento' }
         ],
         gallery_images: [
-            'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=800',
-            'https://images.unsplash.com/photo-1533158326339-dace9271630b?auto=format&fit=crop&q=80&w=800'
-        ]
+            { url: '/quincho_roma_gallery_4.png', caption: 'Nuestro salon de juegos', category: 'Salón' },
+            { url: '/quincho_roma_gallery_3.png', caption: 'Patio parquizado', category: 'Exterior' },
+            { url: '/quincho_roma_gallery_2.png', caption: 'Comedor en asador', category: 'Exterior' },
+            { url: '/quincho_roma_gallery_1.png', caption: 'Parque', category: 'Piscina' }
+        ],
+        metadata: {
+            venue_gallery: [
+                { url: '/quincho_roma_gallery_4.png', caption: 'Nuestro salon de juegos', category: 'Salón' },
+                { url: '/quincho_roma_gallery_3.png', caption: 'Patio parquizado', category: 'Exterior' },
+                { url: '/quincho_roma_gallery_2.png', caption: 'Comedor en asador', category: 'Exterior' },
+                { url: '/quincho_roma_gallery_1.png', caption: 'Parque', category: 'Piscina' }
+            ]
+        }
     }
 ];
 

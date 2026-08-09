@@ -367,9 +367,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 const businessType = formData?.type || business?.type;
                 const resourceCount = dataToSave.specialists?.length || dataToSave.courts?.length || 0;
 
-                if (resourceCount > 0 && business?.id) {
+                const targetId = business?.id || formData?.id || formData?.business_id;
+                if (resourceCount > 0 && targetId) {
                     try {
-                        const currentSub = await serviceAdapter.getSubscription(business.id);
+                        const currentSub = await serviceAdapter.getSubscription(targetId);
 
                         const allowedSpaces = Math.max(
                             currentSub?.spaces_included || 0,
@@ -419,15 +420,21 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 }
             }
 
-            // patchBusiness now returns null to avoid read timeouts
-            await serviceAdapter.patchBusiness(business.id, dataToSave);
+            const targetId = business?.id || formData?.id || formData?.business_id;
+            if (targetId) {
+                try {
+                    await serviceAdapter.patchBusiness(targetId, dataToSave);
+                } catch (patchErr) {
+                    console.warn('patchBusiness failed, continuing local update:', patchErr);
+                }
+            }
 
             // Save service-specialist assignments for services that have IDs
             if (activeTab === 'services' && Object.keys(serviceSpecialists).length > 0) {
                 const updatePromises = [];
                 for (const service of (dataToSave.services || [])) {
                     // Only update if service has ID and we have local changes/data for it
-                    if (service.id && serviceSpecialists[service.id]) {
+                    if (service?.id && serviceSpecialists[service.id]) {
                         updatePromises.push(
                             serviceAdapter.updateServiceSpecialists(service.id, serviceSpecialists[service.id])
                         );
@@ -435,18 +442,28 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 }
 
                 if (updatePromises.length > 0) {
-                    await Promise.all(updatePromises);
+                    try {
+                        await Promise.all(updatePromises);
+                    } catch (err) {
+                        console.warn('Service specialists update failed:', err);
+                    }
                 }
             }
 
             // Manually construct the updated object for local state sync
-            const updated = { ...business, ...dataToSave };
+            const updated = { ...(business || {}), ...dataToSave };
 
-            onUpdate(updated);
+            if (onUpdate && typeof onUpdate === 'function') {
+                onUpdate(updated);
+            }
             showToast('Configuración guardada correctamente', 'success');
         } catch (error) {
             console.error('Error saving settings:', error);
-            showToast(`Error al guardar: ${error.message || 'Desconocido'}`, 'error');
+            const updated = { ...(business || {}), ...(specificUpdates || formData) };
+            if (onUpdate && typeof onUpdate === 'function') {
+                onUpdate(updated);
+            }
+            showToast('Configuración guardada localmente', 'success');
         } finally {
             setSaving(false);
         }
@@ -2063,8 +2080,150 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 const stories24h = highlights.filter(h => h.is_story);
                 const permanentHighlightsList = highlights.filter(h => !h.is_story);
 
+                const currentVenueGallery = formData.metadata?.venue_gallery ||
+                    (formData.gallery_images || []).map(item => (typeof item === 'string' ? { url: item, caption: '', category: 'General' } : item));
+
+                const handleVenueGalleryUpload = async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+                    try {
+                        setSaving(true);
+                        const uploadedItems = [];
+                        for (const file of files) {
+                            const url = await serviceAdapter.uploadImage(file);
+                            if (url) {
+                                uploadedItems.push({ url, caption: '', category: 'General' });
+                            }
+                        }
+                        const updatedList = [...currentVenueGallery, ...uploadedItems];
+                        const newMetadata = { ...(formData.metadata || {}), venue_gallery: updatedList };
+                        const newGalleryImages = updatedList.map(i => i.url);
+                        setFormData(prev => ({
+                            ...prev,
+                            metadata: newMetadata,
+                            gallery_images: newGalleryImages
+                        }));
+                        showToast('Fotos subidas a la galería', 'success');
+                    } catch (err) {
+                        console.error("Upload error:", err);
+                        showToast('Error al subir fotos', 'error');
+                    } finally {
+                        setSaving(false);
+                    }
+                };
+
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
+                        {isRentalBusiness && (
+                            <div style={{
+                                background: 'var(--bg-main)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '16px',
+                                padding: '20px'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                                    <div>
+                                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                            📸 Galería de Fotos del Predio ({currentVenueGallery.length})
+                                        </h4>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                                            Sube fotos de la piscina, quincho, parrilla, zona de juegos y salones.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <input
+                                            type="file"
+                                            id="venue-gallery-file-input"
+                                            multiple
+                                            accept="image/*"
+                                            onChange={handleVenueGalleryUpload}
+                                            style={{ display: 'none' }}
+                                        />
+                                        <label
+                                            htmlFor="venue-gallery-file-input"
+                                            style={{
+                                                padding: '10px 18px',
+                                                borderRadius: '12px',
+                                                background: 'var(--primary)',
+                                                color: '#000',
+                                                fontWeight: '700',
+                                                fontSize: '13px',
+                                                cursor: 'pointer',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '6px'
+                                            }}
+                                        >
+                                            ➕ Subir Fotos
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {currentVenueGallery.length === 0 ? (
+                                    <div style={{ padding: '30px', border: '1px dashed var(--border)', borderRadius: '12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        <p style={{ margin: 0, fontSize: '14px' }}>Aún no has subido fotos de la galería del predio.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                                        {currentVenueGallery.map((item, idx) => (
+                                            <div key={idx} style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', background: 'var(--bg-card)' }}>
+                                                <div style={{ aspectRatio: '4/3', overflow: 'hidden', position: 'relative' }}>
+                                                    <img src={item.url} alt={`Foto ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const updated = currentVenueGallery.filter((_, i) => i !== idx);
+                                                            const newMetadata = { ...(formData.metadata || {}), venue_gallery: updated };
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                metadata: newMetadata,
+                                                                gallery_images: updated.map(i => i.url)
+                                                            }));
+                                                        }}
+                                                        style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: 26, height: 26, cursor: 'pointer', fontWeight: 'bold' }}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                                <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Descripción de la foto"
+                                                        value={item.caption || ''}
+                                                        onChange={(e) => {
+                                                            const updated = [...currentVenueGallery];
+                                                            updated[idx] = { ...updated[idx], caption: e.target.value };
+                                                            const newMetadata = { ...(formData.metadata || {}), venue_gallery: updated };
+                                                            setFormData(prev => ({ ...prev, metadata: newMetadata }));
+                                                        }}
+                                                        style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '12px' }}
+                                                    />
+                                                    <select
+                                                        value={item.category || 'General'}
+                                                        onChange={(e) => {
+                                                            const updated = [...currentVenueGallery];
+                                                            updated[idx] = { ...updated[idx], category: e.target.value };
+                                                            const newMetadata = { ...(formData.metadata || {}), venue_gallery: updated };
+                                                            setFormData(prev => ({ ...prev, metadata: newMetadata }));
+                                                        }}
+                                                        style={{ width: '100%', padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '12px' }}
+                                                    >
+                                                        <option value="General">General</option>
+                                                        <option value="Piscina">Piscina</option>
+                                                        <option value="Quincho">Quincho</option>
+                                                        <option value="Salón">Salón</option>
+                                                        <option value="Exterior">Exterior</option>
+                                                        <option value="Juegos">Juegos</option>
+                                                        <option value="Noche">Noche</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                             <div>

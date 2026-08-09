@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
@@ -34,12 +34,23 @@ export default function VenueProfile({ business: initialBusiness }) {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [showServicesExpanded, setShowServicesExpanded] = useState(false);
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const calendarRef = useRef(null);
+
+    const scrollToCalendar = () => {
+        calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
 
     useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    useEffect(() => {
+        if (initialBusiness) {
+            setBusiness(initialBusiness);
+        }
+    }, [initialBusiness]);
 
     useEffect(() => {
         if (!business) {
@@ -64,37 +75,80 @@ export default function VenueProfile({ business: initialBusiness }) {
         }
     };
 
-    // Get gallery images with captions
-    const getGalleryImages = () => {
-        if (!business) return [];
+    const defaultQuinchoPhotos = [
+        { url: '/quincho_roma_gallery_4.png', caption: 'Nuestro salon de juegos', category: 'Salón' },
+        { url: '/quincho_roma_gallery_3.png', caption: 'Patio parquizado', category: 'Exterior' },
+        { url: '/quincho_roma_gallery_2.png', caption: 'Comedor en asador', category: 'Exterior' },
+        { url: '/quincho_roma_gallery_1.png', caption: 'Parque', category: 'Piscina' }
+    ];
 
-        let images = [];
-        if (business.metadata?.venue_gallery && Array.isArray(business.metadata.venue_gallery) && business.metadata.venue_gallery.length > 0) {
-            images = [...business.metadata.venue_gallery];
-        } else if (business.gallery_images && Array.isArray(business.gallery_images) && business.gallery_images.length > 0) {
-            images = business.gallery_images.map(url => (typeof url === 'string' ? { url, caption: '', category: 'General' } : url));
+    // Get gallery images with captions and featured photo
+    const getGalleryImages = () => {
+        if (!business) return defaultQuinchoPhotos;
+
+        let metadataObj = business.metadata;
+        if (typeof metadataObj === 'string') {
+            try { metadataObj = JSON.parse(metadataObj); } catch (e) { }
         }
 
-        // Add main banner / image / logo to images if not present
-        const coverUrl = business.banner_image || business.banner_url || business.image || business.logo || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200';
-        if (coverUrl && !images.some(img => img.url === coverUrl)) {
-            images.unshift({ url: coverUrl, caption: business.name, category: 'General' });
+        let galleryArr = business.gallery_images;
+        if (typeof galleryArr === 'string') {
+            try { galleryArr = JSON.parse(galleryArr); } catch (e) { }
+        }
+
+        let images = [];
+        if (metadataObj?.venue_gallery && Array.isArray(metadataObj.venue_gallery) && metadataObj.venue_gallery.length > 0) {
+            images = metadataObj.venue_gallery.map(img => typeof img === 'string' ? { url: img, caption: '', category: 'General' } : { ...img });
+        } else if (galleryArr && Array.isArray(galleryArr) && galleryArr.length > 0) {
+            images = galleryArr.map(url => (typeof url === 'string' ? { url, caption: '', category: 'General' } : (typeof url === 'object' && url !== null ? { ...url } : { url: String(url), caption: '', category: 'General' })));
+        }
+
+        // Fallback: If no gallery photos exist yet, use default Quincho photos
+        if (images.length === 0) {
+            images = [...defaultQuinchoPhotos];
+        }
+
+        // Sort so featured photo is at index 0
+        const featuredIndex = images.findIndex(img => img.is_featured || img.featured);
+        if (featuredIndex > 0) {
+            const [featuredItem] = images.splice(featuredIndex, 1);
+            images.unshift(featuredItem);
         }
 
         return images;
     };
 
+    const maxCapacity = Number(business?.capacity_limit || business?.capacity || 100);
+
+    useEffect(() => {
+        if (business) {
+            const maxCap = Number(business.capacity_limit || business.capacity || 100);
+            const halfCap = Math.max(5, Math.round((maxCap / 2) / 5) * 5);
+            setGuestCount(halfCap);
+
+            const options = business.rental_duration_options || [4, 6, 8, 12, 24];
+            if (options && options.length > 0) {
+                setDuration(options[0]);
+            }
+        }
+    }, [business]);
+
     // Calculate price based on guest count and pricing tiers
     const calculatePrice = () => {
         if (!business?.pricing_tiers || business.pricing_tiers.length === 0) {
-            return business?.price_per_hour || 0;
+            return Number(business?.price_per_hour || business?.price || 0);
         }
 
-        const tier = business.pricing_tiers.find(t =>
-            guestCount >= (t.min || 0) && guestCount <= (t.max || 999)
-        );
+        const tier = business.pricing_tiers.find(t => {
+            const minG = Number(t.min_guests !== undefined ? t.min_guests : t.min !== undefined ? t.min : 0);
+            const maxG = Number(t.max_guests !== undefined ? t.max_guests : t.max !== undefined ? t.max : 999);
+            return guestCount >= minG && guestCount <= maxG;
+        });
 
-        return tier ? tier.price : business.pricing_tiers[0].price;
+        if (tier && tier.price !== undefined) {
+            return Number(tier.price);
+        }
+        return Number(business.pricing_tiers[0].price || business?.price_per_hour || 0);
     };
 
     const pricePerHour = calculatePrice();
@@ -207,25 +261,39 @@ export default function VenueProfile({ business: initialBusiness }) {
 
     // Get icon for amenity
     const getAmenityIcon = (amenity) => {
+        if (typeof amenity === 'object' && amenity !== null && amenity.icon) {
+            return amenity.icon;
+        }
+        const name = typeof amenity === 'object' ? amenity.name : String(amenity);
         const icons = {
             'Piscina': '🏊',
             'Parrilla': '🔥',
+            'Parrilla / Asador': '🔥',
             'WiFi': '📶',
+            'WiFi Libre': '📶',
             'Aire Acondicionado': '❄️',
             'Parking': '🚗',
+            'Estacionamiento Privado': '🚗',
             'Sonido': '🔊',
+            'Equipo de Sonido': '🔊',
             'Cocina Equipada': '🍳',
             'Baños Completos': '🚿',
+            'Baños Privados': '🚿',
             'Jardín': '🌳',
+            'Amplio Jardín / Parque': '🌳',
             'Quincho Cubierto': '🏠',
             'Zona de Juegos': '🎮',
             'Iluminación LED': '💡',
             'Televisor': '📺',
+            'Televisor / Pantalla': '📺',
             'Mesa de Pool': '🎱',
             'Metegol': '⚽',
-            'Ping Pong': '🏓'
+            'Ping Pong': '🏓',
+            'Freezer': '🧊',
+            'Freezer / Heladeras': '🧊',
+            'Juegos Infantiles': '🧸'
         };
-        return icons[amenity] || '✨';
+        return icons[name] || '✨';
     };
 
     if (loading) {
@@ -242,8 +310,47 @@ export default function VenueProfile({ business: initialBusiness }) {
         );
     }
 
-    if (!business) return null;
+    // Sync root CSS variables with business theme
+    useEffect(() => {
+        if (business) {
+            const root = document.documentElement;
+            const color = business.primary_color || business.button_color || business.buttonColor || '#84CC16';
+            root.style.setProperty('--primary-paddle', color);
 
+            if (business.theme === 'light') {
+                root.style.setProperty('--bg-main', '#F5F7FA');
+                root.style.setProperty('--bg-card', '#FFFFFF');
+                root.style.setProperty('--text-primary', '#1A1A1A');
+                root.style.setProperty('--text-secondary', '#4A4A4A');
+                root.style.setProperty('--border', '#E0E0E0');
+            } else {
+                root.style.setProperty('--bg-main', '#121212');
+                root.style.setProperty('--bg-card', '#1E1E1E');
+                root.style.setProperty('--text-primary', '#FFFFFF');
+                root.style.setProperty('--text-secondary', '#A0A0A0');
+                root.style.setProperty('--border', '#333333');
+            }
+        }
+        return () => {
+            const root = document.documentElement;
+            root.style.removeProperty('--primary-paddle');
+            root.style.removeProperty('--bg-main');
+            root.style.removeProperty('--bg-card');
+            root.style.removeProperty('--text-primary');
+            root.style.removeProperty('--text-secondary');
+            root.style.removeProperty('--border');
+        };
+    }, [business]);
+
+    const primaryColor = business?.primary_color || business?.button_color || business?.buttonColor || '#84CC16';
+    const isDark = business?.theme === 'dark';
+    const pageBg = isDark ? '#121212' : '#F5F7FA';
+    const cardBg = isDark ? '#1E1E1E' : '#FFFFFF';
+    const textColor = isDark ? '#FFFFFF' : '#1A1A1A';
+    const secondaryTextColor = isDark ? '#A0A0A0' : '#4A4A4A';
+    const borderColor = isDark ? '#333333' : '#E0E0E0';
+    const subCardBg = isDark ? '#2A2A2A' : '#F8F9FA';
+    const btnBg = isDark ? '#333333' : '#FFFFFF';
     const galleryImages = getGalleryImages();
     const amenities = business.amenities || [];
     const additionalServices = business.additional_services || [];
@@ -251,7 +358,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 
     return (
-        <div style={{ background: '#F8F9FA', minHeight: '100vh', width: '100%', overflowX: 'clip' }}>
+        <div style={{ background: pageBg, color: textColor, minHeight: '100vh', width: '100%', overflowX: 'clip', transition: 'background 0.3s' }}>
             {/* Hero Section */}
             <div style={{
                 position: 'relative',
@@ -411,26 +518,27 @@ export default function VenueProfile({ business: initialBusiness }) {
                 alignItems: 'start',
                 position: 'relative',
                 zIndex: 10,
-                marginTop: windowWidth < 768 ? '0px' : '-30px'
+                marginTop: windowWidth < 768 ? '20px' : '32px'
             }}>
                 {/* Left Column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {/* Gallery Section */}
                     {galleryImages.length > 0 && (
                         <div style={{
-                            background: 'white',
+                            background: cardBg,
                             borderRadius: '24px',
                             padding: windowWidth < 768 ? '16px' : '32px',
-                            boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                            boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
+                            border: `1px solid ${borderColor}`
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a' }}>Galería</h2>
+                                <h2 style={{ fontSize: '20px', fontWeight: '700', color: textColor }}>Galería</h2>
                                 <button
                                     onClick={() => { setLightboxIndex(0); setShowLightbox(true); }}
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#84CC16',
+                                        color: primaryColor,
                                         fontSize: '14px',
                                         fontWeight: '600',
                                         cursor: 'pointer'
@@ -441,10 +549,10 @@ export default function VenueProfile({ business: initialBusiness }) {
                             </div>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: windowWidth < 768 ? '1fr' : '2fr 1fr',
-                                gap: '12px',
-                                height: windowWidth < 768 ? '240px' : '400px'
+                                gridTemplateColumns: windowWidth < 768 ? '1fr' : (galleryImages.length > 1 ? '1fr 1fr' : '1fr'),
+                                gap: '12px'
                             }}>
+                                {/* Main Cover Photo */}
                                 <div
                                     onClick={() => { setLightboxIndex(0); setShowLightbox(true); }}
                                     style={{
@@ -452,6 +560,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         borderRadius: '20px',
                                         overflow: 'hidden',
                                         cursor: 'pointer',
+                                        height: windowWidth < 768 ? '260px' : '380px',
                                         transition: 'transform 0.3s ease'
                                     }}
                                 >
@@ -477,43 +586,79 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         </div>
                                     )}
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: '12px' }}>
-                                    {galleryImages.slice(1, 3).map((img, idx) => (
-                                        <div
-                                            key={idx}
-                                            onClick={() => { setLightboxIndex(idx + 1); setShowLightbox(true); }}
-                                            style={{
-                                                position: 'relative',
-                                                borderRadius: '16px',
-                                                overflow: 'hidden',
-                                                cursor: 'pointer',
-                                                transition: 'transform 0.3s ease'
-                                            }}
-                                        >
-                                            <img
-                                                src={img.url}
-                                                alt={img.caption || `Imagen ${idx + 2}`}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            />
-                                            {idx === 1 && galleryImages.length > 3 && (
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    inset: 0,
-                                                    background: 'rgba(0,0,0,0.5)',
-                                                    backdropFilter: 'blur(4px)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    color: 'white',
-                                                    fontSize: '18px',
-                                                    fontWeight: '700'
-                                                }}>
-                                                    +{galleryImages.length - 3} fotos
+
+                                {/* Secondary Grid Thumbnails */}
+                                {galleryImages.length > 1 && (
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: (galleryImages.length - 1) === 1 ? '1fr' : '1fr 1fr',
+                                        gridTemplateRows: (galleryImages.length - 1) <= 2 ? `repeat(${galleryImages.length - 1}, 1fr)` : '1fr 1fr',
+                                        gap: '12px',
+                                        height: windowWidth < 768 ? '280px' : '380px'
+                                    }}>
+                                        {galleryImages.slice(1, 5).map((img, idx) => {
+                                            const actualIndex = idx + 1;
+                                            const isLastSlot = idx === 3 || actualIndex === galleryImages.length - 1;
+                                            const remainingCount = galleryImages.length - 5;
+
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => { setLightboxIndex(actualIndex); setShowLightbox(true); }}
+                                                    style={{
+                                                        position: 'relative',
+                                                        borderRadius: '16px',
+                                                        overflow: 'hidden',
+                                                        cursor: 'pointer',
+                                                        transition: 'transform 0.3s ease'
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={img.url}
+                                                        alt={img.caption || `Imagen ${actualIndex + 1}`}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    />
+                                                    {img.caption && (!isLastSlot || remainingCount <= 0) && (
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            bottom: '8px',
+                                                            left: '8px',
+                                                            background: 'rgba(0,0,0,0.6)',
+                                                            backdropFilter: 'blur(4px)',
+                                                            color: 'white',
+                                                            padding: '4px 10px',
+                                                            borderRadius: '8px',
+                                                            fontSize: '11px',
+                                                            fontWeight: '600',
+                                                            maxWidth: '90%',
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis'
+                                                        }}>
+                                                            {img.caption}
+                                                        </div>
+                                                    )}
+                                                    {idx === 3 && remainingCount > 0 && (
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            inset: 0,
+                                                            background: 'rgba(0,0,0,0.5)',
+                                                            backdropFilter: 'blur(4px)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: 'white',
+                                                            fontSize: '18px',
+                                                            fontWeight: '700'
+                                                        }}>
+                                                            +{remainingCount} fotos
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -521,12 +666,13 @@ export default function VenueProfile({ business: initialBusiness }) {
                     {/* Amenities Section */}
                     {amenities.length > 0 && (
                         <div style={{
-                            background: 'white',
+                            background: cardBg,
                             borderRadius: '24px',
                             padding: windowWidth < 768 ? '16px' : '32px',
-                            boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                            boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
+                            border: `1px solid ${borderColor}`
                         }}>
-                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: textColor, marginBottom: '20px' }}>
                                 Comodidades Destacadas
                             </h2>
                             <div style={{
@@ -534,43 +680,47 @@ export default function VenueProfile({ business: initialBusiness }) {
                                 gridTemplateColumns: windowWidth < 768 ? 'repeat(auto-fill, minmax(100px, 1fr))' : 'repeat(auto-fill, minmax(140px, 1fr))',
                                 gap: windowWidth < 768 ? '10px' : '16px'
                             }}>
-                                {amenities.map((amenity, idx) => (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            padding: '20px',
-                                            background: '#F8F9FA',
-                                            borderRadius: '16px',
-                                            transition: 'all 0.3s ease',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: '48px',
-                                            height: '48px',
-                                            background: 'white',
-                                            borderRadius: '12px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '24px'
-                                        }}>
-                                            {getAmenityIcon(amenity)}
+                                {amenities.map((amenity, idx) => {
+                                    const name = typeof amenity === 'object' ? amenity.name : amenity;
+                                    const icon = getAmenityIcon(amenity);
+                                    return (
+                                        <div
+                                            key={idx}
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '12px',
+                                                padding: '20px',
+                                                background: subCardBg,
+                                                borderRadius: '16px',
+                                                transition: 'all 0.3s ease',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <div style={{
+                                                width: '48px',
+                                                height: '48px',
+                                                background: btnBg,
+                                                borderRadius: '12px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '24px'
+                                            }}>
+                                                {icon}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '13px',
+                                                fontWeight: '600',
+                                                color: secondaryTextColor,
+                                                textAlign: 'center'
+                                            }}>
+                                                {name}
+                                            </div>
                                         </div>
-                                        <div style={{
-                                            fontSize: '13px',
-                                            fontWeight: '600',
-                                            color: '#4A5568',
-                                            textAlign: 'center'
-                                        }}>
-                                            {amenity}
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -578,10 +728,11 @@ export default function VenueProfile({ business: initialBusiness }) {
                     {/* Additional Services Section */}
                     {additionalServices.length > 0 && (
                         <div style={{
-                            background: 'white',
+                            background: cardBg,
                             borderRadius: '24px',
                             overflow: 'hidden',
-                            boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                            boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
+                            border: `1px solid ${borderColor}`
                         }}>
                             <div
                                 onClick={() => setShowServicesExpanded(!showServicesExpanded)}
@@ -595,16 +746,16 @@ export default function VenueProfile({ business: initialBusiness }) {
                                 }}
                             >
                                 <div>
-                                    <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a' }}>
+                                    <h2 style={{ fontSize: '20px', fontWeight: '700', color: textColor }}>
                                         Servicios Adicionales
                                     </h2>
-                                    <p style={{ fontSize: '13px', color: '#64748B', fontWeight: '500', marginTop: '4px' }}>
+                                    <p style={{ fontSize: '13px', color: secondaryTextColor, fontWeight: '500', marginTop: '4px' }}>
                                         Personaliza tu experiencia
                                     </p>
                                 </div>
                                 <div style={{
                                     fontSize: '24px',
-                                    color: '#84CC16',
+                                    color: primaryColor,
                                     transition: 'transform 0.3s',
                                     transform: showServicesExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
                                 }}>
@@ -625,7 +776,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                 justifyContent: 'space-between',
                                                 alignItems: 'center',
                                                 padding: '20px',
-                                                background: '#F8F9FA',
+                                                background: subCardBg,
                                                 borderRadius: '16px',
                                                 transition: 'all 0.3s ease',
                                                 cursor: 'pointer',
@@ -636,7 +787,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                 <div style={{
                                                     width: '56px',
                                                     height: '56px',
-                                                    background: 'white',
+                                                    background: btnBg,
                                                     borderRadius: '14px',
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -647,17 +798,17 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     {service.icon || '✨'}
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a1a' }}>
+                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>
                                                         {service.name}
                                                     </div>
                                                     {service.description && (
-                                                        <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+                                                        <div style={{ fontSize: '13px', color: secondaryTextColor, marginTop: '2px' }}>
                                                             {service.description}
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
-                                            <div style={{ fontSize: '16px', fontWeight: '800', color: '#84CC16' }}>
+                                            <div style={{ fontSize: '16px', fontWeight: '800', color: primaryColor }}>
                                                 +${service.price}
                                             </div>
                                         </div>
@@ -668,13 +819,14 @@ export default function VenueProfile({ business: initialBusiness }) {
                     )}
 
                     {/* Calendar Section */}
-                    <div style={{
-                        background: 'white',
+                    <div ref={calendarRef} style={{
+                        background: cardBg,
                         borderRadius: '24px',
                         padding: windowWidth < 768 ? '16px' : '32px',
-                        boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                        boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
+                        border: `1px solid ${borderColor}`
                     }}>
-                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>
+                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: textColor, marginBottom: '20px' }}>
                             Disponibilidad
                         </h2>
                         <div style={{
@@ -686,7 +838,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                             <button
                                 onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
                                 style={{
-                                    background: '#F8F9FA',
+                                    background: subCardBg,
                                     border: 'none',
                                     width: '40px',
                                     height: '40px',
@@ -694,18 +846,18 @@ export default function VenueProfile({ business: initialBusiness }) {
                                     cursor: 'pointer',
                                     fontSize: '20px',
                                     fontWeight: '700',
-                                    color: '#1a1a1a'
+                                    color: textColor
                                 }}
                             >
                                 ‹
                             </button>
-                            <div style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a1a' }}>
+                            <div style={{ fontSize: '16px', fontWeight: '700', color: textColor }}>
                                 {currentMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
                             </div>
                             <button
                                 onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
                                 style={{
-                                    background: '#F8F9FA',
+                                    background: subCardBg,
                                     border: 'none',
                                     width: '40px',
                                     height: '40px',
@@ -713,7 +865,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                     cursor: 'pointer',
                                     fontSize: '20px',
                                     fontWeight: '700',
-                                    color: '#1a1a1a'
+                                    color: textColor
                                 }}
                             >
                                 ›
@@ -729,7 +881,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                     textAlign: 'center',
                                     fontSize: windowWidth < 768 ? '11px' : '12px',
                                     fontWeight: '700',
-                                    color: '#64748B',
+                                    color: secondaryTextColor,
                                     padding: windowWidth < 768 ? '4px 2px' : '8px'
                                 }}>
                                     {day}
@@ -753,14 +905,14 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         style={{
                                             padding: windowWidth < 768 ? '8px 2px' : '12px',
                                             borderRadius: '12px',
-                                            background: isSelected ? '#84CC16' : isBlocked ? '#FEE2E2' : isPast ? '#F8F9FA' : 'white',
+                                            background: isSelected ? primaryColor : isBlocked ? '#FEE2E2' : isPast ? subCardBg : btnBg,
 
-                                            color: isSelected ? 'white' : isDisabled ? '#CBD5E1' : '#1a1a1a',
+                                            color: isSelected ? 'white' : isDisabled ? '#CBD5E1' : textColor,
                                             fontSize: windowWidth < 768 ? '13px' : '14px',
                                             fontWeight: isSelected ? '700' : '500',
                                             cursor: isDisabled ? 'not-allowed' : 'pointer',
                                             transition: 'all 0.2s',
-                                            border: isSelected ? 'none' : '1px solid #E5E7EB'
+                                            border: isSelected ? 'none' : `1px solid ${borderColor}`
                                         }}
                                     >
                                         {date.getDate()}
@@ -769,27 +921,27 @@ export default function VenueProfile({ business: initialBusiness }) {
                             })}
                         </div>
 
-                        {selectedDate && (
+                        {selectedDate && windowWidth <= 1200 && (
                             <div style={{ marginTop: '24px', animation: 'fadeIn 0.3s ease' }}>
                                 <button
                                     onClick={handleContinue}
                                     style={{
                                         width: '100%',
                                         padding: '16px',
-                                        background: '#84CC16',
+                                        background: primaryColor,
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '16px',
                                         fontSize: '16px',
                                         fontWeight: '700',
                                         cursor: 'pointer',
-                                        boxShadow: '0 4px 12px rgba(132, 204, 22, 0.3)',
+                                        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                         alignItems: 'center'
                                     }}
                                 >
-                                    <span>Continuar reserva</span>
+                                    <span>Continuar</span>
                                     <span>→</span>
                                 </button>
                             </div>
@@ -799,15 +951,16 @@ export default function VenueProfile({ business: initialBusiness }) {
                     {/* Description Section */}
                     {business.description && (
                         <div style={{
-                            background: 'white',
+                            background: cardBg,
                             borderRadius: '24px',
                             padding: windowWidth < 768 ? '16px' : '32px',
-                            boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                            boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
+                            border: `1px solid ${borderColor}`
                         }}>
-                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: textColor, marginBottom: '16px' }}>
                                 Sobre el Espacio
                             </h2>
-                            <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: '1.7' }}>
+                            <p style={{ fontSize: '15px', color: secondaryTextColor, lineHeight: '1.7' }}>
                                 {business.description}
                             </p>
                         </div>
@@ -816,17 +969,18 @@ export default function VenueProfile({ business: initialBusiness }) {
                     {/* Map Section */}
                     {business.latitude && business.longitude && (
                         <div style={{
-                            background: 'white',
+                            background: cardBg,
                             borderRadius: '24px',
                             padding: '32px',
-                            boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+                            boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
+                            border: `1px solid ${borderColor}`
                         }}>
-                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: textColor, marginBottom: '16px' }}>
                                 Ubicación
                             </h2>
 
                             {business.address && (
-                                <div style={{ fontSize: '15px', color: '#4A5568', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ fontSize: '15px', color: secondaryTextColor, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span style={{ fontSize: '18px' }}>🏠</span> {business.address}
                                 </div>
                             )}
@@ -859,15 +1013,16 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '8px',
-                                        color: 'white', // Texto blanco para mejor contraste
+                                        color: 'white',
                                         textDecoration: 'none',
                                         fontWeight: '700',
                                         fontSize: '14px',
                                         padding: '10px 20px',
-                                        background: '#84CC16', // Fondo verde primario
-                                        borderRadius: '50px', // Bordes redondeados estilo "pill"
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)', // Sombra para profundidad
-                                        border: '2px solid white' // Borde blanco para resaltar sobre el mapa
+                                        background: primaryColor,
+                                        borderRadius: '50px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                                        border: '2px solid white',
+                                        whiteSpace: 'nowrap'
                                     }}
                                 >
                                     <span>📍</span> <span>Cómo llegar</span>
@@ -897,52 +1052,13 @@ export default function VenueProfile({ business: initialBusiness }) {
                                 totalPrice={totalPrice}
                                 onContinue={handleContinue}
                                 business={business}
+                                selectedDate={selectedDate}
+                                onSelectDateClick={scrollToCalendar}
                             />
                         </div>
                     )
                 }
             </div >
-
-            {/* Mobile Sticky Booking Bar */}
-            {windowWidth <= 1200 && (
-                <div style={{
-                    position: 'fixed',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    background: 'white',
-                    padding: '12px 20px',
-                    borderTop: '1px solid #E2E8F0',
-                    boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    zIndex: 999
-                }}>
-                    <div>
-                        <div style={{ fontSize: '12px', color: '#64748B', fontWeight: '500' }}>Precio Total Estimado</div>
-                        <div style={{ fontSize: '20px', fontWeight: '900', color: '#84CC16' }}>
-                            ${totalPrice.toLocaleString()}
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleContinue}
-                        style={{
-                            background: '#84CC16',
-                            color: 'white',
-                            border: 'none',
-                            padding: '12px 24px',
-                            borderRadius: '14px',
-                            fontSize: '15px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            boxShadow: '0 4px 12px rgba(132, 204, 22, 0.3)'
-                        }}
-                    >
-                        Reservar Espacio
-                    </button>
-                </div>
-            )}
 
 
 
@@ -974,7 +1090,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                             exit={{ scale: 0.9, opacity: 0 }}
                             onClick={(e) => e.stopPropagation()}
                             style={{
-                                background: 'white',
+                                background: cardBg,
                                 borderRadius: '24px',
                                 maxWidth: '500px',
                                 width: '100%',
@@ -988,15 +1104,15 @@ export default function VenueProfile({ business: initialBusiness }) {
                             {/* Header & Steps Indicator */}
                             <div style={{ marginBottom: '24px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                    <h2 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>
-                                        {bookingStep === 1 && 'Configuración'}
-                                        {bookingStep === 2 && 'Servicios Extra'}
-                                        {bookingStep === 3 && 'Resumen'}
-                                        {bookingStep === 4 && 'Tus Datos'}
+                                    <h2 style={{ fontSize: '24px', fontWeight: '900', margin: 0, color: textColor }}>
+                                        {bookingStep === 1 && 'Detalles del Evento'}
+                                        {bookingStep === 2 && 'Servicios Adicionales'}
+                                        {bookingStep === 3 && 'Resumen de Reserva'}
+                                        {bookingStep === 4 && 'Tus Datos de Contacto'}
                                     </h2>
                                     <button
                                         onClick={() => setShowBookingModal(false)}
-                                        style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#CBD5E1' }}
+                                        style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: secondaryTextColor }}
                                     >
                                         ×
                                     </button>
@@ -1009,7 +1125,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                             flex: 1,
                                             height: '4px',
                                             borderRadius: '2px',
-                                            background: step <= bookingStep ? '#84CC16' : '#E2E8F0',
+                                            background: step <= bookingStep ? primaryColor : borderColor,
                                             transition: 'background 0.3s ease'
                                         }} />
                                     ))}
@@ -1019,36 +1135,38 @@ export default function VenueProfile({ business: initialBusiness }) {
                             {/* STEP 1: Configuration (Guests & Duration) */}
                             {bookingStep === 1 && (
                                 <div style={{ flex: 1 }}>
-                                    <p style={{ fontSize: '14px', color: '#64748B', marginBottom: '24px' }}>
-                                        Configura los detalles básicos de tu evento.
+                                    <p style={{ fontSize: '14px', color: secondaryTextColor, marginBottom: '24px' }}>
+                                        Personalizá la cantidad de invitados y horas para tu reserva.
                                     </p>
 
                                     <div style={{ display: 'grid', gap: '24px' }}>
                                         {/* Guest Counter */}
                                         <div>
-                                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', marginBottom: '12px' }}>
+                                            <div style={{ fontSize: '14px', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
                                                 Cantidad de Invitados
                                             </div>
                                             <div style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                background: '#F8F9FA',
+                                                background: subCardBg,
                                                 borderRadius: '16px',
                                                 padding: '16px'
                                             }}>
                                                 <button
-                                                    onClick={() => setGuestCount(Math.max(1, guestCount - 5))}
+                                                    onClick={() => setGuestCount(Math.max(5, guestCount - 5))}
+                                                    disabled={guestCount <= 5}
                                                     style={{
-                                                        background: 'white',
-                                                        border: '1px solid #E2E8F0',
+                                                        background: btnBg,
+                                                        border: `1px solid ${borderColor}`,
                                                         width: '44px',
                                                         height: '44px',
                                                         borderRadius: '12px',
-                                                        cursor: 'pointer',
+                                                        cursor: guestCount <= 5 ? 'not-allowed' : 'pointer',
+                                                        opacity: guestCount <= 5 ? 0.4 : 1,
                                                         fontSize: '20px',
                                                         fontWeight: '700',
-                                                        color: '#1a1a1a',
+                                                        color: textColor,
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center'
@@ -1057,23 +1175,25 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     −
                                                 </button>
                                                 <div style={{ textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: '#1a1a1a' }}>
+                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: textColor }}>
                                                         {guestCount}
                                                     </div>
-                                                    <div style={{ fontSize: '13px', color: '#64748B' }}>personas</div>
+                                                    <div style={{ fontSize: '13px', color: secondaryTextColor }}>personas</div>
                                                 </div>
                                                 <button
-                                                    onClick={() => setGuestCount(guestCount + 5)}
+                                                    onClick={() => setGuestCount(Math.min(maxCapacity, guestCount + 5))}
+                                                    disabled={guestCount >= maxCapacity}
                                                     style={{
-                                                        background: 'white',
-                                                        border: '1px solid #E2E8F0',
+                                                        background: btnBg,
+                                                        border: `1px solid ${borderColor}`,
                                                         width: '44px',
                                                         height: '44px',
                                                         borderRadius: '12px',
-                                                        cursor: 'pointer',
+                                                        cursor: guestCount >= maxCapacity ? 'not-allowed' : 'pointer',
+                                                        opacity: guestCount >= maxCapacity ? 0.4 : 1,
                                                         fontSize: '20px',
                                                         fontWeight: '700',
-                                                        color: '#1a1a1a',
+                                                        color: textColor,
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center'
@@ -1086,14 +1206,14 @@ export default function VenueProfile({ business: initialBusiness }) {
 
                                         {/* Duration Selector */}
                                         <div>
-                                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1E293B', marginBottom: '12px' }}>
+                                            <div style={{ fontSize: '14px', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
                                                 Duración del Evento
                                             </div>
                                             <div style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                background: '#F8F9FA',
+                                                background: subCardBg,
                                                 borderRadius: '16px',
                                                 padding: '16px'
                                             }}>
@@ -1104,15 +1224,15 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     }}
                                                     disabled={durationOptions.indexOf(duration) === 0}
                                                     style={{
-                                                        background: 'white',
-                                                        border: '1px solid #E2E8F0',
+                                                        background: btnBg,
+                                                        border: `1px solid ${borderColor}`,
                                                         width: '44px',
                                                         height: '44px',
                                                         borderRadius: '12px',
                                                         cursor: durationOptions.indexOf(duration) === 0 ? 'not-allowed' : 'pointer',
                                                         fontSize: '20px',
                                                         fontWeight: '700',
-                                                        color: '#1a1a1a',
+                                                        color: textColor,
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
@@ -1122,10 +1242,10 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     −
                                                 </button>
                                                 <div style={{ textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: '#1a1a1a' }}>
+                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: textColor }}>
                                                         {duration}
                                                     </div>
-                                                    <div style={{ fontSize: '13px', color: '#64748B' }}>horas</div>
+                                                    <div style={{ fontSize: '13px', color: secondaryTextColor }}>horas</div>
                                                 </div>
                                                 <button
                                                     onClick={() => {
@@ -1134,15 +1254,15 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     }}
                                                     disabled={durationOptions.indexOf(duration) === durationOptions.length - 1}
                                                     style={{
-                                                        background: 'white',
-                                                        border: '1px solid #E2E8F0',
+                                                        background: btnBg,
+                                                        border: `1px solid ${borderColor}`,
                                                         width: '44px',
                                                         height: '44px',
                                                         borderRadius: '12px',
                                                         cursor: durationOptions.indexOf(duration) === durationOptions.length - 1 ? 'not-allowed' : 'pointer',
                                                         fontSize: '20px',
                                                         fontWeight: '700',
-                                                        color: '#1a1a1a',
+                                                        color: textColor,
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
@@ -1160,7 +1280,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                             {/* STEP 2: Additional Services */}
                             {bookingStep === 2 && (
                                 <div style={{ flex: 1 }}>
-                                    <p style={{ fontSize: '14px', color: '#64748B', marginBottom: '20px' }}>
+                                    <p style={{ fontSize: '14px', color: secondaryTextColor, marginBottom: '20px' }}>
                                         Personaliza tu experiencia agregando servicios adicionales (opcional).
                                     </p>
 
@@ -1177,10 +1297,10 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                             justifyContent: 'space-between',
                                                             alignItems: 'center',
                                                             padding: '16px',
-                                                            background: isSelected ? 'rgba(132, 204, 22, 0.05)' : 'white',
+                                                            background: isSelected ? 'rgba(132, 204, 22, 0.05)' : subCardBg,
                                                             borderRadius: '16px',
                                                             cursor: 'pointer',
-                                                            border: isSelected ? '2px solid #84CC16' : '1px solid #E5E7EB',
+                                                            border: isSelected ? `2px solid ${primaryColor}` : `1px solid ${borderColor}`,
                                                             transition: 'all 0.2s ease'
                                                         }}
                                                     >
@@ -1189,21 +1309,21 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                                 width: '40px',
                                                                 height: '40px',
                                                                 borderRadius: '10px',
-                                                                background: isSelected ? '#84CC16' : '#F1F5F9',
+                                                                background: isSelected ? primaryColor : btnBg,
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
                                                                 fontSize: '20px',
-                                                                color: isSelected ? 'white' : '#64748B',
+                                                                color: isSelected ? 'white' : secondaryTextColor,
                                                                 transition: 'all 0.2s ease'
                                                             }}>
                                                                 {isSelected ? '✓' : service.icon || '✨'}
                                                             </div>
                                                             <div>
-                                                                <div style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a1a' }}>
+                                                                <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>
                                                                     {service.name}
                                                                 </div>
-                                                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#84CC16', marginTop: '2px' }}>
+                                                                <div style={{ fontSize: '14px', fontWeight: '700', color: primaryColor, marginTop: '2px' }}>
                                                                     +${service.price?.toLocaleString()}
                                                                 </div>
                                                             </div>
@@ -1213,7 +1333,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                             })}
                                         </div>
                                     ) : (
-                                        <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748B' }}>
+                                        <div style={{ textAlign: 'center', padding: '40px 0', color: secondaryTextColor }}>
                                             No hay servicios adicionales disponibles para este espacio.
                                         </div>
                                     )}
@@ -1223,40 +1343,40 @@ export default function VenueProfile({ business: initialBusiness }) {
                             {/* STEP 3: Summary */}
                             {bookingStep === 3 && (
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ background: '#F8F9FA', borderRadius: '16px', padding: '24px' }}>
+                                    <div style={{ background: subCardBg, borderRadius: '16px', padding: '24px' }}>
                                         {/* Date & Guests */}
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                                             <div>
-                                                <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '4px' }}>FECHA</div>
-                                                <div style={{ fontSize: '15px', fontWeight: '700' }}>
+                                                <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>FECHA</div>
+                                                <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>
                                                     {selectedDate?.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                                                 </div>
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '4px' }}>INVITADOS</div>
-                                                <div style={{ fontSize: '15px', fontWeight: '700' }}>{guestCount} pers.</div>
+                                                <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>INVITADOS</div>
+                                                <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>{guestCount} pers.</div>
                                             </div>
                                         </div>
 
                                         {/* Breakdown */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: '#4A5568', fontSize: '14px' }}>Alquiler base ({duration}h)</span>
-                                                <span style={{ fontWeight: '600', fontSize: '14px' }}>${basePrice.toLocaleString()}</span>
+                                                <span style={{ color: secondaryTextColor, fontSize: '14px' }}>Alquiler base ({duration}h)</span>
+                                                <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>${basePrice.toLocaleString()}</span>
                                             </div>
 
                                             {selectedServices.map((service, idx) => (
                                                 <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span style={{ color: '#4A5568', fontSize: '14px' }}>{service.name}</span>
-                                                    <span style={{ fontWeight: '600', fontSize: '14px' }}>+${service.price.toLocaleString()}</span>
+                                                    <span style={{ color: secondaryTextColor, fontSize: '14px' }}>{service.name}</span>
+                                                    <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>+${service.price.toLocaleString()}</span>
                                                 </div>
                                             ))}
 
-                                            <div style={{ height: '1px', background: '#E2E8F0', margin: '8px 0' }} />
+                                            <div style={{ height: '1px', background: borderColor, margin: '8px 0' }} />
 
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ fontWeight: '700', fontSize: '16px' }}>Total Final</span>
-                                                <span style={{ fontWeight: '900', fontSize: '24px', color: '#84CC16' }}>${totalPrice.toLocaleString()}</span>
+                                                <span style={{ fontWeight: '700', fontSize: '16px', color: textColor }}>Total Final</span>
+                                                <span style={{ fontWeight: '900', fontSize: '24px', color: primaryColor }}>${totalPrice.toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1266,26 +1386,26 @@ export default function VenueProfile({ business: initialBusiness }) {
                             {/* STEP 4: Customer Form */}
                             {bookingStep === 4 && (
                                 <div style={{ flex: 1 }}>
-                                    <p style={{ fontSize: '14px', color: '#64748B', marginBottom: '20px' }}>
+                                    <p style={{ fontSize: '14px', color: secondaryTextColor, marginBottom: '20px' }}>
                                         Ingresa tus datos de contacto para enviarte la confirmación.
                                     </p>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                                         <div>
-                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Nombre</label>
-                                            <input type="text" id="customerFirstName" placeholder="Tu nombre" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }} />
+                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Nombre</label>
+                                            <input type="text" id="customerFirstName" placeholder="Tu nombre" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
                                         </div>
                                         <div>
-                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Apellido</label>
-                                            <input type="text" id="customerLastName" placeholder="Tu apellido" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }} />
+                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Apellido</label>
+                                            <input type="text" id="customerLastName" placeholder="Tu apellido" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
                                         </div>
                                     </div>
                                     <div style={{ marginBottom: '16px' }}>
-                                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Teléfono (WhatsApp)</label>
-                                        <input type="tel" id="customerPhone" placeholder="3804..." style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }} />
+                                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Teléfono (WhatsApp)</label>
+                                        <input type="tel" id="customerPhone" placeholder="3804..." style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
                                     </div>
                                     <div style={{ marginBottom: '16px' }}>
-                                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Email (Opcional)</label>
-                                        <input type="email" id="customerEmail" placeholder="tucorreo@ejemplo.com" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }} />
+                                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Email (Opcional)</label>
+                                        <input type="email" id="customerEmail" placeholder="tucorreo@ejemplo.com" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
                                     </div>
                                 </div>
                             )}
@@ -1300,12 +1420,12 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         style={{
                                             padding: '16px 24px',
                                             borderRadius: '14px',
-                                            border: '1px solid #E2E8F0',
-                                            background: 'white',
+                                            border: `1px solid ${borderColor}`,
+                                            background: btnBg,
                                             fontSize: '16px',
                                             fontWeight: '600',
                                             cursor: 'pointer',
-                                            color: '#64748B'
+                                            color: secondaryTextColor
                                         }}
                                     >
                                         Volver
@@ -1343,12 +1463,12 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         padding: '16px',
                                         borderRadius: '14px',
                                         border: 'none',
-                                        background: '#84CC16',
+                                        background: primaryColor,
                                         color: 'white',
                                         fontSize: '16px',
                                         fontWeight: '700',
                                         cursor: 'pointer',
-                                        boxShadow: '0 4px 12px rgba(132, 204, 22, 0.3)'
+                                        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)'
                                     }}
                                 >
                                     {bookingStep === 4 ? 'Confirmar Reserva' : 'Siguiente'}
@@ -1486,23 +1606,34 @@ export default function VenueProfile({ business: initialBusiness }) {
 }
 
 // Booking Panel Component
-function BookingPanel({ pricePerHour, guestCount, setGuestCount, duration, setDuration, basePrice, totalPrice, onContinue, business }) {
+function BookingPanel({ pricePerHour, guestCount, setGuestCount, duration, setDuration, basePrice, totalPrice, onContinue, business, selectedDate, onSelectDateClick }) {
+    const primaryColor = business?.primary_color || business?.button_color || '#84CC16';
+    const isDark = business?.theme === 'dark';
+    const cardBg = isDark ? '#1E293B' : 'white';
+    const textColor = isDark ? '#F8FAFC' : '#1a1a1a';
+    const secondaryTextColor = isDark ? '#94A3B8' : '#64748B';
+    const subCardBg = isDark ? '#0F172A' : '#F8F9FA';
+    const btnBg = isDark ? '#334155' : 'white';
+    const borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0';
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
+    const maxCapacity = Number(business?.capacity_limit || business?.capacity || 100);
 
     return (
         <div style={{
-            background: 'white',
+            background: cardBg,
             borderRadius: '24px',
             padding: '32px',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.06)'
+            boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
+            border: `1px solid ${borderColor}`,
+            color: textColor
         }}>
             <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '4px' }}>Desde</div>
+                <div style={{ fontSize: '13px', color: secondaryTextColor, marginBottom: '4px' }}>Desde</div>
                 <div>
-                    <span style={{ fontSize: '32px', fontWeight: '900', color: '#1a1a1a' }}>
+                    <span style={{ fontSize: '32px', fontWeight: '900', color: textColor }}>
                         ${pricePerHour.toLocaleString()}
                     </span>
-                    <span style={{ fontSize: '16px', color: '#64748B', marginLeft: '4px' }}>/hora</span>
+                    <span style={{ fontSize: '16px', color: secondaryTextColor, marginLeft: '4px' }}>/hora</span>
                 </div>
             </div>
 
@@ -1521,14 +1652,16 @@ function BookingPanel({ pricePerHour, guestCount, setGuestCount, duration, setDu
                         padding: '12px'
                     }}>
                         <button
-                            onClick={() => setGuestCount(Math.max(1, guestCount - 5))}
+                            onClick={() => setGuestCount(Math.max(5, guestCount - 5))}
+                            disabled={guestCount <= 5}
                             style={{
                                 background: 'white',
                                 border: 'none',
                                 width: '36px',
                                 height: '36px',
                                 borderRadius: '8px',
-                                cursor: 'pointer',
+                                cursor: guestCount <= 5 ? 'not-allowed' : 'pointer',
+                                opacity: guestCount <= 5 ? 0.3 : 1,
                                 fontSize: '18px',
                                 fontWeight: '700',
                                 color: '#1a1a1a'
@@ -1543,14 +1676,16 @@ function BookingPanel({ pricePerHour, guestCount, setGuestCount, duration, setDu
                             <div style={{ fontSize: '11px', color: '#64748B' }}>personas</div>
                         </div>
                         <button
-                            onClick={() => setGuestCount(guestCount + 5)}
+                            onClick={() => setGuestCount(Math.min(maxCapacity, guestCount + 5))}
+                            disabled={guestCount >= maxCapacity}
                             style={{
                                 background: 'white',
                                 border: 'none',
                                 width: '36px',
                                 height: '36px',
                                 borderRadius: '8px',
-                                cursor: 'pointer',
+                                cursor: guestCount >= maxCapacity ? 'not-allowed' : 'pointer',
+                                opacity: guestCount >= maxCapacity ? 0.3 : 1,
                                 fontSize: '18px',
                                 fontWeight: '700',
                                 color: '#1a1a1a'
@@ -1652,18 +1787,24 @@ function BookingPanel({ pricePerHour, guestCount, setGuestCount, duration, setDu
                     justifyContent: 'space-between'
                 }}>
                     <span style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a1a' }}>Total</span>
-                    <span style={{ fontSize: '18px', fontWeight: '900', color: '#84CC16' }}>
+                    <span style={{ fontSize: '18px', fontWeight: '900', color: business?.primary_color || business?.button_color || '#84CC16' }}>
                         ${totalPrice.toLocaleString()}
                     </span>
                 </div>
             </div>
 
             <button
-                onClick={onContinue}
+                onClick={() => {
+                    if (!selectedDate) {
+                        if (onSelectDateClick) onSelectDateClick();
+                    } else {
+                        if (onContinue) onContinue();
+                    }
+                }}
                 style={{
                     width: '100%',
                     padding: '16px',
-                    background: '#84CC16',
+                    background: primaryColor,
                     color: 'white',
                     border: 'none',
                     borderRadius: '14px',
@@ -1671,10 +1812,11 @@ function BookingPanel({ pricePerHour, guestCount, setGuestCount, duration, setDu
                     fontWeight: '700',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
-                    marginBottom: '12px'
+                    marginBottom: '12px',
+                    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)'
                 }}
             >
-                Continuar
+                {!selectedDate ? 'Seleccionar Fecha' : 'Continuar'}
             </button>
             <div style={{ textAlign: 'center', fontSize: '13px', color: '#64748B' }}>
                 No se realizará ningún cargo todavía
