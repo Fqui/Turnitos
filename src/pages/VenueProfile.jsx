@@ -159,9 +159,10 @@ export default function VenueProfile({ business: initialBusiness }) {
     // Toggle service selection
     const toggleService = (service) => {
         setSelectedServices(prev => {
-            const exists = prev.find(s => s.id === service.id);
+            const isSame = (s) => (s.id && service.id) ? s.id === service.id : s.name === service.name;
+            const exists = prev.some(isSame);
             if (exists) {
-                return prev.filter(s => s.id !== service.id);
+                return prev.filter(s => !isSame(s));
             } else {
                 return [...prev, service];
             }
@@ -1287,7 +1288,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                     {additionalServices.length > 0 ? (
                                         <div style={{ display: 'grid', gap: '12px' }}>
                                             {additionalServices.map((service, idx) => {
-                                                const isSelected = selectedServices.some(s => s.id === service.id);
+                                                const isSelected = selectedServices.some(s => (s.id && service.id) ? s.id === service.id : s.name === service.name);
                                                 return (
                                                     <div
                                                         key={idx}
