@@ -1,12 +1,12 @@
 // Mock service for demo mode (GitHub Pages)
 // This service mimics the Supabase API using local JSON data
 
-import demoData from '../data/demoData.json';
+import { businesses as mockBusinesses } from '../data/mockData';
 import { generateSlug } from '../utils/utils';
 
 class MockService {
     constructor() {
-        this.businesses = demoData.businesses || [];
+        this.businesses = mockBusinesses || [];
         this.bookings = []; // Simulated bookings (in-memory for demo)
         this.customers = [
             { id: 'c1', business_id: 'b1', name: 'Juan Perez', phone: '1122334455', notes: 'Prefiere cancha 1', tags: ['vip'], created_at: new Date().toISOString() },
