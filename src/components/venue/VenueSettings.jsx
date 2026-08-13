@@ -190,20 +190,26 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
         try {
             const bId = business?.id || formData?.id || formData?.business_id;
 
-            // Always merge with original business to preserve fields not in the form
             const dataToSave = {
                 ...business,
                 ...formData,
+                theme: formData.theme || business?.theme || 'dark',
+                primary_color: formData.primary_color || formData.button_color || business?.primary_color || '#84CC16',
+                button_color: formData.button_color || formData.primary_color || business?.button_color || '#84CC16',
                 gallery_images: formData.metadata?.venue_gallery?.map(item => item.url) || formData.gallery_images || business?.gallery_images
             };
 
             if (bId) {
-                try {
-                    await serviceAdapter.patchBusiness(bId, dataToSave);
-                } catch (patchErr) {
-                    console.warn('patchBusiness failed, updating local state:', patchErr);
-                }
+                await serviceAdapter.patchBusiness(bId, dataToSave);
             }
+
+            try {
+                const raw = localStorage.getItem('business');
+                if (raw) {
+                    const current = JSON.parse(raw);
+                    localStorage.setItem('business', JSON.stringify({ ...current, ...dataToSave }));
+                }
+            } catch (e) { }
 
             if (onUpdate && typeof onUpdate === 'function') {
                 onUpdate(dataToSave);
@@ -214,7 +220,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
             if (onUpdate && typeof onUpdate === 'function') {
                 onUpdate({ ...business, ...formData });
             }
-            showToast('Cambios guardados localmente', 'success');
+            showToast('Error al guardar en el servidor', 'error');
         } finally {
             setSaving(false);
         }

@@ -379,7 +379,10 @@ export default function VenueProfile({ business: initialBusiness }) {
             const color = business.primary_color || business.button_color || business.buttonColor || '#84CC16';
             root.style.setProperty('--primary-paddle', color);
 
-            if (business.theme === 'light') {
+            const isDarkTheme = (business.theme || business.metadata?.theme) === 'dark';
+            root.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+
+            if (!isDarkTheme) {
                 root.style.setProperty('--bg-main', '#F5F7FA');
                 root.style.setProperty('--bg-card', '#FFFFFF');
                 root.style.setProperty('--text-primary', '#1A1A1A');
@@ -395,6 +398,7 @@ export default function VenueProfile({ business: initialBusiness }) {
         }
         return () => {
             const root = document.documentElement;
+            root.removeAttribute('data-theme');
             root.style.removeProperty('--primary-paddle');
             root.style.removeProperty('--bg-main');
             root.style.removeProperty('--bg-card');
@@ -405,7 +409,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     }, [business]);
 
     const primaryColor = business?.primary_color || business?.button_color || business?.buttonColor || '#84CC16';
-    const isDark = business?.theme === 'dark';
+    const isDark = (business?.theme || business?.metadata?.theme) === 'dark';
     const pageBg = isDark ? '#121212' : '#F5F7FA';
     const cardBg = isDark ? '#1E1E1E' : '#FFFFFF';
     const textColor = isDark ? '#FFFFFF' : '#1A1A1A';

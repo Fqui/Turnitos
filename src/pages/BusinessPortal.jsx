@@ -498,23 +498,56 @@ export default function BusinessPortal() {
         }
 
         const currentBusiness = businesses.find(b => b.id === selectedBusinessId);
+        const maxCapacity = Number(currentBusiness?.capacity_limit || currentBusiness?.capacity || 100);
+        if (newBookingData.guestCount) {
+            const numGuests = parseInt(newBookingData.guestCount, 10);
+            if (isNaN(numGuests) || numGuests < 1) {
+                alert('La cantidad de personas debe ser mayor a 0');
+                return;
+            }
+            if (numGuests > maxCapacity) {
+                alert(`La cantidad de personas (${numGuests}) supera el límite de capacidad permitido para este establecimiento (${maxCapacity} personas)`);
+                return;
+            }
+        }
+
         const isCourt = currentBusiness?.courts?.some(c => c.id === newBookingData.serviceId);
 
         const bookingData = {
             businessId: selectedBusinessId,
+            business_id: selectedBusinessId,
             serviceId: isCourt ? null : newBookingData.serviceId || null,
             courtId: isCourt ? newBookingData.serviceId : null,
-            specialistId: newBookingData.specialistId || null, // Create booking with specialist
+            specialistId: newBookingData.specialistId || null,
             date: newBookingData.date,
-            time: newBookingData.time,
+            time: newBookingData.time || '00:00',
+            duration: newBookingData.duration || 240,
+            guestCount: newBookingData.guestCount ? parseInt(newBookingData.guestCount, 10) : null,
+            guest_count: newBookingData.guestCount ? parseInt(newBookingData.guestCount, 10) : null,
+            selectedServices: newBookingData.selectedServices || [],
+            selected_services: newBookingData.selectedServices || [],
+            servicesTotal: parseFloat(newBookingData.servicesTotal) || 0,
+            services_total: parseFloat(newBookingData.servicesTotal) || 0,
+            basePrice: parseFloat(newBookingData.basePrice) || null,
+            base_price: parseFloat(newBookingData.basePrice) || null,
             customerName: newBookingData.customerName,
+            customer_name: newBookingData.customerName,
             customerPhone: newBookingData.customerPhone,
+            customerEmail: newBookingData.customerEmail || null,
+            customer_email: newBookingData.customerEmail || null,
+            notes: newBookingData.notes || null,
+            depositAmount: parseFloat(newBookingData.depositAmount) !== undefined && !isNaN(parseFloat(newBookingData.depositAmount))
+                ? parseFloat(newBookingData.depositAmount)
+                : Math.round((parseFloat(newBookingData.price) || 0) * 0.3),
+            deposit_amount: parseFloat(newBookingData.depositAmount) !== undefined && !isNaN(parseFloat(newBookingData.depositAmount))
+                ? parseFloat(newBookingData.depositAmount)
+                : Math.round((parseFloat(newBookingData.price) || 0) * 0.3),
             status: 'pending',
             price: parseFloat(newBookingData.price) || 0,
             history: [
                 {
                     action: 'creation',
-                    label: 'Turno Creado (Manual)',
+                    label: 'Reserva Creada (Manual)',
                     timestamp: new Date().toISOString(),
                     status: 'pending'
                 }
@@ -633,11 +666,30 @@ export default function BusinessPortal() {
         setShowBookingModal(true);
     };
 
-    const handleBookingAction = async (action) => {
+    const handleBookingAction = async (action, payload = {}) => {
         if (!selectedBooking) return;
 
         try {
-            if (action === 'cancel') {
+            if (action === 'update_booking') {
+                const currentHistory = Array.isArray(selectedBooking.history) ? selectedBooking.history : [];
+                const newHistory = [...currentHistory];
+                newHistory.push({
+                    action: 'updated',
+                    label: 'Reserva Editada',
+                    timestamp: new Date().toISOString(),
+                    status: selectedBooking.status
+                });
+
+                const updated = await serviceAdapter.updateBooking(selectedBooking.id, {
+                    ...payload,
+                    history: newHistory
+                });
+                await fetchBookings();
+                if (updated) {
+                    setSelectedBooking(prev => ({ ...prev, ...updated, history: newHistory }));
+                }
+                return updated;
+            } else if (action === 'cancel') {
                 const reason = prompt('Por favor, ingresa el motivo de la cancelación:');
                 if (reason !== null) {
                     const currentHistory = Array.isArray(selectedBooking.history) ? selectedBooking.history : [];

@@ -1084,8 +1084,45 @@ class SupabaseService {
         // Only update specific fields provided in 'updates'
         // Filter out non-DB fields to be safe (arrays, relations)
         const safeUpdates = { ...updates };
-        const blockedFields = ['id', 'created_at', 'courts', 'bookings', 'customers', 'specialists', 'services'];
+        const blockedFields = [
+            'id', 'created_at', 'updated_at',
+            'courts', 'bookings', 'customers', 'specialists', 'services',
+            'categories', 'category_name', 'subcategories', 'business_subcategories',
+            'subscription_plans', 'subscription_plan', 'subscriptionMonth', 'totalBookings',
+            'requirePasswordChange', 'subscriptionStatus', 'trialEndDate', 'metrics',
+            'service_specialists', 'products', 'store_products', 'amenities_list'
+        ];
         blockedFields.forEach(field => delete safeUpdates[field]);
+
+        // Normalize camelCase field aliases
+        if (safeUpdates.buttonColor && !safeUpdates.button_color) {
+            safeUpdates.button_color = safeUpdates.buttonColor;
+            delete safeUpdates.buttonColor;
+        }
+        if (safeUpdates.primaryColor && !safeUpdates.primary_color) {
+            safeUpdates.primary_color = safeUpdates.primaryColor;
+            delete safeUpdates.primaryColor;
+        }
+        if (safeUpdates.rentalDurationOptions && !safeUpdates.rental_duration_options) {
+            safeUpdates.rental_duration_options = safeUpdates.rentalDurationOptions;
+            delete safeUpdates.rentalDurationOptions;
+        }
+        if (safeUpdates.additionalServices && !safeUpdates.additional_services) {
+            safeUpdates.additional_services = safeUpdates.additionalServices;
+            delete safeUpdates.additionalServices;
+        }
+        if (safeUpdates.blockedDates && !safeUpdates.blocked_dates) {
+            safeUpdates.blocked_dates = safeUpdates.blockedDates;
+            delete safeUpdates.blockedDates;
+        }
+        if (safeUpdates.pricingTiers && !safeUpdates.pricing_tiers) {
+            safeUpdates.pricing_tiers = safeUpdates.pricingTiers;
+            delete safeUpdates.pricingTiers;
+        }
+        if (safeUpdates.maxCapacity && !safeUpdates.max_capacity) {
+            safeUpdates.max_capacity = safeUpdates.maxCapacity;
+            delete safeUpdates.maxCapacity;
+        }
 
         // Safely merge hours and special_days so saving one never overwrites/wipes the other
         if (safeUpdates.special_days || safeUpdates.hours) {
@@ -1134,7 +1171,10 @@ class SupabaseService {
                 .update(safeUpdates)
                 .eq('id', businessId);
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase patchBusiness error:', error);
+                throw error;
+            }
         }
 
         // 2. Handle Courts update
@@ -1518,6 +1558,58 @@ class SupabaseService {
         const { data, error } = await supabase
             .from('bookings')
             .update(updateData)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return this._processBusinessData(data);
+    }
+
+    async updateBooking(id, updates = {}) {
+        const cleanUpdates = { ...updates, updated_at: new Date().toISOString() };
+
+        // Normalize camelCase to snake_case for DB columns
+        if (cleanUpdates.guestCount !== undefined) {
+            cleanUpdates.guest_count = cleanUpdates.guestCount;
+            delete cleanUpdates.guestCount;
+        }
+        if (cleanUpdates.selectedServices !== undefined) {
+            cleanUpdates.selected_services = cleanUpdates.selectedServices;
+            delete cleanUpdates.selectedServices;
+        }
+        if (cleanUpdates.servicesTotal !== undefined) {
+            cleanUpdates.services_total = cleanUpdates.servicesTotal;
+            delete cleanUpdates.servicesTotal;
+        }
+        if (cleanUpdates.depositAmount !== undefined) {
+            cleanUpdates.deposit_amount = cleanUpdates.depositAmount;
+            delete cleanUpdates.depositAmount;
+        }
+        if (cleanUpdates.totalPrice !== undefined) {
+            cleanUpdates.price = cleanUpdates.totalPrice;
+            delete cleanUpdates.totalPrice;
+        }
+        if (cleanUpdates.basePrice !== undefined) {
+            cleanUpdates.base_price = cleanUpdates.basePrice;
+            delete cleanUpdates.basePrice;
+        }
+        if (cleanUpdates.customerName !== undefined) {
+            cleanUpdates.customer_name = cleanUpdates.customerName;
+            delete cleanUpdates.customerName;
+        }
+        if (cleanUpdates.customerPhone !== undefined) {
+            cleanUpdates.customer_phone = cleanUpdates.customerPhone;
+            delete cleanUpdates.customerPhone;
+        }
+        if (cleanUpdates.customerEmail !== undefined) {
+            cleanUpdates.customer_email = cleanUpdates.customerEmail;
+            delete cleanUpdates.customerEmail;
+        }
+
+        const { data, error } = await supabase
+            .from('bookings')
+            .update(cleanUpdates)
             .eq('id', id)
             .select()
             .single();

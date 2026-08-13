@@ -68,13 +68,6 @@ class ServiceAdapter {
     }
 
     async patchBusiness(id, updates) {
-        if (this.isDemoMode) {
-            // Mock implementation for demo mode if needed, or throw error
-            console.warn('patchBusiness not fully implemented in mock service, falling back to updateBusiness mock');
-            // In mock service, updateBusiness typically handles full replacement, but we can try merging
-            const current = await this.service.getBusinessById(id);
-            return this.service.updateBusiness(id, { ...current, ...updates });
-        }
         return this.service.patchBusiness(id, updates);
     }
 
@@ -92,6 +85,10 @@ class ServiceAdapter {
 
     async updateBookingStatus(id, status, metadata = {}) {
         return this.service.updateBookingStatus(id, status, metadata);
+    }
+
+    async updateBooking(id, updates = {}) {
+        return this.service.updateBooking(id, updates);
     }
 
     async moveBooking(id, newDate, newTime, newItemId) {

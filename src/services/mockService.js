@@ -231,6 +231,28 @@ class MockService {
         return booking;
     }
 
+    async updateBooking(id, updates = {}) {
+        await this.delay(200);
+        const booking = this.bookings.find(b => b.id === id);
+        if (!booking) throw new Error('Booking not found');
+
+        Object.assign(booking, updates, {
+            updated_at: new Date().toISOString()
+        });
+
+        // Also update camelCase / snake_case equivalents
+        if (updates.guest_count !== undefined) booking.guestCount = updates.guest_count;
+        if (updates.guestCount !== undefined) booking.guest_count = updates.guestCount;
+        if (updates.price !== undefined) booking.totalPrice = updates.price;
+        if (updates.totalPrice !== undefined) booking.price = updates.totalPrice;
+        if (updates.deposit_amount !== undefined) booking.depositAmount = updates.deposit_amount;
+        if (updates.depositAmount !== undefined) booking.deposit_amount = updates.depositAmount;
+        if (updates.selected_services !== undefined) booking.selectedServices = updates.selected_services;
+        if (updates.selectedServices !== undefined) booking.selected_services = updates.selectedServices;
+
+        return booking;
+    }
+
     async moveBooking(id, newDate, newTime, newItemId) {
         await this.delay(300);
         const booking = this.bookings.find(b => b.id === id);
@@ -312,6 +334,28 @@ class MockService {
                 const dateB = new Date(`${b.date}T${b.time}`);
                 return dateB - dateA;
             });
+    }
+
+    async patchBusiness(id, updates = {}) {
+        await this.delay(150);
+        let biz = this.businesses?.find(b => String(b.id) === String(id) || b.slug === id);
+        if (biz) {
+            Object.assign(biz, updates);
+        }
+        try {
+            const raw = localStorage.getItem('business');
+            if (raw) {
+                const current = JSON.parse(raw);
+                if (String(current.id) === String(id) || current.slug === id) {
+                    localStorage.setItem('business', JSON.stringify({ ...current, ...updates }));
+                }
+            }
+        } catch (e) { }
+        return biz || { id, ...updates };
+    }
+
+    async updateBusiness(id, data = {}) {
+        return this.patchBusiness(id, data);
     }
 
     // --- Utility ---

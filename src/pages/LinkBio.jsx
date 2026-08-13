@@ -71,7 +71,10 @@ export default function LinkBio({ overrideSlug }) {
             // Set primary color variable
             root.style.setProperty('--primary-paddle', color);
 
-            if (business.theme === 'light') {
+            const isDarkTheme = (business.theme || business.metadata?.theme) === 'dark';
+            root.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+
+            if (!isDarkTheme) {
                 root.style.setProperty('--bg-main', '#F5F7FA');
                 root.style.setProperty('--bg-card', '#FFFFFF');
                 root.style.setProperty('--text-primary', '#1A1A1A');
@@ -85,6 +88,16 @@ export default function LinkBio({ overrideSlug }) {
                 root.style.setProperty('--border', '#333333');
             }
         }
+        return () => {
+            const root = document.documentElement;
+            root.removeAttribute('data-theme');
+            root.style.removeProperty('--primary-paddle');
+            root.style.removeProperty('--bg-main');
+            root.style.removeProperty('--bg-card');
+            root.style.removeProperty('--text-primary');
+            root.style.removeProperty('--text-secondary');
+            root.style.removeProperty('--border');
+        };
     }, [business]);
 
     if (loading) {
