@@ -1192,34 +1192,7 @@ export default function BusinessPortal() {
                         ) : viewMode === 'calendar' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
-                                {/* Booking Status Legend */}
-                                <div style={{
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    gap: '12px',
-                                    marginBottom: '16px',
-                                    padding: '10px 16px',
-                                    background: 'var(--bg-card)',
-                                    borderRadius: 'var(--radius-md)',
-                                    border: '1px solid var(--border)',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    boxShadow: 'var(--shadow-sm)'
-                                }}>
-                                    {[
-                                        { label: 'Pendiente', color: 'var(--status-pending)' },
-                                        { label: 'Señado', color: 'var(--status-deposit)' },
-                                        { label: 'Confirmado', color: 'var(--status-confirmed)' },
-                                        { label: 'Finalizado', color: 'var(--status-completed)' },
-                                        { label: 'Cancelado', color: 'var(--status-cancelled)' },
-                                        { label: 'Bloqueado', color: 'var(--status-blocked)' }
-                                    ].map(s => (
-                                        <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: s.color }} />
-                                            <span style={{ color: 'var(--text-secondary)' }}>{s.label}</span>
-                                        </div>
-                                    ))}
-                                </div>
+
                                 {reschedulingBooking && (
                                     <div style={{
                                         background: 'var(--primary-paddle)',

@@ -166,22 +166,27 @@ export default function DayCell({
                     ) : (
                         <div style={{
                             width: '100%',
-                            background: '#D1FAE5',
-                            borderRadius: '6px',
-                            padding: '5px 6px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '4px'
+                            padding: '2px 0'
                         }}>
-                            <span style={{ fontSize: '11px', color: '#059669' }}>✓</span>
-                            <span style={{
-                                fontSize: '11px',
-                                fontWeight: '700',
-                                color: '#059669'
+                            <div style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '50%',
+                                border: '1.5px dashed var(--border)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                color: 'var(--text-muted)',
+                                opacity: 0.6,
+                                transition: 'all 0.2s ease'
                             }}>
-                                Disponible
-                            </span>
+                                +
+                            </div>
                         </div>
                     )}
                 </div>

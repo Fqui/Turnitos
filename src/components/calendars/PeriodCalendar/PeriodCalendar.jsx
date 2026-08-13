@@ -72,7 +72,8 @@ export default function PeriodCalendar({
                 onToday={handleToday}
                 onNext={handleNext}
                 isMobile={isMobile}
-                showTitle={false} // Ocultar título del negocio
+                showTitle={false}
+                showLegend={true}
             />
 
             {/* Vista del calendario */}
