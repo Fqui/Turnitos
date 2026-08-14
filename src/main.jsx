@@ -4,6 +4,12 @@ import './index.css'
 import 'leaflet/dist/leaflet.css';
 import App from './App.jsx'
 
+// Automatically reload if a dynamic chunk fails to load due to a new deployment release
+window.addEventListener('vite:preloadError', (event) => {
+  console.warn('Vite preload error detected, reloading to fetch latest assets...', event);
+  window.location.reload();
+});
+
 // Register Service Worker for PWA ONLY on business/seller/admin routes
 if ('serviceWorker' in navigator) {
   const path = window.location.pathname;
