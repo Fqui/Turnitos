@@ -1286,8 +1286,21 @@ export default function VenueProfile({ business: initialBusiness }) {
 
                                         {/* Duration Selector */}
                                         <div>
-                                            <div style={{ fontSize: '14px', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
-                                                Duración del Evento
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                                <span style={{ fontSize: '14px', fontWeight: '700', color: textColor }}>Duración del Evento</span>
+                                                {durationDiscountPct > 0 && (
+                                                    <span style={{
+                                                        fontSize: '11px',
+                                                        background: 'rgba(16, 185, 129, 0.15)',
+                                                        color: '#10B981',
+                                                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '12px',
+                                                        fontWeight: '700'
+                                                    }}>
+                                                        🔥 {durationDiscountPct}% OFF
+                                                    </span>
+                                                )}
                                             </div>
                                             <div style={{
                                                 display: 'flex',
@@ -1322,13 +1335,8 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     −
                                                 </button>
                                                 <div style={{ textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: textColor, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: textColor }}>
                                                         {duration}
-                                                        {durationDiscountPct > 0 && (
-                                                            <span style={{ fontSize: '11px', background: '#10B981', color: 'white', padding: '2px 6px', borderRadius: '6px', fontWeight: '700' }}>
-                                                                {durationDiscountPct}% OFF
-                                                            </span>
-                                                        )}
                                                     </div>
                                                     <div style={{ fontSize: '13px', color: secondaryTextColor }}>horas</div>
                                                 </div>
@@ -1805,8 +1813,21 @@ function BookingPanel({
 
                 {/* Duration Selector */}
                 <div>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '8px' }}>
-                        Duración
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>Duración</span>
+                        {durationDiscountPct > 0 && (
+                            <span style={{
+                                fontSize: '10px',
+                                background: 'rgba(16, 185, 129, 0.15)',
+                                color: '#10B981',
+                                border: '1px solid rgba(16, 185, 129, 0.3)',
+                                padding: '1px 6px',
+                                borderRadius: '6px',
+                                fontWeight: '700'
+                            }}>
+                                🔥 {durationDiscountPct}% OFF
+                            </span>
+                        )}
                     </div>
                     <div style={{
                         display: 'flex',
@@ -1838,13 +1859,8 @@ function BookingPanel({
                             −
                         </button>
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#1a1a1a' }}>
                                 {duration}
-                                {durationDiscountPct > 0 && (
-                                    <span style={{ fontSize: '10px', background: '#10B981', color: 'white', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
-                                        {durationDiscountPct}%
-                                    </span>
-                                )}
                             </div>
                             <div style={{ fontSize: '11px', color: '#64748B' }}>horas</div>
                         </div>
