@@ -156,17 +156,34 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
         showToast('Se desbloquearon las fechas del mes seleccionado', 'success');
     };
 
-    // Ensure complex objects exist
+    // Ensure complex objects and defaults exist without resetting user data
     useEffect(() => {
         if (business) {
             setFormData(prev => ({
+                ...business,
                 ...prev,
-                metadata: prev.metadata || {},
-                pricing_tiers: prev.pricing_tiers || [],
-                additional_services: prev.additional_services || [],
-                blocked_dates: prev.blocked_dates || [],
-                rental_duration_options: prev.rental_duration_options || [4, 8, 12],
-                amenities: prev.amenities || []
+                capacity_limit: prev.capacity_limit || business.capacity_limit || (business.max_capacity && business.max_capacity > 1 ? business.max_capacity : null) || business.metadata?.capacity_limit || 100,
+                max_capacity: prev.max_capacity || business.max_capacity || business.capacity_limit || 100,
+                price_per_hour: prev.price_per_hour || business.price_per_hour || business.price || 20000,
+                metadata: {
+                    ...(business.metadata || {}),
+                    ...(prev.metadata || {})
+                },
+                pricing_tiers: (prev.pricing_tiers && prev.pricing_tiers.length > 0)
+                    ? prev.pricing_tiers
+                    : (business.pricing_tiers && business.pricing_tiers.length > 0)
+                        ? business.pricing_tiers
+                        : (business.metadata?.pricing_tiers && business.metadata.pricing_tiers.length > 0)
+                            ? business.metadata.pricing_tiers
+                            : [],
+                additional_services: (prev.additional_services && prev.additional_services.length > 0)
+                    ? prev.additional_services
+                    : (business.additional_services || []),
+                blocked_dates: (prev.blocked_dates && prev.blocked_dates.length > 0)
+                    ? prev.blocked_dates
+                    : (business.blocked_dates || business.metadata?.blocked_dates || []),
+                rental_duration_options: prev.rental_duration_options || business.rental_duration_options || [4, 6, 8, 12, 24],
+                amenities: prev.amenities || business.amenities || []
             }));
         }
     }, [business]);
@@ -190,12 +207,30 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
         try {
             const bId = business?.id || formData?.id || formData?.business_id;
 
+            const safeCapacity = Number(formData.capacity_limit || formData.max_capacity || business?.capacity_limit || (business?.max_capacity && business.max_capacity > 1 ? business.max_capacity : null) || 100);
+            const safePrice = Number(formData.price_per_hour || business?.price_per_hour || business?.price || 20000);
+
             const dataToSave = {
                 ...business,
                 ...formData,
+                capacity_limit: safeCapacity,
+                max_capacity: safeCapacity,
+                price_per_hour: safePrice,
                 theme: formData.theme || business?.theme || 'dark',
                 primary_color: formData.primary_color || formData.button_color || business?.primary_color || '#84CC16',
                 button_color: formData.button_color || formData.primary_color || business?.button_color || '#84CC16',
+                pricing_tiers: formData.pricing_tiers || business?.pricing_tiers || [],
+                additional_services: formData.additional_services || business?.additional_services || [],
+                blocked_dates: formData.blocked_dates || business?.blocked_dates || [],
+                rental_duration_options: formData.rental_duration_options || business?.rental_duration_options || [4, 6, 8, 12, 24],
+                metadata: {
+                    ...(business?.metadata || {}),
+                    ...(formData.metadata || {}),
+                    capacity_limit: safeCapacity,
+                    pricing_tiers: formData.pricing_tiers || business?.pricing_tiers || [],
+                    blocked_dates: formData.blocked_dates || business?.blocked_dates || [],
+                    venue_gallery: formData.metadata?.venue_gallery || []
+                },
                 gallery_images: formData.metadata?.venue_gallery?.map(item => item.url) || formData.gallery_images || business?.gallery_images
             };
 

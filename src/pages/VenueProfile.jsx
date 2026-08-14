@@ -131,12 +131,12 @@ export default function VenueProfile({ business: initialBusiness }) {
         return images;
     };
 
-    const maxCapacity = Number(business?.capacity_limit || business?.capacity || 100);
+    const maxCapacity = Number(business?.capacity_limit || business?.metadata?.capacity_limit || (business?.max_capacity && business.max_capacity > 1 ? business.max_capacity : null) || 100);
 
     useEffect(() => {
         if (business) {
-            const maxCap = Number(business.capacity_limit || business.capacity || 100);
-            const halfCap = Math.max(5, Math.round((maxCap / 2) / 5) * 5);
+            const maxCap = Number(business.capacity_limit || business.metadata?.capacity_limit || (business.max_capacity && business.max_capacity > 1 ? business.max_capacity : null) || 100);
+            const halfCap = Math.max(5, Math.min(maxCap, Math.round((maxCap / 2) / 5) * 5));
             setGuestCount(halfCap);
 
             const options = business.rental_duration_options || [4, 6, 8, 12, 24];
@@ -148,11 +148,17 @@ export default function VenueProfile({ business: initialBusiness }) {
 
     // Calculate price based on guest count and pricing tiers
     const calculatePrice = () => {
-        if (!business?.pricing_tiers || business.pricing_tiers.length === 0) {
-            return Number(business?.price_per_hour || business?.price || 0);
+        const tiers = (business?.pricing_tiers && business.pricing_tiers.length > 0)
+            ? business.pricing_tiers
+            : (business?.metadata?.pricing_tiers && business.metadata.pricing_tiers.length > 0)
+                ? business.metadata.pricing_tiers
+                : [];
+
+        if (tiers.length === 0) {
+            return Number(business?.price_per_hour || business?.price || 20000);
         }
 
-        const tier = business.pricing_tiers.find(t => {
+        const tier = tiers.find(t => {
             const minG = Number(t.min_guests !== undefined ? t.min_guests : t.min !== undefined ? t.min : 0);
             const maxG = Number(t.max_guests !== undefined ? t.max_guests : t.max !== undefined ? t.max : 999);
             return guestCount >= minG && guestCount <= maxG;
@@ -161,7 +167,7 @@ export default function VenueProfile({ business: initialBusiness }) {
         if (tier && tier.price !== undefined) {
             return Number(tier.price);
         }
-        return Number(business.pricing_tiers[0].price || business?.price_per_hour || 0);
+        return Number(tiers[0]?.price || business?.price_per_hour || 20000);
     };
 
     const pricePerHour = calculatePrice();
