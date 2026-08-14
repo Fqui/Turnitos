@@ -1102,11 +1102,11 @@ class SupabaseService {
     }
 
     async patchBusiness(businessId, updates) {
-        // Known valid columns in businesses table
+        // Known valid columns in Supabase businesses table (strictly matching DB columns)
         const VALID_COLUMNS = new Set([
-            'name', 'slug', 'category', 'category_id', 'subscription_plan_id', 'type',
-            'email', 'seller_id', 'logo_url', 'banner_url', 'logo', 'banner_image',
-            'image', 'location', 'latitude', 'longitude', 'rating', 'theme', 'amenities',
+            'name', 'slug', 'category_id', 'subscription_plan_id', 'type',
+            'email', 'seller_id', 'logo_url', 'banner_url',
+            'location', 'latitude', 'longitude', 'rating', 'theme', 'amenities',
             'hours', 'button_color', 'instagram', 'facebook', 'whatsapp', 'phone',
             'primary_color', 'price_per_hour', 'price_per_day', 'pricing_model',
             'rental_duration_options', 'additional_services', 'included_amenities',
@@ -1130,7 +1130,7 @@ class SupabaseService {
             metadataUpdates.pricing_tiers = updates.pricing_tiers;
         }
 
-        // Map updates to dbUpdates ONLY if column exists in VALID_COLUMNS
+        // Map updates to dbUpdates with alias normalization
         Object.keys(updates).forEach(key => {
             let colName = key;
             if (key === 'buttonColor') colName = 'button_color';
@@ -1138,11 +1138,24 @@ class SupabaseService {
             if (key === 'rentalDurationOptions') colName = 'rental_duration_options';
             if (key === 'additionalServices') colName = 'additional_services';
             if (key === 'maxCapacity') colName = 'max_capacity';
+            if (key === 'logo' || key === 'image' || key === 'logo_url') {
+                colName = 'logo_url';
+            }
+            if (key === 'banner_image' || key === 'banner_url') {
+                colName = 'banner_url';
+            }
 
             if (VALID_COLUMNS.has(colName)) {
                 dbUpdates[colName] = updates[key];
             }
         });
+
+        // Always sync both primary_color and button_color
+        const colorVal = updates.primary_color || updates.button_color || updates.primaryColor || updates.buttonColor;
+        if (colorVal) {
+            dbUpdates.primary_color = colorVal;
+            dbUpdates.button_color = colorVal;
+        }
 
         // Always set merged metadata if present
         if (Object.keys(metadataUpdates).length > 0 || updates.metadata !== undefined) {

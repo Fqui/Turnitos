@@ -36,4 +36,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-self.__WB_MANIFEST = [];
+const precacheManifest = (self.__WB_MANIFEST || []);
+if (precacheManifest.length > 0) {
+  console.log('[SW-v2] Precache manifest loaded:', precacheManifest.length);
+}
