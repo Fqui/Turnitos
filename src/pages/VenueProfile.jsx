@@ -171,7 +171,12 @@ export default function VenueProfile({ business: initialBusiness }) {
     };
 
     const pricePerHour = calculatePrice();
-    const basePrice = pricePerHour * duration;
+    const durationDiscounts = business?.duration_discounts || business?.metadata?.duration_discounts || {};
+    const durationDiscountPct = Number(durationDiscounts[duration] || 0);
+
+    const rawBasePrice = pricePerHour * duration;
+    const durationDiscountAmount = durationDiscountPct > 0 ? Math.round(rawBasePrice * (durationDiscountPct / 100)) : 0;
+    const basePrice = rawBasePrice - durationDiscountAmount;
     const servicesTotal = selectedServices.reduce((sum, service) => sum + service.price, 0);
     const totalPrice = basePrice + servicesTotal;
 
@@ -1120,6 +1125,9 @@ export default function VenueProfile({ business: initialBusiness }) {
                                 setGuestCount={setGuestCount}
                                 duration={duration}
                                 setDuration={setDuration}
+                                rawBasePrice={rawBasePrice}
+                                durationDiscountPct={durationDiscountPct}
+                                durationDiscountAmount={durationDiscountAmount}
                                 basePrice={basePrice}
                                 totalPrice={totalPrice}
                                 onContinue={handleContinue}
@@ -1314,8 +1322,13 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     −
                                                 </button>
                                                 <div style={{ textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: textColor }}>
+                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: textColor, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                                                         {duration}
+                                                        {durationDiscountPct > 0 && (
+                                                            <span style={{ fontSize: '11px', background: '#10B981', color: 'white', padding: '2px 6px', borderRadius: '6px', fontWeight: '700' }}>
+                                                                {durationDiscountPct}% OFF
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <div style={{ fontSize: '13px', color: secondaryTextColor }}>horas</div>
                                                 </div>
@@ -1434,8 +1447,15 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <span style={{ color: secondaryTextColor, fontSize: '14px' }}>Alquiler base ({duration}h)</span>
-                                                <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>${basePrice.toLocaleString()}</span>
+                                                <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>${rawBasePrice.toLocaleString()}</span>
                                             </div>
+
+                                            {durationDiscountPct > 0 && (
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10B981', fontSize: '14px', fontWeight: '600' }}>
+                                                    <span>Descuento por {duration}hs ({durationDiscountPct}% OFF)</span>
+                                                    <span>-${durationDiscountAmount.toLocaleString()}</span>
+                                                </div>
+                                            )}
 
                                             {selectedServices.map((service, idx) => (
                                                 <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -1678,7 +1698,22 @@ export default function VenueProfile({ business: initialBusiness }) {
 }
 
 // Booking Panel Component
-function BookingPanel({ pricePerHour, guestCount, setGuestCount, duration, setDuration, basePrice, totalPrice, onContinue, business, selectedDate, onSelectDateClick }) {
+function BookingPanel({
+    pricePerHour,
+    guestCount,
+    setGuestCount,
+    duration,
+    setDuration,
+    rawBasePrice,
+    durationDiscountPct,
+    durationDiscountAmount,
+    basePrice,
+    totalPrice,
+    onContinue,
+    business,
+    selectedDate,
+    onSelectDateClick
+}) {
     const primaryColor = business?.primary_color || business?.button_color || '#84CC16';
     const isDark = business?.theme === 'dark';
     const cardBg = isDark ? '#1E293B' : 'white';
@@ -1803,8 +1838,13 @@ function BookingPanel({ pricePerHour, guestCount, setGuestCount, duration, setDu
                             −
                         </button>
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#1a1a1a' }}>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                                 {duration}
+                                {durationDiscountPct > 0 && (
+                                    <span style={{ fontSize: '10px', background: '#10B981', color: 'white', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
+                                        {durationDiscountPct}%
+                                    </span>
+                                )}
                             </div>
                             <div style={{ fontSize: '11px', color: '#64748B' }}>horas</div>
                         </div>
@@ -1840,18 +1880,24 @@ function BookingPanel({ pricePerHour, guestCount, setGuestCount, duration, setDu
                 padding: '20px',
                 marginBottom: '24px'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                     <span style={{ fontSize: '14px', color: '#64748B' }}>Precio por hora</span>
                     <span style={{ fontSize: '14px', fontWeight: '600', color: '#1a1a1a' }}>
                         ${pricePerHour.toLocaleString()}
                     </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                     <span style={{ fontSize: '14px', color: '#64748B' }}>Duración ({duration} horas)</span>
                     <span style={{ fontSize: '14px', fontWeight: '600', color: '#1a1a1a' }}>
-                        ×{duration}
+                        ${(rawBasePrice || (pricePerHour * duration)).toLocaleString()}
                     </span>
                 </div>
+                {durationDiscountPct > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#10B981', fontWeight: '600', fontSize: '14px' }}>
+                        <span>Descuento por {duration}hs ({durationDiscountPct}% OFF)</span>
+                        <span>-${durationDiscountAmount?.toLocaleString()}</span>
+                    </div>
+                )}
                 <div style={{
                     borderTop: '2px solid #E5E7EB',
                     paddingTop: '12px',

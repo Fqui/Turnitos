@@ -183,6 +183,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     ? prev.blocked_dates
                     : (business.blocked_dates || business.metadata?.blocked_dates || []),
                 rental_duration_options: prev.rental_duration_options || business.rental_duration_options || [4, 6, 8, 12, 24],
+                duration_discounts: prev.duration_discounts || business.duration_discounts || business.metadata?.duration_discounts || {},
                 amenities: prev.amenities || business.amenities || []
             }));
         }
@@ -190,6 +191,17 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleDurationDiscountChange = (hours, discountPct) => {
+        const val = Math.max(0, Math.min(100, parseInt(discountPct) || 0));
+        setFormData(prev => ({
+            ...prev,
+            duration_discounts: {
+                ...(prev.duration_discounts || {}),
+                [hours]: val
+            }
+        }));
     };
 
     const handleCapacityChange = (newCapacity) => {
@@ -270,6 +282,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 return;
             }
 
+            const durationDiscounts = formData.duration_discounts || business?.duration_discounts || business?.metadata?.duration_discounts || {};
             const safePrice = Number(tiers[0]?.price || formData.price_per_hour || business?.price_per_hour || business?.price || 20000);
 
             const dataToSave = {
@@ -282,6 +295,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 primary_color: formData.primary_color || formData.button_color || business?.primary_color || '#84CC16',
                 button_color: formData.button_color || formData.primary_color || business?.button_color || '#84CC16',
                 pricing_tiers: tiers,
+                duration_discounts: durationDiscounts,
                 additional_services: formData.additional_services || business?.additional_services || [],
                 blocked_dates: formData.blocked_dates || business?.blocked_dates || [],
                 rental_duration_options: durationOpts,
@@ -290,6 +304,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     ...(formData.metadata || {}),
                     capacity_limit: safeCapacity,
                     pricing_tiers: tiers,
+                    duration_discounts: durationDiscounts,
                     blocked_dates: formData.blocked_dates || business?.blocked_dates || [],
                     venue_gallery: formData.metadata?.venue_gallery || []
                 },
@@ -908,30 +923,77 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                         </div>
 
                         <div>
-                            <label style={labelStyle}>Opciones de Duración Permitidas (Horas) *</label>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <label style={labelStyle}>Opciones de Duración y Descuentos por Horas *</label>
+                            </div>
+                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                                Selecciona qué duraciones permites y asigna un % de descuento opcional para cobrar menos en reservas de mayor cantidad de horas (ej: 0% en 4 hs, 10% en 8 hs, 20% en 12 hs).
+                            </p>
+
                             {(!formData.rental_duration_options || formData.rental_duration_options.length === 0) && (
-                                <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '8px' }}>
+                                <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '12px' }}>
                                     ⚠️ Debes seleccionar al menos una duración permitida.
                                 </p>
                             )}
-                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                {[4, 6, 8, 12, 24].map(hours => (
-                                    <label key={hours} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-card)', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={(formData.rental_duration_options || []).includes(hours)}
-                                            onChange={(e) => {
-                                                const current = formData.rental_duration_options || [];
-                                                if (e.target.checked) {
-                                                    handleInputChange('rental_duration_options', [...current, hours].sort((a, b) => a - b));
-                                                } else {
-                                                    handleInputChange('rental_duration_options', current.filter(h => h !== hours));
-                                                }
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+                                {[4, 6, 8, 12, 24].map(hours => {
+                                    const isSelected = (formData.rental_duration_options || []).includes(hours);
+                                    const discount = formData.duration_discounts?.[hours] || 0;
+
+                                    return (
+                                        <div
+                                            key={hours}
+                                            style={{
+                                                background: isSelected ? 'rgba(132, 204, 22, 0.08)' : 'var(--bg-card)',
+                                                border: isSelected ? '1.5px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                borderRadius: '12px',
+                                                padding: '14px',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '10px',
+                                                transition: 'all 0.2s'
                                             }}
-                                        />
-                                        {hours} Horas
-                                    </label>
-                                ))}
+                                        >
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={(e) => {
+                                                        const current = formData.rental_duration_options || [];
+                                                        if (e.target.checked) {
+                                                            handleInputChange('rental_duration_options', [...current, hours].sort((a, b) => a - b));
+                                                        } else {
+                                                            handleInputChange('rental_duration_options', current.filter(h => h !== hours));
+                                                        }
+                                                    }}
+                                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                />
+                                                <span>⏱️ {hours} Horas</span>
+                                            </label>
+
+                                            {isSelected && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', background: 'var(--bg-main)', padding: '6px 10px', borderRadius: '8px' }}>
+                                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Descuento:</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max="100"
+                                                        value={discount}
+                                                        onChange={(e) => handleDurationDiscountChange(hours, e.target.value)}
+                                                        style={{ ...inputStyle, width: '55px', padding: '4px 6px', textAlign: 'center', fontSize: '13px' }}
+                                                    />
+                                                    <span style={{ fontSize: '12px', fontWeight: '700' }}>%</span>
+                                                    {discount > 0 && (
+                                                        <span style={{ marginLeft: 'auto', fontSize: '11px', background: '#10B981', color: 'white', padding: '2px 6px', borderRadius: '6px', fontWeight: '700' }}>
+                                                            {discount}% OFF
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>

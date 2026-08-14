@@ -68,12 +68,15 @@ class SupabaseService {
             business.metadata = {};
         }
 
-        // Extract blocked_dates and pricing_tiers from metadata if present
+        // Extract blocked_dates, pricing_tiers, and duration_discounts from metadata if present
         if (!business.blocked_dates && business.metadata?.blocked_dates) {
             business.blocked_dates = business.metadata.blocked_dates;
         }
         if (!business.pricing_tiers && business.metadata?.pricing_tiers) {
             business.pricing_tiers = business.metadata.pricing_tiers;
+        }
+        if (!business.duration_discounts && business.metadata?.duration_discounts) {
+            business.duration_discounts = business.metadata.duration_discounts;
         }
 
         // Extract special_days if stored inside business.hours JSON
@@ -1128,6 +1131,9 @@ class SupabaseService {
         }
         if (updates.pricing_tiers !== undefined) {
             metadataUpdates.pricing_tiers = updates.pricing_tiers;
+        }
+        if (updates.duration_discounts !== undefined) {
+            metadataUpdates.duration_discounts = updates.duration_discounts;
         }
 
         // Map updates to dbUpdates with alias normalization
