@@ -491,20 +491,6 @@ export default function VenueProfile({ business: initialBusiness }) {
                         {business.name}
                     </h1>
 
-                    {business.description && (
-                        <p style={{
-                            fontSize: windowWidth < 768 ? '15px' : '18px',
-                            fontWeight: '500',
-                            opacity: 0.95,
-                            marginBottom: '10px',
-                            maxWidth: '800px',
-                            lineHeight: '1.4',
-                            textShadow: '0 2px 8px rgba(0,0,0,0.4)'
-                        }}>
-                            {business.description}
-                        </p>
-                    )}
-
                     {/* Address / Location */}
                     {(() => {
                         const fullAddress = [business.address, business.city || business.location].filter(Boolean).join(', ');

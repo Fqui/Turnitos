@@ -556,7 +556,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                 placeholder="Ej: Un quincho exclusivo con pileta y asador para tus eventos familiares y cumpleaños..."
                             />
                             <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-                                📌 Se muestra en tu Link in Bio, en las tarjetas de búsqueda y debajo del título de tu espacio.
+                                📌 Se muestra en tu Link in Bio y en las tarjetas de búsqueda.
                             </span>
                         </div>
 
