@@ -55,6 +55,27 @@ class SupabaseService {
         }
         // If payment_settings is already an object (from JSONB), keep it as is
         // If it's null or undefined, set to empty object
+        // Ensure metadata is an object
+        if (business.metadata) {
+            if (typeof business.metadata === 'string') {
+                try {
+                    business.metadata = JSON.parse(business.metadata);
+                } catch (e) {
+                    business.metadata = {};
+                }
+            }
+        } else {
+            business.metadata = {};
+        }
+
+        // Extract blocked_dates and pricing_tiers from metadata if present
+        if (!business.blocked_dates && business.metadata?.blocked_dates) {
+            business.blocked_dates = business.metadata.blocked_dates;
+        }
+        if (!business.pricing_tiers && business.metadata?.pricing_tiers) {
+            business.pricing_tiers = business.metadata.pricing_tiers;
+        }
+
         // Extract special_days if stored inside business.hours JSON
         if (!business.special_days && business.hours) {
             try {
@@ -1081,51 +1102,55 @@ class SupabaseService {
     }
 
     async patchBusiness(businessId, updates) {
-        // Only update specific fields provided in 'updates'
-        // Filter out non-DB fields to be safe (arrays, relations)
-        const safeUpdates = { ...updates };
-        const blockedFields = [
-            'id', 'created_at', 'updated_at',
-            'courts', 'bookings', 'customers', 'specialists', 'services',
-            'categories', 'category_name', 'subcategories', 'business_subcategories',
-            'subscription_plans', 'subscription_plan', 'subscriptionMonth', 'totalBookings',
-            'requirePasswordChange', 'subscriptionStatus', 'trialEndDate', 'metrics',
-            'service_specialists', 'products', 'store_products', 'amenities_list'
-        ];
-        blockedFields.forEach(field => delete safeUpdates[field]);
+        // Known valid columns in businesses table
+        const VALID_COLUMNS = new Set([
+            'name', 'slug', 'category', 'category_id', 'subscription_plan_id', 'type',
+            'email', 'seller_id', 'logo_url', 'banner_url', 'logo', 'banner_image',
+            'image', 'location', 'latitude', 'longitude', 'rating', 'theme', 'amenities',
+            'hours', 'button_color', 'instagram', 'facebook', 'whatsapp', 'phone',
+            'primary_color', 'price_per_hour', 'price_per_day', 'pricing_model',
+            'rental_duration_options', 'additional_services', 'included_amenities',
+            'gallery_images', 'max_capacity', 'capacity', 'capacity_limit', 'sport_types',
+            'service_categories', 'time_ranges', 'payment_settings', 'auth_id', 'metadata',
+            'store_enabled', 'address', 'city', 'description', 'password_changed',
+            'subscription_status', 'trial_end_date'
+        ]);
 
-        // Normalize camelCase field aliases
-        if (safeUpdates.buttonColor && !safeUpdates.button_color) {
-            safeUpdates.button_color = safeUpdates.buttonColor;
-            delete safeUpdates.buttonColor;
+        const dbUpdates = {};
+        let metadataUpdates = {};
+
+        // Merge incoming metadata or nested venue properties
+        if (updates.metadata && typeof updates.metadata === 'object') {
+            metadataUpdates = { ...updates.metadata };
         }
-        if (safeUpdates.primaryColor && !safeUpdates.primary_color) {
-            safeUpdates.primary_color = safeUpdates.primaryColor;
-            delete safeUpdates.primaryColor;
+        if (updates.blocked_dates !== undefined) {
+            metadataUpdates.blocked_dates = updates.blocked_dates;
         }
-        if (safeUpdates.rentalDurationOptions && !safeUpdates.rental_duration_options) {
-            safeUpdates.rental_duration_options = safeUpdates.rentalDurationOptions;
-            delete safeUpdates.rentalDurationOptions;
+        if (updates.pricing_tiers !== undefined) {
+            metadataUpdates.pricing_tiers = updates.pricing_tiers;
         }
-        if (safeUpdates.additionalServices && !safeUpdates.additional_services) {
-            safeUpdates.additional_services = safeUpdates.additionalServices;
-            delete safeUpdates.additionalServices;
-        }
-        if (safeUpdates.blockedDates && !safeUpdates.blocked_dates) {
-            safeUpdates.blocked_dates = safeUpdates.blockedDates;
-            delete safeUpdates.blockedDates;
-        }
-        if (safeUpdates.pricingTiers && !safeUpdates.pricing_tiers) {
-            safeUpdates.pricing_tiers = safeUpdates.pricingTiers;
-            delete safeUpdates.pricingTiers;
-        }
-        if (safeUpdates.maxCapacity && !safeUpdates.max_capacity) {
-            safeUpdates.max_capacity = safeUpdates.maxCapacity;
-            delete safeUpdates.maxCapacity;
+
+        // Map updates to dbUpdates ONLY if column exists in VALID_COLUMNS
+        Object.keys(updates).forEach(key => {
+            let colName = key;
+            if (key === 'buttonColor') colName = 'button_color';
+            if (key === 'primaryColor') colName = 'primary_color';
+            if (key === 'rentalDurationOptions') colName = 'rental_duration_options';
+            if (key === 'additionalServices') colName = 'additional_services';
+            if (key === 'maxCapacity') colName = 'max_capacity';
+
+            if (VALID_COLUMNS.has(colName)) {
+                dbUpdates[colName] = updates[key];
+            }
+        });
+
+        // Always set merged metadata if present
+        if (Object.keys(metadataUpdates).length > 0 || updates.metadata !== undefined) {
+            dbUpdates.metadata = metadataUpdates;
         }
 
         // Safely merge hours and special_days so saving one never overwrites/wipes the other
-        if (safeUpdates.special_days || safeUpdates.hours) {
+        if (updates.special_days || updates.hours) {
             let currentHoursObj = {};
             try {
                 const { data: currentBiz } = await supabase
@@ -1145,10 +1170,10 @@ class SupabaseService {
 
             let mergedHours = { ...currentHoursObj };
 
-            if (safeUpdates.hours) {
-                const incomingHours = typeof safeUpdates.hours === 'string'
-                    ? JSON.parse(safeUpdates.hours)
-                    : safeUpdates.hours;
+            if (updates.hours) {
+                const incomingHours = typeof updates.hours === 'string'
+                    ? JSON.parse(updates.hours)
+                    : updates.hours;
                 const existingSpecialDays = mergedHours.special_days;
                 mergedHours = { ...mergedHours, ...incomingHours };
                 if (existingSpecialDays && !incomingHours.special_days) {
@@ -1156,19 +1181,18 @@ class SupabaseService {
                 }
             }
 
-            if (safeUpdates.special_days) {
-                mergedHours.special_days = safeUpdates.special_days;
-                delete safeUpdates.special_days;
+            if (updates.special_days) {
+                mergedHours.special_days = updates.special_days;
             }
 
-            safeUpdates.hours = JSON.stringify(mergedHours);
+            dbUpdates.hours = JSON.stringify(mergedHours);
         }
 
-        // 1. Update main business table if there are fields left
-        if (Object.keys(safeUpdates).length > 0) {
+        // 1. Update main business table if there are valid fields to update
+        if (Object.keys(dbUpdates).length > 0) {
             const { error } = await supabase
                 .from('businesses')
-                .update(safeUpdates)
+                .update(dbUpdates)
                 .eq('id', businessId);
 
             if (error) {
