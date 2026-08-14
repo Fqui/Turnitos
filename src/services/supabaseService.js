@@ -1610,55 +1610,82 @@ class SupabaseService {
     }
 
     async updateBooking(id, updates = {}) {
-        const cleanUpdates = { ...updates, updated_at: new Date().toISOString() };
+        const VALID_BOOKING_COLUMNS = new Set([
+            'business_id', 'service_id', 'court_id', 'specialist_id', 'resource_id',
+            'date', 'time', 'customer_name', 'customer_phone', 'customer_email',
+            'status', 'price', 'duration', 'metadata', 'guest_count',
+            'selected_services', 'services_total', 'base_price', 'confirmed_at',
+            'cancelled_at', 'cancellation_reason', 'deposit_paid_at', 'completed_at',
+            'history', 'updated_at'
+        ]);
 
-        // Normalize camelCase to snake_case for DB columns
-        if (cleanUpdates.guestCount !== undefined) {
-            cleanUpdates.guest_count = cleanUpdates.guestCount;
-            delete cleanUpdates.guestCount;
+        // Fetch existing booking metadata to preserve nested values
+        let currentMetadata = {};
+        try {
+            const { data: existingBooking } = await supabase
+                .from('bookings')
+                .select('metadata')
+                .eq('id', id)
+                .single();
+            if (existingBooking?.metadata) {
+                currentMetadata = typeof existingBooking.metadata === 'string'
+                    ? JSON.parse(existingBooking.metadata)
+                    : { ...existingBooking.metadata };
+            }
+        } catch (e) { }
+
+        let metaUpdates = { ...currentMetadata };
+        if (updates.metadata && typeof updates.metadata === 'object') {
+            metaUpdates = { ...metaUpdates, ...updates.metadata };
         }
-        if (cleanUpdates.selectedServices !== undefined) {
-            cleanUpdates.selected_services = cleanUpdates.selectedServices;
-            delete cleanUpdates.selectedServices;
+
+        // Store deposit amount safely inside metadata JSONB
+        if (updates.deposit_amount !== undefined || updates.depositAmount !== undefined) {
+            metaUpdates.deposit_amount = Number(updates.deposit_amount !== undefined ? updates.deposit_amount : updates.depositAmount);
         }
-        if (cleanUpdates.servicesTotal !== undefined) {
-            cleanUpdates.services_total = cleanUpdates.servicesTotal;
-            delete cleanUpdates.servicesTotal;
-        }
-        if (cleanUpdates.depositAmount !== undefined) {
-            cleanUpdates.deposit_amount = cleanUpdates.depositAmount;
-            delete cleanUpdates.depositAmount;
-        }
-        if (cleanUpdates.totalPrice !== undefined) {
-            cleanUpdates.price = cleanUpdates.totalPrice;
-            delete cleanUpdates.totalPrice;
-        }
-        if (cleanUpdates.basePrice !== undefined) {
-            cleanUpdates.base_price = cleanUpdates.basePrice;
-            delete cleanUpdates.basePrice;
-        }
-        if (cleanUpdates.customerName !== undefined) {
-            cleanUpdates.customer_name = cleanUpdates.customerName;
-            delete cleanUpdates.customerName;
-        }
-        if (cleanUpdates.customerPhone !== undefined) {
-            cleanUpdates.customer_phone = cleanUpdates.customerPhone;
-            delete cleanUpdates.customerPhone;
-        }
-        if (cleanUpdates.customerEmail !== undefined) {
-            cleanUpdates.customer_email = cleanUpdates.customerEmail;
-            delete cleanUpdates.customerEmail;
-        }
+
+        const dbUpdates = {
+            updated_at: new Date().toISOString(),
+            metadata: metaUpdates
+        };
+
+        // Normalize camelCase and map only valid DB columns
+        Object.keys(updates).forEach(key => {
+            let colName = key;
+            if (key === 'guestCount') colName = 'guest_count';
+            if (key === 'selectedServices') colName = 'selected_services';
+            if (key === 'servicesTotal') colName = 'services_total';
+            if (key === 'totalPrice') colName = 'price';
+            if (key === 'basePrice') colName = 'base_price';
+            if (key === 'customerName') colName = 'customer_name';
+            if (key === 'customerPhone') colName = 'customer_phone';
+            if (key === 'customerEmail') colName = 'customer_email';
+
+            if (VALID_BOOKING_COLUMNS.has(colName)) {
+                dbUpdates[colName] = updates[key];
+            }
+        });
 
         const { data, error } = await supabase
             .from('bookings')
-            .update(cleanUpdates)
+            .update(dbUpdates)
             .eq('id', id)
             .select()
             .single();
 
-        if (error) throw error;
-        return this._processBusinessData(data);
+        if (error) {
+            console.error('Supabase updateBooking error:', error);
+            throw error;
+        }
+
+        // Expose deposit_amount on returned object
+        const result = { ...data };
+        if (result.metadata?.deposit_amount !== undefined) {
+            result.deposit_amount = result.metadata.deposit_amount;
+            result.depositAmount = result.metadata.deposit_amount;
+        }
+
+        return this._processBusinessData(result);
     }
 
     async moveBooking(id, newDate, newTime, newItemId) {

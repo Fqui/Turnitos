@@ -92,7 +92,7 @@ const BookingDetailsModal = ({
     const paymentSettings = biz?.payment_settings || biz?.paymentSettings || {};
     const depositSettings = paymentSettings.deposit || { enabled: false, type: 'percentage', percentage: 30, fixed_amount: 0 };
 
-    let calculatedDefaultDeposit = Number(booking.deposit_amount || booking.depositAmount || 0);
+    let calculatedDefaultDeposit = Number(booking.deposit_amount || booking.depositAmount || booking.metadata?.deposit_amount || booking.metadata?.depositAmount || 0);
     if (!calculatedDefaultDeposit) {
         if (depositSettings.enabled) {
             if (depositSettings.type === 'percentage') {
