@@ -89,16 +89,9 @@ export default function VenueProfile({ business: initialBusiness }) {
         }
     };
 
-    const defaultQuinchoPhotos = [
-        { url: '/quincho_roma_gallery_4.png', caption: 'Nuestro salon de juegos', category: 'Salón' },
-        { url: '/quincho_roma_gallery_3.png', caption: 'Patio parquizado', category: 'Exterior' },
-        { url: '/quincho_roma_gallery_2.png', caption: 'Comedor en asador', category: 'Exterior' },
-        { url: '/quincho_roma_gallery_1.png', caption: 'Parque', category: 'Piscina' }
-    ];
-
-    // Get gallery images with captions and featured photo
+    // Get gallery images with captions and featured photo from database
     const getGalleryImages = () => {
-        if (!business) return defaultQuinchoPhotos;
+        if (!business) return [];
 
         let metadataObj = business.metadata;
         if (typeof metadataObj === 'string') {
@@ -115,11 +108,6 @@ export default function VenueProfile({ business: initialBusiness }) {
             images = metadataObj.venue_gallery.map(img => typeof img === 'string' ? { url: img, caption: '', category: 'General' } : { ...img });
         } else if (galleryArr && Array.isArray(galleryArr) && galleryArr.length > 0) {
             images = galleryArr.map(url => (typeof url === 'string' ? { url, caption: '', category: 'General' } : (typeof url === 'object' && url !== null ? { ...url } : { url: String(url), caption: '', category: 'General' })));
-        }
-
-        // Fallback: If no gallery photos exist yet, use default Quincho photos
-        if (images.length === 0) {
-            images = [...defaultQuinchoPhotos];
         }
 
         // Sort so featured photo is at index 0

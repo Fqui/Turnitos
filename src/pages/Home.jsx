@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { categories, promotions as initialPromotions, businesses as initialBusinesses } from '../data/mockData';
 import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
 import { generateSlug } from '../utils/utils';
@@ -10,9 +9,9 @@ export default function Home() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedSubCategory, setSelectedSubCategory] = useState('all');
-    const [businesses, setBusinesses] = useState(initialBusinesses || []);
-    const [promotions, setPromotions] = useState(initialPromotions || []);
-    const [categoriesData, setCategoriesData] = useState([]); // ✅ New state for dynamic categories
+    const [businesses, setBusinesses] = useState([]);
+    const [promotions, setPromotions] = useState([]);
+    const [categoriesData, setCategoriesData] = useState([]); // Dynamic categories
     const [loading, setLoading] = useState(true);
     const [isNearMeActive, setIsNearMeActive] = useState(false); // ✅ New state for Near Me
     const resultsRef = useRef(null);
