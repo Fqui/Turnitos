@@ -1604,12 +1604,20 @@ export default function BusinessPortal() {
                                                                 cursor: 'pointer'
                                                             }}
                                                         >
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                                                 <div>
-                                                                    {getBookingTimeDisplay(booking)}
-                                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                                        {formatDisplayDate(booking.date)}
-                                                                    </div>
+                                                                    {isRentalBusiness ? (
+                                                                        <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                                            {formatDisplayDate(booking.date)}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <div>
+                                                                            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{booking.time} hs</div>
+                                                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                                {formatDisplayDate(booking.date)}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                                 <span style={{
                                                                     padding: '4px 10px',
@@ -1624,7 +1632,7 @@ export default function BusinessPortal() {
                                                                 </span>
                                                             </div>
 
-                                                            <div style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px', fontSize: '15px' }}>
+                                                            <div style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '3px', fontSize: '15px' }}>
                                                                 {booking.customer_name || booking.customerName || '-'}
                                                             </div>
                                                             <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
@@ -1660,9 +1668,9 @@ export default function BusinessPortal() {
                                                 <thead style={{ background: 'rgba(0,0,0,0.02)' }}>
                                                     <tr>
                                                         <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Fecha</th>
-                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                                                            {isRentalBusiness ? 'Horario / Duración' : 'Hora'}
-                                                        </th>
+                                                        {!isRentalBusiness && (
+                                                            <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Hora</th>
+                                                        )}
                                                         <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Cliente</th>
                                                         <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>
                                                             {isRentalBusiness ? 'Detalle del Alquiler' : 'Servicio'}
@@ -1705,13 +1713,19 @@ export default function BusinessPortal() {
 
                                                         return paginated.map((booking, index) => (
                                                             <tr key={index} style={{ borderTop: '1px solid var(--border)' }}>
-                                                                <td style={{ padding: '16px', fontWeight: '500' }}>{formatDisplayDate(booking.date)}</td>
-                                                                <td style={{ padding: '16px' }}>
-                                                                    {getBookingTimeDisplay(booking)}
+                                                                <td style={{ padding: '16px', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                                                                    {formatDisplayDate(booking.date)}
                                                                 </td>
+                                                                {!isRentalBusiness && (
+                                                                    <td style={{ padding: '16px', fontWeight: 'bold' }}>{booking.time}</td>
+                                                                )}
                                                                 <td style={{ padding: '16px' }}>
-                                                                    <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{booking.customer_name || booking.customerName || '-'}</div>
-                                                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{booking.customer_phone || booking.customerPhone || '-'}</div>
+                                                                    <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '15px' }}>
+                                                                        {booking.customer_name || booking.customerName || '-'}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                                                        {booking.customer_phone || booking.customerPhone || '-'}
+                                                                    </div>
                                                                 </td>
                                                                 <td style={{ padding: '16px' }}>
                                                                     {isRentalBusiness ? (
