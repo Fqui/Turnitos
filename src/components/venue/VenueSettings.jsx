@@ -192,6 +192,39 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const handleCapacityChange = (newCapacity) => {
+        const cap = parseInt(newCapacity) || 0;
+        setFormData(prev => {
+            const currentTiers = prev.pricing_tiers || [];
+            let updatedTiers = [...currentTiers];
+
+            if (cap > 0) {
+                if (updatedTiers.length === 0) {
+                    updatedTiers = [{ min_guests: 5, max_guests: cap, price: prev.price_per_hour || 0 }];
+                } else if (updatedTiers.length === 1) {
+                    updatedTiers[0] = {
+                        ...updatedTiers[0],
+                        min_guests: 5,
+                        max_guests: cap
+                    };
+                } else {
+                    const lastIdx = updatedTiers.length - 1;
+                    updatedTiers[lastIdx] = {
+                        ...updatedTiers[lastIdx],
+                        max_guests: cap
+                    };
+                }
+            }
+
+            return {
+                ...prev,
+                capacity_limit: cap,
+                max_capacity: cap,
+                pricing_tiers: updatedTiers
+            };
+        });
+    };
+
     const handleMetadataChange = (key, value) => {
         setFormData(prev => ({
             ...prev,
@@ -207,8 +240,37 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
         try {
             const bId = business?.id || formData?.id || formData?.business_id;
 
-            const safeCapacity = Number(formData.capacity_limit || formData.max_capacity || business?.capacity_limit || (business?.max_capacity && business.max_capacity > 1 ? business.max_capacity : null) || 100);
-            const safePrice = Number(formData.price_per_hour || business?.price_per_hour || business?.price || 20000);
+            const safeCapacity = Number(formData.capacity_limit || formData.max_capacity || business?.capacity_limit || (business?.max_capacity && business.max_capacity > 1 ? business.max_capacity : null) || 0);
+
+            // Validaciones obligatorias de Capacidad, Precios y Horas
+            if (safeCapacity <= 0) {
+                showToast('⚠️ La capacidad máxima debe ser mayor a 0 personas', 'warning');
+                setSaving(false);
+                return;
+            }
+
+            const tiers = formData.pricing_tiers || [];
+            if (tiers.length === 0) {
+                showToast('⚠️ Debes configurar al menos un rango de precios (Desde 5 hasta la capacidad)', 'warning');
+                setSaving(false);
+                return;
+            }
+
+            const hasInvalidPrice = tiers.some(t => !t.price || parseInt(t.price) <= 0);
+            if (hasInvalidPrice) {
+                showToast('⚠️ Todos los rangos de precio deben tener un valor mayor a $0', 'warning');
+                setSaving(false);
+                return;
+            }
+
+            const durationOpts = formData.rental_duration_options || [];
+            if (durationOpts.length === 0) {
+                showToast('⚠️ Debes seleccionar al menos una opción de duración permitida (Horas)', 'warning');
+                setSaving(false);
+                return;
+            }
+
+            const safePrice = Number(tiers[0]?.price || formData.price_per_hour || business?.price_per_hour || business?.price || 20000);
 
             const dataToSave = {
                 ...business,
@@ -219,15 +281,15 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 theme: formData.theme || business?.theme || 'dark',
                 primary_color: formData.primary_color || formData.button_color || business?.primary_color || '#84CC16',
                 button_color: formData.button_color || formData.primary_color || business?.button_color || '#84CC16',
-                pricing_tiers: formData.pricing_tiers || business?.pricing_tiers || [],
+                pricing_tiers: tiers,
                 additional_services: formData.additional_services || business?.additional_services || [],
                 blocked_dates: formData.blocked_dates || business?.blocked_dates || [],
-                rental_duration_options: formData.rental_duration_options || business?.rental_duration_options || [4, 6, 8, 12, 24],
+                rental_duration_options: durationOpts,
                 metadata: {
                     ...(business?.metadata || {}),
                     ...(formData.metadata || {}),
                     capacity_limit: safeCapacity,
-                    pricing_tiers: formData.pricing_tiers || business?.pricing_tiers || [],
+                    pricing_tiers: tiers,
                     blocked_dates: formData.blocked_dates || business?.blocked_dates || [],
                     venue_gallery: formData.metadata?.venue_gallery || []
                 },
@@ -390,8 +452,25 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
 
     // Tiers Logic
     const addTier = () => {
-        const newTier = { min_guests: 1, max_guests: 10, price: 0 };
-        handleInputChange('pricing_tiers', [...(formData.pricing_tiers || []), newTier]);
+        const maxCap = parseInt(formData.capacity_limit || formData.max_capacity) || 50;
+        const currentTiers = formData.pricing_tiers || [];
+
+        if (currentTiers.length === 0) {
+            handleInputChange('pricing_tiers', [{ min_guests: 5, max_guests: maxCap, price: formData.price_per_hour || 0 }]);
+            return;
+        }
+
+        const lastTier = currentTiers[currentTiers.length - 1];
+        const nextMin = (parseInt(lastTier.max_guests) || 5) + 1;
+        const nextMax = Math.max(nextMin + 10, maxCap);
+
+        const newTier = {
+            min_guests: nextMin,
+            max_guests: nextMax,
+            price: (parseInt(lastTier.price) || 0) + 5000
+        };
+
+        handleInputChange('pricing_tiers', [...currentTiers, newTier]);
     };
 
     const updateTier = (index, field, value) => {
@@ -773,57 +852,71 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                         <h2 style={sectionTitleStyle}>Precios y Capacidad</h2>
 
                         <div style={{ marginBottom: '24px' }}>
-                            <label style={labelStyle}>Capacidad Máxima (personas)</label>
+                            <label style={labelStyle}>Capacidad Máxima (personas) *</label>
                             <input
                                 type="number"
                                 style={inputStyle}
                                 value={formData.capacity_limit || ''}
-                                onChange={e => handleInputChange('capacity_limit', parseInt(e.target.value) || 0)}
-                                placeholder="Ej: 50"
+                                onChange={e => handleCapacityChange(e.target.value)}
+                                placeholder="Ej: 85"
                             />
                             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                Límite máximo de personas permitidas en el establecimiento.
+                                Límite máximo de personas permitidas. Al ingresar la capacidad, se establece automáticamente el rango inicial desde 5 hasta la capacidad máxima.
                             </p>
                         </div>
 
                         <div style={{ marginBottom: '30px' }}>
-                            <label style={labelStyle}>Esquema de Precios por Cantidad de Personas (Tiers)</label>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <label style={labelStyle}>Esquema de Precios por Cantidad de Personas *</label>
+                            </div>
+                            {(!formData.pricing_tiers || formData.pricing_tiers.length === 0) && (
+                                <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px dashed #ef4444', borderRadius: '10px', marginBottom: '16px', color: 'var(--text-primary)', fontSize: '13px' }}>
+                                    ⚠️ Ingresa la capacidad máxima o haz clic en <strong>"+ Agregar Rango de Precios"</strong> para configurar los precios.
+                                </div>
+                            )}
                             {formData.pricing_tiers?.map((tier, index) => (
                                 <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
                                     <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: '11px' }}>Desde (pax)</label>
+                                        <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)' }}>Desde (personas)</label>
                                         <input type="number" style={inputStyle} value={tier.min_guests} onChange={e => updateTier(index, 'min_guests', e.target.value)} />
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <label style={{ fontSize: '11px' }}>Hasta (pax)</label>
+                                        <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)' }}>Hasta (personas)</label>
                                         <input type="number" style={inputStyle} value={tier.max_guests} onChange={e => updateTier(index, 'max_guests', e.target.value)} />
                                     </div>
                                     <div style={{ flex: 1.5 }}>
-                                        <label style={{ fontSize: '11px' }}>Precio Base ($)</label>
-                                        <input type="number" style={inputStyle} value={tier.price} onChange={e => updateTier(index, 'price', e.target.value)} />
+                                        <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)' }}>Precio Base ($) *</label>
+                                        <input type="number" style={inputStyle} value={tier.price} placeholder="Ej: 50000" onChange={e => updateTier(index, 'price', e.target.value)} />
                                     </div>
                                     <button
+                                        type="button"
                                         onClick={() => {
                                             const newTiers = [...formData.pricing_tiers];
                                             newTiers.splice(index, 1);
                                             handleInputChange('pricing_tiers', newTiers);
                                         }}
-                                        style={{ background: 'transparent', border: 'none', color: 'red', cursor: 'pointer', marginTop: '15px' }}
+                                        style={{ background: 'transparent', border: 'none', color: 'red', cursor: 'pointer', marginTop: '15px', fontSize: '16px' }}
+                                        title="Eliminar rango"
                                     >
                                         🗑️
                                     </button>
                                 </div>
                             ))}
-                            <button onClick={addTier} style={{ ...buttonStyle, background: 'transparent', border: '1px dashed var(--primary-paddle)', color: 'var(--text-primary)' }}>
+                            <button type="button" onClick={addTier} style={{ ...buttonStyle, background: 'transparent', border: '1px dashed var(--primary-paddle)', color: 'var(--text-primary)' }}>
                                 + Agregar Rango de Precios
                             </button>
                         </div>
 
                         <div>
-                            <label style={labelStyle}>Opciones de Duración Permitidas (Horas)</label>
+                            <label style={labelStyle}>Opciones de Duración Permitidas (Horas) *</label>
+                            {(!formData.rental_duration_options || formData.rental_duration_options.length === 0) && (
+                                <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '8px' }}>
+                                    ⚠️ Debes seleccionar al menos una duración permitida.
+                                </p>
+                            )}
                             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                                 {[4, 6, 8, 12, 24].map(hours => (
-                                    <label key={hours} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-card)', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <label key={hours} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-card)', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', cursor: 'pointer' }}>
                                         <input
                                             type="checkbox"
                                             checked={(formData.rental_duration_options || []).includes(hours)}
