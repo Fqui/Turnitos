@@ -551,20 +551,26 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                             <label style={labelStyle}>Descripción Corta (Bajada)</label>
                             <textarea
                                 style={{ ...inputStyle, minHeight: '80px' }}
-                                value={formData.description || ''}
+                                value={formData.description !== undefined ? formData.description : ''}
                                 onChange={e => handleInputChange('description', e.target.value)}
-                                placeholder="Breve descripción para la tarjeta..."
+                                placeholder="Ej: Un quincho exclusivo con pileta y asador para tus eventos familiares y cumpleaños..."
                             />
+                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
+                                📌 Se muestra en tu Link in Bio, en las tarjetas de búsqueda y debajo del título de tu espacio.
+                            </span>
                         </div>
 
                         <div style={{ marginBottom: '20px' }}>
                             <label style={labelStyle}>Descripción Completa (Perfil)</label>
                             <textarea
-                                style={{ ...inputStyle, minHeight: '150px' }}
-                                value={formData.metadata?.full_description || formData.description || ''}
+                                style={{ ...inputStyle, minHeight: '140px' }}
+                                value={formData.metadata?.full_description !== undefined ? formData.metadata.full_description : ''}
                                 onChange={e => handleMetadataChange('full_description', e.target.value)}
-                                placeholder="Descripción detallada con todas las características..."
+                                placeholder="Descripción detallada de tu espacio: qué incluye el alquiler, vajilla, normas de convivencia, horarios de música, etc."
                             />
+                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
+                                📖 Se muestra en la sección "Acerca del espacio" de tu perfil web público con opción de "Ver más".
+                            </span>
                         </div>
 
                         <div style={{ marginBottom: '20px' }}>

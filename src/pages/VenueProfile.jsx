@@ -34,6 +34,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const [lightboxIndex, setLightboxIndex] = useState(0);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [showServicesExpanded, setShowServicesExpanded] = useState(false);
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const calendarRef = useRef(null);
 
@@ -490,6 +491,20 @@ export default function VenueProfile({ business: initialBusiness }) {
                         {business.name}
                     </h1>
 
+                    {business.description && (
+                        <p style={{
+                            fontSize: windowWidth < 768 ? '15px' : '18px',
+                            fontWeight: '500',
+                            opacity: 0.95,
+                            marginBottom: '10px',
+                            maxWidth: '800px',
+                            lineHeight: '1.4',
+                            textShadow: '0 2px 8px rgba(0,0,0,0.4)'
+                        }}>
+                            {business.description}
+                        </p>
+                    )}
+
                     {/* Address / Location */}
                     {(() => {
                         const fullAddress = [business.address, business.city || business.location].filter(Boolean).join(', ');
@@ -739,6 +754,77 @@ export default function VenueProfile({ business: initialBusiness }) {
                             </div>
                         </div>
                     )}
+
+                    {/* About / Full Description Section */}
+                    {(() => {
+                        const fullDesc = business.metadata?.full_description || business.full_description;
+                        if (!fullDesc || !fullDesc.trim()) return null;
+
+                        const isLong = fullDesc.length > 250 || fullDesc.split('\n').length > 3;
+
+                        return (
+                            <div style={{
+                                background: cardBg,
+                                borderRadius: '24px',
+                                padding: windowWidth < 768 ? '20px 16px' : '28px 32px',
+                                boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
+                                border: `1px solid ${borderColor}`
+                            }}>
+                                <h2 style={{ fontSize: '20px', fontWeight: '700', color: textColor, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span>📖</span>
+                                    <span>Acerca del Espacio</span>
+                                </h2>
+                                <div style={{ position: 'relative' }}>
+                                    <div style={{
+                                        fontSize: '15px',
+                                        lineHeight: '1.7',
+                                        color: secondaryTextColor,
+                                        whiteSpace: 'pre-line',
+                                        maxHeight: (!isDescriptionExpanded && isLong) ? '100px' : 'none',
+                                        overflow: 'hidden',
+                                        transition: 'max-height 0.3s ease'
+                                    }}>
+                                        {fullDesc}
+                                    </div>
+
+                                    {!isDescriptionExpanded && isLong && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: 0,
+                                            left: 0,
+                                            right: 0,
+                                            height: '60px',
+                                            background: isDark
+                                                ? 'linear-gradient(to bottom, transparent, #1E293B)'
+                                                : 'linear-gradient(to bottom, transparent, white)',
+                                            pointerEvents: 'none'
+                                        }} />
+                                    )}
+                                </div>
+
+                                {isLong && (
+                                    <button
+                                        onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: primaryColor,
+                                            fontSize: '14px',
+                                            fontWeight: '700',
+                                            marginTop: '12px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '4px 0'
+                                        }}
+                                    >
+                                        {isDescriptionExpanded ? 'Ver menos ↑' : 'Ver más ↓'}
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {/* Amenities Section */}
                     {amenities.length > 0 && (
