@@ -862,6 +862,106 @@ export default function BusinessPortal() {
         || businesses[0]
         || null;
 
+    const isRentalBusiness = currentBusiness?.type === 'venue' ||
+        currentBusiness?.type === 'alquiler' ||
+        (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
+        (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
+        (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
+        (currentBusiness?.categories?.name || '').toLowerCase().includes('quincho') ||
+        (currentBusiness?.slug || '').toLowerCase().includes('quincho') ||
+        (currentBusiness?.slug || '').toLowerCase().includes('roma');
+
+    const getBookingTimeDisplay = (booking) => {
+        if (!isRentalBusiness) {
+            return <span style={{ fontWeight: '700' }}>{booking.time ? `${booking.time} hs` : '-'}</span>;
+        }
+        const hasValidTime = booking.time && booking.time !== '00:00' && booking.time !== '00:00:00';
+        const duration = booking.duration || booking.metadata?.duration;
+
+        if (hasValidTime) {
+            return (
+                <div>
+                    <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{booking.time} hs</div>
+                    {duration && <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>⏳ {duration} hs</div>}
+                </div>
+            );
+        }
+        if (duration) {
+            return (
+                <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span>⏳</span> <span>{duration} hs</span>
+                </div>
+            );
+        }
+        return <div style={{ fontWeight: '600', color: 'var(--text-secondary)', fontSize: '13px' }}>🗓️ Jornada completa</div>;
+    };
+
+    const getBookingRentalDetails = (booking) => {
+        const guests = booking.guest_count || booking.guestCount || booking.metadata?.guest_count || booking.metadata?.guestCount;
+        
+        let services = [];
+        const rawServices = booking.selected_services || booking.selectedServices || booking.metadata?.selected_services || booking.metadata?.selectedServices || [];
+        if (Array.isArray(rawServices)) {
+            services = rawServices.map(s => typeof s === 'object' && s !== null ? (s.name || s.label || s.title) : String(s)).filter(Boolean);
+        } else if (typeof rawServices === 'string' && rawServices.trim()) {
+            try {
+                const parsed = JSON.parse(rawServices);
+                if (Array.isArray(parsed)) {
+                    services = parsed.map(s => typeof s === 'object' && s !== null ? (s.name || s.label || s.title) : String(s)).filter(Boolean);
+                } else {
+                    services = [rawServices.trim()];
+                }
+            } catch (e) {
+                services = [rawServices.trim()];
+            }
+        }
+
+        return (
+            <div>
+                {guests ? (
+                    <div style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span>👥</span> <span>{guests} personas</span>
+                    </div>
+                ) : (
+                    <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                        {booking.services?.name || booking.courts?.name || booking.service || 'Alquiler del Espacio'}
+                    </div>
+                )}
+                {services.length > 0 ? (
+                    <div style={{ fontSize: '12px', color: 'var(--primary-paddle, #84CC16)', marginTop: '3px', fontWeight: '600' }}>
+                        + {services.join(', ')}
+                    </div>
+                ) : (
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        Sin adicionales
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const getBookingFinancials = (booking) => {
+        const total = Number(booking.price || booking.total_price || booking.totalPrice || 0);
+        const deposit = Number(booking.deposit_amount || booking.depositAmount || booking.metadata?.deposit_amount || booking.metadata?.depositAmount || 0);
+
+        return (
+            <div>
+                <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '14px' }}>
+                    ${total > 0 ? total.toLocaleString('es-AR') : '-'}
+                </div>
+                {deposit > 0 ? (
+                    <div style={{ fontSize: '11px', color: '#10B981', fontWeight: '700', marginTop: '2px' }}>
+                        Seña: ${deposit.toLocaleString('es-AR')}
+                    </div>
+                ) : (
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        Sin seña
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div style={{
             display: 'flex',
@@ -1368,7 +1468,7 @@ export default function BusinessPortal() {
                                             <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
                                             <input
                                                 type="text"
-                                                placeholder="Buscar por cliente o servicio..."
+                                                placeholder={isRentalBusiness ? "Buscar por cliente, invitados o servicios..." : "Buscar por cliente o servicio..."}
                                                 value={listFilters.search}
                                                 onChange={(e) => {
                                                     setListFilters(prev => ({ ...prev, search: e.target.value }));
@@ -1466,9 +1566,24 @@ export default function BusinessPortal() {
                                         {isMobile ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0' }}>
                                                 {(() => {
+                                                    const term = listFilters.search.toLowerCase().trim();
                                                     const filtered = bookings.filter(booking => {
-                                                        const matchesSearch = (booking.customer_name || booking.customerName || '').toLowerCase().includes(listFilters.search.toLowerCase()) ||
-                                                            (booking.services?.name || booking.courts?.name || booking.service || '').toLowerCase().includes(listFilters.search.toLowerCase());
+                                                        let matchesSearch = true;
+                                                        if (term) {
+                                                            const clientName = (booking.customer_name || booking.customerName || '').toLowerCase();
+                                                            const clientPhone = (booking.customer_phone || booking.customerPhone || '').toLowerCase();
+                                                            const serviceName = (booking.services?.name || booking.courts?.name || booking.service || '').toLowerCase();
+                                                            const notes = (booking.notes || booking.metadata?.notes || '').toLowerCase();
+                                                            const guestStr = String(booking.guest_count || booking.guestCount || booking.metadata?.guest_count || booking.metadata?.guestCount || '');
+                                                            const servicesStr = JSON.stringify(booking.selected_services || booking.selectedServices || booking.metadata?.selected_services || '').toLowerCase();
+
+                                                            matchesSearch = clientName.includes(term) ||
+                                                                clientPhone.includes(term) ||
+                                                                serviceName.includes(term) ||
+                                                                notes.includes(term) ||
+                                                                guestStr.includes(term) ||
+                                                                servicesStr.includes(term);
+                                                        }
                                                         const matchesStatus = listFilters.status === 'all' || booking.status === listFilters.status;
                                                         const matchesDate = !listFilters.date || booking.date === listFilters.date;
                                                         return matchesSearch && matchesStatus && matchesDate;
@@ -1485,11 +1600,17 @@ export default function BusinessPortal() {
                                                                 padding: '16px',
                                                                 borderRadius: '16px',
                                                                 border: '1px solid var(--border)',
-                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                                                                cursor: 'pointer'
                                                             }}
                                                         >
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                                                <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{booking.time} hs</span>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                                                <div>
+                                                                    {getBookingTimeDisplay(booking)}
+                                                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                        {formatDisplayDate(booking.date)}
+                                                                    </div>
+                                                                </div>
                                                                 <span style={{
                                                                     padding: '4px 10px',
                                                                     borderRadius: 'var(--radius-full)',
@@ -1502,15 +1623,33 @@ export default function BusinessPortal() {
                                                                     {getStatusLabel(booking.status).toUpperCase()}
                                                                 </span>
                                                             </div>
-                                                            <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
+
+                                                            <div style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px', fontSize: '15px' }}>
                                                                 {booking.customer_name || booking.customerName || '-'}
                                                             </div>
-                                                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                                                {booking.services?.name || booking.courts?.name || booking.service || '-'}
+                                                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                                                                {booking.customer_phone || booking.customerPhone || ''}
                                                             </div>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
-                                                                <span>{formatDisplayDate(booking.date)}</span>
-                                                                <span style={{ color: 'var(--primary-paddle)', fontWeight: '600' }}>Ver detalles →</span>
+
+                                                            <div style={{ background: 'var(--bg-main)', padding: '10px 12px', borderRadius: '12px', marginBottom: '10px', border: '1px solid var(--border)' }}>
+                                                                {isRentalBusiness ? (
+                                                                    getBookingRentalDetails(booking)
+                                                                ) : (
+                                                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                                        {booking.services?.name || booking.courts?.name || booking.service || '-'}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', paddingTop: '4px' }}>
+                                                                {isRentalBusiness ? (
+                                                                    getBookingFinancials(booking)
+                                                                ) : (
+                                                                    <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                                        {booking.price ? `$${Number(booking.price).toLocaleString('es-AR')}` : ''}
+                                                                    </span>
+                                                                )}
+                                                                <span style={{ color: 'var(--primary-paddle, #84CC16)', fontWeight: '700', fontSize: '12px' }}>Ver detalles →</span>
                                                             </div>
                                                         </div>
                                                     ))
@@ -1521,18 +1660,40 @@ export default function BusinessPortal() {
                                                 <thead style={{ background: 'rgba(0,0,0,0.02)' }}>
                                                     <tr>
                                                         <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Fecha</th>
-                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Hora</th>
+                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                                                            {isRentalBusiness ? 'Horario / Duración' : 'Hora'}
+                                                        </th>
                                                         <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Cliente</th>
-                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Servicio</th>
+                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                                                            {isRentalBusiness ? 'Detalle del Alquiler' : 'Servicio'}
+                                                        </th>
+                                                        {isRentalBusiness && (
+                                                            <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Total / Seña</th>
+                                                        )}
                                                         <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Estado</th>
                                                         <th style={{ padding: '16px', textAlign: 'right', color: 'var(--text-secondary)' }}>Acciones</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {(() => {
+                                                        const term = listFilters.search.toLowerCase().trim();
                                                         const filtered = bookings.filter(booking => {
-                                                            const matchesSearch = (booking.customer_name || booking.customerName || '').toLowerCase().includes(listFilters.search.toLowerCase()) ||
-                                                                (booking.services?.name || booking.courts?.name || booking.service || '').toLowerCase().includes(listFilters.search.toLowerCase());
+                                                            let matchesSearch = true;
+                                                            if (term) {
+                                                                const clientName = (booking.customer_name || booking.customerName || '').toLowerCase();
+                                                                const clientPhone = (booking.customer_phone || booking.customerPhone || '').toLowerCase();
+                                                                const serviceName = (booking.services?.name || booking.courts?.name || booking.service || '').toLowerCase();
+                                                                const notes = (booking.notes || booking.metadata?.notes || '').toLowerCase();
+                                                                const guestStr = String(booking.guest_count || booking.guestCount || booking.metadata?.guest_count || booking.metadata?.guestCount || '');
+                                                                const servicesStr = JSON.stringify(booking.selected_services || booking.selectedServices || booking.metadata?.selected_services || '').toLowerCase();
+
+                                                                matchesSearch = clientName.includes(term) ||
+                                                                    clientPhone.includes(term) ||
+                                                                    serviceName.includes(term) ||
+                                                                    notes.includes(term) ||
+                                                                    guestStr.includes(term) ||
+                                                                    servicesStr.includes(term);
+                                                            }
                                                             const matchesStatus = listFilters.status === 'all' || booking.status === listFilters.status;
                                                             const matchesDate = !listFilters.date || booking.date === listFilters.date;
                                                             return matchesSearch && matchesStatus && matchesDate;
@@ -1544,15 +1705,26 @@ export default function BusinessPortal() {
 
                                                         return paginated.map((booking, index) => (
                                                             <tr key={index} style={{ borderTop: '1px solid var(--border)' }}>
-                                                                <td style={{ padding: '16px' }}>{formatDisplayDate(booking.date)}</td>
-                                                                <td style={{ padding: '16px', fontWeight: 'bold' }}>{booking.time}</td>
+                                                                <td style={{ padding: '16px', fontWeight: '500' }}>{formatDisplayDate(booking.date)}</td>
+                                                                <td style={{ padding: '16px' }}>
+                                                                    {getBookingTimeDisplay(booking)}
+                                                                </td>
                                                                 <td style={{ padding: '16px' }}>
                                                                     <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{booking.customer_name || booking.customerName || '-'}</div>
                                                                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{booking.customer_phone || booking.customerPhone || '-'}</div>
                                                                 </td>
                                                                 <td style={{ padding: '16px' }}>
-                                                                    {booking.services?.name || booking.courts?.name || booking.service || '-'}
+                                                                    {isRentalBusiness ? (
+                                                                        getBookingRentalDetails(booking)
+                                                                    ) : (
+                                                                        booking.services?.name || booking.courts?.name || booking.service || '-'
+                                                                    )}
                                                                 </td>
+                                                                {isRentalBusiness && (
+                                                                    <td style={{ padding: '16px' }}>
+                                                                        {getBookingFinancials(booking)}
+                                                                    </td>
+                                                                )}
                                                                 <td style={{ padding: '16px' }}>
                                                                     <span style={{
                                                                         padding: '4px 10px',
@@ -1596,9 +1768,24 @@ export default function BusinessPortal() {
 
                                         {/* Pagination Controls */}
                                         {(() => {
+                                            const term = listFilters.search.toLowerCase().trim();
                                             const filtered = bookings.filter(booking => {
-                                                const matchesSearch = (booking.customer_name || booking.customerName || '').toLowerCase().includes(listFilters.search.toLowerCase()) ||
-                                                    (booking.services?.name || booking.courts?.name || booking.service || '').toLowerCase().includes(listFilters.search.toLowerCase());
+                                                let matchesSearch = true;
+                                                if (term) {
+                                                    const clientName = (booking.customer_name || booking.customerName || '').toLowerCase();
+                                                    const clientPhone = (booking.customer_phone || booking.customerPhone || '').toLowerCase();
+                                                    const serviceName = (booking.services?.name || booking.courts?.name || booking.service || '').toLowerCase();
+                                                    const notes = (booking.notes || booking.metadata?.notes || '').toLowerCase();
+                                                    const guestStr = String(booking.guest_count || booking.guestCount || booking.metadata?.guest_count || booking.metadata?.guestCount || '');
+                                                    const servicesStr = JSON.stringify(booking.selected_services || booking.selectedServices || booking.metadata?.selected_services || '').toLowerCase();
+
+                                                    matchesSearch = clientName.includes(term) ||
+                                                        clientPhone.includes(term) ||
+                                                        serviceName.includes(term) ||
+                                                        notes.includes(term) ||
+                                                        guestStr.includes(term) ||
+                                                        servicesStr.includes(term);
+                                                }
                                                 const matchesStatus = listFilters.status === 'all' || booking.status === listFilters.status;
                                                 const matchesDate = !listFilters.date || booking.date === listFilters.date;
                                                 return matchesSearch && matchesStatus && matchesDate;
