@@ -61,16 +61,20 @@ export default function Footer({ minimal = false }) {
                             <li><Link to="/ayuda" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Centro de Ayuda</Link></li>
                             <li><Link to="/negocios" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Para Negocios</Link></li>
                             <li><Link to="/portal" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Iniciar Sesión</Link></li>
-                            <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Términos y Condiciones</span></li>
-                            <li><span style={{ color: '#A0A0A0', fontSize: '14px', cursor: 'pointer' }}>Política de Privacidad</span></li>
+                            <li><Link to="/terminos" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Términos y Condiciones</Link></li>
+                            <li><Link to="/privacidad" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Política de Privacidad</Link></li>
                         </ul>
                     </div>
 
                     {/* Contact & Social */}
                     <div style={{ flex: '1 1 200px' }}>
                         <h4 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px' }}>Contacto</h4>
-                        <p style={{ color: '#A0A0A0', fontSize: '14px', marginBottom: '8px' }}>📧 <a href="mailto:consultas@turnitoslr.com" style={{ color: '#A0A0A0', textDecoration: 'none' }}>consultas@turnitoslr.com</a></p>
-                        <p style={{ color: '#A0A0A0', fontSize: '14px', marginBottom: '20px' }}>📱 +54 9 380 4123456</p>
+                        <p style={{ color: '#A0A0A0', fontSize: '14px', marginBottom: '8px' }}>
+                            📧 <a href="mailto:consultas@turnitoslr.com" style={{ color: '#A0A0A0', textDecoration: 'none' }}>consultas@turnitoslr.com</a>
+                        </p>
+                        <p style={{ color: '#A0A0A0', fontSize: '14px', marginBottom: '20px' }}>
+                            📱 <a href="https://wa.me/5493805002706" target="_blank" rel="noopener noreferrer" style={{ color: '#A0A0A0', textDecoration: 'none' }}>+54 9 380 500-2706</a>
+                        </p>
 
                         <div style={{ display: 'flex', gap: '12px' }}>
                             {/* Instagram */}

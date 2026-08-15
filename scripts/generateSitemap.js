@@ -38,7 +38,11 @@ async function run() {
 
     const urls = [
         `  <url>\n    <loc>${baseUrl}/</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>`,
-        `  <url>\n    <loc>${baseUrl}/ayuda</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>\n  </url>`
+        `  <url>\n    <loc>${baseUrl}/ayuda</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`,
+        `  <url>\n    <loc>${baseUrl}/negocios</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>`,
+        `  <url>\n    <loc>${baseUrl}/colaboradores</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
+        `  <url>\n    <loc>${baseUrl}/terminos</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>0.4</priority>\n  </url>`,
+        `  <url>\n    <loc>${baseUrl}/privacidad</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>0.4</priority>\n  </url>`
     ];
 
     (businesses || []).forEach(b => {
