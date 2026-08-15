@@ -4,6 +4,7 @@ import supabaseService from '../../services/supabaseService';
 import BusinessFormModal from './BusinessFormModal';
 import SellerDetailModal from './SellerDetailModal';
 import BookingsTab from './BookingsTab';
+import ReviewsTab from './ReviewsTab';
 
 const SuperAdminDashboard = () => {
     const navigate = useNavigate();
@@ -567,6 +568,7 @@ const SuperAdminDashboard = () => {
                 {[
                     { id: 'overview', icon: '📊', label: 'Resumen' },
                     { id: 'bookings', icon: '🎫', label: 'Reservas' },
+                    { id: 'reviews', icon: '⭐', label: 'Reseñas & WhatsApp' },
                     { id: 'sellers', icon: '👥', label: 'Vendedores' },
                     { id: 'businesses', icon: '🏢', label: 'Negocios' },
                     { id: 'categories', icon: '📁', label: 'Categorías' }
@@ -610,6 +612,10 @@ const SuperAdminDashboard = () => {
 
             {activeTab === 'bookings' && (
                 <BookingsTab bookingsData={bookingsData} />
+            )}
+
+            {activeTab === 'reviews' && (
+                <ReviewsTab bookingsData={bookingsData} businesses={businesses} />
             )}
 
             {activeTab === 'sellers' && (

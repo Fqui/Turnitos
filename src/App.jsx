@@ -42,6 +42,7 @@ const Ayuda = lazyWithRetry(() => import('./pages/Ayuda'));
 const Negocios = lazyWithRetry(() => import('./pages/Negocios'));
 const Colaboradores = lazyWithRetry(() => import('./pages/Colaboradores'));
 const BusinessStore = lazyWithRetry(() => import('./pages/BusinessStore'));
+const SubmitReview = lazyWithRetry(() => import('./pages/SubmitReview'));
 
 // Seller Portal Components
 const SellerLogin = lazyWithRetry(() => import('./components/seller/SellerLogin'));
@@ -216,6 +217,8 @@ function AppContent() {
                 <Route path="/login" element={<SellerLogin />} />
                 <Route path="/portal" element={<BusinessPortal />} />
                 <Route path="/business-portal" element={<BusinessPortal />} />
+                <Route path="/calificar/:token" element={<SubmitReview />} />
+                <Route path="/review/:token" element={<SubmitReview />} />
                 {/* /:businessSlug now goes directly to the reservation / booking page */}
                 <Route path="/:businessSlug" element={<BusinessProfileRouter />} />
                 <Route path="/:businessSlug/turnos" element={<BusinessProfileRouter />} />

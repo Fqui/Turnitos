@@ -228,7 +228,36 @@ export default function Home() {
 
             return hasSubcategory;
         });
-    }, [searchTerm, selectedCategory, selectedSubCategory, businesses, categoriesData]);
+
+        // If Near Me is active, respect geographic proximity sorting from RPC
+        if (isNearMeActive) {
+            return list;
+        }
+
+        // Daily seed for fair rotation among businesses with similar scores
+        const todayDay = new Date().getDate();
+
+        return [...list].sort((a, b) => {
+            const ratingA = Number(a.rating_avg || a.metadata?.rating_avg || 5.0);
+            const ratingB = Number(b.rating_avg || b.metadata?.rating_avg || 5.0);
+            const reviewsA = Number(a.reviews_count || a.metadata?.reviews_count || 0);
+            const reviewsB = Number(b.reviews_count || b.metadata?.reviews_count || 0);
+
+            // Reputation Score: Rating (1-5) * 10 + reviews bonus (capped at 20)
+            const scoreA = (ratingA * 10) + Math.min(20, reviewsA * 2);
+            const scoreB = (ratingB * 10) + Math.min(20, reviewsB * 2);
+
+            // If score difference is significant (> 3 points), higher reputation wins
+            if (Math.abs(scoreA - scoreB) >= 3) {
+                return scoreB - scoreA;
+            }
+
+            // Fair pseudo-rotation for businesses in the same tier
+            const hashA = (a.id ? a.id.charCodeAt(0) : 0) + todayDay;
+            const hashB = (b.id ? b.id.charCodeAt(0) : 0) + todayDay;
+            return (hashB % 10) - (hashA % 10);
+        });
+    }, [searchTerm, selectedCategory, selectedSubCategory, businesses, categoriesData, isNearMeActive]);
 
     // Reset pagination when search or filters change
     useEffect(() => {

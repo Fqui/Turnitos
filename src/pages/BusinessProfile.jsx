@@ -16,6 +16,7 @@ import PadelBookingFlow from '../components/PadelBookingFlow'; // 🆕 Padel-spe
 import BookingSummary from '../components/BookingSummary';
 import SpecialistsShowcase from '../components/SpecialistsShowcase';
 import BookingSuccessModal from '../components/BookingSuccessModal';
+import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import { formatDisplayDate } from '../utils/dateUtils';
 
 // Fix for default marker icon

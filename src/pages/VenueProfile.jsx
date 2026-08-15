@@ -6,6 +6,7 @@ import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
 import { pushService } from '../services/pushService';
 import { useNotification } from '../contexts/NotificationContext';
+import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import 'leaflet/dist/leaflet.css';
 
 // Fix Leaflet default icon issue
@@ -1191,8 +1192,10 @@ export default function VenueProfile({ business: initialBusiness }) {
                 }
             </div >
 
-
-
+            {/* Reviews and Ratings Section */}
+            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+                <BusinessReviewsSection businessId={business?.id} businessName={business?.name} />
+            </div>
 
             {/* Booking Modal */}
             {/* Booking Modal Wizard */}

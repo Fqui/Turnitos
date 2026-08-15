@@ -268,6 +268,50 @@ class ServiceAdapter {
         }
         throw new Error('deleteStoreProduct not supported');
     }
+
+    // --- Reviews Methods ---
+
+    async generateReviewToken(booking) {
+        if (this.service.generateReviewToken) {
+            return this.service.generateReviewToken(booking);
+        }
+        return 'rev_' + Date.now();
+    }
+
+    async getReviewInfoByToken(token) {
+        if (this.service.getReviewInfoByToken) {
+            return this.service.getReviewInfoByToken(token);
+        }
+        return { success: false, error: 'No implementado' };
+    }
+
+    async submitReviewByToken(token, data) {
+        if (this.service.submitReviewByToken) {
+            return this.service.submitReviewByToken(token, data);
+        }
+        throw new Error('submitReviewByToken not supported');
+    }
+
+    async getReviewsByBusinessId(businessId) {
+        if (this.service.getReviewsByBusinessId) {
+            return this.service.getReviewsByBusinessId(businessId);
+        }
+        return { reviews: [], rating_avg: 5.0, reviews_count: 0 };
+    }
+
+    async getAllReviewsForSuperAdmin() {
+        if (this.service.getAllReviewsForSuperAdmin) {
+            return this.service.getAllReviewsForSuperAdmin();
+        }
+        return [];
+    }
+
+    async deleteOrModerateReview(reviewId, status) {
+        if (this.service.deleteOrModerateReview) {
+            return this.service.deleteOrModerateReview(reviewId, status);
+        }
+        return true;
+    }
 }
 
 // Export singleton instance
