@@ -21,6 +21,9 @@ export default function Home() {
     const [categoriesData, setCategoriesData] = useState([]); // Dynamic categories
     const [loading, setLoading] = useState(true);
     const [isNearMeActive, setIsNearMeActive] = useState(false); // ✅ New state for Near Me
+    const [visibleCount, setVisibleCount] = useState(20);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const loadMoreRef = useRef(null);
     const resultsRef = useRef(null);
     const searchTimeoutRef = useRef(null);
     const navigate = useNavigate();
@@ -227,6 +230,41 @@ export default function Home() {
         });
     }, [searchTerm, selectedCategory, selectedSubCategory, businesses, categoriesData]);
 
+    // Reset pagination when search or filters change
+    useEffect(() => {
+        setVisibleCount(20);
+    }, [searchTerm, selectedCategory, selectedSubCategory]);
+
+    // Infinite scroll observer
+    useEffect(() => {
+        if (!loadMoreRef.current) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            const first = entries[0];
+            if (first.isIntersecting && visibleCount < filteredBusinesses.length && !isLoadingMore) {
+                setIsLoadingMore(true);
+                setTimeout(() => {
+                    setVisibleCount(prev => Math.min(prev + 20, filteredBusinesses.length));
+                    setIsLoadingMore(false);
+                }, 300);
+            }
+        }, {
+            root: null,
+            rootMargin: '200px',
+            threshold: 0.1
+        });
+
+        observer.observe(loadMoreRef.current);
+
+        return () => {
+            observer.disconnect();
+        };
+    }, [visibleCount, filteredBusinesses.length, isLoadingMore]);
+
+    const paginatedBusinesses = useMemo(() => {
+        return filteredBusinesses.slice(0, visibleCount);
+    }, [filteredBusinesses, visibleCount]);
+
     // Category click handler
     const handleCategoryClick = async (category) => {
         if (isNearMeActive) {
@@ -245,6 +283,7 @@ export default function Home() {
         setSelectedCategory(category);
         setSelectedSubCategory('all'); // Reset sub-category when main category changes
         setSearchTerm('');
+        setVisibleCount(20);
 
         // Auto scroll to results on mobile
         if (window.innerWidth < 768 && resultsRef.current) {
@@ -718,102 +757,162 @@ export default function Home() {
                             `}</style>
                         </div>
                     ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-                            {filteredBusinesses.map(business => (
-                                <div
-                                    key={business.id}
-                                    onClick={() => navigate(`/${generateSlug(business.name)}`, { state: { business } })}
-                                    style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
-                                >
-                                    <motion.div
-                                        className="business-card"
-                                        style={{
-                                            backgroundColor: 'var(--bg-card)',
-                                            borderRadius: '20px',
-                                            overflow: 'hidden',
-                                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                                            transition: 'all 0.3s',
-                                        }}
-                                        whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.1)' }}
-                                    >
-                                        <div style={{ position: 'relative', height: '180px', overflow: 'hidden' }}>
-                                            <motion.img
-                                                layoutId={`business-image-${business.id}`}
-                                                src={business.banner_image || business.image}
-                                                alt={business.name}
-                                                loading="lazy"
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            />
-                                        </div>
-                                        <div style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                            {/* Logo on the left */}
-                                            {business.logo && (
-                                                <div style={{
-                                                    width: '60px',
-                                                    height: '60px',
-                                                    borderRadius: '12px',
+                        <>
+                            {filteredBusinesses.length === 0 ? (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '60px 20px',
+                                    background: 'var(--bg-card)',
+                                    borderRadius: '20px',
+                                    border: '1px solid var(--border)'
+                                }}>
+                                    <span style={{ fontSize: '40px', display: 'block', marginBottom: '12px' }}>🔍</span>
+                                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
+                                        No se encontraron resultados
+                                    </h3>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
+                                        Intenta con otra búsqueda o selecciona una categoría diferente.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                                    {paginatedBusinesses.map(business => (
+                                        <div
+                                            key={business.id}
+                                            onClick={() => navigate(`/${generateSlug(business.name)}`, { state: { business } })}
+                                            style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                                        >
+                                            <motion.div
+                                                className="business-card"
+                                                style={{
+                                                    backgroundColor: 'var(--bg-card)',
+                                                    borderRadius: '20px',
                                                     overflow: 'hidden',
-                                                    flexShrink: 0,
-                                                    border: '2px solid var(--border)',
-                                                    backgroundColor: 'var(--bg-main)'
-                                                }}>
-                                                    <img
-                                                        src={business.logo}
-                                                        alt={`${business.name} logo`}
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                                                    transition: 'all 0.3s',
+                                                }}
+                                                whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.1)' }}
+                                            >
+                                                <div style={{ position: 'relative', height: '180px', overflow: 'hidden' }}>
+                                                    <motion.img
+                                                        layoutId={`business-image-${business.id}`}
+                                                        src={business.banner_image || business.image}
+                                                        alt={business.name}
+                                                        loading="lazy"
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                     />
                                                 </div>
-                                            )}
+                                                <div style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                    {/* Logo on the left */}
+                                                    {business.logo && (
+                                                        <div style={{
+                                                            width: '60px',
+                                                            height: '60px',
+                                                            borderRadius: '12px',
+                                                            overflow: 'hidden',
+                                                            flexShrink: 0,
+                                                            border: '2px solid var(--border)',
+                                                            backgroundColor: 'var(--bg-main)'
+                                                        }}>
+                                                            <img
+                                                                src={business.logo}
+                                                                alt={`${business.name} logo`}
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                            />
+                                                        </div>
+                                                    )}
 
-                                            {/* Info on the right */}
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <h3 style={{
-                                                    fontSize: '18px',
-                                                    fontWeight: '800',
-                                                    marginBottom: '6px',
-                                                    color: 'var(--text-primary)',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap'
-                                                }}>
-                                                    {business.name}
-                                                </h3>
-                                                <p style={{
-                                                    fontSize: '13px',
-                                                    color: 'var(--text-secondary)',
-                                                    marginBottom: '8px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '4px',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap'
-                                                }}>
-                                                    <span>📍</span> {business.location}
-                                                </p>
+                                                    {/* Info on the right */}
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <h3 style={{
+                                                            fontSize: '18px',
+                                                            fontWeight: '800',
+                                                            marginBottom: '6px',
+                                                            color: 'var(--text-primary)',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}>
+                                                            {business.name}
+                                                        </h3>
+                                                        <p style={{
+                                                            fontSize: '13px',
+                                                            color: 'var(--text-secondary)',
+                                                            marginBottom: '8px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}>
+                                                            <span>📍</span> {business.location}
+                                                        </p>
 
-                                                {business.amenities && business.amenities.length > 0 && (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                        {business.amenities.slice(0, 2).map((amenity, idx) => (
-                                                            <span key={idx} style={{
-                                                                fontSize: '10px',
-                                                                padding: '3px 6px',
-                                                                borderRadius: '8px',
-                                                                backgroundColor: 'var(--bg-main)',
-                                                                color: 'var(--text-secondary)',
-                                                                fontWeight: '600'
-                                                            }}>
-                                                                {amenity}
-                                                            </span>
-                                                        ))}
+                                                        {business.amenities && business.amenities.length > 0 && (
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                                {business.amenities.slice(0, 2).map((amenity, idx) => (
+                                                                    <span key={idx} style={{
+                                                                        fontSize: '10px',
+                                                                        padding: '3px 6px',
+                                                                        borderRadius: '8px',
+                                                                        backgroundColor: 'var(--bg-main)',
+                                                                        color: 'var(--text-secondary)',
+                                                                        fontWeight: '600'
+                                                                    }}>
+                                                                        {amenity}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
+                                                </div>
+                                            </motion.div>
                                         </div>
-                                    </motion.div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            )}
+
+                            {/* Infinite Scroll Sentinel & Loader */}
+                            {visibleCount < filteredBusinesses.length && (
+                                <div
+                                    ref={loadMoreRef}
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '30px 0',
+                                        gap: '10px'
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '28px',
+                                        height: '28px',
+                                        border: '3px solid var(--border)',
+                                        borderTopColor: 'var(--primary)',
+                                        borderRadius: '50%',
+                                        animation: 'spin 0.8s linear infinite'
+                                    }} />
+                                    <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                                        Cargando más negocios... ({paginatedBusinesses.length} de {filteredBusinesses.length})
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* All Loaded Footer */}
+                            {visibleCount >= filteredBusinesses.length && filteredBusinesses.length > 0 && (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '36px 0 20px 0',
+                                    color: 'var(--text-muted)',
+                                    fontSize: '13px',
+                                    fontWeight: '500'
+                                }}>
+                                    ✨ Mostrando todos los negocios ({filteredBusinesses.length})
+                                </div>
+                            )}
+                        </>
                     )}
                 </section>
             </div>
