@@ -19,7 +19,7 @@ export default function CalendarHeader({
         { label: 'Pendiente', color: 'var(--status-pending, #9CA3AF)' },
         { label: 'Señado', color: 'var(--status-deposit, #F59E0B)' },
         { label: 'Confirmado', color: 'var(--status-confirmed, #3ECF8E)' },
-        { label: 'Finalizado', color: 'var(--status-completed, #10B981)' },
+        { label: 'Finalizado', color: 'var(--status-completed, #2563EB)' },
         { label: 'Cancelado', color: 'var(--status-cancelled, #EF4444)' },
         { label: 'Bloqueado', color: 'var(--status-blocked, #374151)' }
     ];

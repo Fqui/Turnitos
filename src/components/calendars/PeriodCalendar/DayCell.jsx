@@ -50,15 +50,15 @@ export default function DayCell({
             label: 'Confirmado'
         },
         completed: {
-            bg: 'rgba(16, 185, 129, 0.22)',
-            border: 'var(--status-completed, #10B981)',
-            color: '#065F46',
+            bg: 'rgba(37, 99, 235, 0.22)',
+            border: 'var(--status-completed, #2563EB)',
+            color: '#1D4ED8',
             label: 'Finalizado'
         },
         attended: {
-            bg: 'rgba(5, 150, 105, 0.22)',
-            border: 'var(--status-attended, #059669)',
-            color: '#065F46',
+            bg: 'rgba(37, 99, 235, 0.22)',
+            border: 'var(--status-attended, #2563EB)',
+            color: '#1D4ED8',
             label: 'Asistido'
         },
         cancelled: {

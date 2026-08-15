@@ -780,9 +780,19 @@ export default function BusinessPortal() {
                     return;
                 }
 
-                if (confirm('¿Estás seguro de desbloquear este horario?')) {
-                    await serviceAdapter.deleteBooking(selectedBooking.id);
-                    fetchBookings();
+                if (confirm('¿Estás seguro de desbloquear esta fecha u horario?')) {
+                    if (String(selectedBooking.id).startsWith('blocked-') || selectedBooking.is_blocked) {
+                        const targetDate = selectedBooking.date;
+                        const currentBlocked = (currentBusiness?.blocked_dates || []).filter(b => {
+                            const d = typeof b === 'string' ? b : b.date;
+                            return d !== targetDate;
+                        });
+                        await serviceAdapter.patchBusiness(selectedBusinessId, { blocked_dates: currentBlocked });
+                        setBusinesses(prev => prev.map(b => String(b.id) === String(selectedBusinessId) ? { ...b, blocked_dates: currentBlocked } : b));
+                    } else {
+                        await serviceAdapter.deleteBooking(selectedBooking.id);
+                    }
+                    await fetchBookings();
                     setShowBookingModal(false);
                 }
             }

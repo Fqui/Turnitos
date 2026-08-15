@@ -11,6 +11,10 @@ export default function MonthView({
     isMobile
 }) {
     const displayDays = generateMonthDays(currentDate);
+    const blockedDatesList = [
+        ...(business?.blocked_dates || []),
+        ...(business?.metadata?.blocked_dates || [])
+    ];
 
     return (
         <div style={{
@@ -49,6 +53,32 @@ export default function MonthView({
                     return bDateKey === dateKey && b.status !== 'cancelled';
                 });
 
+                // Verificar si esta fecha está bloqueada en la configuración del negocio
+                const blockedItem = blockedDatesList.find(b => {
+                    const bDateStr = typeof b === 'string' ? b : (b?.date || '');
+                    let normalized = bDateStr;
+                    if (typeof bDateStr === 'string' && bDateStr.includes('/')) {
+                        const [d, m, y] = bDateStr.split('/');
+                        normalized = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    }
+                    return normalized === dateKey;
+                });
+
+                let finalDayBookings = [...dayBookings];
+                if (blockedItem && finalDayBookings.length === 0) {
+                    const reason = typeof blockedItem === 'object' && blockedItem.reason
+                        ? blockedItem.reason
+                        : 'Bloqueado';
+                    finalDayBookings.push({
+                        id: `blocked-${dateKey}`,
+                        date: dateKey,
+                        customer_name: reason,
+                        customerName: reason,
+                        status: 'blocked',
+                        is_blocked: true
+                    });
+                }
+
                 // Verificar si hay reservas que cruzan días (empiezan antes o terminan después)
                 const crossDayBookings = bookings.filter(b => {
                     if (!b.metadata?.crossDay) return false;
@@ -78,7 +108,7 @@ export default function MonthView({
                     <DayCell
                         key={i}
                         day={day}
-                        bookings={dayBookings}
+                        bookings={finalDayBookings}
                         crossDayBookings={crossDayBookings}
                         isCurrentMonth={isCurrentMonth}
                         onCreateBooking={() => onCreateBooking(day)}

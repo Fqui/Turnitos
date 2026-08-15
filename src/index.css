@@ -39,14 +39,14 @@
   --status-confirmed-bg: rgba(62, 207, 142, 0.12);
   --status-deposit: #F59E0B;
   --status-deposit-bg: rgba(245, 158, 11, 0.10);
-  --status-completed: #10B981;
-  --status-completed-bg: rgba(16, 185, 129, 0.10);
+  --status-completed: #2563EB;
+  --status-completed-bg: rgba(37, 99, 235, 0.12);
   --status-cancelled: #EF4444;
   --status-cancelled-bg: rgba(239, 68, 68, 0.10);
   --status-blocked: #374151;
   --status-blocked-bg: rgba(55, 65, 81, 0.10);
-  --status-attended: #059669;
-  --status-attended-bg: rgba(5, 150, 105, 0.10);
+  --status-attended: #2563EB;
+  --status-attended-bg: rgba(37, 99, 235, 0.12);
 
   /* Stat Card Gradients — Supabase Dark Vibrant */
   --stat-1-from: #3ECF8E;
