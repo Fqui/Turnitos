@@ -186,8 +186,10 @@ export default function DayCell({
                                 letterSpacing: '-0.01em',
                                 lineHeight: '1.2',
                                 textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
-                            }} title={booking.customer_name || config.label}>
-                                {formatName(booking.customer_name) || config.label}
+                            }} title={booking.status === 'blocked' || booking.is_blocked ? (booking.customer_name || 'BLOQUEADO') : (booking.customer_name || config.label)}>
+                                {booking.status === 'blocked' || booking.is_blocked
+                                    ? 'BLOQUEADO'
+                                    : (formatName(booking.customer_name) || config.label)}
                             </div>
                         </div>
                     ) : (
