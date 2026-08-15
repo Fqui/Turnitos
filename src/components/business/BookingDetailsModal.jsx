@@ -405,8 +405,8 @@ const BookingDetailsModal = ({
                     {/* Top Grid: Date + Guests + Optional Duration */}
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: hasMultipleDurations ? (isMobile ? '1fr 1fr' : '1fr 1fr 1fr') : '1fr 1fr',
-                        gap: '10px',
+                        gridTemplateColumns: hasMultipleDurations ? 'repeat(3, 1fr)' : '1fr 1fr',
+                        gap: '8px',
                         padding: '10px 14px',
                         background: 'var(--bg-main)',
                         borderRadius: '12px',
@@ -414,12 +414,12 @@ const BookingDetailsModal = ({
                     }}>
                         <div>
                             <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>📅 Fecha</label>
-                            <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '14px' }}>{formatDisplayDate(booking.date)}</div>
+                            <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>{formatDisplayDate(booking.date)}</div>
                         </div>
 
                         <div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>👥 Personas / Invitados</label>
+                                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>👥 {isRental ? 'Invitados' : 'Personas'}</label>
                                 {isEditing && (
                                     <span style={{ fontSize: '10px', color: 'var(--primary-paddle)', fontWeight: '700' }}>
                                         Máx: {maxCapacity}
@@ -454,8 +454,8 @@ const BookingDetailsModal = ({
                                     }}
                                 />
                             ) : (
-                                <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '14px' }}>
-                                    {editableGuests ? `${editableGuests} personas` : 'No especificado'}
+                                <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
+                                    {editableGuests ? `${editableGuests} pers.` : 'No espec.'}
                                 </div>
                             )}
                         </div>
@@ -463,7 +463,7 @@ const BookingDetailsModal = ({
                         {hasMultipleDurations && (
                             <div>
                                 <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>🕒 Duración</label>
-                                <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '14px' }}>
+                                <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
                                     {(!booking.time || booking.time === '00:00' || booking.time === '00:00:00')
                                         ? (booking.metadata?.duration || booking.duration ? `${booking.metadata?.duration || (booking.duration / 60)} hs` : 'Jornada')
                                         : `${booking.time} hs`}
@@ -482,71 +482,82 @@ const BookingDetailsModal = ({
                         flexDirection: 'column',
                         gap: '10px'
                     }}>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: '12px',
-                            flexWrap: isMobile ? 'wrap' : 'nowrap'
-                        }}>
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>👤 Cliente</label>
-                                <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '15px' }}>{booking.customer_name || booking.customerName || '-'}</div>
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '12px', display: 'flex', gap: '10px', marginTop: '2px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                    <span>📱 {phone || '-'}</span>
-                                    {email && <span>📧 {email}</span>}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>👤 Cliente</label>
+                            <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '16px' }}>{booking.customer_name || booking.customerName || '-'}</div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span>📱</span>
+                                    <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{phone || '-'}</span>
                                 </div>
+                                {email && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+                                        <span>📧</span>
+                                        <span>{email}</span>
+                                    </div>
+                                )}
                             </div>
-
-                            {cleanPhone && (
-                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleSendWhatsapp('direct')}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '5px',
-                                            padding: '7px 11px',
-                                            borderRadius: '8px',
-                                            border: '1px solid #25D366',
-                                            background: 'rgba(37, 211, 102, 0.12)',
-                                            color: '#25D366',
-                                            fontSize: '12px',
-                                            fontWeight: '700',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        title="Abrir WhatsApp directo con el cliente (sin texto)"
-                                    >
-                                        <span>📲</span> Abrir WhatsApp
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowWhatsappMenu(!showWhatsappMenu)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '4px',
-                                            padding: '7px 10px',
-                                            borderRadius: '8px',
-                                            border: '1px solid var(--border)',
-                                            background: showWhatsappMenu ? 'var(--primary-paddle)' : 'var(--bg-card)',
-                                            color: showWhatsappMenu ? 'white' : 'var(--text-primary)',
-                                            fontSize: '12px',
-                                            fontWeight: '700',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        title="Ver opciones de mensajes automáticos"
-                                    >
-                                        <span>💬 Mensajes</span>
-                                        <span style={{ fontSize: '10px' }}>{showWhatsappMenu ? '▲' : '▼'}</span>
-                                    </button>
-                                </div>
-                            )}
                         </div>
+
+                        {cleanPhone && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: '8px',
+                                paddingTop: '8px',
+                                borderTop: '1px dashed var(--border)'
+                            }}>
+                                <button
+                                    type="button"
+                                    onClick={() => handleSendWhatsapp('direct')}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px',
+                                        padding: '8px 12px',
+                                        borderRadius: '10px',
+                                        border: '1px solid #25D366',
+                                        background: 'rgba(37, 211, 102, 0.12)',
+                                        color: '#25D366',
+                                        fontSize: '13px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                    title="Abrir WhatsApp directo con el cliente (sin texto)"
+                                >
+                                    <span>📲</span> Abrir WhatsApp
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowWhatsappMenu(!showWhatsappMenu)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px',
+                                        padding: '8px 12px',
+                                        borderRadius: '10px',
+                                        border: '1px solid var(--border)',
+                                        background: showWhatsappMenu ? 'var(--primary-paddle)' : 'var(--bg-card)',
+                                        color: showWhatsappMenu ? 'white' : 'var(--text-primary)',
+                                        fontSize: '13px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                    title="Ver opciones de mensajes automáticos"
+                                >
+                                    <span>💬 Mensajes</span>
+                                    <span style={{ fontSize: '10px' }}>{showWhatsappMenu ? '▲' : '▼'}</span>
+                                </button>
+                            </div>
+                        )}
 
                         {/* WhatsApp Presets Expandable Panel */}
                         {cleanPhone && showWhatsappMenu && (
