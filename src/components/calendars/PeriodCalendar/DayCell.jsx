@@ -32,45 +32,52 @@ export default function DayCell({
 
     const statusStyles = {
         pending: {
-            bg: 'rgba(156, 163, 175, 0.18)',
-            border: 'var(--status-pending, #9CA3AF)',
-            color: 'var(--status-pending, #4B5563)',
+            bg: 'rgba(156, 163, 175, 0.16)',
+            border: 'rgba(156, 163, 175, 0.6)',
+            color: '#E5E7EB',
+            dot: '#9CA3AF',
             label: 'Pendiente'
         },
         deposit_paid: {
-            bg: 'rgba(245, 158, 11, 0.22)',
-            border: 'var(--status-deposit, #F59E0B)',
-            color: '#B45309',
+            bg: 'rgba(245, 158, 11, 0.20)',
+            border: 'rgba(245, 158, 11, 0.7)',
+            color: '#FDE68A',
+            dot: '#F59E0B',
             label: 'Señado'
         },
         confirmed: {
-            bg: 'rgba(62, 207, 142, 0.25)',
-            border: 'var(--status-confirmed, #3ECF8E)',
-            color: '#047857',
+            bg: 'rgba(16, 185, 129, 0.20)',
+            border: 'rgba(16, 185, 129, 0.7)',
+            color: '#A7F3D0',
+            dot: '#10B981',
             label: 'Confirmado'
         },
         completed: {
             bg: 'rgba(37, 99, 235, 0.22)',
-            border: 'var(--status-completed, #2563EB)',
-            color: '#1D4ED8',
+            border: 'rgba(59, 130, 246, 0.7)',
+            color: '#BFDBFE',
+            dot: '#3B82F6',
             label: 'Finalizado'
         },
         attended: {
             bg: 'rgba(37, 99, 235, 0.22)',
-            border: 'var(--status-attended, #2563EB)',
-            color: '#1D4ED8',
+            border: 'rgba(59, 130, 246, 0.7)',
+            color: '#BFDBFE',
+            dot: '#3B82F6',
             label: 'Asistido'
         },
         cancelled: {
             bg: 'rgba(239, 68, 68, 0.18)',
-            border: 'var(--status-cancelled, #EF4444)',
-            color: '#DC2626',
+            border: 'rgba(239, 68, 68, 0.6)',
+            color: '#FECACA',
+            dot: '#EF4444',
             label: 'Cancelado'
         },
         blocked: {
-            bg: 'rgba(55, 65, 81, 0.22)',
-            border: 'var(--status-blocked, #374151)',
-            color: '#1F2937',
+            bg: 'rgba(75, 85, 99, 0.28)',
+            border: 'rgba(107, 114, 128, 0.6)',
+            color: '#E5E7EB',
+            dot: '#9CA3AF',
             label: 'Bloqueado'
         }
     };
@@ -78,6 +85,16 @@ export default function DayCell({
     const booking = bookings[0];
     const status = booking ? booking.status : null;
     const config = status ? (statusStyles[status] || statusStyles.pending) : null;
+
+    // Format customer name nicely to Title Case if all caps or lowercase
+    const formatName = (text) => {
+        if (!text) return '';
+        return text
+            .toLowerCase()
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    };
 
     return (
         <div
@@ -92,27 +109,28 @@ export default function DayCell({
                 backgroundColor: isCurrentMonth
                     ? (isBooked && config ? config.bg : 'var(--bg-card)')
                     : 'rgba(0,0,0,0.02)',
-                padding: '8px 6px',
-                minHeight: isMobile ? '65px' : '72px',
+                padding: '8px 8px',
+                minHeight: isMobile ? '68px' : '78px',
                 cursor: 'pointer',
-                transition: 'all 0.2s',
-                opacity: isCurrentMonth ? 1 : 0.4,
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                opacity: isCurrentMonth ? 1 : 0.35,
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '4px',
-                borderRadius: '10px',
-                border: '2px solid',
+                gap: '6px',
+                borderRadius: '12px',
+                border: '1.5px solid',
                 borderColor: (isCurrentMonth && isBooked && config)
                     ? config.border
                     : (isTodayDay ? 'var(--primary-paddle)' : 'var(--border)'),
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                fontFamily: 'var(--font-sans, "Plus Jakarta Sans", system-ui, sans-serif)'
             }}
             onMouseEnter={(e) => {
                 if (isCurrentMonth) {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.12)';
                 }
             }}
             onMouseLeave={(e) => {
@@ -120,47 +138,59 @@ export default function DayCell({
                 e.currentTarget.style.boxShadow = 'none';
             }}
         >
-            {/* Top row: Date Number */}
+            {/* Top row: Date Number & Status Indicator */}
             <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
             }}>
-                <div style={{
+                <span style={{
                     fontSize: '14px',
                     fontWeight: isTodayDay || isBooked ? '800' : '700',
-                    color: (isBooked && config) ? config.color : (isTodayDay ? 'var(--primary-paddle)' : 'var(--text-primary)'),
-                    width: '26px',
-                    height: '26px',
-                    display: 'flex',
+                    color: isTodayDay ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                    minWidth: '24px',
+                    height: '24px',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '50%',
-                    background: isTodayDay ? 'rgba(0, 230, 118, 0.2)' : 'transparent'
+                    borderRadius: '6px',
+                    background: isTodayDay ? 'rgba(0, 230, 118, 0.18)' : 'transparent',
+                    letterSpacing: '-0.02em'
                 }}>
                     {day.getDate()}
-                </div>
+                </span>
+
+                {isBooked && config && (
+                    <div style={{
+                        width: '7px',
+                        height: '7px',
+                        borderRadius: '50%',
+                        background: config.dot,
+                        boxShadow: `0 0 6px ${config.dot}`
+                    }} />
+                )}
             </div>
 
-            {/* Estado de disponibilidad / Nombre de cliente */}
+            {/* Estado / Nombre de cliente */}
             {isCurrentMonth && (
                 <div style={{ width: '100%' }}>
                     {isBooked && config ? (
                         <div style={{
                             width: '100%',
-                            textAlign: 'center',
+                            textAlign: 'left',
                             padding: '2px 0'
                         }}>
                             <div style={{
-                                fontSize: isMobile ? '10.5px' : '11.5px',
-                                fontWeight: '800',
+                                fontSize: isMobile ? '11px' : '12px',
+                                fontWeight: '700',
                                 color: config.color,
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
-                                letterSpacing: '-0.01em'
-                            }}>
-                                {booking.customer_name || config.label}
+                                letterSpacing: '-0.01em',
+                                lineHeight: '1.2'
+                            }} title={booking.customer_name || config.label}>
+                                {formatName(booking.customer_name) || config.label}
                             </div>
                         </div>
                     ) : (
@@ -172,17 +202,17 @@ export default function DayCell({
                             padding: '2px 0'
                         }}>
                             <div style={{
-                                width: '22px',
-                                height: '22px',
+                                width: '20px',
+                                height: '20px',
                                 borderRadius: '50%',
                                 border: '1.5px dashed var(--border)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '14px',
+                                fontSize: '13px',
                                 fontWeight: '600',
                                 color: 'var(--text-muted)',
-                                opacity: 0.6,
+                                opacity: 0.5,
                                 transition: 'all 0.2s ease'
                             }}>
                                 +
