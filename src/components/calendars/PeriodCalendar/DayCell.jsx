@@ -32,52 +32,52 @@ export default function DayCell({
 
     const statusStyles = {
         pending: {
-            bg: 'rgba(156, 163, 175, 0.16)',
-            border: 'rgba(156, 163, 175, 0.6)',
-            color: '#E5E7EB',
-            dot: '#9CA3AF',
+            bg: '#6B7280',
+            border: '#4B5563',
+            color: '#FFFFFF',
+            subColor: 'rgba(255, 255, 255, 0.92)',
             label: 'Pendiente'
         },
         deposit_paid: {
-            bg: 'rgba(245, 158, 11, 0.20)',
-            border: 'rgba(245, 158, 11, 0.7)',
-            color: '#FDE68A',
-            dot: '#F59E0B',
+            bg: '#D97706',
+            border: '#B45309',
+            color: '#FFFFFF',
+            subColor: 'rgba(255, 255, 255, 0.95)',
             label: 'Señado'
         },
         confirmed: {
-            bg: 'rgba(16, 185, 129, 0.20)',
-            border: 'rgba(16, 185, 129, 0.7)',
-            color: '#A7F3D0',
-            dot: '#10B981',
+            bg: '#059669',
+            border: '#047857',
+            color: '#FFFFFF',
+            subColor: 'rgba(255, 255, 255, 0.95)',
             label: 'Confirmado'
         },
         completed: {
-            bg: 'rgba(37, 99, 235, 0.22)',
-            border: 'rgba(59, 130, 246, 0.7)',
-            color: '#BFDBFE',
-            dot: '#3B82F6',
+            bg: '#2563EB',
+            border: '#1D4ED8',
+            color: '#FFFFFF',
+            subColor: 'rgba(255, 255, 255, 0.95)',
             label: 'Finalizado'
         },
         attended: {
-            bg: 'rgba(37, 99, 235, 0.22)',
-            border: 'rgba(59, 130, 246, 0.7)',
-            color: '#BFDBFE',
-            dot: '#3B82F6',
+            bg: '#2563EB',
+            border: '#1D4ED8',
+            color: '#FFFFFF',
+            subColor: 'rgba(255, 255, 255, 0.95)',
             label: 'Asistido'
         },
         cancelled: {
-            bg: 'rgba(239, 68, 68, 0.18)',
-            border: 'rgba(239, 68, 68, 0.6)',
-            color: '#FECACA',
-            dot: '#EF4444',
+            bg: '#DC2626',
+            border: '#B91C1C',
+            color: '#FFFFFF',
+            subColor: 'rgba(255, 255, 255, 0.92)',
             label: 'Cancelado'
         },
         blocked: {
-            bg: 'rgba(75, 85, 99, 0.28)',
-            border: 'rgba(107, 114, 128, 0.6)',
-            color: '#E5E7EB',
-            dot: '#9CA3AF',
+            bg: '#374151',
+            border: '#1F2937',
+            color: '#FFFFFF',
+            subColor: 'rgba(255, 255, 255, 0.88)',
             label: 'Bloqueado'
         }
     };
@@ -119,10 +119,12 @@ export default function DayCell({
                 justifyContent: 'space-between',
                 gap: '6px',
                 borderRadius: '12px',
-                border: '1.5px solid',
-                borderColor: (isCurrentMonth && isBooked && config)
-                    ? config.border
-                    : (isTodayDay ? 'var(--primary-paddle)' : 'var(--border)'),
+                border: (isCurrentMonth && isBooked && config)
+                    ? `1px solid ${config.border}`
+                    : (isTodayDay ? '2px solid var(--primary-paddle)' : '1px solid var(--border)'),
+                boxShadow: (isCurrentMonth && isBooked && config)
+                    ? '0 2px 8px rgba(0, 0, 0, 0.15)'
+                    : 'none',
                 position: 'relative',
                 overflow: 'hidden',
                 fontFamily: 'var(--font-sans, "Plus Jakarta Sans", system-ui, sans-serif)'
@@ -130,15 +132,17 @@ export default function DayCell({
             onMouseEnter={(e) => {
                 if (isCurrentMonth) {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.12)';
+                    e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.2)';
                 }
             }}
             onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.boxShadow = (isCurrentMonth && isBooked && config)
+                    ? '0 2px 8px rgba(0, 0, 0, 0.15)'
+                    : 'none';
             }}
         >
-            {/* Top row: Date Number & Status Indicator */}
+            {/* Top row: Date Number */}
             <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -147,28 +151,20 @@ export default function DayCell({
                 <span style={{
                     fontSize: '14px',
                     fontWeight: isTodayDay || isBooked ? '800' : '700',
-                    color: isTodayDay ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                    color: isBooked ? '#FFFFFF' : (isTodayDay ? 'var(--primary-paddle)' : 'var(--text-primary)'),
                     minWidth: '24px',
                     height: '24px',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '6px',
-                    background: isTodayDay ? 'rgba(0, 230, 118, 0.18)' : 'transparent',
+                    background: isTodayDay
+                        ? (isBooked ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 230, 118, 0.18)')
+                        : 'transparent',
                     letterSpacing: '-0.02em'
                 }}>
                     {day.getDate()}
                 </span>
-
-                {isBooked && config && (
-                    <div style={{
-                        width: '7px',
-                        height: '7px',
-                        borderRadius: '50%',
-                        background: config.dot,
-                        boxShadow: `0 0 6px ${config.dot}`
-                    }} />
-                )}
             </div>
 
             {/* Estado / Nombre de cliente */}
@@ -183,12 +179,13 @@ export default function DayCell({
                             <div style={{
                                 fontSize: isMobile ? '11px' : '12px',
                                 fontWeight: '700',
-                                color: config.color,
+                                color: config.subColor || '#FFFFFF',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 letterSpacing: '-0.01em',
-                                lineHeight: '1.2'
+                                lineHeight: '1.2',
+                                textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
                             }} title={booking.customer_name || config.label}>
                                 {formatName(booking.customer_name) || config.label}
                             </div>
