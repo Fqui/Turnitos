@@ -41,10 +41,12 @@ export default function PeriodCalendar({
         setCurrentDate(d);
     };
 
-    // Texto del rango de fechas
+    // Texto del rango de fechas (ej: Agosto 2026)
     const getDateRangeText = () => {
         if (viewMode === 'month') {
-            return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            const monthName = currentDate.toLocaleDateString('es-ES', { month: 'long' });
+            const year = currentDate.getFullYear();
+            return `${monthName} ${year}`;
         } else {
             return currentDate.getFullYear().toString();
         }

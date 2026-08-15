@@ -30,6 +30,55 @@ export default function DayCell({
         return b.metadata?.endDate === dayKey;
     });
 
+    const statusStyles = {
+        pending: {
+            bg: 'rgba(156, 163, 175, 0.18)',
+            border: 'var(--status-pending, #9CA3AF)',
+            color: 'var(--status-pending, #4B5563)',
+            label: 'Pendiente'
+        },
+        deposit_paid: {
+            bg: 'rgba(245, 158, 11, 0.22)',
+            border: 'var(--status-deposit, #F59E0B)',
+            color: '#B45309',
+            label: 'Señado'
+        },
+        confirmed: {
+            bg: 'rgba(62, 207, 142, 0.25)',
+            border: 'var(--status-confirmed, #3ECF8E)',
+            color: '#047857',
+            label: 'Confirmado'
+        },
+        completed: {
+            bg: 'rgba(16, 185, 129, 0.22)',
+            border: 'var(--status-completed, #10B981)',
+            color: '#065F46',
+            label: 'Finalizado'
+        },
+        attended: {
+            bg: 'rgba(5, 150, 105, 0.22)',
+            border: 'var(--status-attended, #059669)',
+            color: '#065F46',
+            label: 'Asistido'
+        },
+        cancelled: {
+            bg: 'rgba(239, 68, 68, 0.18)',
+            border: 'var(--status-cancelled, #EF4444)',
+            color: '#DC2626',
+            label: 'Cancelado'
+        },
+        blocked: {
+            bg: 'rgba(55, 65, 81, 0.22)',
+            border: 'var(--status-blocked, #374151)',
+            color: '#1F2937',
+            label: 'Bloqueado'
+        }
+    };
+
+    const booking = bookings[0];
+    const status = booking ? booking.status : null;
+    const config = status ? (statusStyles[status] || statusStyles.pending) : null;
+
     return (
         <div
             onClick={() => {
@@ -40,8 +89,10 @@ export default function DayCell({
                 }
             }}
             style={{
-                backgroundColor: isCurrentMonth ? 'var(--bg-card)' : 'rgba(0,0,0,0.02)',
-                padding: '8px 10px',
+                backgroundColor: isCurrentMonth
+                    ? (isBooked && config ? config.bg : 'var(--bg-card)')
+                    : 'rgba(0,0,0,0.02)',
+                padding: '8px 6px',
                 minHeight: isMobile ? '65px' : '72px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -52,7 +103,9 @@ export default function DayCell({
                 gap: '4px',
                 borderRadius: '10px',
                 border: '2px solid',
-                borderColor: isTodayDay ? 'var(--primary-paddle)' : 'var(--border)',
+                borderColor: (isCurrentMonth && isBooked && config)
+                    ? config.border
+                    : (isTodayDay ? 'var(--primary-paddle)' : 'var(--border)'),
                 position: 'relative',
                 overflow: 'hidden'
             }}
@@ -75,100 +128,41 @@ export default function DayCell({
             }}>
                 <div style={{
                     fontSize: '14px',
-                    fontWeight: isTodayDay ? '800' : '700',
-                    color: isTodayDay ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                    fontWeight: isTodayDay || isBooked ? '800' : '700',
+                    color: (isBooked && config) ? config.color : (isTodayDay ? 'var(--primary-paddle)' : 'var(--text-primary)'),
                     width: '26px',
                     height: '26px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: '50%',
-                    background: isTodayDay ? 'rgba(0, 230, 118, 0.15)' : 'transparent'
+                    background: isTodayDay ? 'rgba(0, 230, 118, 0.2)' : 'transparent'
                 }}>
                     {day.getDate()}
                 </div>
             </div>
 
-            {/* Estado de disponibilidad */}
+            {/* Estado de disponibilidad / Nombre de cliente */}
             {isCurrentMonth && (
                 <div style={{ width: '100%' }}>
-                    {isBooked ? (
-                        (() => {
-                            const booking = bookings[0];
-                            const status = booking.status;
-
-                            const statusConfig = {
-                                pending: {
-                                    bg: 'var(--status-pending-bg, rgba(156, 163, 175, 0.12))',
-                                    color: 'var(--status-pending, #6B7280)',
-                                    label: 'Pendiente'
-                                },
-                                confirmed: {
-                                    bg: 'var(--status-confirmed-bg, rgba(62, 207, 142, 0.15))',
-                                    color: 'var(--status-confirmed, #3ECF8E)',
-                                    label: 'Confirmado'
-                                },
-                                deposit_paid: {
-                                    bg: 'var(--status-deposit-bg, rgba(245, 158, 11, 0.12))',
-                                    color: 'var(--status-deposit, #F59E0B)',
-                                    label: 'Señado'
-                                },
-                                cancelled: {
-                                    bg: 'var(--status-cancelled-bg, rgba(239, 68, 68, 0.12))',
-                                    color: 'var(--status-cancelled, #EF4444)',
-                                    label: 'Cancelado'
-                                },
-                                completed: {
-                                    bg: 'var(--status-completed-bg, rgba(16, 185, 129, 0.12))',
-                                    color: 'var(--status-completed, #10B981)',
-                                    label: 'Finalizado'
-                                },
-                                attended: {
-                                    bg: 'var(--status-attended-bg, rgba(5, 150, 105, 0.12))',
-                                    color: 'var(--status-attended, #059669)',
-                                    label: 'Asistido'
-                                },
-                                blocked: {
-                                    bg: 'var(--status-blocked-bg, rgba(55, 65, 81, 0.15))',
-                                    color: 'var(--status-blocked, #374151)',
-                                    label: 'Bloqueado'
-                                }
-                            };
-
-                            const config = statusConfig[status] || statusConfig.pending;
-
-                            return (
-                                <div style={{
-                                    width: '100%',
-                                    background: config.bg,
-                                    border: `1px solid ${config.color}`,
-                                    borderRadius: '6px',
-                                    padding: isMobile ? '3px 4px' : '4px 6px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '5px'
-                                }}>
-                                    <div style={{
-                                        width: '6px',
-                                        height: '6px',
-                                        borderRadius: '50%',
-                                        background: config.color,
-                                        flexShrink: 0
-                                    }} />
-                                    <span style={{
-                                        fontSize: isMobile ? '10px' : '11px',
-                                        fontWeight: '700',
-                                        color: config.color,
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis'
-                                    }}>
-                                        {booking.customer_name || config.label}
-                                    </span>
-                                </div>
-                            );
-                        })()
+                    {isBooked && config ? (
+                        <div style={{
+                            width: '100%',
+                            textAlign: 'center',
+                            padding: '2px 0'
+                        }}>
+                            <div style={{
+                                fontSize: isMobile ? '10.5px' : '11.5px',
+                                fontWeight: '800',
+                                color: config.color,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                letterSpacing: '-0.01em'
+                            }}>
+                                {booking.customer_name || config.label}
+                            </div>
+                        </div>
                     ) : (
                         <div style={{
                             width: '100%',
