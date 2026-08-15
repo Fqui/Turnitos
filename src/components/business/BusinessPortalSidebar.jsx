@@ -68,18 +68,31 @@ const BusinessPortalSidebar = ({
 
     const handleToggleNotifications = async () => {
         try {
-            if (!('Notification' in window)) {
+            if (typeof window === 'undefined' || !('Notification' in window)) {
                 showToast('Tu navegador no soporta notificaciones push', 'warning');
                 return;
             }
+
             if (Notification.permission === 'denied') {
-                showAlert('Permisos Bloqueados', 'Los permisos de notificación fueron bloqueados previamente en tu navegador.\n\nPara activarlos:\n1. Tocá el ícono del Candado 🔒 al lado de la dirección de la web arriba (turnitoslr.com).\n2. En "Notificaciones", seleccioná "Permitir".\n3. Recargá la página e intentá de nuevo.', 'warning', 'Entendido');
+                showAlert('Permisos Bloqueados', 'Los permisos de notificación están bloqueados en tu navegador.\n\nPara desbloquearlos:\n1. Tocá el ícono del Candado 🔒 o Escudo 🛡️ al lado de la barra de dirección arriba.\n2. En "Notificaciones", seleccioná "Permitir".\n3. Recargá la página.', 'warning', 'Entendido');
+                setNotifGranted(false);
                 return;
             }
+
+            if (notifGranted && Notification.permission === 'granted') {
+                showToast('🔔 Las alertas ya están activas en este dispositivo', 'info');
+                pushService.requestPermissionAndGetTokenDetailed(currentBusiness?.id).catch(() => {});
+                return;
+            }
+
             const result = await pushService.requestPermissionAndGetTokenDetailed(currentBusiness?.id);
-            if (result.success && result.token) {
+            if (result.success) {
                 setNotifGranted(true);
-                showToast('🔔 ¡Notificaciones Push activadas y vinculadas!', 'success');
+                if (result.warning) {
+                    showAlert('Alertas Activas', result.warning, 'info', 'Entendido');
+                } else {
+                    showToast('🔔 ¡Notificaciones Push activadas con éxito!', 'success');
+                }
             } else {
                 showToast(`⚠️ No se pudo activar: ${result.error || 'Permiso denegado'}`, 'error');
             }
