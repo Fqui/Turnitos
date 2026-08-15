@@ -244,17 +244,15 @@ const BusinessPortalSidebar = ({
                                 </span>
                             )}
                             {/* Badge */}
-                            {item.badge && isVisible && (
+                            {item.badge && (
                                 <span style={{
-                                    marginLeft: 'auto',
-                                    background: 'var(--status-pending)',
-                                    color: '#fff',
-                                    fontSize: '10px',
-                                    fontWeight: '800',
+                                    background: 'var(--status-pending-bg, #FEF3C7)',
+                                    color: 'var(--status-pending, #D97706)',
                                     padding: '2px 7px',
-                                    borderRadius: 'var(--radius-full)',
-                                    minWidth: '20px',
-                                    textAlign: 'center'
+                                    borderRadius: '10px',
+                                    fontSize: '11px',
+                                    fontWeight: '800',
+                                    marginLeft: 'auto'
                                 }}>
                                     {item.badge}
                                 </span>
@@ -274,94 +272,108 @@ const BusinessPortalSidebar = ({
                 gap: '8px',
                 paddingBottom: isMobile ? '20px' : 0
             }}>
-                <button
-                    onClick={toggleTheme}
-                    title={!isVisible ? (theme === 'dark' ? 'Modo Oscuro' : 'Modo Claro') : ''}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: isVisible ? 'flex-start' : 'center',
-                        gap: '10px',
-                        padding: isVisible ? '10px 14px' : '10px',
-                        borderRadius: 'var(--radius-md)',
-                        border: '1px solid var(--border)',
-                        background: 'var(--bg-main)',
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        width: '100%',
-                        transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--primary-border)';
-                        e.currentTarget.style.background = 'var(--primary-bg)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--border)';
-                        e.currentTarget.style.background = 'var(--bg-main)';
-                    }}
-                >
-                    <span style={{ fontSize: '16px' }}>{theme === 'dark' ? '🌙' : '☀️'}</span>
-                    {isVisible && <span>{theme === 'dark' ? 'Modo Oscuro' : 'Modo Claro'}</span>}
-                </button>
+                {/* Row: Theme Toggle + Subtle Notification Button */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <button
+                        onClick={toggleTheme}
+                        title={theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
+                        style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: isVisible ? 'flex-start' : 'center',
+                            gap: '8px',
+                            padding: isVisible ? '9px 12px' : '9px',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-main)',
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = 'var(--primary-border)';
+                            e.currentTarget.style.background = 'var(--primary-bg)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = 'var(--border)';
+                            e.currentTarget.style.background = 'var(--bg-main)';
+                        }}
+                    >
+                        <span style={{ fontSize: '15px' }}>{theme === 'dark' ? '🌙' : '☀️'}</span>
+                        {isVisible && <span>{theme === 'dark' ? 'Oscuro' : 'Claro'}</span>}
+                    </button>
 
-                <button
-                    onClick={async () => {
-                        try {
-                            if (!('Notification' in window)) {
-                                alert('Tu navegador no soporta notificaciones push');
-                                return;
-                            }
-                            if (Notification.permission === 'denied') {
-                                alert('⚠️ Los permisos de notificación fueron Bloqueados previamente en tu navegador.\n\nPara activarlos:\n1. Tocá el ícono del Candado 🔒 al lado de la dirección de la web arriba (turnitoslr.com).\n2. En "Notificaciones", seleccioná "Permitir".\n3. Recargá la página e intentá de nuevo.');
-                                return;
-                            }
-                            const result = await pushService.requestPermissionAndGetTokenDetailed(currentBusiness?.id);
-                            if (result.success && result.token) {
-                                alert('🔔 ¡Notificaciones Push activadas y vinculadas correctamente! Recibirás alertas flotantes de turnos nuevos.');
-                            } else {
-                                alert(`⚠️ No se pudo activar la notificación:\n${result.error || 'Permiso denegado por el usuario'}`);
-                            }
-                        } catch (e) {
-                            console.error(e);
-                        }
-                    }}
-                    title={!isVisible ? 'Activar Notificaciones' : ''}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: isVisible ? 'flex-start' : 'center',
-                        gap: '10px',
-                        padding: isVisible ? '10px 14px' : '10px',
-                        borderRadius: 'var(--radius-md)',
-                        border: '1px solid var(--border)',
-                        background: 'var(--bg-main)',
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        width: '100%',
-                        transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--primary-border)';
-                        e.currentTarget.style.background = 'var(--primary-bg)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--border)';
-                        e.currentTarget.style.background = 'var(--bg-main)';
-                    }}
-                >
-                    <span style={{ fontSize: '16px' }}>🔔</span>
-                    {isVisible && <span>Notificaciones PWA</span>}
-                </button>
+                    <button
+                        onClick={handleToggleNotifications}
+                        title={notifGranted ? 'Notificaciones Push Activas' : 'Activar Notificaciones Push'}
+                        style={{
+                            flex: isVisible ? '0 0 auto' : '1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            padding: '9px 12px',
+                            borderRadius: 'var(--radius-md)',
+                            border: notifGranted ? '1px solid rgba(0, 230, 118, 0.35)' : '1px solid var(--border)',
+                            background: notifGranted ? 'rgba(0, 230, 118, 0.1)' : 'var(--bg-main)',
+                            color: notifGranted ? 'var(--primary-paddle)' : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = 'var(--primary-border)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = notifGranted ? 'rgba(0, 230, 118, 0.35)' : 'var(--border)';
+                        }}
+                    >
+                        <span style={{ fontSize: '15px' }}>{notifGranted ? '🔔' : '🔕'}</span>
+                        {isVisible && <span>{notifGranted ? 'Alertas On' : 'Alertas'}</span>}
+                    </button>
+                </div>
+
+                {!isPwaInstalled && (
+                    <button
+                        onClick={handleInstallPwa}
+                        title="Instalar aplicación en este dispositivo"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: isVisible ? 'flex-start' : 'center',
+                            gap: '8px',
+                            padding: isVisible ? '9px 12px' : '9px',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid rgba(0, 230, 118, 0.3)',
+                            background: 'rgba(0, 230, 118, 0.08)',
+                            color: 'var(--primary-paddle)',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            width: '100%',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 230, 118, 0.16)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 230, 118, 0.08)';
+                        }}
+                    >
+                        <span style={{ fontSize: '15px' }}>📲</span>
+                        {isVisible && <span>Instalar App</span>}
+                    </button>
+                )}
 
                 <button
                     onClick={onLogout}
                     title={!isVisible ? 'Cerrar Sesión' : ''}
                     style={{
-                        padding: isVisible ? '10px 14px' : '10px',
+                        padding: isVisible ? '9px 12px' : '9px',
                         borderRadius: 'var(--radius-md)',
                         border: '1px solid rgba(239, 68, 68, 0.15)',
                         background: 'rgba(239, 68, 68, 0.04)',
@@ -370,8 +382,8 @@ const BusinessPortalSidebar = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: isVisible ? 'flex-start' : 'center',
-                        gap: '10px',
-                        fontSize: '13px',
+                        gap: '8px',
+                        fontSize: '12px',
                         fontWeight: '600',
                         width: '100%',
                         transition: 'all 0.2s'
@@ -385,7 +397,7 @@ const BusinessPortalSidebar = ({
                         e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.15)';
                     }}
                 >
-                    <span style={{ fontSize: '16px' }}>🚪</span>
+                    <span style={{ fontSize: '15px' }}>🚪</span>
                     {isVisible && <span>Cerrar Sesión</span>}
                 </button>
             </div>

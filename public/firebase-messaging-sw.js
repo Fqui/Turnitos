@@ -14,11 +14,34 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    const notificationTitle = payload.notification.title;
+    const notificationTitle = payload.notification?.title || payload.data?.title || '🔔 ¡Nueva Reserva Recibida!';
     const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/logo.png'
+        body: payload.notification?.body || payload.data?.body || 'Has recibido una nueva solicitud de reserva web.',
+        icon: '/logo-turnitos.png',
+        badge: '/logo-turnitos.png',
+        vibrate: [200, 100, 200],
+        tag: 'turnitos-booking-' + Date.now(),
+        data: payload.data || { url: '/business/portal' }
     };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    return self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const targetUrl = event.notification.data?.url || '/business/portal';
+    
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (const client of clientList) {
+                if (client.url.includes('/business') && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
+});
+

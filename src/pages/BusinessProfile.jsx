@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
+import { pushService } from '../services/pushService';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import ServiceSelector from '../components/ServiceSelector';
 import Calendar from '../components/Calendar';
@@ -466,6 +467,14 @@ export default function BusinessProfile({ business: initialBusiness }) {
             };
 
             await serviceAdapter.createBooking(bookingData);
+
+            // Notify business owner devices
+            pushService.notifyBusinessNewBooking(business.id, {
+                customerName: customerName,
+                date: formatDisplayDate(selectedDate),
+                time: selectedTime,
+                businessName: business.name
+            });
 
             // Close booking modal and show success modal
             setShowModal(false);

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
+import { pushService } from '../services/pushService';
 import { useNotification } from '../contexts/NotificationContext';
 import 'leaflet/dist/leaflet.css';
 
@@ -312,6 +313,14 @@ export default function VenueProfile({ business: initialBusiness }) {
             };
 
             await serviceAdapter.createBooking(bookingData);
+
+            // Notify business owner devices
+            pushService.notifyBusinessNewBooking(business.id, {
+                customerName: bookingDetails.customerName,
+                date: bookingDetails.date,
+                businessName: business.name
+            });
+
             setShowBookingModal(false);
             await showAlert('¡Reserva Confirmada!', 'Tu reserva ha sido creada exitosamente. Te contactaremos pronto para confirmar los detalles.', 'success', 'Perfecto');
             navigate('/');

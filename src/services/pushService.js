@@ -126,6 +126,51 @@ export const pushService = {
         onMessage(messaging, (payload) => {
             alert(`¡Nueva Notificación!\n${payload.notification.title}: ${payload.notification.body}`);
         });
+    },
+
+    async notifyBusinessNewBooking(businessId, bookingInfo = {}) {
+        if (!businessId) return;
+        try {
+            const { data: subs, error } = await supabase
+                .from('push_subscriptions')
+                .select('token')
+                .eq('business_id', businessId);
+
+            if (error || !subs || subs.length === 0) {
+                console.log('[pushService] Sin suscripciones push activas para el negocio:', businessId);
+                return;
+            }
+
+            const title = '🔔 ¡Nueva Reserva Web Recibida!';
+            const body = `${bookingInfo.customerName ? bookingInfo.customerName : 'Un cliente'} solicitó una reserva para el ${bookingInfo.date || 'día indicado'} en ${bookingInfo.businessName || 'tu negocio'}.`;
+
+            // Broadcast via Supabase Realtime for open portal instances
+            try {
+                const channel = supabase.channel(`business-notif-${businessId}`);
+                channel.send({
+                    type: 'broadcast',
+                    event: 'new_booking',
+                    payload: { title, body, bookingInfo }
+                });
+            } catch (e) {
+                console.warn('[pushService] Realtime broadcast error:', e);
+            }
+
+            // Trigger local browser notification if allowed on the active device
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                try {
+                    new Notification(title, {
+                        body: body,
+                        icon: '/logo-turnitos.png',
+                        badge: '/logo-turnitos.png'
+                    });
+                } catch (e) { }
+            }
+        } catch (err) {
+            console.error('[pushService] Error notifying business of new booking:', err);
+        }
     }
 };
+
+export default pushService;
 
