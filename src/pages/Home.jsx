@@ -968,19 +968,6 @@ export default function Home() {
                                     </span>
                                 </div>
                             )}
-
-                            {/* All Loaded Footer */}
-                            {visibleCount >= filteredBusinesses.length && filteredBusinesses.length > 0 && (
-                                <div style={{
-                                    textAlign: 'center',
-                                    padding: '36px 0 20px 0',
-                                    color: 'var(--text-muted)',
-                                    fontSize: '13px',
-                                    fontWeight: '500'
-                                }}>
-                                    ✨ Mostrando todos los negocios ({filteredBusinesses.length})
-                                </div>
-                            )}
                         </>
                     )}
                 </section>
