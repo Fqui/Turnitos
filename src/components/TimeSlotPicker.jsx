@@ -75,7 +75,7 @@ const TimeSlotPicker = ({
         if (slotDateStr !== currentDate) return false;
 
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        return slotMinutes < currentMinutes;
+        return slotMinutes <= currentMinutes;
     };
 
     // Helper: Check if a court is booked at a specific time

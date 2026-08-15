@@ -26,6 +26,24 @@ const PadelMobileATC = ({
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     };
 
+    // 🆕 Helper: Check if a time slot is in the past (only for today)
+    const isPastTime = (slotMinutes) => {
+        if (!selectedDate) return false;
+
+        const now = new Date();
+        const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+        const slotDateStr = selectedDate instanceof Date
+            ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+            : (typeof selectedDate === 'string' ? selectedDate.split('T')[0] : '');
+
+        // Only filter if selected date is today
+        if (slotDateStr !== currentDate) return false;
+
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        return slotMinutes <= currentMinutes;
+    };
+
     // 🆕 Helper: Check if a time slot falls within operating hours (respects split shifts)
     const isWithinOperatingHours = (slotMinutes) => {
         if (!timeRanges || timeRanges.length === 0) {
@@ -96,7 +114,7 @@ const PadelMobileATC = ({
 
     // --- Data Prep ---
 
-    // 1. Generate all possible time slots - 🆕 Now filters by timeRanges
+    // 1. Generate all possible time slots - 🆕 Now filters by timeRanges and past times for today
     const allTimeSlots = useMemo(() => {
         const slots = [];
         const startMinutes = timeToMinutes(openingTime);
@@ -111,10 +129,15 @@ const PadelMobileATC = ({
                 continue;
             }
 
+            // 🆕 Skip if time has already passed today
+            if (isPastTime(normalizedMinutes)) {
+                continue;
+            }
+
             slots.push(minutesToTime(normalizedMinutes));
         }
         return slots;
-    }, [openingTime, closingTime, timeRanges]);
+    }, [openingTime, closingTime, timeRanges, selectedDate]);
 
     // 2. Filter slots that have at least one court available
     const availableTimeSlots = useMemo(() => {

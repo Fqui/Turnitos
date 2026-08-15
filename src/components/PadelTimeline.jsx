@@ -94,8 +94,31 @@ const PadelTimeline = ({
         });
     };
 
+    // 🆕 Helper: Check if a time slot is in the past (only for today)
+    const isPastTime = (slotTimeStr) => {
+        if (!selectedDate) return false;
+
+        const now = new Date();
+        const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+        const slotDateStr = selectedDate instanceof Date
+            ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+            : (typeof selectedDate === 'string' ? selectedDate.split('T')[0] : '');
+
+        // Only filter if selected date is today
+        if (slotDateStr !== currentDate) return false;
+
+        const slotMinutes = timeToMinutes(slotTimeStr);
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        return slotMinutes <= currentMinutes;
+    };
+
     // Helper: Get available durations for a slot
     const getAvailableDurations = (courtId, startTime) => {
+        if (isPastTime(startTime)) {
+            return []; // Past slots are not available for booking today
+        }
+
         const durations = [60, 90, 120];
         const availableDurations = [];
 
