@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
+import SEOHead from '../components/SEOHead';
 import { findBusinessBySlug } from '../utils/utils';
 
 // Fix for default marker icon
@@ -185,6 +186,13 @@ export default function LinkBio({ overrideSlug }) {
             paddingBottom: isDesktop ? '0' : '40px',
             overflowX: 'hidden'
         }}>
+            <SEOHead
+                title={business ? `${business.name} | Enlaces y Turnos` : 'TurnitosLR'}
+                description={business?.description || `Accedé a los enlaces oficiales, redes sociales, turnos y tienda de ${business?.name || 'este negocio'}.`}
+                keywords={`${business?.name}, link in bio, turnos ${business?.name}, turnitos`}
+                image={bannerUrl || logoUrl || 'https://www.turnitoslr.com/logo-turnitos.png'}
+                url={window.location.href}
+            />
             {/* Banner Section */}
             <div className="linkbio-banner" style={{
                 height: isDesktop ? '110px' : '180px',
