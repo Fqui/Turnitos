@@ -294,6 +294,128 @@ const BookingDetailsModal = ({
         setShowAddExtraForm(false);
     };
 
+    if (booking.status === 'blocked' || booking.is_blocked) {
+        return (
+            <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.6)',
+                display: 'flex',
+                alignItems: isMobile ? 'flex-end' : 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                backdropFilter: 'blur(6px)',
+                padding: isMobile ? '0' : '16px'
+            }} onClick={onClose}>
+                <div style={{
+                    background: 'var(--bg-card)',
+                    padding: isMobile ? '24px 20px 32px' : '28px 32px',
+                    borderRadius: isMobile ? '24px 24px 0 0' : '20px',
+                    width: '100%',
+                    maxWidth: isMobile ? '100%' : '420px',
+                    boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+                    border: '1px solid var(--border)',
+                    textAlign: 'center',
+                    fontFamily: 'var(--font-sans, "Plus Jakarta Sans", system-ui, sans-serif)'
+                }} onClick={e => e.stopPropagation()}>
+                    <div style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '16px',
+                        background: 'rgba(75, 85, 99, 0.25)',
+                        border: '1px solid rgba(107, 114, 128, 0.4)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '28px',
+                        margin: '0 auto 16px'
+                    }}>
+                        🔒
+                    </div>
+
+                    <h3 style={{
+                        margin: '0 0 6px 0',
+                        fontSize: '19px',
+                        fontWeight: '800',
+                        color: 'var(--text-primary)'
+                    }}>
+                        Fecha Bloqueada
+                    </h3>
+
+                    <div style={{
+                        fontSize: '14px',
+                        color: 'var(--text-secondary)',
+                        margin: '0 0 16px 0',
+                        lineHeight: '1.4'
+                    }}>
+                        <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                            📅 {formatDisplayDate(booking.date)}
+                        </div>
+                        {booking.customer_name && booking.customer_name !== 'BLOQUEADO' && (
+                            <div style={{ fontSize: '13px', marginTop: '4px', opacity: 0.85 }}>
+                                Motivo: {booking.customer_name}
+                            </div>
+                        )}
+                    </div>
+
+                    <p style={{
+                        fontSize: '13px',
+                        color: 'var(--text-muted, #9CA3AF)',
+                        margin: '0 0 24px 0'
+                    }}>
+                        ¿Deseas desbloquear esta fecha para que vuelva a estar disponible para reservas?
+                    </p>
+
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '10px'
+                    }}>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            style={{
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '14px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Cancelar
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => onAction('unblock')}
+                            style={{
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                border: 'none',
+                                background: '#059669',
+                                color: 'white',
+                                fontSize: '14px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                            }}
+                        >
+                            🔓 Desbloquear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={{
             position: 'fixed',
