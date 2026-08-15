@@ -40,33 +40,38 @@ const PadelMobileATC = ({
         // Only filter if selected date is today
         if (slotDateStr !== currentDate) return false;
 
+        // If slot is after midnight of the current shift (>= 1440), it is later tonight in the future
+        if (slotMinutes >= 1440) return false;
+
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
         return slotMinutes <= currentMinutes;
     };
 
-    // 🆕 Helper: Check if a time slot falls within operating hours (respects split shifts)
+    // 🆕 Helper: Check if a time slot falls within operating hours (respects split shifts & midnight crossing)
     const isWithinOperatingHours = (slotMinutes) => {
+        const checkRange = (sMin, openStr, closeStr) => {
+            const rangeStart = timeToMinutes(openStr);
+            let rangeClose = timeToMinutes(closeStr);
+            const rangeEnd = rangeClose <= rangeStart ? rangeClose + 1440 : rangeClose;
+
+            let normalizedSlot = sMin;
+            if (normalizedSlot < rangeStart && rangeEnd > 1440) {
+                normalizedSlot += 1440;
+            }
+            return normalizedSlot >= rangeStart && normalizedSlot < rangeEnd;
+        };
+
         if (!timeRanges || timeRanges.length === 0) {
-            // Simple continuous hours
-            const start = timeToMinutes(openingTime);
-            const close = timeToMinutes(closingTime);
-            const end = close < start ? close + 1440 : close;
-            return slotMinutes >= start && slotMinutes < end;
+            return checkRange(slotMinutes, openingTime, closingTime);
         }
 
-        // Check if slot falls within any of the time ranges (for split shifts)
-        return timeRanges.some(range => {
-            const rangeStart = timeToMinutes(range.open);
-            const rangeClose = timeToMinutes(range.close);
-            const rangeEnd = rangeClose < rangeStart ? rangeClose + 1440 : rangeClose;
-            return slotMinutes >= rangeStart && slotMinutes < rangeEnd;
-        });
+        return timeRanges.some(range => checkRange(slotMinutes, range.open, range.close));
     };
 
     const calculateEndTime = (startTime, durationMinutes) => {
         const startMinutes = timeToMinutes(startTime);
         const endMinutes = startMinutes + durationMinutes;
-        return minutesToTime(endMinutes);
+        return minutesToTime(endMinutes % 1440);
     };
 
     // --- Availability Logic ---
@@ -75,10 +80,14 @@ const PadelMobileATC = ({
 
         const slotDate = selectedDate instanceof Date
             ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
-            : selectedDate;
+            : (typeof selectedDate === 'string' ? selectedDate.split('T')[0] : '');
 
-        const startMinutes = timeToMinutes(startTime);
-        const endMinutes = timeToMinutes(endTime);
+        const openMinutes = timeToMinutes(openingTime);
+        let startMinutes = timeToMinutes(startTime);
+        let endMinutes = timeToMinutes(endTime);
+
+        if (startMinutes < openMinutes) startMinutes += 1440;
+        if (endMinutes <= startMinutes) endMinutes += 1440;
 
         return existingBookings.some(booking => {
             const matchesResource = booking.resource_id === courtId || booking.court_id === courtId;
@@ -89,8 +98,9 @@ const PadelMobileATC = ({
             const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
             if (bookingDate !== slotDate) return false;
 
-            const bookingStartMinutes = timeToMinutes(booking.time);
-            const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
+            let bookingStartMinutes = timeToMinutes(booking.time);
+            if (bookingStartMinutes < openMinutes) bookingStartMinutes += 1440;
+            let bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
 
             return (startMinutes < bookingEndMinutes) && (endMinutes > bookingStartMinutes);
         });
@@ -101,13 +111,15 @@ const PadelMobileATC = ({
         const endTime60 = calculateEndTime(time, 60);
 
         let closeMinutes = timeToMinutes(closingTime);
-        const startMinutes = timeToMinutes(time);
-        const endMinutes60 = timeToMinutes(endTime60);
+        let startMinutes = timeToMinutes(time);
+        const openMinutes = timeToMinutes(openingTime);
 
-        if (closeMinutes < timeToMinutes(openingTime)) closeMinutes += 1440;
+        if (closeMinutes <= openMinutes) closeMinutes += 1440;
+        if (startMinutes < openMinutes && closeMinutes > 1440) startMinutes += 1440;
+        const endMinutes60 = startMinutes + 60;
 
-        // If 60 min slots goes beyond closing time, it's not available
-        if (endMinutes60 > closeMinutes && closeMinutes > startMinutes) return false;
+        // If 60 min slot goes beyond closing time, it's not available
+        if (endMinutes60 > closeMinutes) return false;
 
         return !isTimeSlotOccupied(courtId, time, endTime60);
     };
@@ -119,21 +131,20 @@ const PadelMobileATC = ({
         const slots = [];
         const startMinutes = timeToMinutes(openingTime);
         let endMinutes = timeToMinutes(closingTime);
-        if (endMinutes < startMinutes) endMinutes += 1440;
+        if (endMinutes <= startMinutes) endMinutes += 1440;
 
         for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
-            const normalizedMinutes = minutes % 1440;
-
-            // 🆕 Skip if not within operating hours (handles split shifts)
-            if (!isWithinOperatingHours(normalizedMinutes)) {
+            // 🆕 Skip if not within operating hours (handles split shifts & overnight)
+            if (!isWithinOperatingHours(minutes)) {
                 continue;
             }
 
             // 🆕 Skip if time has already passed today
-            if (isPastTime(normalizedMinutes)) {
+            if (isPastTime(minutes)) {
                 continue;
             }
 
+            const normalizedMinutes = minutes % 1440;
             slots.push(minutesToTime(normalizedMinutes));
         }
         return slots;

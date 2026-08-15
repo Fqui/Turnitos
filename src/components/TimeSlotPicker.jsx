@@ -41,23 +41,25 @@ const TimeSlotPicker = ({
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     };
 
-    // Helper: Check if a time slot falls within operating hours
+    // Helper: Check if a time slot falls within operating hours (handles midnight crossing & split shifts)
     const isWithinOperatingHours = (slotMinutes) => {
+        const checkRange = (sMin, openStr, closeStr) => {
+            const rangeStart = timeToMinutes(openStr);
+            let rangeClose = timeToMinutes(closeStr);
+            const rangeEnd = rangeClose <= rangeStart ? rangeClose + 1440 : rangeClose;
+
+            let normalizedSlot = sMin;
+            if (normalizedSlot < rangeStart && rangeEnd > 1440) {
+                normalizedSlot += 1440;
+            }
+            return normalizedSlot >= rangeStart && normalizedSlot < rangeEnd;
+        };
+
         if (!timeRanges || timeRanges.length === 0) {
-            // Simple continuous hours
-            const start = timeToMinutes(openingTime);
-            const close = timeToMinutes(closingTime);
-            const end = close < start ? close + 1440 : close; // Handle midnight crossing
-            return slotMinutes >= start && slotMinutes < end;
+            return checkRange(slotMinutes, openingTime, closingTime);
         }
 
-        // Check if slot falls within any of the time ranges (for split shifts)
-        return timeRanges.some(range => {
-            const rangeStart = timeToMinutes(range.open);
-            const rangeClose = timeToMinutes(range.close);
-            const rangeEnd = rangeClose < rangeStart ? rangeClose + 1440 : rangeClose; // Handle midnight crossing
-            return slotMinutes >= rangeStart && slotMinutes < rangeEnd;
-        });
+        return timeRanges.some(range => checkRange(slotMinutes, range.open, range.close));
     };
 
     // Helper: Check if a time slot is in the past (only for today)
@@ -69,10 +71,13 @@ const TimeSlotPicker = ({
 
         const slotDateStr = selectedDate instanceof Date
             ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
-            : selectedDate;
+            : (typeof selectedDate === 'string' ? selectedDate.split('T')[0] : '');
 
         // Only filter if selected date is today
         if (slotDateStr !== currentDate) return false;
+
+        // If slot is after midnight of the current shift (>= 1440), it is later tonight in the future
+        if (slotMinutes >= 1440) return false;
 
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
         return slotMinutes <= currentMinutes;

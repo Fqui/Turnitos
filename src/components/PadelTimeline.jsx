@@ -108,7 +108,16 @@ const PadelTimeline = ({
         // Only filter if selected date is today
         if (slotDateStr !== currentDate) return false;
 
-        const slotMinutes = timeToMinutes(slotTimeStr);
+        const openMinutes = timeToMinutes(openingTime);
+        let closeMinutes = timeToMinutes(closingTime);
+        if (closeMinutes <= openMinutes) closeMinutes += 1440;
+
+        let slotMinutes = timeToMinutes(slotTimeStr);
+        if (slotMinutes < openMinutes && closeMinutes > 1440) {
+            // Slot is after midnight tonight in the future
+            return false;
+        }
+
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
         return slotMinutes <= currentMinutes;
     };
@@ -157,7 +166,7 @@ const PadelTimeline = ({
         const startMinutes = timeToMinutes(openingTime);
         let endMinutes = timeToMinutes(closingTime);
 
-        if (endMinutes < startMinutes) {
+        if (endMinutes <= startMinutes) {
             endMinutes += 1440;
         }
 
