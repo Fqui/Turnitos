@@ -136,81 +136,81 @@ const BusinessPortalSidebar = ({
             overflowY: 'auto',
             transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
         }}>
-            {/* Business Logo & Name */}
-            <div style={{
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: isVisible ? 'space-between' : 'center',
-                flexDirection: isVisible ? 'row' : 'column',
-                gap: '8px',
-                width: '100%'
-            }}>
+            {/* Business Logo & Name (Desktop Only) */}
+            {!isMobile && (
                 <div style={{
+                    marginBottom: '24px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: isVisible ? 'flex-start' : 'center',
-                    gap: '12px',
-                    width: isVisible ? 'auto' : '100%'
+                    justifyContent: isVisible ? 'space-between' : 'center',
+                    flexDirection: isVisible ? 'row' : 'column',
+                    gap: '8px',
+                    width: '100%'
                 }}>
-                    {currentBusiness?.logo || currentBusiness?.image ? (
-                        <img
-                            src={currentBusiness.logo || currentBusiness.image}
-                            alt="Logo"
-                            style={{
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: isVisible ? 'flex-start' : 'center',
+                        gap: '12px',
+                        width: isVisible ? 'auto' : '100%'
+                    }}>
+                        {currentBusiness?.logo || currentBusiness?.image ? (
+                            <img
+                                src={currentBusiness.logo || currentBusiness.image}
+                                alt="Logo"
+                                style={{
+                                    width: '38px',
+                                    height: '38px',
+                                    borderRadius: '10px',
+                                    objectFit: 'cover',
+                                    border: '2px solid var(--border)',
+                                    boxShadow: 'var(--shadow-sm)',
+                                    flexShrink: 0
+                                }}
+                            />
+                        ) : (
+                            <div style={{
                                 width: '38px',
                                 height: '38px',
                                 borderRadius: '10px',
-                                objectFit: 'cover',
-                                border: '2px solid var(--border)',
-                                boxShadow: 'var(--shadow-sm)',
+                                background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '18px',
+                                color: '#fff',
+                                fontWeight: 'bold',
+                                boxShadow: 'var(--shadow-primary)',
                                 flexShrink: 0
-                            }}
-                        />
-                    ) : (
-                        <div style={{
-                            width: '38px',
-                            height: '38px',
-                            borderRadius: '10px',
-                            background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '18px',
-                            color: '#fff',
-                            fontWeight: 'bold',
-                            boxShadow: 'var(--shadow-primary)',
-                            flexShrink: 0
-                        }}>
-                            {currentBusiness?.name ? currentBusiness.name.charAt(0).toUpperCase() : 'T'}
-                        </div>
-                    )}
-                    {isVisible && (
-                        <div style={{ overflow: 'hidden', minWidth: 0 }}>
-                            <h1 style={{
-                                fontSize: '16px',
-                                fontWeight: '800',
-                                color: 'var(--text-primary)',
-                                margin: 0,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                maxWidth: '150px'
                             }}>
-                                {currentBusiness?.name || 'Portal'}
-                            </h1>
-                            <p style={{
-                                color: 'var(--text-muted)',
-                                margin: '0',
-                                fontSize: '11px',
-                                fontWeight: '500'
-                            }}>Panel de Control</p>
-                        </div>
-                    )}
-                </div>
+                                {currentBusiness?.name ? currentBusiness.name.charAt(0).toUpperCase() : 'T'}
+                            </div>
+                        )}
+                        {isVisible && (
+                            <div style={{ overflow: 'hidden', minWidth: 0 }}>
+                                <h1 style={{
+                                    fontSize: '16px',
+                                    fontWeight: '800',
+                                    color: 'var(--text-primary)',
+                                    margin: 0,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '150px'
+                                }}>
+                                    {currentBusiness?.name || 'Portal'}
+                                </h1>
+                                <p style={{
+                                    color: 'var(--text-muted)',
+                                    margin: '0',
+                                    fontSize: '11px',
+                                    fontWeight: '500'
+                                }}>Panel de Control</p>
+                            </div>
+                        )}
+                    </div>
 
-                {/* Collapse Toggle (Desktop Only) */}
-                {!isMobile && (
+                    {/* Collapse Toggle */}
                     <button
                         onClick={() => onToggleSidebar(!isVisible)}
                         style={{
@@ -244,8 +244,8 @@ const BusinessPortalSidebar = ({
                     >
                         {isVisible ? '❮' : '❯'}
                     </button>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* + New Booking Button */}
             {onCreateBooking && (
