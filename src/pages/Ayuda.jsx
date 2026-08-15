@@ -130,25 +130,47 @@ export default function HelpCenter() {
                     border: '1px solid var(--border)'
                 }}>
                     <h3 style={{ fontSize: '24px', marginBottom: '12px' }}>¿No encontraste lo que buscabas?</h3>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Estamos aquí para ayudarte. Escríbenos por WhatsApp.</p>
-                    <a
-                        href="https://wa.me/5493804123456"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                            display: 'inline-block',
-                            backgroundColor: '#25D366',
-                            color: '#fff',
-                            padding: '12px 32px',
-                            borderRadius: '50px',
-                            textDecoration: 'none',
-                            fontWeight: 'bold',
-                            fontSize: '16px',
-                            boxShadow: '0 4px 15px rgba(37, 211, 102, 0.3)'
-                        }}
-                    >
-                        Contactar Soporte
-                    </a>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Estamos aquí para ayudarte. Escríbenos por WhatsApp o envíanos un correo electrónico.</p>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <a
+                            href="https://wa.me/5493804123456"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                backgroundColor: '#25D366',
+                                color: '#fff',
+                                padding: '12px 28px',
+                                borderRadius: '50px',
+                                textDecoration: 'none',
+                                fontWeight: 'bold',
+                                fontSize: '15px',
+                                boxShadow: '0 4px 15px rgba(37, 211, 102, 0.3)'
+                            }}
+                        >
+                            WhatsApp
+                        </a>
+                        <a
+                            href="mailto:consultas@turnitoslr.com"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                border: '1px solid var(--border)',
+                                padding: '12px 28px',
+                                borderRadius: '50px',
+                                textDecoration: 'none',
+                                fontWeight: 'bold',
+                                fontSize: '15px'
+                            }}
+                        >
+                            📧 consultas@turnitoslr.com
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

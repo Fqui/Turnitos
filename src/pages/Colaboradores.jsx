@@ -112,7 +112,7 @@ export default function Colaboradores() {
                         Ayuda a negocios a crecer mientras generas ingresos recurrentes
                     </p>
                     <button
-                        onClick={() => window.location.href = 'mailto:colaboradores@turnitos.com'}
+                        onClick={() => window.location.href = 'mailto:consultas@turnitoslr.com?subject=Consulta Colaboradores'}
                         style={{
                             background: '#fff',
                             color: '#667eea',
@@ -589,7 +589,7 @@ export default function Colaboradores() {
                         ayudando a negocios a crecer.
                     </p>
                     <button
-                        onClick={() => window.location.href = 'mailto:colaboradores@turnitos.com?subject=Quiero ser Colaborador'}
+                        onClick={() => window.location.href = 'mailto:consultas@turnitoslr.com?subject=Quiero ser Colaborador'}
                         style={{
                             background: '#fff',
                             color: '#667eea',

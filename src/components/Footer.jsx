@@ -69,7 +69,7 @@ export default function Footer({ minimal = false }) {
                     {/* Contact & Social */}
                     <div style={{ flex: '1 1 200px' }}>
                         <h4 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px' }}>Contacto</h4>
-                        <p style={{ color: '#A0A0A0', fontSize: '14px', marginBottom: '8px' }}>📧 hola@turnitoslr.com</p>
+                        <p style={{ color: '#A0A0A0', fontSize: '14px', marginBottom: '8px' }}>📧 <a href="mailto:consultas@turnitoslr.com" style={{ color: '#A0A0A0', textDecoration: 'none' }}>consultas@turnitoslr.com</a></p>
                         <p style={{ color: '#A0A0A0', fontSize: '14px', marginBottom: '20px' }}>📱 +54 9 380 4123456</p>
 
                         <div style={{ display: 'flex', gap: '12px' }}>
