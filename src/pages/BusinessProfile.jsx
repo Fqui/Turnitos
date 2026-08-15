@@ -308,19 +308,23 @@ export default function BusinessProfile({ business: initialBusiness }) {
     // Auto-select sport logic
     useEffect(() => {
         if (business && business.type === 'sport') {
-            const category = business.category?.toLowerCase().trim();
+            const catStr = (business.categories?.slug || business.categories?.name || business.category || '').toLowerCase().trim();
+            const courtSport = (business.courts?.[0]?.sport || '').toLowerCase().trim();
 
-            // Automatically select the sport based on category or available types
-            if (category === 'paddle' || category === 'padel') {
+            // Automatically select the sport based on category or court sports
+            if (catStr.includes('padel') || catStr.includes('paddle') || courtSport.includes('padel') || courtSport.includes('paddle')) {
                 setSelectedItem('paddle');
-            } else if (category === 'football' || category === 'futbol' || category === 'fútbol') {
+            } else if (catStr.includes('futbol') || catStr.includes('football') || catStr.includes('fútbol') || courtSport.includes('futbol') || courtSport.includes('football') || courtSport.includes('fútbol')) {
                 setSelectedItem('football');
             } else if (business.sport_types && business.sport_types.length > 0) {
                 setSelectedItem(business.sport_types[0]);
             } else {
-                // Fallback: use category name or 'sport'
-                console.warn('⚠️ No specific sport matched, using fallback');
-                setSelectedItem(category || 'sport');
+                setSelectedItem(courtSport || catStr || 'sport');
+            }
+
+            // Auto-select today's date if none is selected yet
+            if (!selectedDate) {
+                setSelectedDate(new Date());
             }
         }
     }, [business]);
