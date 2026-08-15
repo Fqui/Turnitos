@@ -13,20 +13,23 @@ export default function CalendarHeader({
     onNext,
     isMobile = false,
     showTitle = true,
-    showLegend = false
+    showLegend = true
 }) {
     const legendItems = [
-        { label: 'Pendiente', color: 'var(--status-pending)' },
-        { label: 'Señado', color: 'var(--status-deposit)' },
-        { label: 'Confirmado', color: 'var(--status-confirmed)' },
-        { label: 'Finalizado', color: 'var(--status-completed)' },
-        { label: 'Cancelado', color: 'var(--status-cancelled)' },
-        { label: 'Bloqueado', color: 'var(--status-blocked)' }
+        { label: 'Pendiente', color: 'var(--status-pending, #9CA3AF)' },
+        { label: 'Señado', color: 'var(--status-deposit, #F59E0B)' },
+        { label: 'Confirmado', color: 'var(--status-confirmed, #3ECF8E)' },
+        { label: 'Finalizado', color: 'var(--status-completed, #10B981)' },
+        { label: 'Cancelado', color: 'var(--status-cancelled, #EF4444)' },
+        { label: 'Bloqueado', color: 'var(--status-blocked, #374151)' }
     ];
+
+    // Only show ViewModeToggle if there is more than 1 view available (e.g. day AND month)
+    const showViewToggle = availableViews && availableViews.length > 1;
 
     return (
         <div style={{
-            padding: isMobile ? '12px 16px' : '12px 20px',
+            padding: isMobile ? '12px 14px' : '14px 20px',
             borderBottom: '1px solid var(--border)',
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
@@ -35,75 +38,120 @@ export default function CalendarHeader({
             background: 'var(--bg-card)',
             gap: isMobile ? '12px' : '16px'
         }}>
-            {/* Left side: Status Legend or Title */}
+            {/* Legend */}
+            {showLegend && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: isMobile ? '6px 10px' : '12px',
+                    flexWrap: 'wrap',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    justifyContent: isMobile ? 'center' : 'flex-start'
+                }}>
+                    {legendItems.map(s => (
+                        <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+                            <span style={{ color: 'var(--text-secondary)' }}>{s.label}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Navigation: [ ◀ ]  Mes y Año  [ ▶ ]  [ Hoy ] */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: isMobile ? '8px' : '14px',
-                flexWrap: 'wrap',
-                justifyContent: isMobile ? 'center' : 'flex-start'
+                gap: '10px',
+                justifyContent: 'center',
+                width: isMobile ? '100%' : 'auto'
             }}>
-                {showLegend && (
-                    <div style={{
+                {showViewToggle && (
+                    <ViewModeToggle
+                        viewMode={viewMode}
+                        setViewMode={setViewMode}
+                        availableViews={availableViews}
+                        isMobile={isMobile}
+                    />
+                )}
+
+                <button
+                    type="button"
+                    onClick={onPrevious}
+                    style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-main)',
+                        color: 'var(--text-primary)',
+                        fontSize: '13px',
+                        cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: isMobile ? '8px' : '12px',
-                        flexWrap: 'wrap',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                    }}>
-                        {legendItems.map(s => (
-                            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.color }} />
-                                <span style={{ color: 'var(--text-secondary)' }}>{s.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                {!showLegend && !isMobile && showTitle && (
-                    <h3 style={{
-                        margin: 0,
-                        fontSize: '18px',
+                        justifyContent: 'center',
                         fontWeight: '700',
-                        color: 'var(--text-primary)'
-                    }}>
-                        {title}
-                    </h3>
-                )}
-            </div>
+                        transition: 'all 0.2s'
+                    }}
+                    title="Mes anterior"
+                >
+                    ◀
+                </button>
 
-            {/* Middle: Controls */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                justifyContent: 'center'
-            }}>
-                <ViewModeToggle
-                    viewMode={viewMode}
-                    setViewMode={setViewMode}
-                    availableViews={availableViews}
-                    isMobile={isMobile}
-                />
-                <NavigationControls
-                    onPrevious={onPrevious}
-                    onToday={onToday}
-                    onNext={onNext}
-                    isMobile={isMobile}
-                />
-            </div>
+                <span style={{
+                    fontSize: isMobile ? '15px' : '17px',
+                    fontWeight: '800',
+                    color: 'var(--text-primary)',
+                    textAlign: 'center',
+                    textTransform: 'capitalize',
+                    minWidth: isMobile ? '140px' : '170px'
+                }}>
+                    {dateRangeText}
+                </span>
 
-            {/* Right side: Date Range */}
-            <span style={{
-                fontSize: isMobile ? '15px' : '16px',
-                fontWeight: '700',
-                color: 'var(--text-primary)',
-                textAlign: 'center',
-                display: 'block',
-                textTransform: 'capitalize'
-            }}>
-                {dateRangeText}
-            </span>
+                <button
+                    type="button"
+                    onClick={onNext}
+                    style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-main)',
+                        color: 'var(--text-primary)',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '700',
+                        transition: 'all 0.2s'
+                    }}
+                    title="Mes siguiente"
+                >
+                    ▶
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onToday}
+                    style={{
+                        padding: '6px 12px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-main)',
+                        color: 'var(--text-secondary)',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        transition: 'all 0.2s',
+                        marginLeft: '4px'
+                    }}
+                    title="Ir a hoy"
+                >
+                    Hoy
+                </button>
+            </div>
         </div>
     );
 }

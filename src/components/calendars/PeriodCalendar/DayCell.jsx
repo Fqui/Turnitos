@@ -99,39 +99,38 @@ export default function DayCell({
 
                             const statusConfig = {
                                 pending: {
-                                    bg: '#FEF3C7',
-                                    color: '#D97706',
-                                    icon: '⏳',
+                                    bg: 'var(--status-pending-bg, rgba(156, 163, 175, 0.12))',
+                                    color: 'var(--status-pending, #6B7280)',
                                     label: 'Pendiente'
                                 },
                                 confirmed: {
-                                    bg: '#DBEAFE',
-                                    color: '#1D4ED8',
-                                    icon: '✓',
+                                    bg: 'var(--status-confirmed-bg, rgba(62, 207, 142, 0.15))',
+                                    color: 'var(--status-confirmed, #3ECF8E)',
                                     label: 'Confirmado'
                                 },
                                 deposit_paid: {
-                                    bg: '#FED7AA',
-                                    color: '#EA580C',
-                                    icon: '💰',
+                                    bg: 'var(--status-deposit-bg, rgba(245, 158, 11, 0.12))',
+                                    color: 'var(--status-deposit, #F59E0B)',
                                     label: 'Señado'
                                 },
                                 cancelled: {
-                                    bg: '#FEE2E2',
-                                    color: '#DC2626',
-                                    icon: '✗',
+                                    bg: 'var(--status-cancelled-bg, rgba(239, 68, 68, 0.12))',
+                                    color: 'var(--status-cancelled, #EF4444)',
                                     label: 'Cancelado'
                                 },
                                 completed: {
-                                    bg: '#D1FAE5',
-                                    color: '#059669',
-                                    icon: '✓',
-                                    label: 'Completado'
+                                    bg: 'var(--status-completed-bg, rgba(16, 185, 129, 0.12))',
+                                    color: 'var(--status-completed, #10B981)',
+                                    label: 'Finalizado'
+                                },
+                                attended: {
+                                    bg: 'var(--status-attended-bg, rgba(5, 150, 105, 0.12))',
+                                    color: 'var(--status-attended, #059669)',
+                                    label: 'Asistido'
                                 },
                                 blocked: {
-                                    bg: '#E5E7EB',
-                                    color: '#374151',
-                                    icon: '🚫',
+                                    bg: 'var(--status-blocked-bg, rgba(55, 65, 81, 0.15))',
+                                    color: 'var(--status-blocked, #374151)',
                                     label: 'Bloqueado'
                                 }
                             };
@@ -142,16 +141,23 @@ export default function DayCell({
                                 <div style={{
                                     width: '100%',
                                     background: config.bg,
+                                    border: `1px solid ${config.color}`,
                                     borderRadius: '6px',
-                                    padding: '5px 6px',
+                                    padding: isMobile ? '3px 4px' : '4px 6px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: '4px'
+                                    gap: '5px'
                                 }}>
-                                    <span style={{ fontSize: '11px' }}>{config.icon}</span>
+                                    <div style={{
+                                        width: '6px',
+                                        height: '6px',
+                                        borderRadius: '50%',
+                                        background: config.color,
+                                        flexShrink: 0
+                                    }} />
                                     <span style={{
-                                        fontSize: '11px',
+                                        fontSize: isMobile ? '10px' : '11px',
                                         fontWeight: '700',
                                         color: config.color,
                                         whiteSpace: 'nowrap',
