@@ -277,17 +277,23 @@ const PadelMobileATC = ({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {courts.map(court => {
                                 // Calculate available durations for THIS court at SELECTED time
+                                const openMinutes = timeToMinutes(openingTime);
+                                let closeMinutes = timeToMinutes(closingTime);
+                                if (closeMinutes <= openMinutes) closeMinutes += 1440;
+
+                                let slotStartMinutes = timeToMinutes(selectedTimeSlot);
+                                if (slotStartMinutes < openMinutes && closeMinutes > 1440) {
+                                    slotStartMinutes += 1440;
+                                }
+
                                 const durations = [60, 90, 120];
                                 const validDurations = durations.filter(d => {
+                                    const slotEndMinutes = slotStartMinutes + d;
+
+                                    // If duration goes beyond closing time, it's not available
+                                    if (slotEndMinutes > closeMinutes) return false;
+
                                     const endTime = calculateEndTime(selectedTimeSlot, d);
-
-                                    // Check closing time logic
-                                    let closeMinutes = timeToMinutes(closingTime);
-                                    const startMinutes = timeToMinutes(selectedTimeSlot);
-                                    const endMinutes = timeToMinutes(endTime);
-                                    if (closeMinutes < timeToMinutes(openingTime)) closeMinutes += 1440;
-                                    if (endMinutes > closeMinutes && closeMinutes > startMinutes) return false;
-
                                     return !isTimeSlotOccupied(court.id, selectedTimeSlot, endTime);
                                 });
 
