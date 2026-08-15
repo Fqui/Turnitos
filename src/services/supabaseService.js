@@ -78,6 +78,9 @@ class SupabaseService {
         if (!business.duration_discounts && business.metadata?.duration_discounts) {
             business.duration_discounts = business.metadata.duration_discounts;
         }
+        if (!business.whatsapp_templates && business.metadata?.whatsapp_templates) {
+            business.whatsapp_templates = business.metadata.whatsapp_templates;
+        }
 
         // Extract special_days if stored inside business.hours JSON
         if (!business.special_days && business.hours) {
@@ -1134,6 +1137,23 @@ class SupabaseService {
         }
         if (updates.duration_discounts !== undefined) {
             metadataUpdates.duration_discounts = updates.duration_discounts;
+        }
+        if (updates.whatsapp_templates !== undefined) {
+            metadataUpdates.whatsapp_templates = updates.whatsapp_templates;
+        }
+
+        // Safely fetch and merge current metadata so we don't accidentally overwrite unrelated metadata keys
+        try {
+            const { data: currentBiz } = await supabase
+                .from('businesses')
+                .select('metadata')
+                .eq('id', businessId)
+                .single();
+            if (currentBiz?.metadata && typeof currentBiz.metadata === 'object') {
+                metadataUpdates = { ...currentBiz.metadata, ...metadataUpdates };
+            }
+        } catch (e) {
+            console.warn('Could not fetch existing metadata for patch:', e);
         }
 
         // Map updates to dbUpdates with alias normalization

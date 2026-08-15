@@ -32,7 +32,10 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
 
-    const [formData, setFormData] = useState({ ...business });
+    const [formData, setFormData] = useState({
+        ...business,
+        whatsapp_templates: business?.whatsapp_templates || business?.metadata?.whatsapp_templates || {}
+    });
 
     // Calendar optimization state
     const [portalMonth, setPortalMonth] = useState(new Date());
@@ -184,7 +187,8 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     : (business.blocked_dates || business.metadata?.blocked_dates || []),
                 rental_duration_options: prev.rental_duration_options || business.rental_duration_options || [4, 6, 8, 12, 24],
                 duration_discounts: prev.duration_discounts || business.duration_discounts || business.metadata?.duration_discounts || {},
-                amenities: prev.amenities || business.amenities || []
+                amenities: prev.amenities || business.amenities || [],
+                whatsapp_templates: prev.whatsapp_templates || business.whatsapp_templates || business.metadata?.whatsapp_templates || {}
             }));
         }
     }, [business]);
@@ -284,6 +288,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
 
             const durationDiscounts = formData.duration_discounts || business?.duration_discounts || business?.metadata?.duration_discounts || {};
             const safePrice = Number(tiers[0]?.price || formData.price_per_hour || business?.price_per_hour || business?.price || 20000);
+            const whatsappTemplates = formData.whatsapp_templates || formData.metadata?.whatsapp_templates || business?.whatsapp_templates || business?.metadata?.whatsapp_templates || {};
 
             const dataToSave = {
                 ...business,
@@ -299,6 +304,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 additional_services: formData.additional_services || business?.additional_services || [],
                 blocked_dates: formData.blocked_dates || business?.blocked_dates || [],
                 rental_duration_options: durationOpts,
+                whatsapp_templates: whatsappTemplates,
                 metadata: {
                     ...(business?.metadata || {}),
                     ...(formData.metadata || {}),
@@ -306,7 +312,8 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     pricing_tiers: tiers,
                     duration_discounts: durationDiscounts,
                     blocked_dates: formData.blocked_dates || business?.blocked_dates || [],
-                    venue_gallery: formData.metadata?.venue_gallery || []
+                    venue_gallery: formData.metadata?.venue_gallery || [],
+                    whatsapp_templates: whatsappTemplates
                 },
                 gallery_images: formData.metadata?.venue_gallery?.map(item => item.url) || formData.gallery_images || business?.gallery_images
             };
