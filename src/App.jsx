@@ -110,10 +110,10 @@ class ErrorBoundary extends React.Component {
           textAlign: 'center',
           color: 'var(--text-primary)'
         }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔄</div>
-          <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '8px' }}>Nueva versión disponible</h2>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '20px', maxWidth: '400px' }}>
-            Hemos actualizado la plataforma con mejoras recientes. Haz clic abajo para cargar la última versión.
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+          <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '8px' }}>Ocurrió un error inesperado</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '20px', maxWidth: '400px', fontSize: '14px' }}>
+            Hubo un problema al cargar esta pantalla. Haz clic abajo para recargar la aplicación.
           </p>
           <button
             onClick={() => {
@@ -131,7 +131,7 @@ class ErrorBoundary extends React.Component {
               cursor: 'pointer'
             }}
           >
-            Actualizar ahora
+            Recargar aplicación
           </button>
         </div>
       );

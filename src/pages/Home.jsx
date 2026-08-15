@@ -5,6 +5,13 @@ import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
 import { generateSlug } from '../utils/utils';
 
+const DEFAULT_CATEGORIES = [
+    { id: 'deportes', slug: 'deportes', name: 'Deportes', icon: '⚽' },
+    { id: 'belleza', slug: 'belleza', name: 'Belleza', icon: '💇' },
+    { id: 'salud', slug: 'salud', name: 'Salud', icon: '⚕️' },
+    { id: 'quinchos', slug: 'quinchos', name: 'Quinchos', icon: '🏡' }
+];
+
 export default function Home() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
@@ -528,7 +535,7 @@ export default function Home() {
                         </motion.button>
 
                         {/* Use DB categories if available, otherwise fallback to static mock */}
-                        {(categoriesData.length > 0 ? categoriesData : categories).map(cat => (
+                        {(categoriesData && categoriesData.length > 0 ? categoriesData : DEFAULT_CATEGORIES).map(cat => (
                             <motion.button
                                 key={cat.id || cat.slug} // Handle both DB (id) and Mock (id/slug) structures
                                 whileHover={{ scale: 1.05 }}
