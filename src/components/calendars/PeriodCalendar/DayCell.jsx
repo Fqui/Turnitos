@@ -116,8 +116,8 @@ export default function DayCell({
                 backgroundColor: isCurrentMonth
                     ? (isBooked && config ? config.bg : 'var(--bg-card)')
                     : 'rgba(0,0,0,0.02)',
-                padding: isMobile ? '6px 4px' : '8px 8px',
-                minHeight: isMobile ? '56px' : '78px',
+                padding: isMobile ? '8px 4px' : '8px 8px',
+                minHeight: isMobile ? '70px' : '78px',
                 cursor: 'pointer',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 opacity: isCurrentMonth ? 1 : 0.35,
@@ -174,25 +174,35 @@ export default function DayCell({
                 </span>
             </div>
 
-            {/* Estado / Nombre en Desktop vs Icono en Mobile */}
+            {/* Estado / Nombre */}
             {isCurrentMonth && (
                 <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {isBooked && config ? (
-                        isMobile ? (
-                            <div style={{
-                                fontSize: '15px',
-                                lineHeight: 1,
-                                padding: '2px 0',
-                                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))'
-                            }} title={booking.status === 'blocked' || booking.is_blocked ? (booking.customer_name || 'BLOQUEADO') : (booking.customer_name || config.label)}>
-                                {config.icon}
-                            </div>
-                        ) : (
-                            <div style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '2px 0'
-                            }}>
+                        <div style={{
+                            width: '100%',
+                            textAlign: 'center',
+                            padding: '2px 0'
+                        }}>
+                            {isMobile ? (
+                                <>
+                                    <div style={{ fontSize: '14px', lineHeight: 1, marginBottom: '2px' }}>
+                                        {config.icon}
+                                    </div>
+                                    <div style={{
+                                        fontSize: '9.5px',
+                                        fontWeight: '800',
+                                        color: config.subColor || '#FFFFFF',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        lineHeight: 1
+                                    }}>
+                                        {booking.status === 'blocked' || booking.is_blocked
+                                            ? 'BLOQ'
+                                            : (formatName(booking.customer_name)?.split(' ')[0] || config.label)}
+                                    </div>
+                                </>
+                            ) : (
                                 <div style={{
                                     fontSize: '12px',
                                     fontWeight: '700',
@@ -208,8 +218,8 @@ export default function DayCell({
                                         ? 'BLOQUEADO'
                                         : (formatName(booking.customer_name) || config.label)}
                                 </div>
-                            </div>
-                        )
+                            )}
+                        </div>
                     ) : (
                         <div style={{
                             width: '100%',
@@ -219,8 +229,8 @@ export default function DayCell({
                             padding: '2px 0'
                         }}>
                             <div style={{
-                                width: isMobile ? '16px' : '20px',
-                                height: isMobile ? '16px' : '20px',
+                                width: isMobile ? '18px' : '20px',
+                                height: isMobile ? '18px' : '20px',
                                 borderRadius: '50%',
                                 border: '1.5px dashed var(--border)',
                                 display: 'flex',

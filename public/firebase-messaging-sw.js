@@ -21,7 +21,7 @@ messaging.onBackgroundMessage((payload) => {
         badge: '/logo-turnitos.png',
         vibrate: [200, 100, 200],
         tag: 'turnitos-booking-' + Date.now(),
-        data: payload.data || { url: '/business/portal' }
+        data: payload.data || { url: '/portal' }
     };
 
     return self.registration.showNotification(notificationTitle, notificationOptions);
@@ -29,12 +29,12 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const targetUrl = event.notification.data?.url || '/business/portal';
+    const targetUrl = event.notification.data?.url || '/portal';
     
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (const client of clientList) {
-                if (client.url.includes('/business') && 'focus' in client) {
+                if ((client.url.includes('/portal') || client.url.includes('/business')) && 'focus' in client) {
                     return client.focus();
                 }
             }

@@ -54,37 +54,18 @@ export default function PeriodCalendar({
         }
     };
 
-    // Reservas del mes actual para la lista rápida en móvil
-    const currentMonthBookings = useMemo(() => {
-        const currentYear = currentDate.getFullYear();
-        const currentMonth = currentDate.getMonth() + 1;
-        return bookings.filter(b => {
-            if (!b.date || b.status === 'cancelled') return false;
-            let [y, m, d] = [null, null, null];
-            if (b.date.includes('-')) {
-                [y, m, d] = b.date.split('-');
-            } else if (b.date.includes('/')) {
-                [d, m, y] = b.date.split('/');
-            }
-            return parseInt(y) === currentYear && parseInt(m) === currentMonth;
-        }).sort((a, b) => {
-            const dateA = a.date.includes('/') ? a.date.split('/').reverse().join('-') : a.date;
-            const dateB = b.date.includes('/') ? b.date.split('/').reverse().join('-') : b.date;
-            return dateA.localeCompare(dateB);
-        });
-    }, [bookings, currentDate]);
-
     return (
         <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: isMobile ? '16px' : '0px',
-            flex: isMobile ? 'none' : 1,
-            width: '100%'
+            width: '100%',
+            maxWidth: '1200px',
+            margin: '0 auto',
+            flex: isMobile ? 'none' : 1
         }}>
             <div style={{
                 background: 'var(--bg-card)',
-                borderRadius: '20px',
+                borderRadius: isMobile ? '16px' : '20px',
                 border: '1px solid var(--border)',
                 overflow: 'hidden',
                 display: 'flex',
@@ -107,7 +88,12 @@ export default function PeriodCalendar({
                 />
 
                 {/* Vista del calendario */}
-                <div style={{ padding: isMobile ? '8px 10px 12px 10px' : '12px 16px' }}>
+                <div style={{
+                    padding: isMobile ? '10px 8px 16px 8px' : '14px 18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center'
+                }}>
                     {viewMode === 'month' && (
                         <MonthView
                             business={business}
@@ -132,127 +118,6 @@ export default function PeriodCalendar({
                 </div>
             </div>
 
-            {/* Eventos del Mes en Mobile */}
-            {isMobile && (
-                <div style={{
-                    background: 'var(--bg-card)',
-                    borderRadius: '16px',
-                    border: '1px solid var(--border)',
-                    padding: '16px',
-                    boxShadow: 'var(--shadow-sm)'
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '12px'
-                    }}>
-                        <h3 style={{
-                            fontSize: '14px',
-                            fontWeight: '800',
-                            color: 'var(--text-primary)',
-                            margin: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                        }}>
-                            <span>📋</span> Eventos de {getDateRangeText()}
-                        </h3>
-                        <span style={{
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            background: 'var(--primary-bg)',
-                            color: 'var(--primary)',
-                            padding: '2px 8px',
-                            borderRadius: '10px'
-                        }}>
-                            {currentMonthBookings.length} {currentMonthBookings.length === 1 ? 'evento' : 'eventos'}
-                        </span>
-                    </div>
-
-                    {currentMonthBookings.length === 0 ? (
-                        <div style={{
-                            textAlign: 'center',
-                            padding: '18px 12px',
-                            color: 'var(--text-muted)',
-                            fontSize: '13px'
-                        }}>
-                            ✨ No hay reservas agendadas para este mes.
-                            <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.8 }}>
-                                Tocá cualquier día libre arriba para reservar o bloquear.
-                            </div>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {currentMonthBookings.map((b, idx) => {
-                                const statusConfig = {
-                                    pending: { bg: '#FEF3C7', color: '#D97706', label: 'Pendiente' },
-                                    deposit_paid: { bg: '#FEF3C7', color: '#D97706', label: 'Señado' },
-                                    confirmed: { bg: '#D1FAE5', color: '#059669', label: 'Confirmado' },
-                                    completed: { bg: '#DBEAFE', color: '#2563EB', label: 'Finalizado' },
-                                    attended: { bg: '#DBEAFE', color: '#2563EB', label: 'Asistido' },
-                                    blocked: { bg: '#F3F4F6', color: '#374151', label: 'Bloqueado' }
-                                }[b.status] || { bg: '#F3F4F6', color: '#6B7280', label: b.status };
-
-                                return (
-                                    <div
-                                        key={b.id || idx}
-                                        onClick={() => onBookingClick && onBookingClick(b)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '10px 12px',
-                                            borderRadius: '12px',
-                                            background: 'var(--bg-main)',
-                                            border: '1px solid var(--border)',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{
-                                                fontSize: '12px',
-                                                fontWeight: '800',
-                                                color: 'var(--text-primary)',
-                                                background: 'var(--bg-card)',
-                                                padding: '4px 8px',
-                                                borderRadius: '8px',
-                                                border: '1px solid var(--border)',
-                                                textAlign: 'center',
-                                                minWidth: '55px'
-                                            }}>
-                                                {b.date}
-                                            </div>
-                                            <div>
-                                                <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                    {b.customer_name || b.customerName || 'Cliente'}
-                                                </div>
-                                                {(b.start_time || b.startTime) && (
-                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                                        ⏰ {b.start_time || b.startTime} {b.end_time ? `- ${b.end_time}` : ''}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <span style={{
-                                            fontSize: '10px',
-                                            fontWeight: '800',
-                                            padding: '3px 8px',
-                                            borderRadius: '8px',
-                                            background: statusConfig.bg,
-                                            color: statusConfig.color
-                                        }}>
-                                            {statusConfig.label}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
-
             {/* Modal de Acción para Fecha Libre: Reservar o Bloquear */}
             {selectedFreeDay && (
                 <div style={{
@@ -266,104 +131,98 @@ export default function PeriodCalendar({
                     alignItems: isMobile ? 'flex-end' : 'center',
                     justifyContent: 'center',
                     zIndex: 1000,
-                    backdropFilter: 'blur(6px)',
-                    padding: isMobile ? '0' : '16px'
-                }} onClick={() => setSelectedFreeDay(null)}>
+                    padding: isMobile ? 0 : '20px',
+                    animation: 'fadeIn 0.2s ease-out'
+                }}>
                     <div style={{
                         background: 'var(--bg-card)',
-                        padding: isMobile ? '24px 20px 32px' : '28px 32px',
                         borderRadius: isMobile ? '24px 24px 0 0' : '20px',
+                        padding: isMobile ? '24px 20px 32px 20px' : '24px',
                         width: '100%',
-                        maxWidth: isMobile ? '100%' : '420px',
-                        boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
+                        maxWidth: '420px',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
                         border: '1px solid var(--border)',
-                        textAlign: 'center',
-                        fontFamily: 'var(--font-sans, "Plus Jakarta Sans", system-ui, sans-serif)'
-                    }} onClick={e => e.stopPropagation()}>
-                        <div style={{
-                            width: '52px',
-                            height: '52px',
-                            borderRadius: '14px',
-                            background: 'rgba(0, 230, 118, 0.12)',
-                            border: '1px solid rgba(0, 230, 118, 0.3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '26px',
-                            margin: '0 auto 14px'
-                        }}>
-                            📅
+                        animation: isMobile ? 'slideUp 0.3s ease-out' : 'scaleUp 0.2s ease-out'
+                    }}>
+                        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                            <div style={{
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '50%',
+                                background: 'rgba(0, 230, 118, 0.1)',
+                                color: 'var(--primary-paddle)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '24px',
+                                margin: '0 auto 12px auto'
+                            }}>
+                                📅
+                            </div>
+                            <h3 style={{
+                                margin: '0 0 6px 0',
+                                fontSize: '18px',
+                                fontWeight: '800',
+                                color: 'var(--text-primary)'
+                            }}>
+                                {selectedFreeDay.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </h3>
+                            <p style={{
+                                margin: 0,
+                                fontSize: '13px',
+                                color: 'var(--text-secondary)'
+                            }}>
+                                Esta fecha está libre. ¿Qué deseas hacer?
+                            </p>
                         </div>
 
-                        <h3 style={{
-                            margin: '0 0 6px 0',
-                            fontSize: '18px',
-                            fontWeight: '800',
-                            color: 'var(--text-primary)',
-                            textTransform: 'capitalize'
-                        }}>
-                            {selectedFreeDay.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                        </h3>
-
-                        <p style={{
-                            fontSize: '13px',
-                            color: 'var(--text-secondary)',
-                            margin: '0 0 20px 0'
-                        }}>
-                            ¿Qué acción deseas realizar en esta fecha disponible?
-                        </p>
-
-                        <div style={{ display: 'grid', gap: '10px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <button
-                                type="button"
                                 onClick={() => {
-                                    const dayObj = selectedFreeDay;
+                                    const day = selectedFreeDay;
                                     setSelectedFreeDay(null);
-                                    onCreateBooking && onCreateBooking(dayObj);
+                                    onCreateBooking && onCreateBooking(day);
                                 }}
                                 style={{
-                                    padding: '14px 18px',
-                                    borderRadius: '12px',
-                                    border: 'none',
-                                    background: 'var(--primary-paddle)',
-                                    color: 'white',
-                                    fontSize: '14px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: '8px',
-                                    boxShadow: '0 4px 14px rgba(0, 230, 118, 0.25)',
+                                    gap: '10px',
+                                    padding: '14px',
+                                    borderRadius: '12px',
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                                    color: '#FFFFFF',
+                                    fontSize: '15px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    boxShadow: 'var(--shadow-primary)',
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                <span>➕</span> Crear Reserva
+                                <span>➕</span> Crear Reserva Manual
                             </button>
 
                             <button
-                                type="button"
                                 onClick={() => {
-                                    const dayObj = selectedFreeDay;
+                                    const day = selectedFreeDay;
                                     setSelectedFreeDay(null);
-                                    const dateKey = formatDateKey(dayObj);
-                                    if (onBlockDate) {
-                                        onBlockDate(dateKey);
-                                    }
+                                    const dateKey = formatDateKey(day);
+                                    onBlockDate && onBlockDate(dateKey);
                                 }}
                                 style={{
-                                    padding: '14px 18px',
-                                    borderRadius: '12px',
-                                    border: '1px solid var(--border)',
-                                    background: 'var(--bg-main)',
-                                    color: 'var(--text-primary)',
-                                    fontSize: '14px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: '8px',
+                                    gap: '10px',
+                                    padding: '14px',
+                                    borderRadius: '12px',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    background: 'rgba(239, 68, 68, 0.08)',
+                                    color: '#EF4444',
+                                    fontSize: '15px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
                                     transition: 'all 0.2s'
                                 }}
                             >
@@ -371,17 +230,17 @@ export default function PeriodCalendar({
                             </button>
 
                             <button
-                                type="button"
                                 onClick={() => setSelectedFreeDay(null)}
                                 style={{
-                                    padding: '10px',
-                                    borderRadius: '10px',
-                                    border: 'none',
-                                    background: 'transparent',
-                                    color: 'var(--text-muted, #9CA3AF)',
-                                    fontSize: '13px',
+                                    padding: '12px',
+                                    borderRadius: '12px',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg-main)',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '14px',
                                     fontWeight: '600',
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    marginTop: '4px'
                                 }}
                             >
                                 Cancelar
