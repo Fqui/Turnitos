@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { pushService } from '../../services/pushService';
 
 const BusinessPortalSidebar = ({
@@ -14,6 +14,77 @@ const BusinessPortalSidebar = ({
     onCreateBooking,
     pendingCount = 0
 }) => {
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [isPwaInstalled, setIsPwaInstalled] = useState(false);
+    const [notifGranted, setNotifGranted] = useState(
+        typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted'
+    );
+
+    useEffect(() => {
+        const isStandalone = typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone);
+        if (isStandalone) {
+            setIsPwaInstalled(true);
+        }
+
+        const handlePrompt = (e) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+
+        const handleInstalled = () => {
+            setIsPwaInstalled(true);
+            setDeferredPrompt(null);
+        };
+
+        window.addEventListener('beforeinstallprompt', handlePrompt);
+        window.addEventListener('appinstalled', handleInstalled);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handlePrompt);
+            window.removeEventListener('appinstalled', handleInstalled);
+        };
+    }, []);
+
+    const handleInstallPwa = async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setIsPwaInstalled(true);
+            }
+            setDeferredPrompt(null);
+        } else {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if (isIOS) {
+                alert('📲 Para instalar en iPhone / iPad:\n1. Toca el botón Compartir (el ícono de la flechita arriba en Safari)\n2. Elige "Agregar a inicio"');
+            } else {
+                alert('📲 Para instalar la App:\n1. Toca los 3 puntos en la esquina superior de tu navegador\n2. Elige "Instalar aplicación" o "Agregar a la pantalla principal"');
+            }
+        }
+    };
+
+    const handleToggleNotifications = async () => {
+        try {
+            if (!('Notification' in window)) {
+                alert('Tu navegador no soporta notificaciones push');
+                return;
+            }
+            if (Notification.permission === 'denied') {
+                alert('⚠️ Los permisos de notificación fueron bloqueados previamente en tu navegador.\n\nPara activarlos:\n1. Tocá el ícono del Candado 🔒 al lado de la dirección de la web arriba.\n2. En "Notificaciones", seleccioná "Permitir".\n3. Recargá la página e intentá de nuevo.');
+                return;
+            }
+            const result = await pushService.requestPermissionAndGetTokenDetailed(currentBusiness?.id);
+            if (result.success && result.token) {
+                setNotifGranted(true);
+                alert('🔔 ¡Notificaciones Push activadas con éxito! Recibirás avisos emergentes cuando entre una nueva reserva web.');
+            } else {
+                alert(`⚠️ No se pudo activar la notificación:\n${result.error || 'Permiso denegado'}`);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const handleNavigation = (mode) => {
         setViewMode(mode);
         if (isMobile) {
