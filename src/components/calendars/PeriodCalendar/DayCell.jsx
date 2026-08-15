@@ -36,6 +36,7 @@ export default function DayCell({
             border: '#4B5563',
             color: '#FFFFFF',
             subColor: 'rgba(255, 255, 255, 0.92)',
+            icon: '⏳',
             label: 'Pendiente'
         },
         deposit_paid: {
@@ -43,6 +44,7 @@ export default function DayCell({
             border: '#B45309',
             color: '#FFFFFF',
             subColor: 'rgba(255, 255, 255, 0.95)',
+            icon: '💰',
             label: 'Señado'
         },
         confirmed: {
@@ -50,6 +52,7 @@ export default function DayCell({
             border: '#047857',
             color: '#FFFFFF',
             subColor: 'rgba(255, 255, 255, 0.95)',
+            icon: '✓',
             label: 'Confirmado'
         },
         completed: {
@@ -57,6 +60,7 @@ export default function DayCell({
             border: '#1D4ED8',
             color: '#FFFFFF',
             subColor: 'rgba(255, 255, 255, 0.95)',
+            icon: '✓',
             label: 'Finalizado'
         },
         attended: {
@@ -64,6 +68,7 @@ export default function DayCell({
             border: '#1D4ED8',
             color: '#FFFFFF',
             subColor: 'rgba(255, 255, 255, 0.95)',
+            icon: '✓',
             label: 'Asistido'
         },
         cancelled: {
@@ -71,6 +76,7 @@ export default function DayCell({
             border: '#B91C1C',
             color: '#FFFFFF',
             subColor: 'rgba(255, 255, 255, 0.92)',
+            icon: '✕',
             label: 'Cancelado'
         },
         blocked: {
@@ -78,6 +84,7 @@ export default function DayCell({
             border: '#1F2937',
             color: '#FFFFFF',
             subColor: 'rgba(255, 255, 255, 0.88)',
+            icon: '🔒',
             label: 'Bloqueado'
         }
     };
@@ -109,16 +116,16 @@ export default function DayCell({
                 backgroundColor: isCurrentMonth
                     ? (isBooked && config ? config.bg : 'var(--bg-card)')
                     : 'rgba(0,0,0,0.02)',
-                padding: '8px 8px',
-                minHeight: isMobile ? '68px' : '78px',
+                padding: isMobile ? '6px 4px' : '8px 8px',
+                minHeight: isMobile ? '56px' : '78px',
                 cursor: 'pointer',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 opacity: isCurrentMonth ? 1 : 0.35,
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '6px',
-                borderRadius: '12px',
+                gap: '4px',
+                borderRadius: isMobile ? '10px' : '12px',
                 border: (isCurrentMonth && isBooked && config)
                     ? `1px solid ${config.border}`
                     : (isTodayDay ? '2px solid var(--primary-paddle)' : '1px solid var(--border)'),
@@ -149,11 +156,11 @@ export default function DayCell({
                 alignItems: 'center'
             }}>
                 <span style={{
-                    fontSize: '14px',
+                    fontSize: isMobile ? '13px' : '14px',
                     fontWeight: isTodayDay || isBooked ? '800' : '700',
                     color: isBooked ? '#FFFFFF' : (isTodayDay ? 'var(--primary-paddle)' : 'var(--text-primary)'),
-                    minWidth: '24px',
-                    height: '24px',
+                    minWidth: isMobile ? '20px' : '24px',
+                    height: isMobile ? '20px' : '24px',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -167,31 +174,42 @@ export default function DayCell({
                 </span>
             </div>
 
-            {/* Estado / Nombre de cliente */}
+            {/* Estado / Nombre en Desktop vs Icono en Mobile */}
             {isCurrentMonth && (
-                <div style={{ width: '100%' }}>
+                <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {isBooked && config ? (
-                        <div style={{
-                            width: '100%',
-                            textAlign: 'left',
-                            padding: '2px 0'
-                        }}>
+                        isMobile ? (
                             <div style={{
-                                fontSize: isMobile ? '11px' : '12px',
-                                fontWeight: '700',
-                                color: config.subColor || '#FFFFFF',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                letterSpacing: '-0.01em',
-                                lineHeight: '1.2',
-                                textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
+                                fontSize: '15px',
+                                lineHeight: 1,
+                                padding: '2px 0',
+                                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))'
                             }} title={booking.status === 'blocked' || booking.is_blocked ? (booking.customer_name || 'BLOQUEADO') : (booking.customer_name || config.label)}>
-                                {booking.status === 'blocked' || booking.is_blocked
-                                    ? 'BLOQUEADO'
-                                    : (formatName(booking.customer_name) || config.label)}
+                                {config.icon}
                             </div>
-                        </div>
+                        ) : (
+                            <div style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '2px 0'
+                            }}>
+                                <div style={{
+                                    fontSize: '12px',
+                                    fontWeight: '700',
+                                    color: config.subColor || '#FFFFFF',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    letterSpacing: '-0.01em',
+                                    lineHeight: '1.2',
+                                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
+                                }} title={booking.status === 'blocked' || booking.is_blocked ? (booking.customer_name || 'BLOQUEADO') : (booking.customer_name || config.label)}>
+                                    {booking.status === 'blocked' || booking.is_blocked
+                                        ? 'BLOQUEADO'
+                                        : (formatName(booking.customer_name) || config.label)}
+                                </div>
+                            </div>
+                        )
                     ) : (
                         <div style={{
                             width: '100%',
@@ -201,17 +219,17 @@ export default function DayCell({
                             padding: '2px 0'
                         }}>
                             <div style={{
-                                width: '20px',
-                                height: '20px',
+                                width: isMobile ? '16px' : '20px',
+                                height: isMobile ? '16px' : '20px',
                                 borderRadius: '50%',
                                 border: '1.5px dashed var(--border)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '13px',
+                                fontSize: isMobile ? '11px' : '13px',
                                 fontWeight: '600',
                                 color: 'var(--text-muted)',
-                                opacity: 0.5,
+                                opacity: 0.45,
                                 transition: 'all 0.2s ease'
                             }}>
                                 +
