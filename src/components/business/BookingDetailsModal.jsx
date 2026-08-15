@@ -1152,16 +1152,20 @@ const BookingDetailsModal = ({
                                         style={{
                                             padding: '10px 14px',
                                             borderRadius: '12px',
-                                            border: 'none',
-                                            background: '#F59E0B',
-                                            color: 'white',
+                                            border: booking.status === 'deposit_paid' ? '1px solid var(--border)' : 'none',
+                                            background: booking.status === 'deposit_paid' ? 'rgba(0,0,0,0.06)' : '#F59E0B',
+                                            color: booking.status === 'deposit_paid' ? 'var(--text-muted)' : 'white',
                                             fontWeight: '700',
-                                            cursor: booking.status === 'deposit_paid' ? 'default' : 'pointer',
-                                            opacity: booking.status === 'deposit_paid' ? 0.5 : 1,
-                                            fontSize: '14px'
+                                            cursor: booking.status === 'deposit_paid' ? 'not-allowed' : 'pointer',
+                                            opacity: booking.status === 'deposit_paid' ? 0.6 : 1,
+                                            fontSize: '14px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '4px'
                                         }}
                                     >
-                                        {booking.status === 'deposit_paid' ? 'Seña Confirmada' : 'Confirmar Seña'}
+                                        {booking.status === 'deposit_paid' ? '✓ Seña Confirmada' : 'Confirmar Seña'}
                                     </button>
                                 )}
                                 {(booking.status === 'pending' || booking.status === 'deposit_paid') && (
@@ -1171,13 +1175,17 @@ const BookingDetailsModal = ({
                                         style={{
                                             padding: '10px 14px',
                                             borderRadius: '12px',
-                                            border: 'none',
-                                            background: 'var(--primary-paddle)',
-                                            color: 'white',
+                                            border: booking.status === 'pending' ? '1px solid var(--border)' : 'none',
+                                            background: booking.status === 'pending' ? 'rgba(0,0,0,0.06)' : 'var(--primary-paddle, #10B981)',
+                                            color: booking.status === 'pending' ? 'var(--text-muted)' : 'white',
                                             fontWeight: '700',
-                                            cursor: booking.status === 'pending' ? 'default' : 'pointer',
-                                            opacity: booking.status === 'pending' ? 0.5 : 1,
-                                            fontSize: '14px'
+                                            cursor: booking.status === 'pending' ? 'not-allowed' : 'pointer',
+                                            opacity: booking.status === 'pending' ? 0.6 : 1,
+                                            fontSize: '14px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '4px'
                                         }}
                                     >
                                         Confirmar Turno
