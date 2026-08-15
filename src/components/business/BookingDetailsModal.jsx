@@ -87,6 +87,10 @@ const BookingDetailsModal = ({
     const [customExtraPrice, setCustomExtraPrice] = useState('');
     const [showAddExtraForm, setShowAddExtraForm] = useState(false);
 
+    // WhatsApp Menu and Custom Message Modal State
+    const [showWhatsappMenu, setShowWhatsappMenu] = useState(false);
+    const [previewMessage, setPreviewMessage] = useState(null);
+
     // Calculate default deposit if missing
     const defaultTotalPrice = Number(booking.price || booking.total_price || booking.totalPrice || 0);
     const paymentSettings = biz?.payment_settings || biz?.paymentSettings || {};
@@ -117,11 +121,72 @@ const BookingDetailsModal = ({
         setIsSaving(false);
         setSaveSuccess(false);
         setShowAddExtraForm(false);
+        setShowWhatsappMenu(false);
+        setPreviewMessage(null);
     }, [booking?.id, defaultTotalPrice, calculatedDefaultDeposit, currentGuests]);
 
     const activePrice = Number(editablePrice) || 0;
     const activeDeposit = Number(editableDeposit) || 0;
     const pendingBalance = activePrice - activeDeposit > 0 ? activePrice - activeDeposit : 0;
+    const extrasSum = editableServices.reduce((sum, item) => sum + Number(item.price || 0), 0);
+    const baseRentalPrice = Math.max(0, activePrice - extrasSum);
+
+    // WhatsApp Message Builder
+    const generateWhatsappMessage = (templateType) => {
+        if (templateType === 'direct') return '';
+        const customTemplates = biz?.whatsapp_templates || biz?.metadata?.whatsapp_templates || {};
+        const defaultTemplates = {
+            pedir_sena: "¡Hola {cliente}! 👋 Te escribimos de *{negocio}* para coordinar tu reserva del *{fecha}* ({invitados}). Para asegurar y reservar la fecha, solicitamos una seña de *${seña}* (Total: ${total}). Quedamos a disposición para pasarte los datos de pago.",
+            confirmar_reserva: "¡Hola {cliente}! 🎉 Tu reserva en *{negocio}* para el día *{fecha}* ha sido confirmada con éxito. Recuerda que el saldo pendiente a abonar al ingresar es de *${saldo}*. ¡Te esperamos!",
+            recordatorio_saldo: "¡Hola {cliente}! 😊 Te recordamos tu reserva en *{negocio}* para el *{fecha}*. El saldo a abonar al ingresar es de *${saldo}*. Si necesitas consultar algún adicional o detalle, no dudes en escribirnos.",
+            ubicacion: "¡Hola {cliente}! 📍 Te enviamos la información de *{negocio}* para tu reserva del *{fecha}*:\nDirección: {direccion}\n¡Cualquier consulta estamos a disposición!"
+        };
+
+        const rawTemplate = customTemplates[templateType] || defaultTemplates[templateType] || "";
+        const clientName = booking.customer_name || booking.customerName || 'Estimado/a';
+        const businessName = biz?.name || 'nuestro espacio';
+        const dateFormatted = formatDisplayDate(booking.date);
+        const guestsStr = editableGuests ? `${editableGuests} personas` : (isRental ? 'Alquiler del Espacio' : '');
+        const totalStr = activePrice.toLocaleString('es-AR');
+        const depositStr = activeDeposit.toLocaleString('es-AR');
+        const balanceStr = pendingBalance.toLocaleString('es-AR');
+        const addressStr = biz?.address || biz?.location || 'Consultar ubicación';
+        const extrasStr = editableServices.length > 0 ? editableServices.map(s => s.name).join(', ') : 'Sin adicionales';
+
+        return rawTemplate
+            .replace(/{cliente}/gi, clientName)
+            .replace(/{nombre}/gi, clientName)
+            .replace(/{negocio}/gi, businessName)
+            .replace(/{fecha}/gi, dateFormatted)
+            .replace(/{invitados}/gi, guestsStr)
+            .replace(/{total}/gi, totalStr)
+            .replace(/{seña}/gi, depositStr)
+            .replace(/{sena}/gi, depositStr)
+            .replace(/{saldo}/gi, balanceStr)
+            .replace(/{direccion}/gi, addressStr)
+            .replace(/{adicionales}/gi, extrasStr);
+    };
+
+    const handleSendWhatsapp = (templateType) => {
+        if (!cleanPhone) {
+            alert('El cliente no tiene un teléfono válido registrado');
+            return;
+        }
+        if (templateType === 'direct') {
+            window.open(`https://wa.me/${cleanPhone}`, '_blank');
+            setShowWhatsappMenu(false);
+            return;
+        }
+        const text = generateWhatsappMessage(templateType);
+        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
+        setShowWhatsappMenu(false);
+    };
+
+    const handleOpenPreview = (templateType, title) => {
+        const text = generateWhatsappMessage(templateType);
+        setPreviewMessage({ title, text, templateType });
+        setShowWhatsappMenu(false);
+    };
 
     // Additional services handlers
     const handleToggleCatalogExtra = (catalogItem) => {
@@ -407,48 +472,249 @@ const BookingDetailsModal = ({
                         )}
                     </div>
 
-                    {/* Customer Info Card + Direct WhatsApp Button */}
+                    {/* Customer Info Card + Direct WhatsApp Hub */}
                     <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '10px 14px',
+                        padding: '12px 14px',
                         background: 'var(--bg-main)',
                         borderRadius: '12px',
                         border: '1px solid var(--border)',
-                        flexWrap: isMobile ? 'wrap' : 'nowrap'
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px'
                     }}>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>👤 Cliente</label>
-                            <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '15px' }}>{booking.customer_name || booking.customerName || '-'}</div>
-                            <div style={{ color: 'var(--text-secondary)', fontSize: '12px', display: 'flex', gap: '10px', marginTop: '2px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                <span>📱 {phone || '-'}</span>
-                                {email && <span>📧 {email}</span>}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '12px',
+                            flexWrap: isMobile ? 'wrap' : 'nowrap'
+                        }}>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>👤 Cliente</label>
+                                <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '15px' }}>{booking.customer_name || booking.customerName || '-'}</div>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '12px', display: 'flex', gap: '10px', marginTop: '2px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <span>📱 {phone || '-'}</span>
+                                    {email && <span>📧 {email}</span>}
+                                </div>
                             </div>
+
+                            {cleanPhone && (
+                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSendWhatsapp('direct')}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '5px',
+                                            padding: '7px 11px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #25D366',
+                                            background: 'rgba(37, 211, 102, 0.12)',
+                                            color: '#25D366',
+                                            fontSize: '12px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        title="Abrir WhatsApp directo con el cliente (sin texto)"
+                                    >
+                                        <span>📲</span> Abrir WhatsApp
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowWhatsappMenu(!showWhatsappMenu)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            padding: '7px 10px',
+                                            borderRadius: '8px',
+                                            border: '1px solid var(--border)',
+                                            background: showWhatsappMenu ? 'var(--primary-paddle)' : 'var(--bg-card)',
+                                            color: showWhatsappMenu ? 'white' : 'var(--text-primary)',
+                                            fontSize: '12px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        title="Ver opciones de mensajes automáticos"
+                                    >
+                                        <span>💬 Mensajes</span>
+                                        <span style={{ fontSize: '10px' }}>{showWhatsappMenu ? '▲' : '▼'}</span>
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        {cleanPhone && (
-                            <button
-                                onClick={() => window.open(`https://wa.me/${cleanPhone}`, '_blank')}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    padding: '7px 12px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #25D366',
-                                    background: 'rgba(37, 211, 102, 0.12)',
-                                    color: '#25D366',
-                                    fontSize: '12px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    flexShrink: 0
-                                }}
-                            >
-                                <span>📲</span> Abrir WhatsApp
-                            </button>
+                        {/* WhatsApp Presets Expandable Panel */}
+                        {cleanPhone && showWhatsappMenu && (
+                            <div style={{
+                                marginTop: '4px',
+                                padding: '10px 12px',
+                                background: 'var(--bg-card)',
+                                borderRadius: '10px',
+                                border: '1px solid rgba(37, 211, 102, 0.3)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#25D366', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                                        🚀 Enviar mensaje predeterminado:
+                                    </span>
+                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                        Haz clic para enviar directo o previsualizar
+                                    </span>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '6px' }}>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSendWhatsapp('pedir_sena')}
+                                            style={{
+                                                flex: 1,
+                                                padding: '6px 10px',
+                                                borderRadius: '6px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-main)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '11px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                textAlign: 'left'
+                                            }}
+                                        >
+                                            💳 <strong>Pedir Seña</strong>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenPreview('pedir_sena', 'Pedir Seña')}
+                                            style={{
+                                                padding: '6px 8px',
+                                                borderRadius: '6px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-main)',
+                                                fontSize: '11px',
+                                                cursor: 'pointer'
+                                            }}
+                                            title="Editar o ver antes de enviar"
+                                        >
+                                            ✏️
+                                        </button>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSendWhatsapp('confirmar_reserva')}
+                                            style={{
+                                                flex: 1,
+                                                padding: '6px 10px',
+                                                borderRadius: '6px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-main)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '11px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                textAlign: 'left'
+                                            }}
+                                        >
+                                            🎉 <strong>Confirmar Reserva</strong>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenPreview('confirmar_reserva', 'Confirmar Reserva')}
+                                            style={{
+                                                padding: '6px 8px',
+                                                borderRadius: '6px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-main)',
+                                                fontSize: '11px',
+                                                cursor: 'pointer'
+                                            }}
+                                            title="Editar o ver antes de enviar"
+                                        >
+                                            ✏️
+                                        </button>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSendWhatsapp('recordatorio_saldo')}
+                                            style={{
+                                                flex: 1,
+                                                padding: '6px 10px',
+                                                borderRadius: '6px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-main)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '11px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                textAlign: 'left'
+                                            }}
+                                        >
+                                            ⏰ <strong>Recordatorio Saldo</strong>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenPreview('recordatorio_saldo', 'Recordatorio de Saldo')}
+                                            style={{
+                                                padding: '6px 8px',
+                                                borderRadius: '6px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-main)',
+                                                fontSize: '11px',
+                                                cursor: 'pointer'
+                                            }}
+                                            title="Editar o ver antes de enviar"
+                                        >
+                                            ✏️
+                                        </button>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSendWhatsapp('ubicacion')}
+                                            style={{
+                                                flex: 1,
+                                                padding: '6px 10px',
+                                                borderRadius: '6px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-main)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '11px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                textAlign: 'left'
+                                            }}
+                                        >
+                                            📍 <strong>Enviar Ubicación</strong>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenPreview('ubicacion', 'Ubicación')}
+                                            style={{
+                                                padding: '6px 8px',
+                                                borderRadius: '6px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-main)',
+                                                fontSize: '11px',
+                                                cursor: 'pointer'
+                                            }}
+                                            title="Editar o ver antes de enviar"
+                                        >
+                                            ✏️
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -670,7 +936,7 @@ const BookingDetailsModal = ({
                         </div>
                     )}
 
-                    {/* Dynamic Payment Breakdown & Editable Price Card */}
+                    {/* Dynamic Payment Breakdown & Transparent Price Calculation Card */}
                     <div style={{
                         padding: '12px 14px',
                         background: 'var(--bg-main)',
@@ -678,7 +944,7 @@ const BookingDetailsModal = ({
                         border: '1px solid var(--border)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '8px'
+                        gap: '10px'
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
@@ -716,16 +982,50 @@ const BookingDetailsModal = ({
                                             }}
                                         />
                                     ) : (
-                                        <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '17px' }}>${activePrice}</div>
+                                        <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '18px' }}>${activePrice.toLocaleString('es-AR')}</div>
                                     )}
                                 </div>
                             </div>
                         </div>
 
+                        {/* Itemized Calculation Breakdown */}
+                        <div style={{
+                            background: 'var(--bg-card)',
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            border: '1px solid var(--border)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                            fontSize: '12px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                                <span>Alquiler base ({editableGuests ? `${editableGuests} personas` : (isRental ? 'Espacio' : 'Servicio')}):</span>
+                                <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>${baseRentalPrice.toLocaleString('es-AR')}</span>
+                            </div>
+                            {editableServices.length > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                                    <span>+ Adicionales ({editableServices.length}):</span>
+                                    <span style={{ fontWeight: '700', color: 'var(--primary-paddle, #84CC16)' }}>+${extrasSum.toLocaleString('es-AR')}</span>
+                                </div>
+                            )}
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                borderTop: '1px dashed var(--border)',
+                                paddingTop: '5px',
+                                marginTop: '3px',
+                                fontWeight: '800',
+                                fontSize: '13px'
+                            }}>
+                                <span>Total:</span>
+                                <span style={{ color: 'var(--text-primary)' }}>${activePrice.toLocaleString('es-AR')}</span>
+                            </div>
+                        </div>
+
                         {/* Detailed payment breakdown with editable deposit */}
                         <div style={{
-                            paddingTop: '8px',
-                            borderTop: '1px dashed var(--border)',
+                            paddingTop: '6px',
                             display: 'grid',
                             gridTemplateColumns: '1fr 1fr',
                             gap: '8px',
@@ -751,14 +1051,14 @@ const BookingDetailsModal = ({
                                     />
                                 ) : (
                                     <span style={{ fontWeight: '700', color: booking.status === 'deposit_paid' || booking.status === 'confirmed' ? '#F59E0B' : 'var(--text-primary)' }}>
-                                        ${activeDeposit}
+                                        ${activeDeposit.toLocaleString('es-AR')}
                                     </span>
                                 )}
                             </div>
                             <div style={{ textAlign: 'right' }}>
                                 <span style={{ color: 'var(--text-secondary)', fontSize: '11px', display: 'block', marginBottom: '2px' }}>Saldo a Cobrar al Ingresar:</span>
                                 <span style={{ fontWeight: '700', color: booking.status === 'confirmed' ? '#00E676' : '#E11D48' }}>
-                                    {booking.status === 'confirmed' || booking.status === 'completed' ? '$0 (Pagado Total)' : `$${pendingBalance}`}
+                                    {booking.status === 'confirmed' || booking.status === 'completed' ? '$0 (Pagado Total)' : `$${pendingBalance.toLocaleString('es-AR')}`}
                                 </span>
                             </div>
                         </div>
@@ -880,29 +1180,41 @@ const BookingDetailsModal = ({
                                             fontSize: '14px'
                                         }}
                                     >
-                                        Confirmar Reserva
+                                        Confirmar Turno
                                     </button>
                                 )}
-                                {(booking.status === 'confirmed' || booking.status === 'attended') && (
+                                {booking.status === 'confirmed' && (
                                     <button
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            onAction('complete_booking');
-                                        }}
+                                        onClick={() => onAction('confirm_attendance')}
                                         style={{
-                                            gridColumn: 'span 2',
                                             padding: '10px 14px',
                                             borderRadius: '12px',
                                             border: 'none',
-                                            background: '#000',
+                                            background: 'var(--primary-paddle)',
                                             color: 'white',
                                             fontWeight: '700',
                                             cursor: 'pointer',
                                             fontSize: '14px'
                                         }}
                                     >
-                                        Finalizar
+                                        Confirmar Asistencia
+                                    </button>
+                                )}
+                                {booking.status === 'attended' && (
+                                    <button
+                                        onClick={() => onAction('complete_booking')}
+                                        style={{
+                                            padding: '10px 14px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: '#00E676',
+                                            color: 'white',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            fontSize: '14px'
+                                        }}
+                                    >
+                                        Finalizar Turno
                                     </button>
                                 )}
                                 {booking.status !== 'cancelled' && booking.status !== 'completed' && (
@@ -913,7 +1225,7 @@ const BookingDetailsModal = ({
                                             onAction('cancel');
                                         }}
                                         style={{
-                                            gridColumn: 'span 2',
+                                            gridColumn: (booking.status === 'attended' || booking.status === 'confirmed') ? 'auto' : 'span 2',
                                             padding: '10px 14px',
                                             borderRadius: '12px',
                                             border: 'none',
@@ -921,7 +1233,7 @@ const BookingDetailsModal = ({
                                             color: 'white',
                                             fontWeight: '700',
                                             cursor: 'pointer',
-                                            marginTop: '4px',
+                                            marginTop: (booking.status === 'attended' || booking.status === 'confirmed') ? '0' : '4px',
                                             fontSize: '14px'
                                         }}
                                     >
@@ -933,6 +1245,119 @@ const BookingDetailsModal = ({
                     </div>
                 </div>
             </div>
+
+            {/* Custom Message Preview / Editor Modal */}
+            {previewMessage && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1100,
+                        padding: '16px'
+                    }}
+                    onClick={() => setPreviewMessage(null)}
+                >
+                    <div
+                        style={{
+                            background: 'var(--bg-card)',
+                            padding: '20px',
+                            borderRadius: '16px',
+                            width: '100%',
+                            maxWidth: '500px',
+                            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+                            border: '1px solid var(--border)'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '20px' }}>💬</span>
+                                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                    Mensaje: {previewMessage.title}
+                                </h4>
+                            </div>
+                            <button
+                                onClick={() => setPreviewMessage(null)}
+                                style={{ background: 'transparent', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                            Puedes editar el texto antes de enviarlo a <strong>{booking.customer_name || 'Cliente'}</strong> ({cleanPhone}):
+                        </p>
+
+                        <textarea
+                            value={previewMessage.text}
+                            onChange={(e) => setPreviewMessage(prev => ({ ...prev, text: e.target.value }))}
+                            rows={6}
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '13px',
+                                lineHeight: '1.5',
+                                resize: 'vertical',
+                                marginBottom: '16px',
+                                fontFamily: 'inherit'
+                            }}
+                        />
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setPreviewMessage(null)}
+                                style={{
+                                    padding: '8px 14px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg-main)',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(previewMessage.text)}`, '_blank');
+                                    setPreviewMessage(null);
+                                }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '8px 16px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: '#25D366',
+                                    color: 'white',
+                                    fontSize: '13px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)'
+                                }}
+                            >
+                                <span>📲</span> Enviar por WhatsApp
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
