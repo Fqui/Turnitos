@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
+import SEOHead from '../components/SEOHead';
 import { generateSlug } from '../utils/utils';
 
 const DEFAULT_CATEGORIES = [
@@ -443,6 +444,38 @@ export default function Home() {
         setShowSuggestions(false);
     };
 
+    // Structured Data for Home (WebSite + Organization Schema)
+    const homeSchema = useMemo(() => ({
+        '@context': 'https://schema.org',
+        '@graph': [
+            {
+                '@type': 'Organization',
+                '@id': 'https://www.turnitoslr.com/#organization',
+                'name': 'TurnitosLR',
+                'url': 'https://www.turnitoslr.com',
+                'logo': 'https://www.turnitoslr.com/logo-turnitos.png',
+                'description': 'Plataforma líder de reservas de turnos online en La Rioja, Argentina.',
+                'areaServed': {
+                    '@type': 'AdministrativeArea',
+                    'name': 'La Rioja, Argentina'
+                }
+            },
+            {
+                '@type': 'WebSite',
+                '@id': 'https://www.turnitoslr.com/#website',
+                'url': 'https://www.turnitoslr.com',
+                'name': 'TurnitosLR',
+                'description': 'Reserva de turnos online de canchas de pádel, fútbol, peluquerías y quinchos en La Rioja.',
+                'publisher': { '@id': 'https://www.turnitoslr.com/#organization' },
+                'potentialAction': {
+                    '@type': 'SearchAction',
+                    'target': 'https://www.turnitoslr.com/?q={search_term_string}',
+                    'query-input': 'required name=search_term_string'
+                }
+            }
+        ]
+    }), []);
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -450,6 +483,13 @@ export default function Home() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
         >
+            <SEOHead
+                title="TurnitosLR | Reserva de Turnos Online en La Rioja"
+                description="Reservá canchas de pádel, fútbol, turnos de peluquería, estética y quinchos en La Rioja. Rápido, fácil y sin esperas."
+                keywords="turnos online la rioja, canchas de padel la rioja, futbol la rioja, peluquerias la rioja, quinchos la rioja, turnitos"
+                url="https://www.turnitoslr.com"
+                schema={homeSchema}
+            />
             <div className="container" style={{ padding: '20px 20px 80px' }}>
 
                 {/* 1. Hero / Promotions */}

@@ -1,0 +1,21 @@
+# robots.txt for TurnitosLR
+User-agent: *
+Allow: /
+Allow: /cancha-*
+Allow: /padel-*
+Allow: /quincho-*
+Allow: /barberia-*
+Allow: /peluqueria-*
+Allow: /estetica-*
+Allow: /*/tienda
+Allow: /calificar/*
+
+# Disallow internal & admin areas from indexing
+Disallow: /seller/
+Disallow: /admin/
+Disallow: /superadmin/
+Disallow: /login
+Disallow: /registro
+
+# Sitemap location
+Sitemap: https://www.turnitoslr.com/sitemap.xml

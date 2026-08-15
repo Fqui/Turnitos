@@ -7,6 +7,7 @@ import serviceAdapter from '../services/serviceAdapter';
 import { pushService } from '../services/pushService';
 import { useNotification } from '../contexts/NotificationContext';
 import BusinessReviewsSection from '../components/BusinessReviewsSection';
+import SEOHead from '../components/SEOHead';
 import 'leaflet/dist/leaflet.css';
 
 // Fix Leaflet default icon issue
@@ -433,8 +434,68 @@ export default function VenueProfile({ business: initialBusiness }) {
     const daysInMonth = getDaysInMonth(currentMonth);
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 
+    // SEO: Schema.org EventVenue Structured Data
+    const venueSchema = useMemo(() => {
+        if (!business) return null;
+        const ratingVal = Number(business.rating_avg || business.rating || business.metadata?.rating_avg || 5.0);
+        const reviewsNum = Number(business.reviews_count || business.metadata?.reviews_count || 1);
+
+        const schemaObj = {
+            '@context': 'https://schema.org',
+            '@type': 'EventVenue',
+            'name': business.name,
+            'image': business.banner_image || business.banner_url || business.logo || 'https://www.turnitoslr.com/logo-turnitos.png',
+            'url': `https://www.turnitoslr.com/${business.slug || ''}`,
+            'telephone': business.whatsapp ? `+54${business.whatsapp}` : undefined,
+            'priceRange': '$$',
+            'maximumAttendeeCapacity': business.max_capacity || business.capacity || 100,
+            'address': {
+                '@type': 'PostalAddress',
+                'addressLocality': business.location || 'La Rioja',
+                'addressRegion': 'La Rioja',
+                'addressCountry': 'AR'
+            }
+        };
+
+        if (business.latitude && business.longitude) {
+            schemaObj.geo = {
+                '@type': 'GeoCoordinates',
+                'latitude': Number(business.latitude),
+                'longitude': Number(business.longitude)
+            };
+        }
+
+        if (ratingVal && reviewsNum > 0) {
+            schemaObj.aggregateRating = {
+                '@type': 'AggregateRating',
+                'ratingValue': ratingVal.toFixed(1),
+                'reviewCount': reviewsNum,
+                'bestRating': '5',
+                'worstRating': '1'
+            };
+        }
+
+        return schemaObj;
+    }, [business]);
+
+    const pageTitle = business
+        ? `${business.name} - Alquiler de Quincho y Eventos en ${business.location || 'La Rioja'}`
+        : 'TurnitosLR';
+    const pageDescription = business
+        ? `Alquilá ${business.name} en ${business.location || 'La Rioja'}. Consultá disponibilidad, precios por hora o por día y reservá online.`
+        : 'Alquiler de quinchos y salones en La Rioja con TurnitosLR.';
+    const pageImage = business?.banner_image || business?.banner_url || business?.logo || 'https://www.turnitoslr.com/logo-turnitos.png';
+
     return (
         <div style={{ background: pageBg, color: textColor, minHeight: '100vh', width: '100%', overflowX: 'clip', transition: 'background 0.3s' }}>
+            <SEOHead
+                title={pageTitle}
+                description={pageDescription}
+                keywords={`${business?.name}, alquiler quincho ${business?.name}, eventos la rioja, quinchos la rioja, turnitos`}
+                image={pageImage}
+                url={`https://www.turnitoslr.com/${business?.slug || ''}`}
+                schema={venueSchema}
+            />
             {/* Hero Section */}
             <div style={{
                 position: 'relative',

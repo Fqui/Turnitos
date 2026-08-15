@@ -17,6 +17,7 @@ import BookingSummary from '../components/BookingSummary';
 import SpecialistsShowcase from '../components/SpecialistsShowcase';
 import BookingSuccessModal from '../components/BookingSuccessModal';
 import BusinessReviewsSection from '../components/BusinessReviewsSection';
+import SEOHead from '../components/SEOHead';
 import { formatDisplayDate } from '../utils/dateUtils';
 
 // Fix for default marker icon
@@ -551,6 +552,68 @@ export default function BusinessProfile({ business: initialBusiness }) {
         }
     };
 
+    // SEO: Schema.org JSON-LD Structured Data for Local Business
+    const businessSchema = useMemo(() => {
+        if (!business) return null;
+
+        const catName = (business.categories?.name || business.category || '').toLowerCase();
+        let schemaType = 'LocalBusiness';
+        if (business.type === 'sport' || catName.includes('deporte') || catName.includes('padel') || catName.includes('futbol')) {
+            schemaType = 'SportsActivityLocation';
+        } else if (business.type === 'service' || catName.includes('belleza') || catName.includes('peluqueria') || catName.includes('barberia')) {
+            schemaType = 'HealthAndBeautyBusiness';
+        } else if (business.type === 'venue' || catName.includes('quincho')) {
+            schemaType = 'EventVenue';
+        }
+
+        const ratingVal = Number(business.rating_avg || business.rating || business.metadata?.rating_avg || 5.0);
+        const reviewsNum = Number(business.reviews_count || business.metadata?.reviews_count || 1);
+
+        const schemaObj = {
+            '@context': 'https://schema.org',
+            '@type': schemaType,
+            'name': business.name,
+            'image': business.banner_image || business.logo || 'https://www.turnitoslr.com/logo-turnitos.png',
+            'url': `https://www.turnitoslr.com/${business.slug || ''}`,
+            'telephone': business.whatsapp ? `+54${business.whatsapp}` : undefined,
+            'priceRange': '$$',
+            'address': {
+                '@type': 'PostalAddress',
+                'addressLocality': business.location || 'La Rioja',
+                'addressRegion': 'La Rioja',
+                'addressCountry': 'AR'
+            }
+        };
+
+        if (business.latitude && business.longitude) {
+            schemaObj.geo = {
+                '@type': 'GeoCoordinates',
+                'latitude': Number(business.latitude),
+                'longitude': Number(business.longitude)
+            };
+        }
+
+        if (ratingVal && reviewsNum > 0) {
+            schemaObj.aggregateRating = {
+                '@type': 'AggregateRating',
+                'ratingValue': ratingVal.toFixed(1),
+                'reviewCount': reviewsNum,
+                'bestRating': '5',
+                'worstRating': '1'
+            };
+        }
+
+        return schemaObj;
+    }, [business]);
+
+    const pageTitle = business
+        ? `${business.name} - Turnos Online en ${business.location || 'La Rioja'}`
+        : 'TurnitosLR';
+    const pageDescription = business
+        ? `Reservá tu turno online en ${business.name} (${business.location || 'La Rioja'}). Turnos de canchas y servicios disponibles en tiempo real.`
+        : 'Reservá turnos online en La Rioja con TurnitosLR.';
+    const pageImage = business?.banner_image || business?.logo || 'https://www.turnitoslr.com/logo-turnitos.png';
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -560,6 +623,14 @@ export default function BusinessProfile({ business: initialBusiness }) {
             className="business-profile-page"
             style={{ paddingBottom: '80px', width: '100%', overflowX: 'clip' }}
         >
+            <SEOHead
+                title={pageTitle}
+                description={pageDescription}
+                keywords={`${business?.name}, turnos ${business?.name}, ${business?.category || 'deportes'}, turnos online la rioja, turnitos`}
+                image={pageImage}
+                url={`https://www.turnitoslr.com/${business?.slug || ''}`}
+                schema={businessSchema}
+            />
             <div className="business-profile-card-shell" style={{ maxWidth: containerWidth }}>
                 {/* 1. Immersive Hero Section */}
                 {/* Header / Banner */}
