@@ -10,6 +10,7 @@ export default function CalendarWrapper({
     onBookingClick,
     onBlockSlot,
     onUnblockSlot,
+    onBlockDate,
     onMoveBooking,
     isRescheduling,
     reschedulingBooking,
@@ -27,6 +28,7 @@ export default function CalendarWrapper({
                 bookings={bookings}
                 onCreateBooking={onCreateBooking}
                 onBookingClick={onBookingClick}
+                onBlockDate={onBlockDate}
                 isMobile={isMobile}
             />
         );

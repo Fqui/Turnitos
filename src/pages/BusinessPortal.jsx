@@ -642,6 +642,39 @@ export default function BusinessPortal() {
         }
     };
 
+    const handleBlockDate = async (dateStr, reason = 'Bloqueado por el negocio') => {
+        try {
+            const currentBusiness = businesses.find(b => b.id === selectedBusinessId);
+            const currentBlocked = [
+                ...(currentBusiness?.blocked_dates || []),
+                ...(currentBusiness?.metadata?.blocked_dates || [])
+            ];
+            const exists = currentBlocked.some(b => {
+                const bStr = typeof b === 'string' ? b : b?.date;
+                return bStr === dateStr;
+            });
+
+            if (!exists) {
+                const newBlocked = [...currentBlocked, { date: dateStr, reason: reason || 'Bloqueado por el negocio' }];
+                await serviceAdapter.patchBusiness(selectedBusinessId, {
+                    blocked_dates: newBlocked,
+                    metadata: {
+                        ...(currentBusiness?.metadata || {}),
+                        blocked_dates: newBlocked
+                    }
+                });
+                setBusinesses(prev => prev.map(b => String(b.id) === String(selectedBusinessId) ? {
+                    ...b,
+                    blocked_dates: newBlocked,
+                    metadata: { ...(b.metadata || {}), blocked_dates: newBlocked }
+                } : b));
+            }
+        } catch (error) {
+            console.error('Error blocking date:', error);
+            alert('Error al bloquear la fecha');
+        }
+    };
+
     const handleUnblockSlot = async (booking) => {
         setConfirmModal({
             isOpen: true,
@@ -771,30 +804,37 @@ export default function BusinessPortal() {
                 setShowBookingModal(false);
             } else if (action === 'unblock') {
                 if (selectedBooking.isVirtual) {
-                    if (confirm('Este horario corresponde a un descanso programado. ¿Desea crear una reserva manual aquí?')) {
-                        setShowBookingModal(false);
-                        const [y, m, d] = selectedBooking.date.split('-');
-                        const dateObj = new Date(y, m - 1, d);
-                        handleCreateBooking(null, dateObj, selectedBooking.time);
-                    }
+                    setShowBookingModal(false);
+                    const [y, m, d] = selectedBooking.date.split('-');
+                    const dateObj = new Date(y, m - 1, d);
+                    handleCreateBooking(null, dateObj, selectedBooking.time);
                     return;
                 }
 
-                if (confirm('¿Estás seguro de desbloquear esta fecha u horario?')) {
-                    if (String(selectedBooking.id).startsWith('blocked-') || selectedBooking.is_blocked) {
-                        const targetDate = selectedBooking.date;
-                        const currentBlocked = (currentBusiness?.blocked_dates || []).filter(b => {
-                            const d = typeof b === 'string' ? b : b.date;
-                            return d !== targetDate;
-                        });
-                        await serviceAdapter.patchBusiness(selectedBusinessId, { blocked_dates: currentBlocked });
-                        setBusinesses(prev => prev.map(b => String(b.id) === String(selectedBusinessId) ? { ...b, blocked_dates: currentBlocked } : b));
-                    } else {
-                        await serviceAdapter.deleteBooking(selectedBooking.id);
-                    }
-                    await fetchBookings();
-                    setShowBookingModal(false);
+                if (String(selectedBooking.id).startsWith('blocked-') || selectedBooking.is_blocked) {
+                    const targetDate = selectedBooking.date;
+                    const currentBusiness = businesses.find(b => b.id === selectedBusinessId);
+                    const currentBlocked = (currentBusiness?.blocked_dates || []).filter(b => {
+                        const d = typeof b === 'string' ? b : b?.date;
+                        return d !== targetDate;
+                    });
+                    await serviceAdapter.patchBusiness(selectedBusinessId, {
+                        blocked_dates: currentBlocked,
+                        metadata: {
+                            ...(currentBusiness?.metadata || {}),
+                            blocked_dates: currentBlocked
+                        }
+                    });
+                    setBusinesses(prev => prev.map(b => String(b.id) === String(selectedBusinessId) ? {
+                        ...b,
+                        blocked_dates: currentBlocked,
+                        metadata: { ...(b.metadata || {}), blocked_dates: currentBlocked }
+                    } : b));
+                } else {
+                    await serviceAdapter.deleteBooking(selectedBooking.id);
                 }
+                await fetchBookings();
+                setShowBookingModal(false);
             }
         } catch (error) {
             console.error('Error in booking action:', error);
@@ -1400,6 +1440,7 @@ export default function BusinessPortal() {
                                         isMobile={isMobile}
                                         onBlockSlot={handleBlockSlot}
                                         onUnblockSlot={handleUnblockSlot}
+                                        onBlockDate={handleBlockDate}
                                         onCreateBooking={handleCreateBooking}
                                         onBookingClick={handleBookingClick}
                                         onMoveBooking={handleMoveBooking}
