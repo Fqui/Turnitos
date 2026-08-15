@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { pushService } from '../../services/pushService';
+import { useNotification } from '../../contexts/NotificationContext';
 
 const BusinessPortalSidebar = ({
     isVisible,
@@ -14,6 +15,7 @@ const BusinessPortalSidebar = ({
     onCreateBooking,
     pendingCount = 0
 }) => {
+    const { showToast, showAlert } = useNotification();
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [isPwaInstalled, setIsPwaInstalled] = useState(false);
     const [notifGranted, setNotifGranted] = useState(
@@ -51,14 +53,15 @@ const BusinessPortalSidebar = ({
             const { outcome } = await deferredPrompt.userChoice;
             if (outcome === 'accepted') {
                 setIsPwaInstalled(true);
+                showToast('¡App instalada con éxito!', 'success');
             }
             setDeferredPrompt(null);
         } else {
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             if (isIOS) {
-                alert('📲 Para instalar en iPhone / iPad:\n1. Toca el botón Compartir (el ícono de la flechita arriba en Safari)\n2. Elige "Agregar a inicio"');
+                showAlert('Instalar en iPhone / iPad', '1. Tocá el botón Compartir (el ícono de la flechita 📤 en Safari)\n2. Elegí "Agregar a inicio"', 'info', 'Entendido');
             } else {
-                alert('📲 Para instalar la App:\n1. Toca los 3 puntos en la esquina superior de tu navegador\n2. Elige "Instalar aplicación" o "Agregar a la pantalla principal"');
+                showAlert('Instalar Aplicación', '1. Tocá los 3 puntos en la esquina de tu navegador\n2. Elegí "Instalar aplicación" o "Agregar a la pantalla principal"', 'info', 'Entendido');
             }
         }
     };
@@ -66,22 +69,23 @@ const BusinessPortalSidebar = ({
     const handleToggleNotifications = async () => {
         try {
             if (!('Notification' in window)) {
-                alert('Tu navegador no soporta notificaciones push');
+                showToast('Tu navegador no soporta notificaciones push', 'warning');
                 return;
             }
             if (Notification.permission === 'denied') {
-                alert('⚠️ Los permisos de notificación fueron bloqueados previamente en tu navegador.\n\nPara activarlos:\n1. Tocá el ícono del Candado 🔒 al lado de la dirección de la web arriba.\n2. En "Notificaciones", seleccioná "Permitir".\n3. Recargá la página e intentá de nuevo.');
+                showAlert('Permisos Bloqueados', 'Los permisos de notificación fueron bloqueados previamente en tu navegador.\n\nPara activarlos:\n1. Tocá el ícono del Candado 🔒 al lado de la dirección de la web arriba (turnitoslr.com).\n2. En "Notificaciones", seleccioná "Permitir".\n3. Recargá la página e intentá de nuevo.', 'warning', 'Entendido');
                 return;
             }
             const result = await pushService.requestPermissionAndGetTokenDetailed(currentBusiness?.id);
             if (result.success && result.token) {
                 setNotifGranted(true);
-                alert('🔔 ¡Notificaciones Push activadas con éxito! Recibirás avisos emergentes cuando entre una nueva reserva web.');
+                showToast('🔔 ¡Notificaciones Push activadas y vinculadas!', 'success');
             } else {
-                alert(`⚠️ No se pudo activar la notificación:\n${result.error || 'Permiso denegado'}`);
+                showToast(`⚠️ No se pudo activar: ${result.error || 'Permiso denegado'}`, 'error');
             }
         } catch (e) {
             console.error(e);
+            showToast('Error al configurar notificaciones', 'error');
         }
     };
 

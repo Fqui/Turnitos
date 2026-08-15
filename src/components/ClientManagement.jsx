@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import serviceAdapter from '../services/serviceAdapter';
+import { useNotification } from '../contexts/NotificationContext';
 import { formatDisplayDate } from '../utils/dateUtils';
 
 export default function ClientManagement({ businessId, isMobile }) {
+    const { showToast } = useNotification();
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -76,10 +78,10 @@ export default function ClientManagement({ businessId, isMobile }) {
             });
             setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
             setSelectedCustomer(updated);
-            alert('Notas guardadas correctamente');
+            showToast('✓ Notas guardadas correctamente', 'success');
         } catch (error) {
             console.error('Error saving notes:', error);
-            alert('Error al guardar notas');
+            showToast('Error al guardar notas', 'error');
         } finally {
             setSaving(false);
         }
@@ -93,10 +95,10 @@ export default function ClientManagement({ businessId, isMobile }) {
             });
             setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
             setSelectedCustomer(updated);
-            alert('Cumpleaños guardado correctamente');
+            showToast('✓ Cumpleaños guardado correctamente', 'success');
         } catch (error) {
             console.error('Error saving birthday:', error);
-            alert('Error al guardar cumpleaños');
+            showToast('Error al guardar cumpleaños', 'error');
         } finally {
             setSaving(false);
         }

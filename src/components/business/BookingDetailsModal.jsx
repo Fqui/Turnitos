@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNotification } from '../../contexts/NotificationContext';
 
 const BookingDetailsModal = ({
     isOpen,
@@ -11,6 +12,7 @@ const BookingDetailsModal = ({
     formatDisplayDate,
     getStatusLabel
 }) => {
+    const { showToast } = useNotification();
     if (!isOpen || !booking) return null;
 
     const biz = businesses?.find(b => String(b.id) === String(selectedBusinessId || booking.business_id || booking.businessId));
@@ -171,7 +173,7 @@ const BookingDetailsModal = ({
 
     const handleSendWhatsapp = (templateType) => {
         if (!cleanPhone) {
-            alert('El cliente no tiene un teléfono válido registrado');
+            showToast('El cliente no tiene un teléfono válido registrado', 'warning');
             return;
         }
         if (templateType === 'direct') {
@@ -252,11 +254,11 @@ const BookingDetailsModal = ({
         if (editableGuests) {
             const numGuests = parseInt(editableGuests, 10);
             if (isNaN(numGuests) || numGuests < 1) {
-                alert('La cantidad de personas debe ser mayor a 0');
+                showToast('La cantidad de personas debe ser mayor a 0', 'warning');
                 return;
             }
             if (numGuests > maxCapacity) {
-                alert(`La cantidad de personas (${numGuests}) supera el límite de capacidad de este establecimiento (${maxCapacity} personas)`);
+                showToast(`La cantidad de personas (${numGuests}) supera el límite permitido (${maxCapacity})`, 'warning');
                 return;
             }
         }
@@ -288,11 +290,12 @@ const BookingDetailsModal = ({
             setIsSaving(false);
             setIsEditing(false);
             setSaveSuccess(true);
+            showToast('✓ Cambios guardados correctamente', 'success');
             setTimeout(() => setSaveSuccess(false), 3000);
         } catch (err) {
             console.error('Error saving booking changes:', err);
             setIsSaving(false);
-            alert('Error al guardar los cambios en la reserva');
+            showToast('Error al guardar los cambios en la reserva', 'error');
         }
     };
 

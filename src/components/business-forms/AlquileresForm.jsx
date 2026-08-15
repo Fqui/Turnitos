@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import supabaseService from '../../services/supabaseService';
+import { useNotification } from '../../contexts/NotificationContext';
 import { generateBusinessCredentials, slugify } from '../../utils/businessUtils';
 import { resizeImage, validateImageFile } from '../../utils/imageUtils';
 
@@ -29,6 +30,7 @@ function LocationPicker({ position, onLocationChange }) {
 }
 
 export default function AlquileresForm({ business, onSave, onCancel }) {
+    const { showToast } = useNotification();
     const [categories, setCategories] = useState([]);
     const [subcategories, setSubcategories] = useState([]);
     const [subscriptionPlans, setSubscriptionPlans] = useState([]);
@@ -101,7 +103,7 @@ export default function AlquileresForm({ business, onSave, onCancel }) {
             // Validate image file
             const validation = validateImageFile(file);
             if (!validation.valid) {
-                alert(validation.error);
+                showToast(validation.error, 'warning');
                 setters[type](false);
                 return;
             }
@@ -122,7 +124,7 @@ export default function AlquileresForm({ business, onSave, onCancel }) {
             }
         } catch (error) {
             console.error('Error uploading image:', error);
-            alert('Error al subir imagen: ' + error.message);
+            showToast('Error al subir imagen: ' + error.message, 'error');
         } finally {
             setters[type](false);
         }
@@ -130,7 +132,7 @@ export default function AlquileresForm({ business, onSave, onCancel }) {
 
     const handleAddAdditionalService = () => {
         if (!newAdditionalService.name || !newAdditionalService.price) {
-            alert('Completa nombre y precio del servicio adicional');
+            showToast('Completa nombre y precio del servicio adicional', 'warning');
             return;
         }
         setFormData(prev => ({ ...prev, additional_services: [...prev.additional_services, { ...newAdditionalService, id: Date.now().toString() }] }));
@@ -153,16 +155,17 @@ export default function AlquileresForm({ business, onSave, onCancel }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name || !formData.category_id || !formData.subcategory_id || !formData.subscription_plan_id || !formData.price_per_hour) {
-            alert('Completa todos los campos obligatorios');
+            showToast('Completa todos los campos obligatorios', 'warning');
             return;
         }
         try {
             const credentials = generateBusinessCredentials(formData.name);
             const businessData = { ...formData, email: credentials.email, password: credentials.password, slug: slugify(formData.name), primary_color: formData.primaryColor };
             await onSave(businessData);
+            showToast('✓ Negocio guardado correctamente', 'success');
         } catch (error) {
             console.error('Error saving business:', error);
-            alert('Error al guardar negocio: ' + error.message);
+            showToast('Error al guardar negocio: ' + error.message, 'error');
         }
     };
 
