@@ -78,6 +78,7 @@ const BookingDetailsModal = ({
     const [editablePrice, setEditablePrice] = useState(0);
     const [editableDeposit, setEditableDeposit] = useState(0);
     const [editableGuests, setEditableGuests] = useState('');
+    const [editableNotes, setEditableNotes] = useState('');
     const [editableServices, setEditableServices] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
@@ -116,6 +117,7 @@ const BookingDetailsModal = ({
         setEditablePrice(defaultTotalPrice);
         setEditableDeposit(calculatedDefaultDeposit);
         setEditableGuests(currentGuests ? String(currentGuests) : '');
+        setEditableNotes(notes || '');
         setEditableServices(parseBookingServices(booking));
         setIsEditing(false);
         setIsSaving(false);
@@ -123,7 +125,7 @@ const BookingDetailsModal = ({
         setShowAddExtraForm(false);
         setShowWhatsappMenu(false);
         setPreviewMessage(null);
-    }, [booking?.id, defaultTotalPrice, calculatedDefaultDeposit, currentGuests]);
+    }, [booking?.id, defaultTotalPrice, calculatedDefaultDeposit, currentGuests, notes]);
 
     const activePrice = Number(editablePrice) || 0;
     const activeDeposit = Number(editableDeposit) || 0;
@@ -269,7 +271,16 @@ const BookingDetailsModal = ({
                 deposit_amount: activeDeposit,
                 guest_count: editableGuests ? parseInt(editableGuests, 10) : null,
                 selected_services: editableServices,
-                services_total: extrasSum
+                services_total: extrasSum,
+                notes: editableNotes,
+                metadata: {
+                    ...(booking.metadata || {}),
+                    notes: editableNotes,
+                    deposit_amount: activeDeposit,
+                    depositAmount: activeDeposit,
+                    guestCount: editableGuests ? parseInt(editableGuests, 10) : null,
+                    selectedServices: editableServices
+                }
             };
 
             await onAction('update_booking', updatePayload);
@@ -289,6 +300,7 @@ const BookingDetailsModal = ({
         setEditablePrice(defaultTotalPrice);
         setEditableDeposit(calculatedDefaultDeposit);
         setEditableGuests(currentGuests ? String(currentGuests) : '');
+        setEditableNotes(notes || '');
         setEditableServices(parseBookingServices(booking));
         setIsEditing(false);
         setShowAddExtraForm(false);
@@ -1055,17 +1067,41 @@ const BookingDetailsModal = ({
                         )}
                     </div>
 
-                    {/* Notes if available */}
-                    {notes && (
+                    {/* Notes / Observations */}
+                    {(notes || isEditing) && (
                         <div style={{
-                            padding: '8px 12px',
+                            padding: '10px 12px',
                             background: 'rgba(245, 158, 11, 0.08)',
                             borderRadius: '10px',
                             border: '1px solid rgba(245, 158, 11, 0.25)',
-                            fontSize: '11px'
+                            fontSize: '12px'
                         }}>
-                            <span style={{ fontWeight: '700', color: '#D97706', display: 'block', marginBottom: '1px' }}>📝 Notas / Observaciones:</span>
-                            <span style={{ color: 'var(--text-primary)' }}>{notes}</span>
+                            <span style={{ fontWeight: '700', color: '#D97706', display: 'block', marginBottom: '4px' }}>
+                                📝 Notas / Observaciones:
+                            </span>
+                            {isEditing ? (
+                                <textarea
+                                    rows="2"
+                                    value={editableNotes}
+                                    onChange={(e) => setEditableNotes(e.target.value)}
+                                    placeholder="Observaciones de la reserva..."
+                                    style={{
+                                        width: '100%',
+                                        padding: '6px 10px',
+                                        borderRadius: '8px',
+                                        border: '1px solid var(--border)',
+                                        background: 'var(--bg-card)',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '12px',
+                                        outline: 'none',
+                                        resize: 'vertical'
+                                    }}
+                                />
+                            ) : (
+                                <span style={{ color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
+                                    {editableNotes || notes}
+                                </span>
+                            )}
                         </div>
                     )}
 

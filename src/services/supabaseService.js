@@ -1422,7 +1422,11 @@ class SupabaseService {
         // Map court_id or service_id to resource_id for consistent availability checking
         const bookingsWithResourceId = data?.map(booking => ({
             ...booking,
-            resource_id: booking.court_id || booking.service_id
+            resource_id: booking.court_id || booking.service_id,
+            notes: booking.notes || booking.metadata?.notes || '',
+            deposit_amount: booking.deposit_amount !== undefined && booking.deposit_amount !== null
+                ? booking.deposit_amount
+                : (booking.metadata?.deposit_amount !== undefined ? booking.metadata?.deposit_amount : (booking.metadata?.depositAmount || null))
         })) || [];
 
         return { bookings: bookingsWithResourceId };
@@ -1568,6 +1572,13 @@ class SupabaseService {
         const targetCustomerPhone = bookingData.customerPhone || bookingData.customer_phone;
         const targetCustomerEmail = bookingData.customerEmail || bookingData.customer_email;
 
+        const safeMetadata = {
+            ...(bookingData.metadata || {}),
+            notes: bookingData.notes || bookingData.metadata?.notes || null,
+            deposit_amount: bookingData.depositAmount !== undefined ? bookingData.depositAmount : (bookingData.deposit_amount !== undefined ? bookingData.deposit_amount : null),
+            duration_hours: bookingData.durationHours || bookingData.metadata?.duration_hours || (bookingData.duration ? Math.round(bookingData.duration / 60) : null)
+        };
+
         const { data, error } = await supabase
             .from('bookings')
             .insert([{
@@ -1584,7 +1595,7 @@ class SupabaseService {
                 status: bookingData.status || 'pending',
                 price: bookingData.price || bookingData.total_price || bookingData.totalPrice || 0,
                 duration: bookingData.duration,
-                metadata: bookingData.metadata,
+                metadata: safeMetadata,
                 // Venue-specific fields
                 guest_count: bookingData.guestCount || bookingData.guest_count || null,
                 selected_services: bookingData.selectedServices || bookingData.selected_services || [],
@@ -1659,9 +1670,12 @@ class SupabaseService {
             metaUpdates = { ...metaUpdates, ...updates.metadata };
         }
 
-        // Store deposit amount safely inside metadata JSONB
+        // Store deposit amount & notes safely inside metadata JSONB
         if (updates.deposit_amount !== undefined || updates.depositAmount !== undefined) {
             metaUpdates.deposit_amount = Number(updates.deposit_amount !== undefined ? updates.deposit_amount : updates.depositAmount);
+        }
+        if (updates.notes !== undefined) {
+            metaUpdates.notes = updates.notes;
         }
 
         const dbUpdates = {

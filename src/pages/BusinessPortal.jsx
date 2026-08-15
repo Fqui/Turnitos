@@ -513,6 +513,10 @@ export default function BusinessPortal() {
 
         const isCourt = currentBusiness?.courts?.some(c => c.id === newBookingData.serviceId);
 
+        const parsedDeposit = (newBookingData.depositAmount !== '' && newBookingData.depositAmount !== null && newBookingData.depositAmount !== undefined && !isNaN(Number(newBookingData.depositAmount)))
+            ? Number(newBookingData.depositAmount)
+            : Math.round((parseFloat(newBookingData.price) || 0) * 0.3);
+
         const bookingData = {
             businessId: selectedBusinessId,
             business_id: selectedBusinessId,
@@ -522,6 +526,7 @@ export default function BusinessPortal() {
             date: newBookingData.date,
             time: newBookingData.time || '00:00',
             duration: newBookingData.duration || 240,
+            durationHours: newBookingData.durationHours || (newBookingData.duration ? Math.round(newBookingData.duration / 60) : 4),
             guestCount: newBookingData.guestCount ? parseInt(newBookingData.guestCount, 10) : null,
             guest_count: newBookingData.guestCount ? parseInt(newBookingData.guestCount, 10) : null,
             selectedServices: newBookingData.selectedServices || [],
@@ -536,12 +541,14 @@ export default function BusinessPortal() {
             customerEmail: newBookingData.customerEmail || null,
             customer_email: newBookingData.customerEmail || null,
             notes: newBookingData.notes || null,
-            depositAmount: parseFloat(newBookingData.depositAmount) !== undefined && !isNaN(parseFloat(newBookingData.depositAmount))
-                ? parseFloat(newBookingData.depositAmount)
-                : Math.round((parseFloat(newBookingData.price) || 0) * 0.3),
-            deposit_amount: parseFloat(newBookingData.depositAmount) !== undefined && !isNaN(parseFloat(newBookingData.depositAmount))
-                ? parseFloat(newBookingData.depositAmount)
-                : Math.round((parseFloat(newBookingData.price) || 0) * 0.3),
+            depositAmount: parsedDeposit,
+            deposit_amount: parsedDeposit,
+            metadata: {
+                notes: newBookingData.notes || null,
+                deposit_amount: parsedDeposit,
+                depositAmount: parsedDeposit,
+                duration_hours: newBookingData.durationHours || (newBookingData.duration ? Math.round(newBookingData.duration / 60) : 4)
+            },
             status: 'pending',
             price: parseFloat(newBookingData.price) || 0,
             history: [

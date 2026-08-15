@@ -13,13 +13,15 @@ const NewBookingModal = ({
     const [customExtraName, setCustomExtraName] = useState('');
     const [customExtraPrice, setCustomExtraPrice] = useState('');
     const [showAddCustomExtra, setShowAddCustomExtra] = useState(false);
+    const [isManualDeposit, setIsManualDeposit] = useState(false);
 
-    // Reset specialist & custom fields when modal closes
+    // Reset specialist, custom fields & manual deposit when modal closes
     useEffect(() => {
         if (!isOpen) {
             setCustomExtraName('');
             setCustomExtraPrice('');
             setShowAddCustomExtra(false);
+            setIsManualDeposit(false);
         }
     }, [isOpen]);
 
@@ -182,8 +184,33 @@ const NewBookingModal = ({
         (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
         (!currentBusiness?.courts?.length && !currentBusiness?.services?.length);
 
-    const durationOptions = currentBusiness?.rental_duration_options || currentBusiness?.rentalDurationOptions || [];
-    const hasMultipleDurations = Array.isArray(durationOptions) && durationOptions.length > 1;
+    // Duration options for rental
+    const availableDurations = useMemo(() => {
+        const rawOptions = currentBusiness?.rental_duration_options || currentBusiness?.rentalDurationOptions || [];
+        if (Array.isArray(rawOptions) && rawOptions.length > 0) {
+            return rawOptions.map(opt => {
+                if (typeof opt === 'object' && opt !== null) {
+                    const h = Number(opt.hours || opt.duration || 4);
+                    return {
+                        hours: h,
+                        label: opt.label || (h >= 24 ? '24 Horas (Jornada Completa)' : `${h} Horas`)
+                    };
+                }
+                const h = Number(opt);
+                return {
+                    hours: h,
+                    label: h >= 24 ? '24 Horas (Jornada Completa)' : `${h} Horas`
+                };
+            });
+        }
+        return [
+            { hours: 4, label: '4 Horas' },
+            { hours: 6, label: '6 Horas' },
+            { hours: 8, label: '8 Horas' },
+            { hours: 12, label: '12 Horas' },
+            { hours: 24, label: '24 Horas (Jornada Completa)' }
+        ];
+    }, [currentBusiness]);
 
     // Capacity limit
     const maxCapacity = Number(currentBusiness?.capacity_limit || currentBusiness?.capacity || 100);
@@ -217,7 +244,6 @@ const NewBookingModal = ({
                     price: Number(item.price || 0)
                 };
             }
-            // If it's string, look up in catalog
             const found = catalogAdditionals.find(cat => cat.name === item);
             return {
                 name: String(item),
@@ -226,20 +252,28 @@ const NewBookingModal = ({
         });
     }, [newBookingData.selectedServices, catalogAdditionals]);
 
-    // Auto-set default base price for rental when modal opens
+    // Auto-set default base price and duration for rental when modal opens
     useEffect(() => {
         if (isOpen && isRental) {
             const defaultBase = Number(currentBusiness?.base_price || currentBusiness?.price || currentBusiness?.pricing_tiers?.[0]?.price || 0);
-            if ((!newBookingData.price || Number(newBookingData.price) === 0) && defaultBase > 0) {
+            const initialDurationHours = newBookingData.durationHours || (newBookingData.duration ? Math.round(newBookingData.duration / 60) : availableDurations[0]?.hours || 24);
+
+            setNewBookingData(prev => {
                 const extrasTotal = selectedAdditionals.reduce((sum, item) => sum + Number(item.price || 0), 0);
-                const total = defaultBase + extrasTotal;
-                setNewBookingData(prev => ({
+                const currentPrice = prev.price && Number(prev.price) > 0 ? Number(prev.price) : (defaultBase + extrasTotal);
+                const deposit = prev.depositAmount !== undefined && prev.depositAmount !== ''
+                    ? prev.depositAmount
+                    : Math.round(currentPrice * 0.3);
+
+                return {
                     ...prev,
-                    basePrice: defaultBase,
-                    price: total,
-                    depositAmount: Math.round(total * 0.3)
-                }));
-            }
+                    basePrice: prev.basePrice || defaultBase,
+                    price: currentPrice,
+                    depositAmount: deposit,
+                    duration: initialDurationHours * 60,
+                    durationHours: initialDurationHours
+                };
+            });
         }
     }, [isOpen, isRental, currentBusiness]);
 
@@ -248,15 +282,17 @@ const NewBookingModal = ({
         const extrasTotal = updatedList.reduce((sum, item) => sum + Number(item.price || 0), 0);
         const base = Number(newBookingData.basePrice || currentBusiness?.base_price || currentBusiness?.price || currentBusiness?.pricing_tiers?.[0]?.price || 0);
         const newTotal = base + extrasTotal;
-        const newDeposit = Math.round(newTotal * 0.3);
 
-        setNewBookingData(prev => ({
-            ...prev,
-            selectedServices: updatedList,
-            servicesTotal: extrasTotal,
-            price: newTotal,
-            depositAmount: newDeposit
-        }));
+        setNewBookingData(prev => {
+            const newDeposit = isManualDeposit ? prev.depositAmount : Math.round(newTotal * 0.3);
+            return {
+                ...prev,
+                selectedServices: updatedList,
+                servicesTotal: extrasTotal,
+                price: newTotal,
+                depositAmount: newDeposit
+            };
+        });
     };
 
     const handleToggleCatalogExtra = (catalogItem) => {
@@ -338,8 +374,8 @@ const NewBookingModal = ({
                 </div>
 
                 <form onSubmit={onSubmit} style={{ display: 'grid', gap: '14px' }}>
-                    {/* Date & Time / Duration Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: hasMultipleDurations ? '1fr 1fr' : '1fr', gap: '10px' }}>
+                    {/* Date & Duration Selector */}
+                    <div style={{ display: 'grid', gridTemplateColumns: isRental ? '1fr 1fr' : '1fr', gap: '10px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>📅 Fecha</label>
                             <input
@@ -359,15 +395,21 @@ const NewBookingModal = ({
                             />
                         </div>
 
-                        {hasMultipleDurations && (
+                        {isRental && (
                             <div>
                                 <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    🕒 Duración
+                                    🕒 Duración del Alquiler
                                 </label>
-                                <input
-                                    type="text"
-                                    value={newBookingData.time && newBookingData.time !== '00:00' ? `${newBookingData.time} hs` : 'Jornada Completa'}
-                                    disabled
+                                <select
+                                    value={newBookingData.durationHours || (newBookingData.duration ? Math.round(newBookingData.duration / 60) : availableDurations[0]?.hours || 24)}
+                                    onChange={(e) => {
+                                        const hours = Number(e.target.value);
+                                        setNewBookingData(prev => ({
+                                            ...prev,
+                                            duration: hours * 60,
+                                            durationHours: hours
+                                        }));
+                                    }}
                                     style={{
                                         width: '100%',
                                         padding: '10px 12px',
@@ -376,23 +418,34 @@ const NewBookingModal = ({
                                         background: 'var(--bg-main)',
                                         color: 'var(--text-primary)',
                                         fontSize: '13px',
-                                        fontWeight: '600'
+                                        fontWeight: '600',
+                                        outline: 'none',
+                                        cursor: 'pointer'
                                     }}
-                                />
+                                >
+                                    {availableDurations.map((opt, idx) => (
+                                        <option key={idx} value={opt.hours}>
+                                            {opt.label}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         )}
                     </div>
 
-                    {/* Customer Info */}
+                    {/* Customer Info & Guests: Row 1 (Nombre y Apellido | Personas) & Row 2 (Teléfono | Email) */}
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px' }}>
+                        {/* Row 1 Left: Nombre y Apellido */}
                         <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>👤 Nombre y Apellido *</label>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                👤 Nombre y Apellido *
+                            </label>
                             <input
                                 type="text"
                                 value={newBookingData.customerName || ''}
                                 onChange={(e) => setNewBookingData({ ...newBookingData, customerName: e.target.value })}
                                 required
-                                placeholder="Juan Pérez"
+                                placeholder="Nombre y apellido"
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
@@ -406,35 +459,8 @@ const NewBookingModal = ({
                             />
                         </div>
 
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>📱 Teléfono / WhatsApp *</label>
-                            <input
-                                type="tel"
-                                value={newBookingData.customerPhone || ''}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, '');
-                                    setNewBookingData({ ...newBookingData, customerPhone: val });
-                                }}
-                                required
-                                placeholder="3804123456"
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 12px',
-                                    borderRadius: '10px',
-                                    border: '1px solid var(--border)',
-                                    background: 'var(--bg-main)',
-                                    color: 'var(--text-primary)',
-                                    fontSize: '13px',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Venue / Rental Fields */}
-                    {isRental ? (
-                        <>
-                            {/* Guests Count with Max Capacity Limit */}
+                        {/* Row 1 Right: Personas / Invitados (Venue) o Selector de Servicio (Sports/Beauty) */}
+                        {isRental ? (
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                     <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
@@ -449,7 +475,7 @@ const NewBookingModal = ({
                                         borderRadius: '6px',
                                         border: '1px solid rgba(0, 230, 118, 0.25)'
                                     }}>
-                                        Capacidad Máx: {maxCapacity} personas
+                                        Capacidad Máx: {maxCapacity} pers.
                                     </span>
                                 </div>
                                 <input
@@ -478,237 +504,24 @@ const NewBookingModal = ({
                                     }}
                                 />
                             </div>
-
-                            {/* Additional Services CRUD Component */}
-                            <div style={{
-                                padding: '12px 14px',
-                                background: 'var(--bg-main)',
-                                borderRadius: '12px',
-                                border: '1px solid var(--border)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '10px'
-                            }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span>✨</span> Adicionales de la Reserva ({selectedAdditionals.length})
-                                    </label>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowAddCustomExtra(!showAddCustomExtra)}
-                                        style={{
-                                            padding: '4px 8px',
-                                            borderRadius: '6px',
-                                            border: '1px solid var(--primary-paddle)',
-                                            background: 'rgba(0, 230, 118, 0.1)',
-                                            color: 'var(--primary-paddle)',
-                                            fontSize: '11px',
-                                            fontWeight: '700',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        {showAddCustomExtra ? '✕ Cancelar' : '+ Agregar Extra'}
-                                    </button>
-                                </div>
-
-                                {/* Catalog Quick-Add Chips */}
-                                {catalogAdditionals.length > 0 && (
-                                    <div>
-                                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                                            Catálogo del establecimiento (click para sumar/quitar):
-                                        </span>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                            {catalogAdditionals.map((catItem, idx) => {
-                                                const isSelected = selectedAdditionals.some(s => s.name.toLowerCase() === catItem.name.toLowerCase());
-                                                return (
-                                                    <button
-                                                        key={idx}
-                                                        type="button"
-                                                        onClick={() => handleToggleCatalogExtra(catItem)}
-                                                        style={{
-                                                            padding: '4px 9px',
-                                                            borderRadius: '8px',
-                                                            border: isSelected ? '1px solid var(--primary-paddle)' : '1px solid var(--border)',
-                                                            background: isSelected ? 'rgba(0, 230, 118, 0.15)' : 'var(--bg-card)',
-                                                            color: isSelected ? 'var(--primary-paddle)' : 'var(--text-primary)',
-                                                            fontSize: '11px',
-                                                            fontWeight: isSelected ? '700' : '500',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '4px',
-                                                            transition: 'all 0.15s'
-                                                        }}
-                                                    >
-                                                        <span>{isSelected ? '✓' : '+'}</span>
-                                                        <span>{catItem.name}</span>
-                                                        {catItem.price > 0 && <span style={{ opacity: 0.8 }}>(${catItem.price})</span>}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Form for adding custom extra */}
-                                {showAddCustomExtra && (
-                                    <div style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: isMobile ? '1fr 1fr auto' : '2fr 1fr auto',
-                                        gap: '6px',
-                                        padding: '10px',
-                                        background: 'var(--bg-card)',
-                                        borderRadius: '10px',
-                                        border: '1px dashed var(--primary-paddle)',
-                                        alignItems: 'center'
-                                    }}>
-                                        <input
-                                            type="text"
-                                            value={customExtraName}
-                                            onChange={(e) => setCustomExtraName(e.target.value)}
-                                            placeholder="Nombre del adicional (ej. Hielo)"
-                                            style={{
-                                                padding: '6px 10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid var(--border)',
-                                                background: 'var(--bg-main)',
-                                                color: 'var(--text-primary)',
-                                                fontSize: '12px'
-                                            }}
-                                        />
-                                        <input
-                                            type="number"
-                                            value={customExtraPrice}
-                                            onChange={(e) => setCustomExtraPrice(e.target.value)}
-                                            placeholder="Precio ($)"
-                                            min="0"
-                                            style={{
-                                                padding: '6px 10px',
-                                                borderRadius: '6px',
-                                                border: '1px solid var(--border)',
-                                                background: 'var(--bg-main)',
-                                                color: 'var(--text-primary)',
-                                                fontSize: '12px'
-                                            }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={handleAddCustomExtra}
-                                            style={{
-                                                padding: '6px 12px',
-                                                borderRadius: '6px',
-                                                border: 'none',
-                                                background: 'var(--primary-paddle)',
-                                                color: 'white',
-                                                fontSize: '12px',
-                                                fontWeight: '700',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Sumar
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Selected Additionals List with Inline Price Edit & Remove */}
-                                {selectedAdditionals.length > 0 ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
-                                        {selectedAdditionals.map((item, idx) => (
-                                            <div
-                                                key={idx}
-                                                style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    padding: '6px 10px',
-                                                    borderRadius: '8px',
-                                                    background: 'var(--bg-card)',
-                                                    border: '1px solid var(--border)',
-                                                    fontSize: '12px'
-                                                }}
-                                            >
-                                                <span style={{ fontWeight: '600', color: 'var(--text-primary)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    ✓ {item.name}
-                                                </span>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>$</span>
-                                                    <input
-                                                        type="number"
-                                                        value={item.price}
-                                                        onChange={(e) => handleEditExtraPrice(idx, e.target.value)}
-                                                        min="0"
-                                                        style={{
-                                                            width: '75px',
-                                                            padding: '3px 6px',
-                                                            borderRadius: '6px',
-                                                            border: '1px solid var(--border)',
-                                                            background: 'var(--bg-main)',
-                                                            color: 'var(--text-primary)',
-                                                            fontSize: '12px',
-                                                            fontWeight: '700',
-                                                            textAlign: 'right'
-                                                        }}
-                                                        title="Editar precio de este adicional"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveExtra(idx)}
-                                                        style={{
-                                                            background: 'transparent',
-                                                            border: 'none',
-                                                            color: '#ff4444',
-                                                            fontSize: '14px',
-                                                            cursor: 'pointer',
-                                                            padding: '2px 4px'
-                                                        }}
-                                                        title="Quitar adicional"
-                                                    >
-                                                        🗑️
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                                        Sin adicionales seleccionados.
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Optional Customer Email */}
+                        ) : (
                             <div>
-                                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    📧 Email del Cliente (Opcional)
-                                </label>
-                                <input
-                                    type="email"
-                                    value={newBookingData.customerEmail || ''}
-                                    onChange={(e) => setNewBookingData({ ...newBookingData, customerEmail: e.target.value })}
-                                    placeholder="cliente@email.com"
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px 12px',
-                                        borderRadius: '10px',
-                                        border: '1px solid var(--border)',
-                                        background: 'var(--bg-main)',
-                                        color: 'var(--text-primary)',
-                                        fontSize: '13px',
-                                        outline: 'none'
+                                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Servicio / Recurso</label>
+                                <select
+                                    value={newBookingData.serviceId || ''}
+                                    onChange={(e) => {
+                                        const allResources = [
+                                            ...(currentBusiness?.services || []),
+                                            ...(currentBusiness?.courts || [])
+                                        ];
+                                        const selectedResource = allResources.find(r => r.id === e.target.value);
+                                        setNewBookingData({
+                                            ...newBookingData,
+                                            serviceId: e.target.value,
+                                            price: selectedResource?.price || 0,
+                                            specialistId: null
+                                        });
                                     }}
-                                />
-                            </div>
-
-                            {/* Notes */}
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    📝 Notas / Observaciones
-                                </label>
-                                <textarea
-                                    rows="2"
-                                    value={newBookingData.notes || ''}
-                                    onChange={(e) => setNewBookingData({ ...newBookingData, notes: e.target.value })}
-                                    placeholder="Ej. Cumpleaños infantil, solicita inflable..."
                                     style={{
                                         width: '100%',
                                         padding: '10px 12px',
@@ -718,30 +531,42 @@ const NewBookingModal = ({
                                         color: 'var(--text-primary)',
                                         fontSize: '13px',
                                         outline: 'none',
-                                        resize: 'vertical'
+                                        cursor: 'pointer'
                                     }}
-                                />
+                                >
+                                    <option value="">Seleccionar recurso...</option>
+                                    {availableResources.services.length > 0 && <optgroup label="Servicios">
+                                        {availableResources.services.map(service => (
+                                            <option key={service.id} value={service.id}>
+                                                {service.name} - ${service.price}
+                                            </option>
+                                        ))}
+                                    </optgroup>}
+                                    {availableResources.courts.length > 0 && <optgroup label="Canchas">
+                                        {availableResources.courts.map(court => (
+                                            <option key={court.id} value={court.id}>
+                                                {court.name} - ${court.price}
+                                            </option>
+                                        ))}
+                                    </optgroup>}
+                                </select>
                             </div>
-                        </>
-                    ) : (
-                        /* Service / Court Selector for Sports & Beauty */
+                        )}
+
+                        {/* Row 2 Left: Teléfono / WhatsApp */}
                         <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Servicio / Recurso</label>
-                            <select
-                                value={newBookingData.serviceId || ''}
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                📱 Teléfono / WhatsApp *
+                            </label>
+                            <input
+                                type="tel"
+                                value={newBookingData.customerPhone || ''}
                                 onChange={(e) => {
-                                    const allResources = [
-                                        ...(currentBusiness?.services || []),
-                                        ...(currentBusiness?.courts || [])
-                                    ];
-                                    const selectedResource = allResources.find(r => r.id === e.target.value);
-                                    setNewBookingData({
-                                        ...newBookingData,
-                                        serviceId: e.target.value,
-                                        price: selectedResource?.price || 0,
-                                        specialistId: null
-                                    });
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    setNewBookingData({ ...newBookingData, customerPhone: val });
                                 }}
+                                required
+                                placeholder="3804123456"
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
@@ -750,28 +575,34 @@ const NewBookingModal = ({
                                     background: 'var(--bg-main)',
                                     color: 'var(--text-primary)',
                                     fontSize: '13px',
-                                    outline: 'none',
-                                    cursor: 'pointer'
+                                    outline: 'none'
                                 }}
-                            >
-                                <option value="">Seleccionar recurso...</option>
-                                {availableResources.services.length > 0 && <optgroup label="Servicios">
-                                    {availableResources.services.map(service => (
-                                        <option key={service.id} value={service.id}>
-                                            {service.name} - ${service.price}
-                                        </option>
-                                    ))}
-                                </optgroup>}
-                                {availableResources.courts.length > 0 && <optgroup label="Canchas">
-                                    {availableResources.courts.map(court => (
-                                        <option key={court.id} value={court.id}>
-                                            {court.name} - ${court.price}
-                                        </option>
-                                    ))}
-                                </optgroup>}
-                            </select>
+                            />
                         </div>
-                    )}
+
+                        {/* Row 2 Right: Email del Cliente */}
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                📧 Email del Cliente (Opcional)
+                            </label>
+                            <input
+                                type="email"
+                                value={newBookingData.customerEmail || ''}
+                                onChange={(e) => setNewBookingData({ ...newBookingData, customerEmail: e.target.value })}
+                                placeholder="cliente@email.com"
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '13px',
+                                    outline: 'none'
+                                }}
+                            />
+                        </div>
+                    </div>
 
                     {/* Specialist Selector for non-rentals */}
                     {!isRental && availableSpecialistsForSelectedService.length > 1 && (
@@ -803,6 +634,229 @@ const NewBookingModal = ({
                         </div>
                     )}
 
+                    {/* Venue / Rental Adicionales CRUD */}
+                    {isRental && (
+                        <div style={{
+                            padding: '12px 14px',
+                            background: 'var(--bg-main)',
+                            borderRadius: '12px',
+                            border: '1px solid var(--border)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '10px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span>✨</span> Adicionales de la Reserva ({selectedAdditionals.length})
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddCustomExtra(!showAddCustomExtra)}
+                                    style={{
+                                        padding: '4px 8px',
+                                        borderRadius: '6px',
+                                        border: '1px solid var(--primary-paddle)',
+                                        background: 'rgba(0, 230, 118, 0.1)',
+                                        color: 'var(--primary-paddle)',
+                                        fontSize: '11px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {showAddCustomExtra ? '✕ Cancelar' : '+ Agregar Extra'}
+                                </button>
+                            </div>
+
+                            {/* Catalog Quick-Add Chips */}
+                            {catalogAdditionals.length > 0 && (
+                                <div>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                                        Catálogo del establecimiento (click para sumar/quitar):
+                                    </span>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                        {catalogAdditionals.map((catItem, idx) => {
+                                            const isSelected = selectedAdditionals.some(s => s.name.toLowerCase() === catItem.name.toLowerCase());
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => handleToggleCatalogExtra(catItem)}
+                                                    style={{
+                                                        padding: '4px 9px',
+                                                        borderRadius: '8px',
+                                                        border: isSelected ? '1px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                        background: isSelected ? 'rgba(0, 230, 118, 0.15)' : 'var(--bg-card)',
+                                                        color: isSelected ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                                                        fontSize: '11px',
+                                                        fontWeight: isSelected ? '700' : '500',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        transition: 'all 0.15s'
+                                                    }}
+                                                >
+                                                    <span>{isSelected ? '✓' : '+'}</span>
+                                                    <span>{catItem.name}</span>
+                                                    {catItem.price > 0 && <span style={{ opacity: 0.8 }}>(${catItem.price})</span>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Form for adding custom extra */}
+                            {showAddCustomExtra && (
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: isMobile ? '1fr 1fr auto' : '2fr 1fr auto',
+                                    gap: '6px',
+                                    padding: '10px',
+                                    background: 'var(--bg-card)',
+                                    borderRadius: '10px',
+                                    border: '1px dashed var(--primary-paddle)',
+                                    alignItems: 'center'
+                                }}>
+                                    <input
+                                        type="text"
+                                        value={customExtraName}
+                                        onChange={(e) => setCustomExtraName(e.target.value)}
+                                        placeholder="Nombre del adicional (ej. Hielo)"
+                                        style={{
+                                            padding: '6px 10px',
+                                            borderRadius: '6px',
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--bg-main)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '12px'
+                                        }}
+                                    />
+                                    <input
+                                        type="number"
+                                        value={customExtraPrice}
+                                        onChange={(e) => setCustomExtraPrice(e.target.value)}
+                                        placeholder="Precio ($)"
+                                        min="0"
+                                        style={{
+                                            padding: '6px 10px',
+                                            borderRadius: '6px',
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--bg-main)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '12px'
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleAddCustomExtra}
+                                        style={{
+                                            padding: '6px 12px',
+                                            borderRadius: '6px',
+                                            border: 'none',
+                                            background: 'var(--primary-paddle)',
+                                            color: 'white',
+                                            fontSize: '12px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Sumar
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Selected Additionals List with Inline Price Edit & Remove */}
+                            {selectedAdditionals.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '2px' }}>
+                                    {selectedAdditionals.map((item, idx) => (
+                                        <div
+                                            key={idx}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '6px 10px',
+                                                borderRadius: '8px',
+                                                background: 'var(--bg-card)',
+                                                border: '1px solid var(--border)',
+                                                fontSize: '12px'
+                                            }}
+                                        >
+                                            <span style={{ fontWeight: '600', color: 'var(--text-primary)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                ✓ {item.name}
+                                            </span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>$</span>
+                                                <input
+                                                    type="number"
+                                                    value={item.price}
+                                                    onChange={(e) => handleEditExtraPrice(idx, e.target.value)}
+                                                    min="0"
+                                                    style={{
+                                                        width: '75px',
+                                                        padding: '3px 6px',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid var(--border)',
+                                                        background: 'var(--bg-main)',
+                                                        color: 'var(--text-primary)',
+                                                        fontSize: '12px',
+                                                        fontWeight: '700',
+                                                        textAlign: 'right'
+                                                    }}
+                                                    title="Editar precio de este adicional"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveExtra(idx)}
+                                                    style={{
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        color: '#ff4444',
+                                                        fontSize: '14px',
+                                                        cursor: 'pointer',
+                                                        padding: '2px 4px'
+                                                    }}
+                                                    title="Quitar adicional"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                    Sin adicionales seleccionados.
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Notes / Observations */}
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                            📝 Notas / Observaciones
+                        </label>
+                        <textarea
+                            rows="2"
+                            value={newBookingData.notes || ''}
+                            onChange={(e) => setNewBookingData({ ...newBookingData, notes: e.target.value })}
+                            placeholder="Ej. Cumpleaños infantil, solicita inflable..."
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '13px',
+                                outline: 'none',
+                                resize: 'vertical'
+                            }}
+                        />
+                    </div>
+
                     {/* Price and Deposit Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <div>
@@ -812,11 +866,12 @@ const NewBookingModal = ({
                                 value={newBookingData.price || ''}
                                 onChange={(e) => {
                                     const val = e.target.value;
-                                    setNewBookingData({
-                                        ...newBookingData,
+                                    const newTotal = parseFloat(val) || 0;
+                                    setNewBookingData(prev => ({
+                                        ...prev,
                                         price: val,
-                                        depositAmount: Math.round((parseFloat(val) || 0) * 0.3)
-                                    });
+                                        depositAmount: isManualDeposit ? prev.depositAmount : Math.round(newTotal * 0.3)
+                                    }));
                                 }}
                                 placeholder="0"
                                 min="0"
@@ -839,8 +894,11 @@ const NewBookingModal = ({
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Seña Requerida ($)</label>
                             <input
                                 type="number"
-                                value={newBookingData.depositAmount !== undefined ? newBookingData.depositAmount : Math.round((parseFloat(newBookingData.price) || 0) * 0.3)}
-                                onChange={(e) => setNewBookingData({ ...newBookingData, depositAmount: e.target.value })}
+                                value={newBookingData.depositAmount !== undefined && newBookingData.depositAmount !== null ? newBookingData.depositAmount : ''}
+                                onChange={(e) => {
+                                    setIsManualDeposit(true);
+                                    setNewBookingData(prev => ({ ...prev, depositAmount: e.target.value }));
+                                }}
                                 placeholder="Ej. 30000"
                                 min="0"
                                 step="0.01"
