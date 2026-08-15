@@ -287,8 +287,8 @@ const BusinessPortalSidebar = ({
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: isVisible ? 'flex-start' : 'center',
-                                gap: '12px',
-                                padding: isVisible ? '10px 14px' : '0',
+                                gap: isVisible ? '12px' : '0px',
+                                padding: isVisible ? '10px 14px' : '0px',
                                 width: isVisible ? '100%' : '42px',
                                 height: '42px',
                                 borderRadius: 'var(--radius-md)',
@@ -319,8 +319,6 @@ const BusinessPortalSidebar = ({
                         >
                             <span style={{
                                 fontSize: '18px',
-                                width: isVisible ? '24px' : '100%',
-                                textAlign: 'center',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -333,7 +331,8 @@ const BusinessPortalSidebar = ({
                                 <span style={{
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
-                                    textOverflow: 'ellipsis'
+                                    textOverflow: 'ellipsis',
+                                    flex: 1
                                 }}>
                                     {item.label}
                                 </span>
@@ -356,8 +355,8 @@ const BusinessPortalSidebar = ({
                                 ) : (
                                     <span style={{
                                         position: 'absolute',
-                                        top: '4px',
-                                        right: '4px',
+                                        top: '2px',
+                                        right: '2px',
                                         background: 'var(--status-pending, #D97706)',
                                         color: '#FFFFFF',
                                         minWidth: '16px',
@@ -369,7 +368,8 @@ const BusinessPortalSidebar = ({
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                        pointerEvents: 'none'
                                     }}>
                                         {item.badge}
                                     </span>
@@ -387,114 +387,102 @@ const BusinessPortalSidebar = ({
                 borderTop: '1px solid var(--border-light)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px',
+                gap: '6px',
                 width: '100%',
                 alignItems: 'center',
                 paddingBottom: isMobile ? '20px' : 0
             }}>
-                {/* Theme & Notifications Row / Stack */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: isVisible ? 'row' : 'column',
-                    gap: '6px',
-                    alignItems: 'center',
-                    width: '100%',
-                    justifyContent: 'center'
-                }}>
-                    {/* Theme Toggle Button */}
-                    <button
-                        onClick={toggleTheme}
-                        title={theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
-                        style={{
-                            flex: isVisible ? 1 : 'none',
-                            width: isVisible ? '100%' : '42px',
-                            height: '38px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: isVisible ? 'flex-start' : 'center',
-                            gap: '8px',
-                            padding: isVisible ? '9px 12px' : '0',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--border)',
-                            background: 'var(--bg-main)',
-                            color: 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            transition: 'all 0.2s',
-                            flexShrink: 0
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--primary-border)';
-                            e.currentTarget.style.background = 'var(--primary-bg)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                            e.currentTarget.style.background = 'var(--bg-main)';
-                        }}
-                    >
-                        <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {theme === 'dark' ? '🌙' : '☀️'}
-                        </span>
-                        {isVisible && <span>{theme === 'dark' ? 'Oscuro' : 'Claro'}</span>}
-                    </button>
+                {/* Theme Toggle Button */}
+                <button
+                    onClick={toggleTheme}
+                    title={!isVisible ? (theme === 'dark' ? 'Modo Oscuro' : 'Modo Claro') : ''}
+                    style={{
+                        width: isVisible ? '100%' : '42px',
+                        height: '42px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: isVisible ? 'flex-start' : 'center',
+                        gap: isVisible ? '10px' : '0px',
+                        padding: isVisible ? '10px 14px' : '0px',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-main)',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s',
+                        flexShrink: 0
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--primary-border)';
+                        e.currentTarget.style.background = 'var(--primary-bg)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.background = 'var(--bg-main)';
+                    }}
+                >
+                    <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {theme === 'dark' ? '🌙' : '☀️'}
+                    </span>
+                    {isVisible && <span>{theme === 'dark' ? 'Modo Oscuro' : 'Modo Claro'}</span>}
+                </button>
 
-                    {/* Notification Button */}
-                    <button
-                        onClick={handleToggleNotifications}
-                        title={notifGranted ? 'Notificaciones Push Activas' : 'Activar Notificaciones Push'}
-                        style={{
-                            flex: isVisible ? '0 0 auto' : 'none',
-                            width: isVisible ? 'auto' : '42px',
-                            height: '38px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            padding: isVisible ? '9px 12px' : '0',
-                            borderRadius: 'var(--radius-md)',
-                            border: notifGranted ? '1px solid rgba(0, 230, 118, 0.35)' : '1px solid var(--border)',
-                            background: notifGranted ? 'rgba(0, 230, 118, 0.1)' : 'var(--bg-main)',
-                            color: notifGranted ? 'var(--primary-paddle)' : 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            transition: 'all 0.2s',
-                            flexShrink: 0
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--primary-border)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = notifGranted ? 'rgba(0, 230, 118, 0.35)' : 'var(--border)';
-                        }}
-                    >
-                        <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {notifGranted ? '🔔' : '🔕'}
-                        </span>
-                        {isVisible && <span>{notifGranted ? 'Alertas On' : 'Alertas'}</span>}
-                    </button>
-                </div>
+                {/* Notification Button */}
+                <button
+                    onClick={handleToggleNotifications}
+                    title={!isVisible ? (notifGranted ? 'Notificaciones Push Activas' : 'Activar Notificaciones Push') : ''}
+                    style={{
+                        width: isVisible ? '100%' : '42px',
+                        height: '42px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: isVisible ? 'flex-start' : 'center',
+                        gap: isVisible ? '10px' : '0px',
+                        padding: isVisible ? '10px 14px' : '0px',
+                        borderRadius: 'var(--radius-md)',
+                        border: notifGranted ? '1px solid rgba(0, 230, 118, 0.35)' : '1px solid var(--border)',
+                        background: notifGranted ? 'rgba(0, 230, 118, 0.1)' : 'var(--bg-main)',
+                        color: notifGranted ? 'var(--primary-paddle)' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s',
+                        flexShrink: 0
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--primary-border)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = notifGranted ? 'rgba(0, 230, 118, 0.35)' : 'var(--border)';
+                    }}
+                >
+                    <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {notifGranted ? '🔔' : '🔕'}
+                    </span>
+                    {isVisible && <span>{notifGranted ? 'Alertas Activas' : 'Activar Alertas'}</span>}
+                </button>
 
                 {/* Install PWA Button */}
                 {!isPwaInstalled && (
                     <button
                         onClick={handleInstallPwa}
-                        title="Instalar aplicación en este dispositivo"
+                        title={!isVisible ? 'Instalar App' : ''}
                         style={{
+                            width: isVisible ? '100%' : '42px',
+                            height: '42px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: isVisible ? 'flex-start' : 'center',
-                            gap: '8px',
-                            padding: isVisible ? '9px 12px' : '0',
-                            width: isVisible ? '100%' : '42px',
-                            height: '38px',
+                            gap: isVisible ? '10px' : '0px',
+                            padding: isVisible ? '10px 14px' : '0px',
                             borderRadius: 'var(--radius-md)',
                             border: '1px solid rgba(0, 230, 118, 0.3)',
                             background: 'rgba(0, 230, 118, 0.08)',
                             color: 'var(--primary-paddle)',
                             cursor: 'pointer',
-                            fontSize: '12px',
+                            fontSize: '13px',
                             fontWeight: '700',
                             transition: 'all 0.2s',
                             flexShrink: 0
@@ -506,7 +494,7 @@ const BusinessPortalSidebar = ({
                             e.currentTarget.style.background = 'rgba(0, 230, 118, 0.08)';
                         }}
                     >
-                        <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📲</span>
+                        <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📲</span>
                         {isVisible && <span>Instalar App</span>}
                     </button>
                 )}
@@ -516,19 +504,19 @@ const BusinessPortalSidebar = ({
                     onClick={onLogout}
                     title={!isVisible ? 'Cerrar Sesión' : ''}
                     style={{
-                        padding: isVisible ? '9px 12px' : '0',
                         width: isVisible ? '100%' : '42px',
-                        height: '38px',
+                        height: '42px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: isVisible ? 'flex-start' : 'center',
+                        gap: isVisible ? '10px' : '0px',
+                        padding: isVisible ? '10px 14px' : '0px',
                         borderRadius: 'var(--radius-md)',
                         border: '1px solid rgba(239, 68, 68, 0.15)',
                         background: 'rgba(239, 68, 68, 0.04)',
                         color: '#EF4444',
                         cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: isVisible ? 'flex-start' : 'center',
-                        gap: '8px',
-                        fontSize: '12px',
+                        fontSize: '13px',
                         fontWeight: '600',
                         transition: 'all 0.2s',
                         flexShrink: 0
@@ -542,7 +530,7 @@ const BusinessPortalSidebar = ({
                         e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.15)';
                     }}
                 >
-                    <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🚪</span>
+                    <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🚪</span>
                     {isVisible && <span>Cerrar Sesión</span>}
                 </button>
             </div>
