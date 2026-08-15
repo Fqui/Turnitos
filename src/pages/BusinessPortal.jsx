@@ -22,8 +22,45 @@ import NewBookingModal from '../components/business/NewBookingModal';
 import BlockSlotModal from '../components/business/BlockSlotModal';
 import ChangePasswordModal from '../components/seller/ChangePasswordModal';
 import ConfirmModal from '../components/common/ConfirmModal';
+import { useNotification } from '../contexts/NotificationContext';
+
+const playNotificationChime = () => {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const now = ctx.currentTime;
+
+        // Tone 1 (E5)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(659.25, now);
+        gain1.gain.setValueAtTime(0.3, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.3);
+
+        // Tone 2 (A5)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880, now + 0.12);
+        gain2.gain.setValueAtTime(0.35, now + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.5);
+    } catch (e) {
+        // Audio might be muted or awaiting interaction
+    }
+};
 
 export default function BusinessPortal() {
+    const { showToast } = useNotification();
     const [businesses, setBusinesses] = useState([]);
     const [selectedBusinessId, setSelectedBusinessId] = useState('');
     const [loginEmail, setLoginEmail] = useState('');
@@ -37,6 +74,7 @@ export default function BusinessPortal() {
     const [currentBusinessId, setCurrentBusinessId] = useState(null);
     const [showBlockModal, setShowBlockModal] = useState(false);
     const [pendingBlockData, setPendingBlockData] = useState(null);
+    const [newBookingAlert, setNewBookingAlert] = useState(null);
 
     useEffect(() => {
         const checkAutoLogin = async () => {
@@ -275,9 +313,7 @@ export default function BusinessPortal() {
 
             // Sincronización en tiempo real
             const subscription = serviceAdapter.subscribeToBookings(selectedBusinessId, (payload) => {
-
                 // Enriquecer el payload con datos de la empresa actual (nombres de servicios/canchas)
-                // Esto es necesario porque el payload de Realtime solo trae IDs planos.
                 const enrichBooking = (b) => {
                     if (!b) return null;
                     const businessData = businesses.find(bus => bus.id === selectedBusinessId);
@@ -296,7 +332,26 @@ export default function BusinessPortal() {
                 const enrichedNew = enrichBooking(payload.new);
 
                 if (payload.eventType === 'INSERT') {
-                    setBookings(prev => [...prev, enrichedNew]);
+                    setBookings(prev => {
+                        if (prev.some(b => String(b.id) === String(enrichedNew.id))) return prev;
+                        return [...prev, enrichedNew];
+                    });
+
+                    // Trigger in-app visual alert card, audio chime, and toast
+                    const customerName = enrichedNew.customer_name || enrichedNew.customerName || 'Un cliente';
+                    setNewBookingAlert(enrichedNew);
+                    playNotificationChime();
+                    showToast(`🔔 ¡Nueva reserva web de ${customerName}!`, 'success', 8000);
+
+                    // Local desktop browser notification
+                    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                        try {
+                            new Notification('🔔 ¡Nueva Reserva Web Recibida!', {
+                                body: `${customerName} solicitó una reserva para el ${enrichedNew.date || 'día indicado'}`,
+                                icon: '/logo-turnitos.png'
+                            });
+                        } catch (e) { }
+                    }
                 } else if (payload.eventType === 'UPDATE') {
                     setBookings(prev => prev.map(b => b.id === enrichedNew.id ? enrichedNew : b));
                 } else if (payload.eventType === 'DELETE') {
@@ -304,9 +359,24 @@ export default function BusinessPortal() {
                 }
             });
 
+            // Realtime notification broadcast channel
+            const notifChannel = supabaseService.client
+                ? supabaseService.client.channel(`business-notif-${selectedBusinessId}`)
+                    .on('broadcast', { event: 'new_booking' }, (payload) => {
+                        if (payload?.payload?.bookingInfo) {
+                            playNotificationChime();
+                            showToast(payload.payload.title || '🔔 ¡Nueva Reserva Web!', 'success', 8000);
+                        }
+                    })
+                    .subscribe()
+                : null;
+
             return () => {
                 if (subscription && typeof subscription.unsubscribe === 'function') {
                     subscription.unsubscribe();
+                }
+                if (notifChannel && typeof notifChannel.unsubscribe === 'function') {
+                    notifChannel.unsubscribe();
                 }
             };
         }
@@ -1990,6 +2060,121 @@ export default function BusinessPortal() {
                 onConfirm={() => confirmModal.onConfirm && confirmModal.onConfirm()}
                 onClose={() => setConfirmModal({ isOpen: false })}
             />
+
+            {/* In-App Floating New Booking Alert */}
+            {newBookingAlert && (
+                <div style={{
+                    position: 'fixed',
+                    top: isMobile ? '70px' : '24px',
+                    right: isMobile ? '12px' : '24px',
+                    left: isMobile ? '12px' : 'auto',
+                    maxWidth: isMobile ? 'none' : '400px',
+                    zIndex: 99999,
+                    background: 'var(--bg-card)',
+                    border: '2px solid var(--primary-paddle, #00E676)',
+                    borderRadius: '16px',
+                    padding: '16px 18px',
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    animation: 'slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '24px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>🔔</span>
+                            <div>
+                                <strong style={{ fontSize: '15px', color: 'var(--text-primary)', display: 'block', fontWeight: '800' }}>
+                                    ¡Nueva Reserva Web!
+                                </strong>
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    Ingresó una nueva reserva por la web
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setNewBookingAlert(null)}
+                            style={{
+                                background: 'var(--bg-main)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '8px',
+                                width: '26px',
+                                height: '26px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                color: 'var(--text-muted)'
+                            }}
+                            title="Cerrar"
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    <div style={{
+                        background: 'var(--bg-main)',
+                        padding: '10px 14px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border)',
+                        fontSize: '13px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                    }}>
+                        <div style={{ color: 'var(--text-primary)' }}>
+                            <strong>Cliente:</strong> {newBookingAlert.customer_name || newBookingAlert.customerName || 'Cliente'}
+                        </div>
+                        <div style={{ color: 'var(--text-secondary)' }}>
+                            <strong>Fecha:</strong> {newBookingAlert.date}
+                        </div>
+                        {(newBookingAlert.start_time || newBookingAlert.startTime) && (
+                            <div style={{ color: 'var(--text-secondary)' }}>
+                                <strong>Horario:</strong> {newBookingAlert.start_time || newBookingAlert.startTime}
+                            </div>
+                        )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button
+                            onClick={() => setNewBookingAlert(null)}
+                            style={{
+                                padding: '8px 14px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-main)',
+                                color: 'var(--text-secondary)',
+                                fontWeight: '600',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Ignorar
+                        </button>
+                        <button
+                            onClick={() => {
+                                setSelectedBooking(newBookingAlert);
+                                setShowBookingModal(true);
+                                setNewBookingAlert(null);
+                            }}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, var(--primary-paddle, #00E676), #00B0FF)',
+                                color: '#000000',
+                                fontWeight: '800',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(0, 230, 118, 0.3)'
+                            }}
+                        >
+                            Ver Reserva ➔
+                        </button>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
