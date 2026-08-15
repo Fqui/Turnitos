@@ -152,11 +152,6 @@ export const pushService = {
                 .select('token')
                 .eq('business_id', businessId);
 
-            if (error || !subs || subs.length === 0) {
-                console.log('[pushService] Sin suscripciones push activas para el negocio:', businessId);
-                return;
-            }
-
             const title = '🔔 ¡Nueva Reserva Web Recibida!';
             const body = `${bookingInfo.customerName ? bookingInfo.customerName : 'Un cliente'} solicitó una reserva para el ${bookingInfo.date || 'día indicado'} en ${bookingInfo.businessName || 'tu negocio'}.`;
 
@@ -172,7 +167,7 @@ export const pushService = {
                 console.warn('[pushService] Realtime broadcast error:', e);
             }
 
-            // Trigger local browser notification if allowed on the active device
+            // Trigger local browser notification if active on this device
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
                 try {
                     new Notification(title, {
@@ -181,6 +176,39 @@ export const pushService = {
                         badge: '/logo-turnitos.png'
                     });
                 } catch (e) { }
+            }
+
+            if (error || !subs || subs.length === 0) {
+                console.log('[pushService] Sin suscripciones push activas para el negocio:', businessId);
+                return;
+            }
+
+            // Dispatch to registered tokens
+            for (const sub of subs) {
+                if (!sub.token) continue;
+                try {
+                    await fetch('https://fcm.googleapis.com/fcm/send', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            to: sub.token,
+                            notification: {
+                                title: title,
+                                body: body,
+                                icon: '/logo-turnitos.png'
+                            },
+                            data: {
+                                url: '/portal',
+                                businessId: businessId,
+                                date: bookingInfo.date || ''
+                            }
+                        })
+                    });
+                } catch (sendErr) {
+                    console.warn('[pushService] Error sending to token:', sub.token, sendErr);
+                }
             }
         } catch (err) {
             console.error('[pushService] Error notifying business of new booking:', err);
