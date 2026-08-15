@@ -54,6 +54,7 @@ const SellerBusinessForm = lazyWithRetry(() => import('./components/seller/Selle
 const SellerCommissionsReport = lazyWithRetry(() => import('./components/seller/SellerCommissionsReport'));
 const SuperAdminDashboard = lazyWithRetry(() => import('./components/seller/SuperAdminDashboard'));
 const ProtectedSellerRoute = lazyWithRetry(() => import('./components/seller/ProtectedSellerRoute'));
+const ProtectedSuperAdminRoute = lazyWithRetry(() => import('./components/seller/ProtectedSuperAdminRoute'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -232,7 +233,7 @@ function AppContent() {
                 <Route path="/admin/login" element={<Navigate to="/login" replace />} />
 
                 {/* Admin Portal Routes (Sellers + Super Admin) */}
-                <Route path="/admin/super" element={<Suspense fallback={<LoadingFallback />}><SuperAdminDashboard /></Suspense>} />
+                <Route path="/admin/super" element={<Suspense fallback={<LoadingFallback />}><ProtectedSuperAdminRoute><SuperAdminDashboard /></ProtectedSuperAdminRoute></Suspense>} />
                 <Route path="/admin/dashboard" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerDashboard /></ProtectedSellerRoute></Suspense>} />
                 <Route path="/admin/businesses" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerBusinessList /></ProtectedSellerRoute></Suspense>} />
                 <Route path="/admin/businesses/new" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerBusinessForm /></ProtectedSellerRoute></Suspense>} />
