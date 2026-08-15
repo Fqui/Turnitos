@@ -1,13 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 
-// Read .env directly
-const envContent = fs.readFileSync('.env', 'utf8');
-const urlMatch = envContent.match(/VITE_SUPABASE_URL\s*=\s*(.*)/);
-const keyMatch = envContent.match(/VITE_SUPABASE_ANON_KEY\s*=\s*(.*)/);
+let supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+let supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 
-const supabaseUrl = urlMatch ? urlMatch[1].trim() : '';
-const supabaseKey = keyMatch ? keyMatch[1].trim() : '';
+// Fallback to local .env if building locally and env vars are not in process.env
+if ((!supabaseUrl || !supabaseKey) && fs.existsSync('.env')) {
+    try {
+        const envContent = fs.readFileSync('.env', 'utf8');
+        const urlMatch = envContent.match(/VITE_SUPABASE_URL\s*=\s*(.*)/);
+        const keyMatch = envContent.match(/VITE_SUPABASE_ANON_KEY\s*=\s*(.*)/);
+        if (urlMatch) supabaseUrl = urlMatch[1].trim();
+        if (keyMatch) supabaseKey = keyMatch[1].trim();
+    } catch (e) {
+        console.warn('Could not read .env file:', e.message);
+    }
+}
 
 function generateSlug(text) {
     if (!text) return '';
@@ -18,21 +26,6 @@ function generateSlug(text) {
 }
 
 async function run() {
-    if (!supabaseUrl || !supabaseKey) {
-        console.error('Missing Supabase credentials in .env');
-        process.exit(1);
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { data: businesses, error } = await supabase
-        .from('businesses')
-        .select('id, name, slug, created_at, store_enabled');
-
-    if (error) {
-        console.error('Error fetching businesses:', error);
-        return;
-    }
-
     const baseUrl = 'https://www.turnitoslr.com';
     const today = new Date().toISOString().split('T')[0];
 
@@ -45,18 +38,31 @@ async function run() {
         `  <url>\n    <loc>${baseUrl}/privacidad</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>0.4</priority>\n  </url>`
     ];
 
-    (businesses || []).forEach(b => {
-        const slug = b.slug || generateSlug(b.name);
-        const lastMod = (b.created_at || new Date().toISOString()).split('T')[0];
+    if (supabaseUrl && supabaseKey) {
+        try {
+            const supabase = createClient(supabaseUrl, supabaseKey);
+            const { data: businesses, error } = await supabase
+                .from('businesses')
+                .select('id, name, slug, created_at, store_enabled');
 
-        // Business profile URL
-        urls.push(`  <url>\n    <loc>${baseUrl}/${slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>`);
+            if (!error && businesses) {
+                businesses.forEach(b => {
+                    const slug = b.slug || generateSlug(b.name);
+                    const lastMod = (b.created_at || new Date().toISOString()).split('T')[0];
 
-        // Store URL if enabled
-        if (b.store_enabled) {
-            urls.push(`  <url>\n    <loc>${baseUrl}/${slug}/tienda</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`);
+                    // Business profile URL
+                    urls.push(`  <url>\n    <loc>${baseUrl}/${slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>`);
+
+                    // Store URL if enabled
+                    if (b.store_enabled) {
+                        urls.push(`  <url>\n    <loc>${baseUrl}/${slug}/tienda</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`);
+                    }
+                });
+            }
+        } catch (err) {
+            console.warn('Could not fetch dynamic businesses for sitemap, using static routes:', err.message);
         }
-    });
+    }
 
     const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`;
 
