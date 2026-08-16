@@ -804,60 +804,93 @@ export default function VenueProfile({ business: initialBusiness }) {
                         <div style={{
                             background: cardBg,
                             borderRadius: '24px',
-                            padding: windowWidth < 768 ? '16px' : '32px',
+                            padding: windowWidth < 768 ? '16px' : '28px',
                             boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
                             border: `1px solid ${borderColor}`
                         }}>
-                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: textColor, marginBottom: '20px' }}>
-                                Comodidades Destacadas
+                            <h2 style={{ fontSize: windowWidth < 768 ? '17px' : '20px', fontWeight: '700', color: textColor, marginBottom: windowWidth < 768 ? '12px' : '20px' }}>
+                                Comodidades
                             </h2>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: windowWidth < 768 ? 'repeat(auto-fill, minmax(100px, 1fr))' : 'repeat(auto-fill, minmax(140px, 1fr))',
-                                gap: windowWidth < 768 ? '10px' : '16px'
-                            }}>
-                                {amenities.map((amenity, idx) => {
-                                    const name = typeof amenity === 'object' ? amenity.name : amenity;
-                                    const icon = getAmenityIcon(amenity);
-                                    return (
-                                        <div
-                                            key={idx}
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '12px',
-                                                padding: '20px',
-                                                background: subCardBg,
-                                                borderRadius: '16px',
-                                                transition: 'all 0.3s ease',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            <div style={{
-                                                width: '48px',
-                                                height: '48px',
-                                                background: btnBg,
-                                                borderRadius: '12px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '24px'
-                                            }}>
-                                                {icon}
+                            {windowWidth < 768 ? (
+                                <div style={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: '8px'
+                                }}>
+                                    {amenities.map((amenity, idx) => {
+                                        const name = typeof amenity === 'object' ? amenity.name : amenity;
+                                        const icon = getAmenityIcon(amenity);
+                                        return (
+                                            <div
+                                                key={idx}
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    padding: '8px 14px',
+                                                    background: subCardBg,
+                                                    borderRadius: '12px',
+                                                    border: `1px solid ${borderColor}`,
+                                                    fontSize: '13px',
+                                                    fontWeight: '600',
+                                                    color: textColor
+                                                }}
+                                            >
+                                                <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center' }}>{icon}</span>
+                                                <span>{name}</span>
                                             </div>
-                                            <div style={{
-                                                fontSize: '13px',
-                                                fontWeight: '600',
-                                                color: secondaryTextColor,
-                                                textAlign: 'center'
-                                            }}>
-                                                {name}
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                                    gap: '14px'
+                                }}>
+                                    {amenities.map((amenity, idx) => {
+                                        const name = typeof amenity === 'object' ? amenity.name : amenity;
+                                        const icon = getAmenityIcon(amenity);
+                                        return (
+                                            <div
+                                                key={idx}
+                                                style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    gap: '10px',
+                                                    padding: '16px 12px',
+                                                    background: subCardBg,
+                                                    borderRadius: '16px',
+                                                    border: `1px solid ${borderColor}`,
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                            >
+                                                <div style={{
+                                                    width: '42px',
+                                                    height: '42px',
+                                                    background: btnBg,
+                                                    borderRadius: '12px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '20px'
+                                                }}>
+                                                    {icon}
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '13px',
+                                                    fontWeight: '600',
+                                                    color: secondaryTextColor,
+                                                    textAlign: 'center'
+                                                }}>
+                                                    {name}
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     )}
 
