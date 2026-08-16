@@ -545,71 +545,168 @@ textarea {
   }
 }
 
-.linkbio-container {
-  flex: 1;
+/* ═══════════════════════════════════════════
+   LINK IN BIO — UNIFIED SEAMLESS LAYOUT
+   ═══════════════════════════════════════════ */
+
+.linkbio-main-container {
   width: 100%;
-  height: 100% !important;
-  max-height: 100% !important;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  overflow: hidden !important;
+  flex: 1;
+  box-sizing: border-box;
 }
 
-.linkbio-container::-webkit-scrollbar {
-  display: none !important;
-}
-.linkbio-container {
-  -ms-overflow-style: none !important;
-  scrollbar-width: none !important;
+/* Banner */
+.linkbio-banner {
+  width: 100%;
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-card);
 }
 
+.linkbio-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.linkbio-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 30%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+/* Central Content Column */
 .linkbio-body-wrapper {
   width: 100%;
-  max-width: 440px;
+  max-width: 520px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  padding: 0 16px 20px;
+  box-sizing: border-box;
+  margin-top: -48px;
+  z-index: 10;
 }
 
-@media (max-width: 768px) {
-  .linkbio-container {
-    flex: 1;
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    max-height: 100%;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    padding-bottom: 0;
-  }
+.linkbio-profile-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 2px;
+}
 
+.linkbio-logo {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  margin: 0 auto 6px;
+  padding: 3px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.linkbio-name {
+  font-size: 23px;
+  font-weight: 800;
+  margin-bottom: 3px;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.linkbio-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 auto 12px;
+  line-height: 1.45;
+  max-width: 420px;
+}
+
+.linkbio-socials {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.linkbio-social-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.linkbio-social-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+}
+
+.linkbio-links-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.linkbio-link-btn {
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.linkbio-link-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.linkbio-link-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.linkbio-link-title {
+  font-weight: 700;
+  font-size: 15.5px;
+}
+
+.linkbio-link-subtitle {
+  font-size: 12px;
+  opacity: 0.82;
+}
+
+/* Tablet & Desktop Banner enhancement */
+@media (min-width: 769px) {
   .linkbio-banner {
-    width: 100%;
-  }
-
-  .linkbio-body-wrapper {
-    width: 100%;
-    max-width: 440px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .linkbio-profile-card {
-    margin-top: 0;
-    margin-bottom: 2px;
-  }
-
-  .linkbio-links-section {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    flex: none;
+    height: 250px;
+    max-width: 680px;
+    border-radius: 0 0 28px 28px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   }
 }
 

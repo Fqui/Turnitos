@@ -160,20 +160,18 @@ function AppContent() {
     const isBio = location.pathname === '/';
     return (
       <div className="app-container" style={{ 
-        height: isBio ? '100dvh' : 'auto',
-        minHeight: isBio ? '100dvh' : '100vh', 
+        minHeight: '100dvh', 
         display: 'flex', 
         flexDirection: 'column',
-        overflow: isBio ? 'hidden' : 'visible'
+        backgroundColor: 'var(--bg-main)'
       }}>
         {!isBio && <Header showSearch={false} />}
         <main style={{ 
           flex: 1, 
-          minHeight: 0,
-          height: isBio ? '100%' : 'calc(100vh - 70px)', 
           display: 'flex', 
           flexDirection: 'column',
-          overflow: isBio ? 'hidden' : 'visible'
+          width: '100%',
+          alignItems: 'center'
         }}>
           <ErrorBoundary>
             <Suspense fallback={<LoadingFallback />}>
@@ -197,21 +195,17 @@ function AppContent() {
 
   return (
     <div className="app-container" style={{ 
-      height: isLinkBio ? '100dvh' : 'auto',
-      minHeight: isLinkBio ? '100dvh' : '100vh', 
+      minHeight: '100dvh', 
       display: 'flex', 
-      flexDirection: 'column',
-      overflow: isLinkBio ? 'hidden' : 'visible'
+      flexDirection: 'column'
     }}>
       {!isAdmin && !isLinkBio && !isBusinessPortal && <Header showSearch={isHome} />}
 
       <main style={{ 
         flex: 1, 
-        minHeight: 0, 
-        height: isLinkBio ? '100%' : 'auto',
         display: 'flex', 
         flexDirection: 'column',
-        overflow: isLinkBio ? 'hidden' : 'visible'
+        width: '100%'
       }}>
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback />}>

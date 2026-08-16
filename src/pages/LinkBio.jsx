@@ -193,18 +193,7 @@ export default function LinkBio({ overrideSlug }) {
     const linkSubtitleFontSize = isCompact ? '11.5px' : '12px';
 
     return (
-        <div className="linkbio-container" style={{
-            backgroundColor: 'var(--bg-main)',
-            height: '100%',
-            width: '100%',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            padding: 0,
-            boxSizing: 'border-box'
-        }}>
+        <div className="linkbio-main-container">
             <SEOHead
                 title={business ? `${business.name} | Enlaces y Turnos` : 'TurnitosLR'}
                 description={business?.description || `Accedé a los enlaces oficiales, redes sociales, turnos y tienda de ${business?.name || 'este negocio'}.`}
@@ -214,41 +203,17 @@ export default function LinkBio({ overrideSlug }) {
             />
 
             {/* Top Cover Banner */}
-            <div className="linkbio-banner" style={{
-                height: bannerHeight,
-                width: '100%',
-                maxWidth: isDesktop ? '460px' : '100%',
-                borderRadius: isDesktop ? '0 0 24px 24px' : '0',
-                position: 'relative',
-                overflow: 'hidden',
-                flexShrink: 0,
-                backgroundColor: 'var(--bg-card)'
-            }}>
+            <div className="linkbio-banner">
                 <img
                     src={bannerUrl}
                     alt={business.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
-                <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.35) 100%)'
-                }} />
+                <div className="linkbio-banner-overlay" />
             </div>
 
             {/* Main Unified Content Body */}
-            <div className="linkbio-body-wrapper" style={{
-                width: '100%',
-                maxWidth: isDesktop ? '440px' : '480px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '0 16px',
-                boxSizing: 'border-box',
-                marginTop: logoOverlap,
-                zIndex: 10,
-                gap: '4px'
-            }}>
+            <div className="linkbio-body-wrapper">
                 {/* Profile Section */}
                 <motion.div
                     className="linkbio-profile-card"
@@ -767,6 +732,6 @@ export default function LinkBio({ overrideSlug }) {
                 )}
                 </div>
             </div>
-        </div >
+        </div>
     );
 }
