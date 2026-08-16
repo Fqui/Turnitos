@@ -5,8 +5,8 @@ export default function Footer({ minimal = false }) {
     if (minimal) {
         return (
             <div style={{
-                padding: '8px 16px',
-                paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+                padding: '10px 16px',
+                paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
                 textAlign: 'center',
                 color: 'var(--text-secondary)',
                 fontSize: '11px',
