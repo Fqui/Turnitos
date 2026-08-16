@@ -721,29 +721,6 @@ export default function VenueProfile({ business: initialBusiness }) {
                                             {galleryImages[0].caption}
                                         </div>
                                     )}
-
-                                    {/* Cover photo badge with total count on mobile */}
-                                    {galleryImages.length > 1 && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            bottom: '12px',
-                                            right: '12px',
-                                            background: 'rgba(0,0,0,0.7)',
-                                            backdropFilter: 'blur(8px)',
-                                            color: 'white',
-                                            padding: '6px 12px',
-                                            borderRadius: '10px',
-                                            fontSize: '12px',
-                                            fontWeight: '700',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                                        }}>
-                                            <span>📷</span>
-                                            <span>1 / {galleryImages.length}</span>
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* Secondary Grid Thumbnails */}
@@ -842,13 +819,14 @@ export default function VenueProfile({ business: initialBusiness }) {
                             boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
                             border: `1px solid ${borderColor}`
                         }}>
-                            <h2 style={{ fontSize: windowWidth < 768 ? '17px' : '20px', fontWeight: '700', color: textColor, marginBottom: windowWidth < 768 ? '12px' : '20px' }}>
+                            <h2 style={{ fontSize: windowWidth < 768 ? '17px' : '20px', fontWeight: '700', color: textColor, marginBottom: windowWidth < 768 ? '14px' : '20px', textAlign: windowWidth < 768 ? 'center' : 'left' }}>
                                 Comodidades
                             </h2>
                             {windowWidth < 768 ? (
                                 <div style={{
                                     display: 'flex',
                                     flexWrap: 'wrap',
+                                    justifyContent: 'center',
                                     gap: '8px'
                                 }}>
                                     {amenities.map((amenity, idx) => {
@@ -979,43 +957,53 @@ export default function VenueProfile({ business: initialBusiness }) {
                                             key={idx}
                                             style={{
                                                 display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                padding: '20px',
+                                                alignItems: 'flex-start',
+                                                gap: '14px',
+                                                padding: '16px',
                                                 background: subCardBg,
                                                 borderRadius: '16px',
-                                                transition: 'all 0.3s ease',
-                                                cursor: 'pointer',
-                                                border: '2px solid transparent'
+                                                border: `1px solid ${borderColor}`,
+                                                cursor: 'default',
+                                                userSelect: 'none'
                                             }}
                                         >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                <div style={{
-                                                    width: '56px',
-                                                    height: '56px',
-                                                    background: btnBg,
-                                                    borderRadius: '14px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '28px',
-                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                                                }}>
-                                                    {service.icon || '✨'}
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>
-                                                        {service.name}
-                                                    </div>
-                                                    {service.description && (
-                                                        <div style={{ fontSize: '13px', color: secondaryTextColor, marginTop: '2px' }}>
-                                                            {service.description}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                            <div style={{
+                                                width: '46px',
+                                                height: '46px',
+                                                background: btnBg,
+                                                borderRadius: '12px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '22px',
+                                                flexShrink: 0,
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                                            }}>
+                                                {service.icon || '✨'}
                                             </div>
-                                            <div style={{ fontSize: '16px', fontWeight: '800', color: primaryColor }}>
-                                                +${service.price}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: '15px', fontWeight: '700', color: textColor, lineHeight: '1.3' }}>
+                                                    {service.name}
+                                                </div>
+                                                {service.description && (
+                                                    <div style={{ fontSize: '13px', color: secondaryTextColor, marginTop: '4px', lineHeight: '1.4' }}>
+                                                        {service.description}
+                                                    </div>
+                                                )}
+                                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+                                                    <div style={{
+                                                        fontSize: '14px',
+                                                        fontWeight: '800',
+                                                        color: primaryColor,
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                                                        padding: '4px 10px',
+                                                        borderRadius: '8px'
+                                                    }}>
+                                                        +${Number(service.price).toLocaleString()}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -1344,9 +1332,10 @@ export default function VenueProfile({ business: initialBusiness }) {
                         onClick={() => setShowBookingModal(false)}
                     >
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
+                            initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.92, opacity: 0, y: 20 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                             onClick={(e) => e.stopPropagation()}
                             style={{
                                 background: cardBg,
@@ -1357,18 +1346,25 @@ export default function VenueProfile({ business: initialBusiness }) {
                                 overflow: 'auto',
                                 padding: '32px',
                                 display: 'flex',
-                                flexDirection: 'column'
+                                flexDirection: 'column',
+                                boxShadow: '0 25px 60px rgba(0,0,0,0.3)'
                             }}
                         >
                             {/* Header & Steps Indicator */}
                             <div style={{ marginBottom: '24px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                    <h2 style={{ fontSize: '24px', fontWeight: '900', margin: 0, color: textColor }}>
+                                    <motion.h2
+                                        key={bookingStep}
+                                        initial={{ opacity: 0, y: -6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        style={{ fontSize: '24px', fontWeight: '900', margin: 0, color: textColor }}
+                                    >
                                         {bookingStep === 1 && 'Detalles del Evento'}
                                         {bookingStep === 2 && 'Servicios Adicionales'}
                                         {bookingStep === 3 && 'Resumen de Reserva'}
                                         {bookingStep === 4 && 'Tus Datos de Contacto'}
-                                    </h2>
+                                    </motion.h2>
                                     <button
                                         onClick={() => setShowBookingModal(false)}
                                         style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: secondaryTextColor }}
@@ -1382,317 +1378,367 @@ export default function VenueProfile({ business: initialBusiness }) {
                                     {[1, 2, 3, 4].map(step => (
                                         <div key={step} style={{
                                             flex: 1,
-                                            height: '4px',
-                                            borderRadius: '2px',
+                                            height: '5px',
+                                            borderRadius: '3px',
                                             background: step <= bookingStep ? primaryColor : borderColor,
-                                            transition: 'background 0.3s ease'
+                                            transition: 'background 0.35s ease, transform 0.2s ease',
+                                            transform: step === bookingStep ? 'scaleY(1.2)' : 'scaleY(1)'
                                         }} />
                                     ))}
                                 </div>
                             </div>
 
-                            {/* STEP 1: Configuration (Guests & Duration) */}
-                            {bookingStep === 1 && (
-                                <div style={{ flex: 1 }}>
-                                    <p style={{ fontSize: '14px', color: secondaryTextColor, marginBottom: '24px' }}>
-                                        Personalizá la cantidad de invitados y horas para tu reserva.
-                                    </p>
+                            {/* Animated Step Content */}
+                            <AnimatePresence mode="wait">
+                                {/* STEP 1: Configuration (Guests & Duration) */}
+                                {bookingStep === 1 && (
+                                    <motion.div
+                                        key="step-1"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ duration: 0.22, ease: 'easeOut' }}
+                                        style={{ flex: 1 }}
+                                    >
+                                        <p style={{ fontSize: '14px', color: secondaryTextColor, marginBottom: '24px' }}>
+                                            Personalizá la cantidad de invitados y horas para tu reserva.
+                                        </p>
 
-                                    <div style={{ display: 'grid', gap: '24px' }}>
-                                        {/* Guest Counter */}
-                                        <div>
-                                            <div style={{ fontSize: '14px', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
-                                                Cantidad de Invitados
-                                            </div>
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                background: subCardBg,
-                                                borderRadius: '16px',
-                                                padding: '16px'
-                                            }}>
-                                                <button
-                                                    onClick={() => setGuestCount(Math.max(5, guestCount - 5))}
-                                                    disabled={guestCount <= 5}
-                                                    style={{
-                                                        background: btnBg,
-                                                        border: `1px solid ${borderColor}`,
-                                                        width: '44px',
-                                                        height: '44px',
-                                                        borderRadius: '12px',
-                                                        cursor: guestCount <= 5 ? 'not-allowed' : 'pointer',
-                                                        opacity: guestCount <= 5 ? 0.4 : 1,
-                                                        fontSize: '20px',
-                                                        fontWeight: '700',
-                                                        color: textColor,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}
-                                                >
-                                                    −
-                                                </button>
-                                                <div style={{ textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: textColor }}>
-                                                        {guestCount}
-                                                    </div>
-                                                    <div style={{ fontSize: '13px', color: secondaryTextColor }}>personas</div>
+                                        <div style={{ display: 'grid', gap: '24px' }}>
+                                            {/* Guest Counter */}
+                                            <div>
+                                                <div style={{ fontSize: '14px', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
+                                                    Cantidad de Invitados
                                                 </div>
-                                                <button
-                                                    onClick={() => setGuestCount(Math.min(maxCapacity, guestCount + 5))}
-                                                    disabled={guestCount >= maxCapacity}
-                                                    style={{
-                                                        background: btnBg,
-                                                        border: `1px solid ${borderColor}`,
-                                                        width: '44px',
-                                                        height: '44px',
-                                                        borderRadius: '12px',
-                                                        cursor: guestCount >= maxCapacity ? 'not-allowed' : 'pointer',
-                                                        opacity: guestCount >= maxCapacity ? 0.4 : 1,
-                                                        fontSize: '20px',
-                                                        fontWeight: '700',
-                                                        color: textColor,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Duration Selector */}
-                                        <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                                <span style={{ fontSize: '14px', fontWeight: '700', color: textColor }}>Duración del Evento</span>
-                                                {durationDiscountPct > 0 && (
-                                                    <span style={{
-                                                        fontSize: '11px',
-                                                        background: 'rgba(16, 185, 129, 0.15)',
-                                                        color: '#10B981',
-                                                        border: '1px solid rgba(16, 185, 129, 0.3)',
-                                                        padding: '2px 8px',
-                                                        borderRadius: '12px',
-                                                        fontWeight: '700'
-                                                    }}>
-                                                        🔥 {durationDiscountPct}% OFF
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                background: subCardBg,
-                                                borderRadius: '16px',
-                                                padding: '16px'
-                                            }}>
-                                                <button
-                                                    onClick={() => {
-                                                        const currentIdx = durationOptions.indexOf(duration);
-                                                        if (currentIdx > 0) setDuration(durationOptions[currentIdx - 1]);
-                                                    }}
-                                                    disabled={durationOptions.indexOf(duration) === 0}
-                                                    style={{
-                                                        background: btnBg,
-                                                        border: `1px solid ${borderColor}`,
-                                                        width: '44px',
-                                                        height: '44px',
-                                                        borderRadius: '12px',
-                                                        cursor: durationOptions.indexOf(duration) === 0 ? 'not-allowed' : 'pointer',
-                                                        fontSize: '20px',
-                                                        fontWeight: '700',
-                                                        color: textColor,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        opacity: durationOptions.indexOf(duration) === 0 ? 0.3 : 1
-                                                    }}
-                                                >
-                                                    −
-                                                </button>
-                                                <div style={{ textAlign: 'center' }}>
-                                                    <div style={{ fontSize: '24px', fontWeight: '900', color: textColor }}>
-                                                        {duration}
-                                                    </div>
-                                                    <div style={{ fontSize: '13px', color: secondaryTextColor }}>horas</div>
-                                                </div>
-                                                <button
-                                                    onClick={() => {
-                                                        const currentIdx = durationOptions.indexOf(duration);
-                                                        if (currentIdx < durationOptions.length - 1) setDuration(durationOptions[currentIdx + 1]);
-                                                    }}
-                                                    disabled={durationOptions.indexOf(duration) === durationOptions.length - 1}
-                                                    style={{
-                                                        background: btnBg,
-                                                        border: `1px solid ${borderColor}`,
-                                                        width: '44px',
-                                                        height: '44px',
-                                                        borderRadius: '12px',
-                                                        cursor: durationOptions.indexOf(duration) === durationOptions.length - 1 ? 'not-allowed' : 'pointer',
-                                                        fontSize: '20px',
-                                                        fontWeight: '700',
-                                                        color: textColor,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        opacity: durationOptions.indexOf(duration) === durationOptions.length - 1 ? 0.3 : 1
-                                                    }}
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* STEP 2: Additional Services */}
-                            {bookingStep === 2 && (
-                                <div style={{ flex: 1 }}>
-                                    <p style={{ fontSize: '14px', color: secondaryTextColor, marginBottom: '20px' }}>
-                                        Personaliza tu experiencia agregando servicios adicionales (opcional).
-                                    </p>
-
-                                    {additionalServices.length > 0 ? (
-                                        <div style={{ display: 'grid', gap: '12px' }}>
-                                            {additionalServices.map((service, idx) => {
-                                                const isSelected = selectedServices.some(s => (s.id && service.id) ? s.id === service.id : s.name === service.name);
-                                                return (
-                                                    <div
-                                                        key={idx}
-                                                        onClick={() => toggleService(service)}
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    background: subCardBg,
+                                                    borderRadius: '16px',
+                                                    padding: '16px'
+                                                }}>
+                                                    <motion.button
+                                                        whileTap={{ scale: 0.9 }}
+                                                        onClick={() => setGuestCount(Math.max(5, guestCount - 5))}
+                                                        disabled={guestCount <= 5}
                                                         style={{
+                                                            background: btnBg,
+                                                            border: `1px solid ${borderColor}`,
+                                                            width: '44px',
+                                                            height: '44px',
+                                                            borderRadius: '12px',
+                                                            cursor: guestCount <= 5 ? 'not-allowed' : 'pointer',
+                                                            opacity: guestCount <= 5 ? 0.4 : 1,
+                                                            fontSize: '20px',
+                                                            fontWeight: '700',
+                                                            color: textColor,
                                                             display: 'flex',
-                                                            justifyContent: 'space-between',
                                                             alignItems: 'center',
-                                                            padding: '16px',
-                                                            background: isSelected ? 'rgba(132, 204, 22, 0.05)' : subCardBg,
-                                                            borderRadius: '16px',
-                                                            cursor: 'pointer',
-                                                            border: isSelected ? `2px solid ${primaryColor}` : `1px solid ${borderColor}`,
-                                                            transition: 'all 0.2s ease'
+                                                            justifyContent: 'center'
                                                         }}
                                                     >
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                            <div style={{
-                                                                width: '40px',
-                                                                height: '40px',
-                                                                borderRadius: '10px',
-                                                                background: isSelected ? primaryColor : btnBg,
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                fontSize: '20px',
-                                                                color: isSelected ? 'white' : secondaryTextColor,
-                                                                transition: 'all 0.2s ease'
-                                                            }}>
-                                                                {isSelected ? '✓' : service.icon || '✨'}
-                                                            </div>
-                                                            <div>
-                                                                <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>
-                                                                    {service.name}
-                                                                </div>
-                                                                <div style={{ fontSize: '14px', fontWeight: '700', color: primaryColor, marginTop: '2px' }}>
-                                                                    +${service.price?.toLocaleString()}
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                        −
+                                                    </motion.button>
+                                                    <div style={{ textAlign: 'center' }}>
+                                                        <motion.div
+                                                            key={guestCount}
+                                                            initial={{ scale: 0.8, opacity: 0 }}
+                                                            animate={{ scale: 1, opacity: 1 }}
+                                                            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                                                            style={{ fontSize: '24px', fontWeight: '900', color: textColor }}
+                                                        >
+                                                            {guestCount}
+                                                        </motion.div>
+                                                        <div style={{ fontSize: '13px', color: secondaryTextColor }}>personas</div>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
-                                        <div style={{ textAlign: 'center', padding: '40px 0', color: secondaryTextColor }}>
-                                            No hay servicios adicionales disponibles para este espacio.
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                                    <motion.button
+                                                        whileTap={{ scale: 0.9 }}
+                                                        onClick={() => setGuestCount(Math.min(maxCapacity, guestCount + 5))}
+                                                        disabled={guestCount >= maxCapacity}
+                                                        style={{
+                                                            background: btnBg,
+                                                            border: `1px solid ${borderColor}`,
+                                                            width: '44px',
+                                                            height: '44px',
+                                                            borderRadius: '12px',
+                                                            cursor: guestCount >= maxCapacity ? 'not-allowed' : 'pointer',
+                                                            opacity: guestCount >= maxCapacity ? 0.4 : 1,
+                                                            fontSize: '20px',
+                                                            fontWeight: '700',
+                                                            color: textColor,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}
+                                                    >
+                                                        +
+                                                    </motion.button>
+                                                </div>
+                                            </div>
 
-                            {/* STEP 3: Summary */}
-                            {bookingStep === 3 && (
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ background: subCardBg, borderRadius: '16px', padding: '24px' }}>
-                                        {/* Date & Guests */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                                            {/* Duration Selector */}
                                             <div>
-                                                <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>FECHA</div>
-                                                <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>
-                                                    {selectedDate?.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                                    <span style={{ fontSize: '14px', fontWeight: '700', color: textColor }}>Duración del Evento</span>
+                                                    {durationDiscountPct > 0 && (
+                                                        <span style={{
+                                                            fontSize: '11px',
+                                                            background: 'rgba(16, 185, 129, 0.15)',
+                                                            color: '#10B981',
+                                                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '12px',
+                                                            fontWeight: '700'
+                                                        }}>
+                                                            🔥 {durationDiscountPct}% OFF
+                                                        </span>
+                                                    )}
                                                 </div>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    background: subCardBg,
+                                                    borderRadius: '16px',
+                                                    padding: '16px'
+                                                }}>
+                                                    <motion.button
+                                                        whileTap={{ scale: 0.9 }}
+                                                        onClick={() => {
+                                                            const currentIdx = durationOptions.indexOf(duration);
+                                                            if (currentIdx > 0) setDuration(durationOptions[currentIdx - 1]);
+                                                        }}
+                                                        disabled={durationOptions.indexOf(duration) === 0}
+                                                        style={{
+                                                            background: btnBg,
+                                                            border: `1px solid ${borderColor}`,
+                                                            width: '44px',
+                                                            height: '44px',
+                                                            borderRadius: '12px',
+                                                            cursor: durationOptions.indexOf(duration) === 0 ? 'not-allowed' : 'pointer',
+                                                            fontSize: '20px',
+                                                            fontWeight: '700',
+                                                            color: textColor,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            opacity: durationOptions.indexOf(duration) === 0 ? 0.3 : 1
+                                                        }}
+                                                    >
+                                                        −
+                                                    </motion.button>
+                                                    <div style={{ textAlign: 'center' }}>
+                                                        <motion.div
+                                                            key={duration}
+                                                            initial={{ scale: 0.8, opacity: 0 }}
+                                                            animate={{ scale: 1, opacity: 1 }}
+                                                            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                                                            style={{ fontSize: '24px', fontWeight: '900', color: textColor }}
+                                                        >
+                                                            {duration}
+                                                        </motion.div>
+                                                        <div style={{ fontSize: '13px', color: secondaryTextColor }}>horas</div>
+                                                    </div>
+                                                    <motion.button
+                                                        whileTap={{ scale: 0.9 }}
+                                                        onClick={() => {
+                                                            const currentIdx = durationOptions.indexOf(duration);
+                                                            if (currentIdx < durationOptions.length - 1) setDuration(durationOptions[currentIdx + 1]);
+                                                        }}
+                                                        disabled={durationOptions.indexOf(duration) === durationOptions.length - 1}
+                                                        style={{
+                                                            background: btnBg,
+                                                            border: `1px solid ${borderColor}`,
+                                                            width: '44px',
+                                                            height: '44px',
+                                                            borderRadius: '12px',
+                                                            cursor: durationOptions.indexOf(duration) === durationOptions.length - 1 ? 'not-allowed' : 'pointer',
+                                                            fontSize: '20px',
+                                                            fontWeight: '700',
+                                                            color: textColor,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            opacity: durationOptions.indexOf(duration) === durationOptions.length - 1 ? 0.3 : 1
+                                                        }}
+                                                    >
+                                                        +
+                                                    </motion.button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* STEP 2: Additional Services */}
+                                {bookingStep === 2 && (
+                                    <motion.div
+                                        key="step-2"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ duration: 0.22, ease: 'easeOut' }}
+                                        style={{ flex: 1 }}
+                                    >
+                                        <p style={{ fontSize: '14px', color: secondaryTextColor, marginBottom: '20px' }}>
+                                            Personaliza tu experiencia agregando servicios adicionales (opcional).
+                                        </p>
+
+                                        {additionalServices.length > 0 ? (
+                                            <div style={{ display: 'grid', gap: '12px' }}>
+                                                {additionalServices.map((service, idx) => {
+                                                    const isSelected = selectedServices.some(s => (s.id && service.id) ? s.id === service.id : s.name === service.name);
+                                                    return (
+                                                        <motion.div
+                                                            key={idx}
+                                                            whileTap={{ scale: 0.98 }}
+                                                            onClick={() => toggleService(service)}
+                                                            style={{
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                padding: '16px',
+                                                                background: isSelected ? 'rgba(132, 204, 22, 0.08)' : subCardBg,
+                                                                borderRadius: '16px',
+                                                                cursor: 'pointer',
+                                                                border: isSelected ? `2px solid ${primaryColor}` : `1px solid ${borderColor}`,
+                                                                transition: 'background 0.2s ease, border-color 0.2s ease'
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                                <div style={{
+                                                                    width: '40px',
+                                                                    height: '40px',
+                                                                    borderRadius: '10px',
+                                                                    background: isSelected ? primaryColor : btnBg,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    fontSize: '20px',
+                                                                    color: isSelected ? 'white' : secondaryTextColor,
+                                                                    transition: 'all 0.2s ease'
+                                                                }}>
+                                                                    {isSelected ? '✓' : service.icon || '✨'}
+                                                                </div>
+                                                                <div>
+                                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>
+                                                                        {service.name}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '14px', fontWeight: '700', color: primaryColor, marginTop: '2px' }}>
+                                                                        +${service.price?.toLocaleString()}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div style={{ textAlign: 'center', padding: '40px 0', color: secondaryTextColor }}>
+                                                No hay servicios adicionales disponibles para este espacio.
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                )}
+
+                                {/* STEP 3: Summary */}
+                                {bookingStep === 3 && (
+                                    <motion.div
+                                        key="step-3"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ duration: 0.22, ease: 'easeOut' }}
+                                        style={{ flex: 1 }}
+                                    >
+                                        <div style={{ background: subCardBg, borderRadius: '16px', padding: '24px' }}>
+                                            {/* Date & Guests */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>FECHA</div>
+                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>
+                                                        {selectedDate?.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>INVITADOS</div>
+                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>{guestCount} pers.</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Breakdown */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <span style={{ color: secondaryTextColor, fontSize: '14px' }}>Alquiler base ({duration}h)</span>
+                                                    <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>${rawBasePrice.toLocaleString()}</span>
+                                                </div>
+
+                                                {durationDiscountPct > 0 && (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10B981', fontSize: '14px', fontWeight: '600' }}>
+                                                        <span>Descuento por {duration}hs ({durationDiscountPct}% OFF)</span>
+                                                        <span>-${durationDiscountAmount.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+
+                                                {selectedServices.map((service, idx) => (
+                                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span style={{ color: secondaryTextColor, fontSize: '14px' }}>{service.name}</span>
+                                                        <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>+${service.price.toLocaleString()}</span>
+                                                    </div>
+                                                ))}
+
+                                                <div style={{ height: '1px', background: borderColor, margin: '8px 0' }} />
+
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontWeight: '700', fontSize: '16px', color: textColor }}>Total Final</span>
+                                                    <span style={{ fontWeight: '900', fontSize: '24px', color: primaryColor }}>${totalPrice.toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* STEP 4: Customer Form */}
+                                {bookingStep === 4 && (
+                                    <motion.div
+                                        key="step-4"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ duration: 0.22, ease: 'easeOut' }}
+                                        style={{ flex: 1 }}
+                                    >
+                                        <p style={{ fontSize: '14px', color: secondaryTextColor, marginBottom: '20px' }}>
+                                            Ingresa tus datos de contacto para enviarte la confirmación.
+                                        </p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Nombre</label>
+                                                <input type="text" id="customerFirstName" placeholder="Tu nombre" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>INVITADOS</div>
-                                                <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>{guestCount} pers.</div>
+                                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Apellido</label>
+                                                <input type="text" id="customerLastName" placeholder="Tu apellido" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
                                             </div>
                                         </div>
-
-                                        {/* Breakdown */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: secondaryTextColor, fontSize: '14px' }}>Alquiler base ({duration}h)</span>
-                                                <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>${rawBasePrice.toLocaleString()}</span>
-                                            </div>
-
-                                            {durationDiscountPct > 0 && (
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10B981', fontSize: '14px', fontWeight: '600' }}>
-                                                    <span>Descuento por {duration}hs ({durationDiscountPct}% OFF)</span>
-                                                    <span>-${durationDiscountAmount.toLocaleString()}</span>
-                                                </div>
-                                            )}
-
-                                            {selectedServices.map((service, idx) => (
-                                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <span style={{ color: secondaryTextColor, fontSize: '14px' }}>{service.name}</span>
-                                                    <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>+${service.price.toLocaleString()}</span>
-                                                </div>
-                                            ))}
-
-                                            <div style={{ height: '1px', background: borderColor, margin: '8px 0' }} />
-
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ fontWeight: '700', fontSize: '16px', color: textColor }}>Total Final</span>
-                                                <span style={{ fontWeight: '900', fontSize: '24px', color: primaryColor }}>${totalPrice.toLocaleString()}</span>
-                                            </div>
+                                        <div style={{ marginBottom: '16px' }}>
+                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Teléfono (WhatsApp)</label>
+                                            <input type="tel" id="customerPhone" placeholder="3804..." style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
                                         </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* STEP 4: Customer Form */}
-                            {bookingStep === 4 && (
-                                <div style={{ flex: 1 }}>
-                                    <p style={{ fontSize: '14px', color: secondaryTextColor, marginBottom: '20px' }}>
-                                        Ingresa tus datos de contacto para enviarte la confirmación.
-                                    </p>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Nombre</label>
-                                            <input type="text" id="customerFirstName" placeholder="Tu nombre" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
+                                        <div style={{ marginBottom: '16px' }}>
+                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Email (Opcional)</label>
+                                            <input type="email" id="customerEmail" placeholder="tucorreo@ejemplo.com" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
                                         </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Apellido</label>
-                                            <input type="text" id="customerLastName" placeholder="Tu apellido" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
-                                        </div>
-                                    </div>
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Teléfono (WhatsApp)</label>
-                                        <input type="tel" id="customerPhone" placeholder="3804..." style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
-                                    </div>
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Email (Opcional)</label>
-                                        <input type="email" id="customerEmail" placeholder="tucorreo@ejemplo.com" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
-                                    </div>
-                                </div>
-                            )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             {/* Footer Buttons */}
                             <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
                                 {bookingStep > 1 && (
-                                    <button
+                                    <motion.button
+                                        whileTap={{ scale: 0.95 }}
                                         onClick={() => {
                                             setBookingStep(prev => prev - 1)
                                         }}
@@ -1708,10 +1754,12 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         }}
                                     >
                                         Volver
-                                    </button>
+                                    </motion.button>
                                 )}
 
-                                <button
+                                <motion.button
+                                    whileTap={{ scale: 0.97 }}
+                                    whileHover={{ scale: 1.01 }}
                                     onClick={() => {
                                         if (bookingStep === 4) {
                                             // Handle Submit
@@ -1751,7 +1799,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                     }}
                                 >
                                     {bookingStep === 4 ? 'Confirmar Reserva' : 'Siguiente'}
-                                </button>
+                                </motion.button>
                             </div>
                         </motion.div>
                     </motion.div>
