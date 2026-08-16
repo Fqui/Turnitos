@@ -6,7 +6,6 @@ import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
 import { pushService } from '../services/pushService';
 import { useNotification } from '../contexts/NotificationContext';
-import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import SEOHead from '../components/SEOHead';
 import 'leaflet/dist/leaflet.css';
 
@@ -1251,11 +1250,6 @@ export default function VenueProfile({ business: initialBusiness }) {
                         </div>
                     )
                 }
-            </div >
-
-            {/* Reviews and Ratings Section */}
-            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
-                <BusinessReviewsSection businessId={business?.id} businessName={business?.name} />
             </div>
 
             {/* Booking Modal */}
