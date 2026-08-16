@@ -31,6 +31,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
     const [saving, setSaving] = useState(false);
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+    const [uploadingProductImage, setUploadingProductImage] = useState(false);
 
     const [formData, setFormData] = useState({
         ...business,
@@ -1292,7 +1293,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                 </div>
                                 <button
                                     onClick={() => {
-                                        setEditingProduct({ id: Date.now().toString(), name: '', price: 0, category: 'Pelotas', desc: '', image: '', is_active: true });
+                                        setEditingProduct({ id: Date.now().toString(), name: '', price: '', category: 'General', desc: '', image: '', images: [], is_active: true });
                                         setIsProductModalOpen(true);
                                     }}
                                     style={buttonStyle}
@@ -1606,7 +1607,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                 type="text"
                                 style={inputStyle}
                                 value={editingProduct.name || ''}
-                                placeholder="Ej: Tubo Pelotas Wilson"
+                                placeholder="Nombre del producto o artículo"
                                 onChange={e => setEditingProduct(prev => ({ ...prev, name: e.target.value }))}
                             />
                         </div>
@@ -1624,18 +1625,19 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                             </div>
                             <div style={{ flex: 1 }}>
                                 <label style={labelStyle}>Categoría</label>
-                                <select
+                                <input
+                                    type="text"
                                     style={inputStyle}
-                                    value={editingProduct.category || 'Pelotas'}
+                                    value={editingProduct.category || ''}
+                                    placeholder="Escribí o elegí categoría..."
+                                    list="venue-store-categories-list"
                                     onChange={e => setEditingProduct(prev => ({ ...prev, category: e.target.value }))}
-                                >
-                                    <option value="Pelotas">Pelotas</option>
-                                    <option value="Accesorios">Accesorios</option>
-                                    <option value="Alquileres">Alquileres</option>
-                                    <option value="Bebidas">Bebidas</option>
-                                    <option value="Indumentaria">Indumentaria</option>
-                                    <option value="General">General</option>
-                                </select>
+                                />
+                                <datalist id="venue-store-categories-list">
+                                    {Array.from(new Set(['General', 'Bebidas', 'Snacks', 'Alquileres', 'Equipamiento', 'Indumentaria', 'Accesorios', 'Servicios', ...(formData.metadata?.store_products || []).map(p => p.category).filter(Boolean)])).map(cat => (
+                                        <option key={cat} value={cat} />
+                                    ))}
+                                </datalist>
                             </div>
                         </div>
 
@@ -1645,35 +1647,140 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                 type="text"
                                 style={inputStyle}
                                 value={editingProduct.desc || ''}
-                                placeholder="Ej: Presurizador de alta duración"
+                                placeholder="Descripción breve del producto..."
                                 onChange={e => setEditingProduct(prev => ({ ...prev, desc: e.target.value }))}
                             />
                         </div>
 
                         <div>
-                            <label style={labelStyle}>URL de Imagen Principal</label>
-                            <input
-                                type="text"
-                                style={inputStyle}
-                                value={editingProduct.image || ''}
-                                placeholder="https://..."
-                                onChange={e => setEditingProduct(prev => ({ ...prev, image: e.target.value }))}
-                            />
-                        </div>
+                            <label style={labelStyle}>Imágenes del Producto (Podés subir varias fotos)</label>
+                            
+                            {/* Grid of uploaded images */}
+                            {((Array.isArray(editingProduct.images) && editingProduct.images.length > 0) || editingProduct.image) && (
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                    {(Array.isArray(editingProduct.images) && editingProduct.images.length > 0
+                                        ? editingProduct.images
+                                        : [editingProduct.image]
+                                    ).filter(Boolean).map((imgUrl, iIdx) => (
+                                        <div key={iIdx} style={{ position: 'relative', width: '64px', height: '64px' }}>
+                                            <img
+                                                src={imgUrl}
+                                                alt={`Foto ${iIdx + 1}`}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    borderRadius: '12px',
+                                                    objectFit: 'cover',
+                                                    border: (editingProduct.image === imgUrl || (!editingProduct.image && iIdx === 0)) ? '2px solid var(--primary-paddle)' : '1px solid var(--border)'
+                                                }}
+                                            />
+                                            {/* Primary badge */}
+                                            {(editingProduct.image === imgUrl || (!editingProduct.image && iIdx === 0)) && (
+                                                <span style={{
+                                                    position: 'absolute',
+                                                    bottom: '2px',
+                                                    left: '2px',
+                                                    background: 'var(--primary-paddle)',
+                                                    color: '#000',
+                                                    fontSize: '9px',
+                                                    fontWeight: '800',
+                                                    padding: '1px 4px',
+                                                    borderRadius: '4px'
+                                                }}>
+                                                    Principal
+                                                </span>
+                                            )}
+                                            {/* Delete button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const currentList = Array.isArray(editingProduct.images) && editingProduct.images.length > 0
+                                                        ? editingProduct.images
+                                                        : [editingProduct.image];
+                                                    const newImgs = currentList.filter((_, idx) => idx !== iIdx);
+                                                    setEditingProduct(prev => ({
+                                                        ...prev,
+                                                        images: newImgs,
+                                                        image: newImgs[0] || null
+                                                    }));
+                                                }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '-6px',
+                                                    right: '-6px',
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    borderRadius: '50%',
+                                                    background: '#ef4444',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    fontSize: '11px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                }}
+                                                title="Eliminar foto"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
-                        <div>
-                            <label style={labelStyle}>Imágenes Adicionales (URLs separadas por comas)</label>
-                            <input
-                                type="text"
-                                style={inputStyle}
-                                value={Array.isArray(editingProduct.images) ? editingProduct.images.join(', ') : (editingProduct.images || '')}
-                                placeholder="https://img2.jpg, https://img3.jpg"
-                                onChange={e => {
-                                    const val = e.target.value;
-                                    const list = val.split(',').map(s => s.trim()).filter(Boolean);
-                                    setEditingProduct(prev => ({ ...prev, images: list }));
-                                }}
-                            />
+                            <label style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                width: '100%',
+                                padding: '14px 16px',
+                                borderRadius: '12px',
+                                border: '1px dashed var(--border)',
+                                background: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: uploadingProductImage ? 'wait' : 'pointer'
+                            }}>
+                                {uploadingProductImage ? '⏳ Subiendo fotos a la nube...' : '📷 Subir Fotos (Seleccionar 1 o varias desde tu dispositivo)'}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    disabled={uploadingProductImage}
+                                    style={{ display: 'none' }}
+                                    onChange={async (e) => {
+                                        const files = Array.from(e.target.files || []);
+                                        if (files.length === 0) return;
+                                        try {
+                                            setUploadingProductImage(true);
+                                            const uploadPromises = files.map(file => serviceAdapter.uploadImage(file));
+                                            const uploadedUrls = await Promise.all(uploadPromises);
+
+                                            setEditingProduct(prev => {
+                                                const existingImages = Array.isArray(prev.images) && prev.images.length > 0
+                                                    ? prev.images
+                                                    : (prev.image ? [prev.image] : []);
+                                                const combined = [...existingImages, ...uploadedUrls];
+                                                return {
+                                                    ...prev,
+                                                    images: combined,
+                                                    image: combined[0] || null
+                                                };
+                                            });
+                                            showToast(`${uploadedUrls.length} imagen(es) subida(s)`, 'success');
+                                        } catch (err) {
+                                            console.error('Error uploading product images:', err);
+                                            showToast('Error al subir imágenes', 'error');
+                                        } finally {
+                                            setUploadingProductImage(false);
+                                        }
+                                    }}
+                                />
+                            </label>
                         </div>
 
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '4px' }}>
