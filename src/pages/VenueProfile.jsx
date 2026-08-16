@@ -833,7 +833,9 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     border: `1px solid ${borderColor}`,
                                                     fontSize: '13px',
                                                     fontWeight: '600',
-                                                    color: textColor
+                                                    color: textColor,
+                                                    cursor: 'default',
+                                                    userSelect: 'none'
                                                 }}
                                             >
                                                 <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center' }}>{icon}</span>
@@ -863,7 +865,8 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     background: subCardBg,
                                                     borderRadius: '16px',
                                                     border: `1px solid ${borderColor}`,
-                                                    transition: 'all 0.2s ease'
+                                                    cursor: 'default',
+                                                    userSelect: 'none'
                                                 }}
                                             >
                                                 <div style={{
