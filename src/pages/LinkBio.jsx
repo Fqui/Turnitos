@@ -174,22 +174,23 @@ export default function LinkBio({ overrideSlug }) {
     const isDesktop = window.innerWidth > 768;
 
     const totalLinksCount = mainLinks.length + (business.whatsapp ? 1 : 0) + (business.location ? 1 : 0);
-    const isCompact = totalLinksCount === 4;
-    const bannerHeight = isDesktop ? '180px' : '215px';
-    const logoSize = isDesktop ? '88px' : '94px';
-    const logoOverlap = isDesktop ? '-44px' : '-48px';
-    const nameFontSize = isDesktop ? '18px' : '22px';
-    const descFontSize = '13.5px';
-    const descMargin = '10px';
-    const socialBtnSize = '42px';
-    const socialIconSize = 20;
-    const socialMargin = isDesktop ? '14px' : '18px';
-    const linkGap = '10px';
-    const linkBtnPadding = '11px 16px';
-    const linkIconBoxSize = '38px';
-    const linkIconFontSize = '19px';
-    const linkTitleFontSize = '15.5px';
-    const linkSubtitleFontSize = '12px';
+    const isCompact = totalLinksCount >= 4;
+
+    const bannerHeight = isCompact ? (isDesktop ? '155px' : '175px') : (isDesktop ? '180px' : '210px');
+    const logoSize = isCompact ? (isDesktop ? '78px' : '82px') : (isDesktop ? '88px' : '94px');
+    const logoOverlap = isCompact ? (isDesktop ? '-38px' : '-42px') : (isDesktop ? '-44px' : '-48px');
+    const nameFontSize = isCompact ? (isDesktop ? '17px' : '20px') : (isDesktop ? '18px' : '22px');
+    const descFontSize = isCompact ? '12.5px' : '13.5px';
+    const descMargin = isCompact ? '6px' : '10px';
+    const socialBtnSize = isCompact ? '38px' : '42px';
+    const socialIconSize = isCompact ? 18 : 20;
+    const socialMargin = isCompact ? (isDesktop ? '10px' : '13px') : (isDesktop ? '14px' : '18px');
+    const linkGap = isCompact ? '7px' : '10px';
+    const linkBtnPadding = isCompact ? '9px 14px' : '12px 16px';
+    const linkIconBoxSize = isCompact ? '34px' : '38px';
+    const linkIconFontSize = isCompact ? '17px' : '19px';
+    const linkTitleFontSize = isCompact ? '14.5px' : '15.5px';
+    const linkSubtitleFontSize = isCompact ? '11.5px' : '12px';
 
     return (
         <div className="linkbio-container" style={{

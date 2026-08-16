@@ -5,18 +5,18 @@ export default function Footer({ minimal = false }) {
     if (minimal) {
         return (
             <div style={{
-                padding: '10px 16px',
-                paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
+                padding: '6px 16px',
+                paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
                 textAlign: 'center',
                 color: 'var(--text-secondary)',
                 fontSize: '11px',
-                lineHeight: 1.4,
+                lineHeight: 1.35,
                 marginTop: 'auto',
                 borderTop: '1px solid var(--border)',
                 flexShrink: 0
             }}>
                 <div>© {new Date().getFullYear()} TurnitosLR. Todos los derechos reservados.</div>
-                <div style={{ marginTop: '2px', opacity: 0.85 }}>Hecho con ❤️ en La Rioja.</div>
+                <div style={{ marginTop: '1px', opacity: 0.85 }}>Hecho con ❤️ en La Rioja.</div>
             </div>
         );
     }
