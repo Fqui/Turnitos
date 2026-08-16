@@ -8,6 +8,7 @@ import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
 import SEOHead from '../components/SEOHead';
 import { findBusinessBySlug } from '../utils/utils';
+import { isFreePlan } from '../utils/subscriptionUtils';
 
 // Fix for default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -17,7 +18,7 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-export default function LinkBio({ overrideSlug }) {
+const LinkBio = ({ overrideSlug = null }) => {
     const { businessSlug: routeSlug } = useParams();
     const businessSlug = overrideSlug || routeSlug;
     const navigate = useNavigate();
@@ -46,6 +47,10 @@ export default function LinkBio({ overrideSlug }) {
                 const allBusinesses = await serviceAdapter.getBusinesses();
                 const foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
                 if (foundBusiness) {
+                    if (isFreePlan(foundBusiness.subscription_plan_id || foundBusiness.subscription_plan_name)) {
+                        navigate(`/${foundBusiness.slug || businessSlug}`, { replace: true });
+                        return;
+                    }
                     setBusiness(foundBusiness);
                 }
             } catch (error) {

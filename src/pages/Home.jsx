@@ -381,7 +381,10 @@ export default function Home() {
 
     // Handle Nav to Business from Suggestion
     const handleSelectSuggestion = (business) => {
-        navigate(`/${generateSlug(business.name)}`, { state: { business } });
+        try {
+            sessionStorage.setItem('turnitos_booking_source', 'marketplace');
+        } catch (e) {}
+        navigate(`/${generateSlug(business.name)}`, { state: { business, fromMarketplace: true } });
         setShowSuggestions(false);
     };
 
@@ -845,7 +848,12 @@ export default function Home() {
                                     {paginatedBusinesses.map(business => (
                                         <div
                                             key={business.id}
-                                            onClick={() => navigate(`/${generateSlug(business.name)}`, { state: { business } })}
+                                            onClick={() => {
+                                                try {
+                                                    sessionStorage.setItem('turnitos_booking_source', 'marketplace');
+                                                } catch (e) {}
+                                                navigate(`/${generateSlug(business.name)}`, { state: { business, fromMarketplace: true } });
+                                            }}
                                             style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                                         >
                                             <motion.div

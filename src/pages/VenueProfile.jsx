@@ -327,7 +327,16 @@ export default function VenueProfile({ business: initialBusiness }) {
             navigate('/');
         } catch (error) {
             console.error('Error creating booking:', error);
-            showAlert('Error', 'No pudimos procesar tu reserva. Por favor intenta nuevamente.', 'error', 'Reintentar');
+            if (error.message && error.message.includes('cupo mensual')) {
+                showAlert(
+                    'Cupo Mensual Completado',
+                    'Este negocio ha completado su cupo mensual de turnos online. Por favor, contactalo directamente por WhatsApp para coordinar tu lugar.',
+                    'warning',
+                    'Entendido'
+                );
+            } else {
+                showAlert('Error', error.message || 'No pudimos procesar tu reserva. Por favor intenta nuevamente.', 'error', 'Reintentar');
+            }
         }
     };
 

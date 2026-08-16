@@ -494,7 +494,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
         } catch (error) {
             console.error("Booking error:", error);
-            alert("Hubo un error al guardar la reserva. Por favor intenta nuevamente.");
+            if (error.message && error.message.includes('cupo mensual')) {
+                alert("Este negocio ha completado su cupo mensual de turnos online. Por favor contactalo por WhatsApp para coordinar tu turno.");
+            } else {
+                alert(error.message || "Hubo un error al guardar la reserva. Por favor intenta nuevamente.");
+            }
         } finally {
             setIsSubmitting(false);
         }

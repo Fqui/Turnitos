@@ -113,6 +113,7 @@ const BusinessPortalSidebar = ({
         { id: 'calendar', icon: '📅', label: 'Calendario' },
         { id: 'list', icon: '📋', label: 'Reservas', badge: pendingCount > 0 ? pendingCount : null },
         { id: 'analytics', icon: '📊', label: 'Analytics' },
+        { id: 'subscription', icon: '💳', label: 'Suscripción' },
         { id: 'customers', icon: '👥', label: 'Clientes' },
         { id: 'settings', icon: '⚙️', label: 'Ajustes' }
     ];

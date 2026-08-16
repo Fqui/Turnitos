@@ -1,5 +1,6 @@
 
 import { supabase } from './supabaseClient';
+import { calculateBookingCommission, isFreePlan, PLANS_CATALOG, getPlanDetails } from '../utils/subscriptionUtils';
 
 class SupabaseService {
     // --- Helpers ---
@@ -1572,11 +1573,75 @@ class SupabaseService {
         const targetCustomerPhone = bookingData.customerPhone || bookingData.customer_phone;
         const targetCustomerEmail = bookingData.customerEmail || bookingData.customer_email;
 
+        // 1. Determine Booking Source (marketplace vs direct)
+        let bookingSource = bookingData.bookingSource || bookingData.booking_source || bookingData.metadata?.booking_source;
+        if (!bookingSource && typeof window !== 'undefined') {
+            try {
+                bookingSource = sessionStorage.getItem('turnitos_booking_source') || 'direct';
+            } catch (e) {
+                bookingSource = 'direct';
+            }
+        }
+        if (!bookingSource) bookingSource = 'direct';
+
+        // 2. Resolve Business Plan
+        let businessPlanId = bookingData.subscriptionPlanId || bookingData.subscription_plan_id;
+        if (!businessPlanId && targetBusinessId) {
+            try {
+                const { data: bData } = await supabase
+                    .from('businesses')
+                    .select('subscription_plan_id')
+                    .eq('id', targetBusinessId)
+                    .single();
+                if (bData) businessPlanId = bData.subscription_plan_id;
+            } catch (e) {
+                // Ignore fallback error
+            }
+        }
+
+        // 3. Validate Monthly Limit for Free Plan (100 bookings max / month)
+        if (isFreePlan(businessPlanId)) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const startOfMonth = `${year}-${month}-01`;
+            const endOfMonth = `${year}-${month}-31`;
+
+            try {
+                const { count: monthlyBookingsCount } = await supabase
+                    .from('bookings')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('business_id', targetBusinessId)
+                    .neq('status', 'cancelled')
+                    .gte('date', startOfMonth)
+                    .lte('date', endOfMonth);
+
+                if (monthlyBookingsCount !== null && monthlyBookingsCount >= 100) {
+                    throw new Error('Este negocio ha alcanzado su cupo mensual de 100 reservas online.');
+                }
+            } catch (err) {
+                if (err.message && err.message.includes('cupo mensual')) {
+                    throw err;
+                }
+            }
+        }
+
+        // 4. Calculate Commission
+        const bookingPrice = Number(bookingData.price || bookingData.total_price || bookingData.totalPrice || 0);
+        const commissionAmount = calculateBookingCommission({
+            planId: businessPlanId,
+            price: bookingPrice,
+            isMarketplace: bookingSource === 'marketplace'
+        });
+
         const safeMetadata = {
             ...(bookingData.metadata || {}),
             notes: bookingData.notes || bookingData.metadata?.notes || null,
             deposit_amount: bookingData.depositAmount !== undefined ? bookingData.depositAmount : (bookingData.deposit_amount !== undefined ? bookingData.deposit_amount : null),
-            duration_hours: bookingData.durationHours || bookingData.metadata?.duration_hours || (bookingData.duration ? Math.round(bookingData.duration / 60) : null)
+            duration_hours: bookingData.durationHours || bookingData.metadata?.duration_hours || (bookingData.duration ? Math.round(bookingData.duration / 60) : null),
+            booking_source: bookingSource,
+            commission_amount: commissionAmount,
+            plan_at_booking: businessPlanId || 'standard'
         };
 
         const { data, error } = await supabase
@@ -1593,7 +1658,7 @@ class SupabaseService {
                 customer_phone: targetCustomerPhone || '',
                 customer_email: targetCustomerEmail || null,
                 status: bookingData.status || 'pending',
-                price: bookingData.price || bookingData.total_price || bookingData.totalPrice || 0,
+                price: bookingPrice,
                 duration: bookingData.duration,
                 metadata: safeMetadata,
                 // Venue-specific fields
@@ -2071,23 +2136,104 @@ class SupabaseService {
     }
 
     /**
+     * Get monthly booking statistics for a business
+     * @param {string} businessId - Business ID
+     * @param {Date} monthDate - Date in target month
+     * @returns {Promise<Object>} Statistics object
+     */
+    async getMonthlyBookingsStats(businessId, monthDate = new Date()) {
+        try {
+            const year = monthDate.getFullYear();
+            const month = String(monthDate.getMonth() + 1).padStart(2, '0');
+            const startOfMonth = `${year}-${month}-01`;
+            const endOfMonth = `${year}-${month}-31`;
+
+            const { data: bookings, error } = await supabase
+                .from('bookings')
+                .select('id, date, time, customer_name, customer_phone, price, status, metadata, created_at')
+                .eq('business_id', businessId)
+                .gte('date', startOfMonth)
+                .lte('date', endOfMonth)
+                .order('date', { ascending: false });
+
+            if (error) throw error;
+
+            const activeBookings = (bookings || []).filter(b => b.status !== 'cancelled' && b.status !== 'rejected');
+            const marketplaceBookings = activeBookings.filter(b => b.metadata?.booking_source === 'marketplace');
+            const directBookings = activeBookings.filter(b => b.metadata?.booking_source !== 'marketplace');
+
+            let totalMarketplaceCommission = 0;
+            marketplaceBookings.forEach(b => {
+                const comm = b.metadata?.commission_amount !== undefined 
+                    ? Number(b.metadata.commission_amount) 
+                    : 500;
+                totalMarketplaceCommission += comm;
+            });
+
+            return {
+                month: `${year}-${month}`,
+                totalBookings: activeBookings.length,
+                marketplaceBookings: marketplaceBookings.length,
+                directBookings: directBookings.length,
+                totalMarketplaceCommission,
+                marketplaceList: marketplaceBookings,
+                limit: 100,
+                isLimitReached: activeBookings.length >= 100
+            };
+        } catch (e) {
+            console.error('Error in getMonthlyBookingsStats:', e);
+            return {
+                month: '',
+                totalBookings: 0,
+                marketplaceBookings: 0,
+                directBookings: 0,
+                totalMarketplaceCommission: 0,
+                marketplaceList: [],
+                limit: 100,
+                isLimitReached: false
+            };
+        }
+    }
+
+    /**
  * Get all subscription plans
  * @param {string} businessType - Optional filter by business type
  * @returns {Promise<Array>} List of subscription plans
  */
     async getSubscriptionPlans(businessType = null) {
-        let query = supabase
-            .from('subscription_plans')
-            .select('*')
-            .order('display_order', { ascending: true });
+        try {
+            let query = supabase
+                .from('subscription_plans')
+                .select('*')
+                .order('display_order', { ascending: true });
 
-        if (businessType) {
-            query = query.eq('business_type', businessType);
+            if (businessType) {
+                query = query.eq('business_type', businessType);
+            }
+
+            const { data, error } = await query;
+            if (!error && data && data.length > 0) {
+                return data;
+            }
+        } catch (e) {
+            console.warn('Could not load plans from DB, using PLANS_CATALOG fallback:', e);
         }
 
-        const { data, error } = await query;
-        if (error) throw error;
-        return data || [];
+        let filtered = PLANS_CATALOG;
+        if (businessType) {
+            const normalized = businessType === 'service' ? 'services' : businessType;
+            filtered = PLANS_CATALOG.filter(p => p.business_type === normalized || p.business_type === businessType || p.business_type === 'all');
+        }
+
+        return filtered.map(p => ({
+            id: p.id,
+            name: p.name,
+            price_monthly: p.monthly_price || p.monthly_price_per_unit || 0,
+            monthly_price: p.monthly_price || p.monthly_price_per_unit || 0,
+            spaces_included: p.id === 'services_team' ? 3 : (p.id === 'courts_4_5' ? 4 : (p.id === 'courts_6_plus' ? 6 : 1)),
+            business_type: p.business_type,
+            description: p.description
+        }));
     }
 
     /**

@@ -22,6 +22,7 @@ import NewBookingModal from '../components/business/NewBookingModal';
 import BlockSlotModal from '../components/business/BlockSlotModal';
 import ChangePasswordModal from '../components/seller/ChangePasswordModal';
 import ConfirmModal from '../components/common/ConfirmModal';
+import BusinessSubscriptionView from '../components/business/BusinessSubscriptionView';
 import { useNotification } from '../contexts/NotificationContext';
 
 const playNotificationChime = () => {
@@ -1463,6 +1464,11 @@ export default function BusinessPortal() {
                                     </div>
                                 )}
                             </div>
+                        ) : viewMode === 'subscription' ? (
+                            <BusinessSubscriptionView
+                                business={currentBusiness}
+                                isMobile={isMobile}
+                            />
                         ) : viewMode === 'customers' ? (
                             <ClientManagement
                                 businessId={selectedBusinessId}
