@@ -157,24 +157,29 @@ function AppContent() {
   const isBusinessPage = isLinkBio || location.pathname.endsWith('/turnos') || location.pathname.endsWith('/tienda') || (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda'));
 
   if (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda')) {
+    const isBio = location.pathname === '/';
     return (
       <div className="app-container" style={{ 
-        minHeight: '100vh', 
+        height: isBio ? '100dvh' : 'auto',
+        minHeight: isBio ? '100dvh' : '100vh', 
         display: 'flex', 
-        flexDirection: 'column'
+        flexDirection: 'column',
+        overflow: isBio ? 'hidden' : 'visible'
       }}>
-        <Header showSearch={false} />
+        {!isBio && <Header showSearch={false} />}
         <main style={{ 
           flex: 1, 
-          minHeight: 'calc(100vh - 70px)', 
+          minHeight: 0,
+          height: isBio ? '100%' : 'calc(100vh - 70px)', 
           display: 'flex', 
-          flexDirection: 'column'
+          flexDirection: 'column',
+          overflow: isBio ? 'hidden' : 'visible'
         }}>
           <ErrorBoundary>
             <Suspense fallback={<LoadingFallback />}>
               {location.pathname === '/tienda' ? (
-                <BusinessStore overrideSlug={subdomain} />
-              ) : location.pathname === '/' ? (
+                 <BusinessStore overrideSlug={subdomain} />
+              ) : isBio ? (
                 <LinkBio overrideSlug={subdomain} />
               ) : (
                 <BusinessProfileRouter overrideSlug={subdomain} />
@@ -192,8 +197,8 @@ function AppContent() {
 
   return (
     <div className="app-container" style={{ 
-      height: isLinkBio ? '100vh' : 'auto',
-      minHeight: '100vh', 
+      height: isLinkBio ? '100dvh' : 'auto',
+      minHeight: isLinkBio ? '100dvh' : '100vh', 
       display: 'flex', 
       flexDirection: 'column',
       overflow: isLinkBio ? 'hidden' : 'visible'
@@ -202,8 +207,8 @@ function AppContent() {
 
       <main style={{ 
         flex: 1, 
-        minHeight: isLinkBio ? '0' : 'calc(100vh - 70px)', 
-        height: isLinkBio ? 'calc(100vh - 60px)' : 'auto',
+        minHeight: 0, 
+        height: isLinkBio ? '100%' : 'auto',
         display: 'flex', 
         flexDirection: 'column',
         overflow: isLinkBio ? 'hidden' : 'visible'

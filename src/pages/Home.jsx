@@ -335,107 +335,48 @@ export default function Home() {
         const seen = new Set(); // duplicate checker
 
         businesses.forEach(b => {
-            const bNameNorm = normalizeText(b.name);
+            if (seen.has(b.id)) return;
 
-            // 1. Business Name Match
-            if (bNameNorm.includes(termNorm)) {
-                const key = `biz-${b.id}`;
-                if (!seen.has(key)) {
-                    results.push({
-                        type: 'business',
-                        id: b.id,
-                        title: b.name,
-                        subtitle: `${b.categories?.name || 'Negocio'} • ${b.location || 'La Rioja'}`,
-                        business: b
-                    });
-                    seen.add(key);
-                }
+            const bNameNorm = normalizeText(b.name || '');
+            const catNorm = normalizeText(b.categories?.name || '');
+            const locNorm = normalizeText(b.location || b.address || '');
+            const subsNorm = (b.subcategories || []).map(s => normalizeText(s.name)).join(' ');
+            const servsNorm = (b.services || []).map(s => normalizeText(s.name)).join(' ');
+            const courtsNorm = (b.courts || []).map(c => `${normalizeText(c.name)} ${normalizeText(c.sport || '')}`).join(' ');
+            const specsNorm = (b.specialists || []).map(s => `${normalizeText(s.name)} ${normalizeText(s.specialty || '')}`).join(' ');
+
+            const isNameMatch = bNameNorm.includes(termNorm);
+            const isCatMatch = catNorm.includes(termNorm);
+            const isSubMatch = subsNorm.includes(termNorm);
+            const isServMatch = servsNorm.includes(termNorm);
+            const isCourtMatch = courtsNorm.includes(termNorm);
+            const isSpecMatch = specsNorm.includes(termNorm);
+            const isLocMatch = locNorm.includes(termNorm);
+
+            if (isNameMatch || isCatMatch || isSubMatch || isServMatch || isCourtMatch || isSpecMatch || isLocMatch) {
+                const categoryName = b.categories?.name || 'Negocio';
+                const locationText = b.location || b.address || 'La Rioja';
+
+                results.push({
+                    type: 'business',
+                    id: b.id,
+                    title: b.name,
+                    subtitle: `${categoryName} • ${locationText}`,
+                    logo: b.logo || b.banner_image || b.banner_url || b.image,
+                    isNameMatch,
+                    business: b
+                });
+                seen.add(b.id);
             }
-
-            // 2. Category & Subcategory Match
-            if (normalizeText(b.categories?.name).includes(termNorm)) {
-                const key = `cat-${b.categories?.name}-${b.id}`;
-                if (!seen.has(key)) {
-                    results.push({
-                        type: 'category',
-                        id: key,
-                        title: b.categories.name,
-                        subtitle: `en ${b.name}`,
-                        business: b
-                    });
-                    seen.add(key);
-                }
-            }
-
-            b.subcategories?.forEach(sub => {
-                if (normalizeText(sub.name).includes(termNorm)) {
-                    const key = `sub-${sub.name}-${b.id}`;
-                    if (!seen.has(key)) {
-                        results.push({
-                            type: 'subcategory',
-                            id: key,
-                            title: sub.name,
-                            subtitle: `Subcategoría en ${b.name}`,
-                            business: b
-                        });
-                        seen.add(key);
-                    }
-                }
-            });
-
-            // 3. Services Match
-            b.services?.forEach(s => {
-                if (normalizeText(s.name).includes(termNorm)) {
-                    const key = `service-${s.name}-${b.id}`;
-                    if (!seen.has(key)) {
-                        results.push({
-                            type: 'service',
-                            id: key,
-                            title: s.name,
-                            subtitle: `Servicio en ${b.name}`,
-                            business: b
-                        });
-                        seen.add(key);
-                    }
-                }
-            });
-
-            // 4. Courts/Resources Match
-            b.courts?.forEach(c => {
-                if (normalizeText(c.name).includes(termNorm) || normalizeText(c.sport).includes(termNorm)) {
-                    const key = `court-${c.name}-${b.id}`;
-                    if (!seen.has(key)) {
-                        results.push({
-                            type: 'court',
-                            id: key,
-                            title: c.name,
-                            subtitle: `Cancha/Espacio en ${b.name}`,
-                            business: b
-                        });
-                        seen.add(key);
-                    }
-                }
-            });
-
-            // 5. Specialists Match
-            b.specialists?.forEach(s => {
-                if (normalizeText(s.name).includes(termNorm) || normalizeText(s.specialty).includes(termNorm)) {
-                    const key = `spec-${s.name}-${b.id}`;
-                    if (!seen.has(key)) {
-                        results.push({
-                            type: 'specialist',
-                            id: key,
-                            title: s.name,
-                            subtitle: `Especialista en ${b.name}`,
-                            business: b
-                        });
-                        seen.add(key);
-                    }
-                }
-            });
         });
 
-        return results.slice(0, 8); // Limit to 8 suggestions
+        // Exact name matches first
+        results.sort((a, b) => (b.isNameMatch ? 1 : 0) - (a.isNameMatch ? 1 : 0));
+
+        return {
+            items: results.slice(0, 6),
+            totalCount: results.length
+        };
     }, [searchTerm, businesses]);
 
     // Handle Nav to Business from Suggestion
@@ -560,7 +501,7 @@ export default function Home() {
                         )}
 
                         {/* Autocomplete Dropdown */}
-                        {showSuggestions && suggestions.length > 0 && (
+                        {showSuggestions && suggestions?.items?.length > 0 && (
                             <div style={{
                                 position: 'absolute',
                                 top: '110%',
@@ -568,37 +509,93 @@ export default function Home() {
                                 right: 0,
                                 background: 'var(--bg-card)',
                                 borderRadius: '16px',
-                                boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                                boxShadow: '0 12px 40px rgba(0,0,0,0.22)',
                                 border: '1px solid var(--border)',
                                 overflow: 'hidden',
-                                padding: '8px 0',
-                                zIndex: 100
+                                padding: '6px 0',
+                                zIndex: 100,
+                                maxHeight: '340px',
+                                overflowY: 'auto'
                             }}>
-                                {suggestions.map((item, index) => (
+                                {suggestions.items.map((item, index) => (
                                     <div
-                                        key={index}
+                                        key={item.id || index}
                                         onClick={() => handleSelectSuggestion(item.business)}
                                         style={{
-                                            padding: '12px 20px',
+                                            padding: '10px 16px',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '12px',
-                                            borderBottom: index < suggestions.length - 1 ? '1px solid var(--border)' : 'none',
-                                            transition: 'background 0.2s'
+                                            borderBottom: index < suggestions.items.length - 1 ? '1px solid var(--border)' : 'none',
+                                            transition: 'background 0.15s ease'
                                         }}
                                         onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-main)'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
-                                        <div style={{ fontSize: '18px' }}>
-                                            {item.type === 'business' ? '🏢' : item.type === 'court' ? '⚽' : item.type === 'category' ? '🏷️' : item.type === 'subcategory' ? '📌' : item.type === 'specialist' ? '👨‍⚕️' : '💆'}
+                                        {/* Business Logo / Thumbnail */}
+                                        <div style={{
+                                            width: '40px',
+                                            height: '40px',
+                                            borderRadius: '10px',
+                                            overflow: 'hidden',
+                                            backgroundColor: 'var(--bg-main)',
+                                            border: '1px solid var(--border)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0
+                                        }}>
+                                            {item.logo ? (
+                                                <img
+                                                    src={item.logo}
+                                                    alt={item.title}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        if (e.target.parentElement) {
+                                                            e.target.parentElement.innerHTML = `<span style="font-weight: 800; font-size: 16px; color: var(--primary-paddle);">${(item.title || 'N').charAt(0).toUpperCase()}</span>`;
+                                                        }
+                                                    }}
+                                                />
+                                            ) : (
+                                                <span style={{ fontWeight: '800', fontSize: '16px', color: 'var(--primary-paddle)' }}>
+                                                    {(item.title || 'N').charAt(0).toUpperCase()}
+                                                </span>
+                                            )}
                                         </div>
-                                        <div>
-                                            <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{item.title}</div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{item.subtitle}</div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {item.title}
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                                                {item.subtitle}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
+
+                                {/* Footer if there are more matches than shown */}
+                                {suggestions.totalCount > suggestions.items.length && (
+                                    <div
+                                        onClick={() => {
+                                            setShowSuggestions(false);
+                                            handleSearchSubmit();
+                                        }}
+                                        style={{
+                                            padding: '10px 16px',
+                                            textAlign: 'center',
+                                            fontSize: '13px',
+                                            fontWeight: '700',
+                                            color: 'var(--primary-paddle)',
+                                            cursor: 'pointer',
+                                            background: 'var(--bg-main)',
+                                            borderTop: '1px solid var(--border)'
+                                        }}
+                                    >
+                                        Ver todos los {suggestions.totalCount} resultados →
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

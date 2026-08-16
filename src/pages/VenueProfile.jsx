@@ -323,7 +323,7 @@ export default function VenueProfile({ business: initialBusiness }) {
             });
 
             setShowBookingModal(false);
-            await showAlert('¡Reserva Confirmada!', 'Tu reserva ha sido creada exitosamente. Te contactaremos pronto para confirmar los detalles.', 'success', 'Perfecto');
+            await showAlert('¡Reserva Confirmada!', 'Tu reserva ha sido creada exitosamente. Te contactaremos pronto para confirmar los detalles.', 'success', 'Aceptar');
             navigate('/');
         } catch (error) {
             console.error('Error creating booking:', error);

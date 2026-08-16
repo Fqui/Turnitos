@@ -5,12 +5,13 @@ export default function Footer({ minimal = false }) {
     if (minimal) {
         return (
             <div style={{
-                padding: '24px 20px',
+                padding: '10px 16px',
                 textAlign: 'center',
                 color: 'var(--text-secondary)',
-                fontSize: '13px',
+                fontSize: '11px',
                 marginTop: 'auto',
-                borderTop: '1px solid var(--border)'
+                borderTop: '1px solid var(--border)',
+                flexShrink: 0
             }}>
                 © {new Date().getFullYear()} TurnitosLR. Todos los derechos reservados. Hecho con ❤️ en La Rioja.
             </div>
