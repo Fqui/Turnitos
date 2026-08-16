@@ -696,7 +696,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         borderRadius: '20px',
                                         overflow: 'hidden',
                                         cursor: 'pointer',
-                                        height: windowWidth < 768 ? '260px' : '380px',
+                                        height: windowWidth < 768 ? '240px' : '380px',
                                         transition: 'transform 0.3s ease'
                                     }}
                                 >
@@ -721,80 +721,114 @@ export default function VenueProfile({ business: initialBusiness }) {
                                             {galleryImages[0].caption}
                                         </div>
                                     )}
+
+                                    {/* Cover photo badge with total count on mobile */}
+                                    {galleryImages.length > 1 && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: '12px',
+                                            right: '12px',
+                                            background: 'rgba(0,0,0,0.7)',
+                                            backdropFilter: 'blur(8px)',
+                                            color: 'white',
+                                            padding: '6px 12px',
+                                            borderRadius: '10px',
+                                            fontSize: '12px',
+                                            fontWeight: '700',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                                        }}>
+                                            <span>📷</span>
+                                            <span>1 / {galleryImages.length}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Secondary Grid Thumbnails */}
-                                {galleryImages.length > 1 && (
-                                    <div style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: (galleryImages.length - 1) === 1 ? '1fr' : '1fr 1fr',
-                                        gridTemplateRows: (galleryImages.length - 1) <= 2 ? `repeat(${galleryImages.length - 1}, 1fr)` : '1fr 1fr',
-                                        gap: '12px',
-                                        height: windowWidth < 768 ? '280px' : '380px'
-                                    }}>
-                                        {galleryImages.slice(1, 5).map((img, idx) => {
-                                            const actualIndex = idx + 1;
-                                            const isLastSlot = idx === 3 || actualIndex === galleryImages.length - 1;
-                                            const remainingCount = galleryImages.length - 5;
+                                {galleryImages.length > 1 && (() => {
+                                    const maxThumbnails = 4;
+                                    const visibleThumbnails = galleryImages.slice(1, 1 + maxThumbnails);
+                                    const remainingCount = galleryImages.length - (1 + visibleThumbnails.length);
 
-                                            return (
-                                                <div
-                                                    key={idx}
-                                                    onClick={() => { setLightboxIndex(actualIndex); setShowLightbox(true); }}
-                                                    style={{
-                                                        position: 'relative',
-                                                        borderRadius: '16px',
-                                                        overflow: 'hidden',
-                                                        cursor: 'pointer',
-                                                        transition: 'transform 0.3s ease'
-                                                    }}
-                                                >
-                                                    <img
-                                                        src={img.url}
-                                                        alt={img.caption || `Imagen ${actualIndex + 1}`}
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                    />
-                                                    {img.caption && (!isLastSlot || remainingCount <= 0) && (
-                                                        <div style={{
-                                                            position: 'absolute',
-                                                            bottom: '8px',
-                                                            left: '8px',
-                                                            background: 'rgba(0,0,0,0.6)',
-                                                            backdropFilter: 'blur(4px)',
-                                                            color: 'white',
-                                                            padding: '4px 10px',
-                                                            borderRadius: '8px',
-                                                            fontSize: '11px',
-                                                            fontWeight: '600',
-                                                            maxWidth: '90%',
-                                                            whiteSpace: 'nowrap',
+                                    return (
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: visibleThumbnails.length === 1 ? '1fr' : '1fr 1fr',
+                                            gridTemplateRows: visibleThumbnails.length <= 2 ? `repeat(${visibleThumbnails.length}, 1fr)` : '1fr 1fr',
+                                            gap: '12px',
+                                            height: windowWidth < 768 ? '240px' : '380px'
+                                        }}>
+                                            {visibleThumbnails.map((img, idx) => {
+                                                const actualIndex = idx + 1;
+                                                const isLastSlot = idx === visibleThumbnails.length - 1;
+                                                const showRemaining = isLastSlot && remainingCount > 0;
+
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        onClick={() => { setLightboxIndex(actualIndex); setShowLightbox(true); }}
+                                                        style={{
+                                                            position: 'relative',
+                                                            borderRadius: '16px',
                                                             overflow: 'hidden',
-                                                            textOverflow: 'ellipsis'
-                                                        }}>
-                                                            {img.caption}
-                                                        </div>
-                                                    )}
-                                                    {idx === 3 && remainingCount > 0 && (
-                                                        <div style={{
-                                                            position: 'absolute',
-                                                            inset: 0,
-                                                            background: 'rgba(0,0,0,0.5)',
-                                                            backdropFilter: 'blur(4px)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            color: 'white',
-                                                            fontSize: '18px',
-                                                            fontWeight: '700'
-                                                        }}>
-                                                            +{remainingCount} fotos
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+                                                            cursor: 'pointer',
+                                                            transition: 'transform 0.3s ease'
+                                                        }}
+                                                    >
+                                                        <img
+                                                            src={img.url}
+                                                            alt={img.caption || `Imagen ${actualIndex + 1}`}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        />
+                                                        {img.caption && !showRemaining && (
+                                                            <div style={{
+                                                                position: 'absolute',
+                                                                bottom: '8px',
+                                                                left: '8px',
+                                                                background: 'rgba(0,0,0,0.6)',
+                                                                backdropFilter: 'blur(4px)',
+                                                                color: 'white',
+                                                                padding: '4px 10px',
+                                                                borderRadius: '8px',
+                                                                fontSize: '11px',
+                                                                fontWeight: '600',
+                                                                maxWidth: '90%',
+                                                                whiteSpace: 'nowrap',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis'
+                                                            }}>
+                                                                {img.caption}
+                                                            </div>
+                                                        )}
+                                                        {showRemaining && (
+                                                            <div style={{
+                                                                position: 'absolute',
+                                                                inset: 0,
+                                                                background: 'rgba(0,0,0,0.65)',
+                                                                backdropFilter: 'blur(4px)',
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: 'white',
+                                                                gap: '4px'
+                                                            }}>
+                                                                <span style={{ fontSize: '22px', fontWeight: '800' }}>
+                                                                    +{remainingCount}
+                                                                </span>
+                                                                <span style={{ fontSize: '11px', fontWeight: '600', opacity: 0.9 }}>
+                                                                    más fotos
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     )}
