@@ -3,7 +3,7 @@ import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
 import { formatDisplayDate } from '../utils/dateUtils';
 
-export default function ClientManagement({ businessId, isMobile }) {
+export default function ClientManagement({ businessId, isMobile, bookings = [] }) {
     const { showToast } = useNotification();
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -17,6 +17,26 @@ export default function ClientManagement({ businessId, isMobile }) {
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [allCustomerBookings, setAllCustomerBookings] = useState({});
 
+    // Compute last visit dates map from in-memory bookings instantly
+    useEffect(() => {
+        if (bookings && bookings.length > 0) {
+            const map = {};
+            bookings.forEach(b => {
+                const phone = (b.customer_phone || b.customerPhone || '').replace(/\D/g, '');
+                const rawPhone = b.customer_phone || b.customerPhone;
+                if (b.date) {
+                    if (phone && (!map[phone] || new Date(b.date) > new Date(map[phone]))) {
+                        map[phone] = b.date;
+                    }
+                    if (rawPhone && (!map[rawPhone] || new Date(b.date) > new Date(map[rawPhone]))) {
+                        map[rawPhone] = b.date;
+                    }
+                }
+            });
+            setAllCustomerBookings(prev => ({ ...prev, ...map }));
+        }
+    }, [bookings]);
+
     useEffect(() => {
         loadCustomers();
     }, [businessId]);
@@ -25,26 +45,35 @@ export default function ClientManagement({ businessId, isMobile }) {
         try {
             setLoading(true);
             const data = await serviceAdapter.getCustomers(businessId);
-            setCustomers(data);
+            setCustomers(data || []);
+            setLoading(false); // Immediate display!
 
-            // Load booking history for all customers to calculate last visit
-            const bookingsMap = {};
-            for (const customer of data) {
+            // If we don't have bookings in-memory, fetch last booking dates efficiently in parallel or single query
+            if (!bookings || bookings.length === 0) {
                 try {
-                    const history = await serviceAdapter.getCustomerBookings(businessId, customer.phone);
-                    if (history && history.length > 0) {
-                        // Sort by date descending and get the most recent
-                        const sortedHistory = history.sort((a, b) => new Date(b.date) - new Date(a.date));
-                        bookingsMap[customer.phone] = sortedHistory[0].date;
+                    const bData = await serviceAdapter.getBookings(businessId);
+                    if (bData && bData.length > 0) {
+                        const map = {};
+                        bData.forEach(b => {
+                            const phone = (b.customer_phone || b.customerPhone || '').replace(/\D/g, '');
+                            const rawPhone = b.customer_phone || b.customerPhone;
+                            if (b.date) {
+                                if (phone && (!map[phone] || new Date(b.date) > new Date(map[phone]))) {
+                                    map[phone] = b.date;
+                                }
+                                if (rawPhone && (!map[rawPhone] || new Date(b.date) > new Date(map[rawPhone]))) {
+                                    map[rawPhone] = b.date;
+                                }
+                            }
+                        });
+                        setAllCustomerBookings(map);
                     }
-                } catch (err) {
-                    console.error(`Error loading history for ${customer.phone}:`, err);
+                } catch (e) {
+                    // Ignore non-critical background calculation error
                 }
             }
-            setAllCustomerBookings(bookingsMap);
         } catch (error) {
             console.error('Error loading customers:', error);
-        } finally {
             setLoading(false);
         }
     };

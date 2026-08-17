@@ -1695,6 +1695,7 @@ export default function BusinessPortal() {
                             <ClientManagement
                                 businessId={selectedBusinessId}
                                 isMobile={isMobile}
+                                bookings={bookings}
                             />
                         ) : viewMode === 'calendar' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>

@@ -444,10 +444,12 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 finalPrice = finalPrice - discountApplied;
             }
 
+            const selectedExtrasList = finalDetails.extras || [];
+
             const bookingData = {
                 businessId: business.id,
                 serviceId: business.type === 'service' ? selectedItem.id : null,
-                courtId: business.type === 'sport' ? finalDetails.courtId : null,
+                courtId: business.type === 'sport' ? (finalDetails.courtId || selectedTime?.courtId) : null,
                 specialistId: business.type === 'service' ? finalSpecialistId : null, // ✅ Include specialist
                 date: finalDetails.date,
                 time: finalDetails.time,
@@ -457,7 +459,16 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 status: 'pending',
                 // Venue specific fields - Prioritize selectedTime.duration for Padel
                 duration: selectedTime?.duration || finalDetails.duration || (business.type === 'venue' ? (selectedDuration * 60) : (business.type === 'service' ? selectedItem.duration : 60)),
-                metadata: business.type === 'venue' ? { additionalServices: selectedAdditionalServices } : null,
+                selectedServices: selectedExtrasList,
+                selected_services: selectedExtrasList,
+                metadata: {
+                    ...(finalDetails.metadata || {}),
+                    selectedServices: selectedExtrasList,
+                    selected_services: selectedExtrasList,
+                    additionalServices: selectedExtrasList,
+                    extras: selectedExtrasList,
+                    deposit_amount: finalDetails.depositAmount || null
+                },
                 // 🎫 Promo tracking
                 promo_id: activePromotion?.id || null,
                 discount_applied: discountApplied,

@@ -84,7 +84,17 @@ const BookingDetailsModal = ({
 
     // Parse initial services from booking with full quantity support
     const parseBookingServices = (b) => {
-        const raw = b?.selected_services || b?.selectedServices || b?.additional_services || b?.metadata?.selectedServices || b?.metadata?.selected_services || [];
+        const raw = b?.selected_services || 
+                    b?.selectedServices || 
+                    b?.additional_services || 
+                    b?.additionalServices || 
+                    b?.extras || 
+                    b?.metadata?.selectedServices || 
+                    b?.metadata?.selected_services || 
+                    b?.metadata?.additionalServices || 
+                    b?.metadata?.additional_services || 
+                    b?.metadata?.extras || 
+                    [];
         if (!Array.isArray(raw)) {
             if (typeof raw === 'string' && raw.trim()) {
                 const found = catalogAdditionals.find(cat => cat.name.toLowerCase() === raw.trim().toLowerCase());
@@ -591,6 +601,37 @@ const BookingDetailsModal = ({
                 </div>
 
                 <div style={{ display: 'grid', gap: '10px' }}>
+                    {/* Booking Source Banner */}
+                    {(() => {
+                        const isMarketplace = booking.metadata?.booking_source === 'marketplace' || 
+                                              booking.booking_source === 'marketplace' || 
+                                              booking.bookingSource === 'marketplace' || 
+                                              booking.metadata?.source === 'marketplace';
+                        return (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '8px 12px',
+                                background: isMarketplace ? 'rgba(0, 230, 118, 0.08)' : 'var(--bg-main)',
+                                border: isMarketplace ? '1px solid rgba(0, 230, 118, 0.3)' : '1px solid var(--border)',
+                                borderRadius: '10px',
+                                fontSize: '12px'
+                            }}>
+                                <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Canal de Origen:</span>
+                                {isMarketplace ? (
+                                    <span style={{ fontWeight: '800', color: 'var(--primary-paddle)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span>🌐</span> TurnitosLR (Marketplace)
+                                    </span>
+                                ) : (
+                                    <span style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span>🔗</span> Link Directo / Bio
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })()}
+
                     {/* Top Grid: Date + Court/Guests + Duration */}
                     <div style={{
                         display: 'grid',
