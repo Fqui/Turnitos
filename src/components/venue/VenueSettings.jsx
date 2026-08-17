@@ -45,6 +45,8 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
     const [blockReason, setBlockReason] = useState('');
     const [quickBlockDay, setQuickBlockDay] = useState(null);
     const [quickBlockReason, setQuickBlockReason] = useState('');
+    const [newAmenityName, setNewAmenityName] = useState('');
+    const [newAmenityIcon, setNewAmenityIcon] = useState('✨');
 
     const formatDateKey = (d) => {
         if (!d) return '';
@@ -513,7 +515,6 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     { id: 'pricing', label: 'Precios y Capacidad', icon: '💰' },
                     { id: 'services', label: 'Servicios Adicionales', icon: '✨' },
                     { id: 'whatsapp', label: 'Mensajes de WhatsApp', icon: '💬' },
-                    { id: 'store', label: 'Tienda del Negocio', icon: '🛒' },
                     { id: 'amenities', label: 'Comodidades', icon: '🛋️' }
                 ].map(tab => (
                     <button
@@ -1170,66 +1171,217 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     <div style={cardStyle}>
                         <h2 style={sectionTitleStyle}>Comodidades (Amenities)</h2>
                         <p style={{ marginBottom: '20px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                            Selecciona las comodidades disponibles en tu predio con su pack de íconos temáticos:
+                            Selecciona las comodidades predeterminadas o añade comodidades personalizadas exclusivas de tu espacio:
                         </p>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-                            {[
-                                { name: 'Piscina', icon: '🏊' },
-                                { name: 'Parrilla', icon: '🔥' },
-                                { name: 'Quincho Cubierto', icon: '🏠' },
-                                { name: 'WiFi', icon: '📶' },
-                                { name: 'Aire Acondicionado', icon: '❄️' },
-                                { name: 'Parking', icon: '🚗' },
-                                { name: 'Sonido', icon: '🔊' },
-                                { name: 'Cocina Equipada', icon: '🍳' },
-                                { name: 'Zona de Juegos', icon: '🎮' },
-                                { name: 'Mesa de Pool', icon: '🎱' },
-                                { name: 'Metegol', icon: '⚽' },
-                                { name: 'Ping Pong', icon: '🏓' },
-                                { name: 'Televisor', icon: '📺' },
-                                { name: 'Iluminación LED', icon: '💡' },
-                                { name: 'Jardín', icon: '🌳' },
-                                { name: 'Baños Completos', icon: '🚿' },
-                                { name: 'Freezer', icon: '🧊' },
-                                { name: 'Juegos Infantiles', icon: '🧸' }
-                            ].map((preset, idx) => {
-                                const currentAmenities = (formData.amenities || []).map(a => typeof a === 'object' ? a.name : a);
-                                const isSelected = currentAmenities.includes(preset.name);
+                        {/* Presets Grid */}
+                        <div style={{ marginBottom: '28px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: 'var(--text-primary)' }}>
+                                Comodidades Principales
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+                                {[
+                                    { name: 'Piscina', icon: '🏊' },
+                                    { name: 'Parrilla', icon: '🔥' },
+                                    { name: 'Quincho Cubierto', icon: '🏠' },
+                                    { name: 'WiFi', icon: '📶' },
+                                    { name: 'Aire Acondicionado', icon: '❄️' },
+                                    { name: 'Parking', icon: '🚗' },
+                                    { name: 'Sonido', icon: '🔊' },
+                                    { name: 'Cocina Equipada', icon: '🍳' },
+                                    { name: 'Zona de Juegos', icon: '🎮' },
+                                    { name: 'Mesa de Pool', icon: '🎱' },
+                                    { name: 'Metegol', icon: '⚽' },
+                                    { name: 'Ping Pong', icon: '🏓' },
+                                    { name: 'Televisor', icon: '📺' },
+                                    { name: 'Iluminación LED', icon: '💡' },
+                                    { name: 'Jardín', icon: '🌳' },
+                                    { name: 'Baños Completos', icon: '🚿' },
+                                    { name: 'Freezer', icon: '🧊' },
+                                    { name: 'Juegos Infantiles', icon: '🧸' }
+                                ].map((preset, idx) => {
+                                    const currentAmenities = (formData.amenities || []).map(a => typeof a === 'object' ? a.name : a);
+                                    const isSelected = currentAmenities.includes(preset.name);
 
-                                return (
+                                    return (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => {
+                                                let updated;
+                                                if (isSelected) {
+                                                    updated = (formData.amenities || []).filter(a => (typeof a === 'object' ? a.name : a) !== preset.name);
+                                                } else {
+                                                    updated = [...(formData.amenities || []), { name: preset.name, icon: preset.icon }];
+                                                }
+                                                handleInputChange('amenities', updated);
+                                            }}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                padding: '12px 16px',
+                                                borderRadius: '12px',
+                                                border: isSelected ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                background: isSelected ? 'rgba(132, 204, 22, 0.12)' : 'var(--bg-card)',
+                                                color: 'var(--text-primary)',
+                                                cursor: 'pointer',
+                                                fontWeight: isSelected ? '700' : '500',
+                                                fontSize: '13px',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '20px' }}>{preset.icon}</span>
+                                            <span>{preset.name}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Custom Amenities Section */}
+                        <div style={{
+                            padding: '20px',
+                            background: 'var(--bg-main)',
+                            borderRadius: '16px',
+                            border: '1px solid var(--border)'
+                        }}>
+                            <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>✨</span> Comodidades Personalizadas
+                            </div>
+                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                                Agrega comodidades adicionales que ofrece tu lugar (ej: Cancha de Bochas, Cama Elástica, Grupo Electrógeno, Barra de Tragos):
+                            </p>
+
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                                {['✨', '🎯', '🥩', '🍸', '🎪', '🪑', '⛱️', '🎵', '🛁', '🔌', '👶', '🐎'].map(emoji => (
                                     <button
-                                        key={idx}
+                                        key={emoji}
                                         type="button"
-                                        onClick={() => {
-                                            let updated;
-                                            if (isSelected) {
-                                                updated = (formData.amenities || []).filter(a => (typeof a === 'object' ? a.name : a) !== preset.name);
-                                            } else {
-                                                updated = [...(formData.amenities || []), preset.name];
-                                            }
-                                            handleInputChange('amenities', updated);
-                                        }}
+                                        onClick={() => setNewAmenityIcon(emoji)}
                                         style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '10px',
-                                            padding: '12px 16px',
-                                            borderRadius: '12px',
-                                            border: isSelected ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
-                                            background: isSelected ? 'rgba(132, 204, 22, 0.1)' : 'var(--bg-card)',
-                                            color: 'var(--text-primary)',
-                                            cursor: 'pointer',
-                                            fontWeight: isSelected ? '700' : '500',
-                                            fontSize: '13px',
-                                            transition: 'all 0.2s ease'
+                                            fontSize: '18px',
+                                            padding: '6px 10px',
+                                            borderRadius: '8px',
+                                            border: newAmenityIcon === emoji ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                            background: newAmenityIcon === emoji ? 'rgba(132, 204, 22, 0.2)' : 'var(--bg-card)',
+                                            cursor: 'pointer'
                                         }}
                                     >
-                                        <span style={{ fontSize: '20px' }}>{preset.icon}</span>
-                                        <span>{preset.name}</span>
+                                        {emoji}
                                     </button>
+                                ))}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Nombre de la comodidad personalizada (ej: Cama Elástica)..."
+                                    value={newAmenityName}
+                                    onChange={(e) => setNewAmenityName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            if (!newAmenityName.trim()) return;
+                                            const newObj = { name: newAmenityName.trim(), icon: newAmenityIcon || '✨' };
+                                            handleInputChange('amenities', [...(formData.amenities || []), newObj]);
+                                            setNewAmenityName('');
+                                            showToast('Comodidad personalizada agregada', 'success');
+                                        }
+                                    }}
+                                    style={{
+                                        ...inputStyle,
+                                        flex: 1,
+                                        margin: 0
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (!newAmenityName.trim()) {
+                                            showToast('Escribe el nombre de la comodidad', 'warning');
+                                            return;
+                                        }
+                                        const newObj = { name: newAmenityName.trim(), icon: newAmenityIcon || '✨' };
+                                        handleInputChange('amenities', [...(formData.amenities || []), newObj]);
+                                        setNewAmenityName('');
+                                        showToast('Comodidad personalizada agregada', 'success');
+                                    }}
+                                    style={{
+                                        padding: '12px 18px',
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        background: 'var(--primary-paddle)',
+                                        color: 'white',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        fontSize: '13px',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    + Agregar
+                                </button>
+                            </div>
+
+                            {/* Active Custom Amenities list */}
+                            {(() => {
+                                const presetNames = ['Piscina', 'Parrilla', 'Quincho Cubierto', 'WiFi', 'Aire Acondicionado', 'Parking', 'Sonido', 'Cocina Equipada', 'Zona de Juegos', 'Mesa de Pool', 'Metegol', 'Ping Pong', 'Televisor', 'Iluminación LED', 'Jardín', 'Baños Completos', 'Freezer', 'Juegos Infantiles'];
+                                const customItems = (formData.amenities || []).filter(a => {
+                                    const name = typeof a === 'object' ? a.name : a;
+                                    return !presetNames.includes(name);
+                                });
+
+                                if (customItems.length === 0) return null;
+
+                                return (
+                                    <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        {customItems.map((item, idx) => {
+                                            const name = typeof item === 'object' ? item.name : item;
+                                            const icon = typeof item === 'object' ? item.icon : '✨';
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        padding: '8px 12px',
+                                                        background: 'var(--bg-card)',
+                                                        borderRadius: '12px',
+                                                        border: '1px solid var(--border)',
+                                                        fontSize: '13px',
+                                                        fontWeight: '600',
+                                                        color: 'var(--text-primary)'
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: '16px' }}>{icon}</span>
+                                                    <span>{name}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const updated = (formData.amenities || []).filter(a => (typeof a === 'object' ? a.name : a) !== name);
+                                                            handleInputChange('amenities', updated);
+                                                        }}
+                                                        style={{
+                                                            background: 'transparent',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            color: '#EF4444',
+                                                            fontSize: '14px',
+                                                            padding: '0 2px',
+                                                            marginLeft: '4px',
+                                                            fontWeight: '700'
+                                                        }}
+                                                        title="Eliminar comodidad personalizada"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 );
-                            })}
+                            })()}
                         </div>
                     </div>
                 )}
