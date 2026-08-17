@@ -36,6 +36,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const [lightboxIndex, setLightboxIndex] = useState(0);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [showServicesExpanded, setShowServicesExpanded] = useState(false);
+    const [showAllAmenities, setShowAllAmenities] = useState(false);
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const calendarRef = useRef(null);
@@ -864,93 +865,99 @@ export default function VenueProfile({ business: initialBusiness }) {
                             <h2 style={{ fontSize: windowWidth < 768 ? '17px' : '20px', fontWeight: '700', color: textColor, marginBottom: windowWidth < 768 ? '14px' : '20px', textAlign: windowWidth < 768 ? 'center' : 'left' }}>
                                 Comodidades
                             </h2>
-                            {windowWidth < 768 ? (
-                                <div style={{
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    justifyContent: 'center',
-                                    gap: '8px'
-                                }}>
-                                    {amenities.map((amenity, idx) => {
-                                        const parsed = parseAmenity(amenity);
-                                        const name = parsed.name;
-                                        const icon = parsed.icon || getAmenityIcon(amenity);
-                                        return (
-                                            <div
-                                                key={idx}
+                            {/* Airbnb-style clean 2-column grid on mobile / multi-column on desktop */}
+                            {(() => {
+                                const limit = windowWidth < 768 ? 6 : 8;
+                                const displayed = showAllAmenities ? amenities : amenities.slice(0, limit);
+                                const hasMore = amenities.length > limit;
+
+                                return (
+                                    <div>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: windowWidth < 768 ? 'repeat(2, minmax(0, 1fr))' : 'repeat(auto-fill, minmax(180px, 1fr))',
+                                            gap: windowWidth < 768 ? '8px' : '12px'
+                                        }}>
+                                            {displayed.map((amenity, idx) => {
+                                                const parsed = parseAmenity(amenity);
+                                                const name = parsed.name;
+                                                const icon = parsed.icon || getAmenityIcon(amenity);
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '10px',
+                                                            padding: windowWidth < 768 ? '10px 12px' : '12px 16px',
+                                                            background: subCardBg,
+                                                            borderRadius: '14px',
+                                                            border: `1px solid ${borderColor}`,
+                                                            fontSize: windowWidth < 768 ? '12px' : '13px',
+                                                            fontWeight: '600',
+                                                            color: textColor,
+                                                            minHeight: '44px',
+                                                            boxSizing: 'border-box'
+                                                        }}
+                                                    >
+                                                        <div style={{
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            borderRadius: '8px',
+                                                            background: 'rgba(132, 204, 22, 0.12)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: primaryColor,
+                                                            flexShrink: 0
+                                                        }}>
+                                                            <AmenityIcon icon={icon} size={16} />
+                                                        </div>
+                                                        <span style={{
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap',
+                                                            flex: 1
+                                                        }}>
+                                                            {name}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {hasMore && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowAllAmenities(!showAllAmenities)}
                                                 style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px',
-                                                    padding: '8px 14px',
-                                                    background: subCardBg,
-                                                    borderRadius: '12px',
+                                                    width: '100%',
+                                                    marginTop: '12px',
+                                                    padding: '11px 16px',
+                                                    borderRadius: '14px',
                                                     border: `1px solid ${borderColor}`,
-                                                    fontSize: '13px',
-                                                    fontWeight: '600',
+                                                    background: subCardBg,
                                                     color: textColor,
-                                                    cursor: 'default',
-                                                    userSelect: 'none'
-                                                }}
-                                            >
-                                                <AmenityIcon icon={icon} size={16} />
-                                                <span>{name}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                                    gap: '14px'
-                                }}>
-                                    {amenities.map((amenity, idx) => {
-                                        const parsed = parseAmenity(amenity);
-                                        const name = parsed.name;
-                                        const icon = parsed.icon || getAmenityIcon(amenity);
-                                        return (
-                                            <div
-                                                key={idx}
-                                                style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    gap: '10px',
-                                                    padding: '16px 12px',
-                                                    background: subCardBg,
-                                                    borderRadius: '16px',
-                                                    border: `1px solid ${borderColor}`,
-                                                    cursor: 'default',
-                                                    userSelect: 'none'
-                                                }}
-                                            >
-                                                <div style={{
-                                                    width: '42px',
-                                                    height: '42px',
-                                                    background: btnBg,
-                                                    borderRadius: '12px',
+                                                    fontSize: '13px',
+                                                    fontWeight: '700',
+                                                    cursor: 'pointer',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    fontSize: '20px',
-                                                    color: 'var(--primary-paddle, #84CC16)'
-                                                }}>
-                                                    <AmenityIcon icon={icon} size={22} />
-                                                </div>
-                                                <div style={{
-                                                    fontSize: '13px',
-                                                    fontWeight: '600',
-                                                    color: secondaryTextColor,
-                                                    textAlign: 'center'
-                                                }}>
-                                                    {name}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                                    gap: '8px',
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                            >
+                                                <span>
+                                                    {showAllAmenities
+                                                        ? '▲ Mostrar menos'
+                                                        : `▼ Ver todas las comodidades (${amenities.length})`}
+                                                </span>
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
 
