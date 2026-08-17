@@ -16,41 +16,79 @@ const BookingDetailsModal = ({
     if (!isOpen || !booking) return null;
 
     const biz = businesses?.find(b => String(b.id) === String(selectedBusinessId || booking.business_id || booking.businessId));
-    const isRental = biz?.type === 'venue' || biz?.type === 'alquiler' || (biz?.category || '').toLowerCase().includes('quincho') || (biz?.categories?.name || '').toLowerCase().includes('alquiler');
+    const isRental = biz?.type === 'venue' || biz?.type === 'alquiler' || (biz?.category || '').toLowerCase().includes('quincho') || (biz?.categories?.name || '').toLowerCase().includes('alquiler') || (biz?.category || '').toLowerCase().includes('salon');
+
+    const courtId = booking.court_id || booking.courtId || booking.service_id || booking.serviceId;
+    const court = (biz?.courts || []).find(c => String(c.id) === String(courtId));
+    const service = (biz?.services || []).find(s => String(s.id) === String(booking.service_id || booking.serviceId));
+    const resourceName = court?.name || service?.name || booking.resource_name || booking.court_name || booking.service_name || booking.metadata?.resource_name || (isRental ? 'Espacio Completo' : 'Cancha Asignada');
+
+    const isPadel = !isRental && (
+        (biz?.sport_type || '').toLowerCase().includes('padel') ||
+        (biz?.category || '').toLowerCase().includes('padel') ||
+        (biz?.categories?.name || '').toLowerCase().includes('padel') ||
+        (biz?.name || '').toLowerCase().includes('padel') ||
+        (resourceName || '').toLowerCase().includes('padel')
+    );
+
+    const isFutbol = !isRental && !isPadel && (
+        (biz?.sport_type || '').toLowerCase().includes('futbol') ||
+        (biz?.category || '').toLowerCase().includes('futbol') ||
+        (biz?.categories?.name || '').toLowerCase().includes('futbol') ||
+        (biz?.name || '').toLowerCase().includes('futbol') ||
+        (biz?.type === 'sport')
+    );
 
     // Durations
     const durationOptions = biz?.rental_duration_options || biz?.rentalDurationOptions || [];
-    const hasMultipleDurations = Array.isArray(durationOptions) && durationOptions.length > 1;
+    const hasMultipleDurations = isRental && Array.isArray(durationOptions) && durationOptions.length > 1;
 
     // Capacity limit
     const maxCapacity = Number(biz?.capacity_limit || biz?.capacity || 100);
 
-    // Business Catalog Additionals
+    // Business Catalog Additionals (ONLY additional services / extras, exclude amenities)
     const catalogAdditionals = useMemo(() => {
-        const list = biz?.additional_services || biz?.additionalServices || [];
-        return list.map(item => {
+        const list = [
+            ...(biz?.additional_services || []),
+            ...(biz?.additionalServices || []),
+            ...(biz?.extras || [])
+        ];
+        const unique = [];
+        const seen = new Set();
+
+        list.forEach(item => {
             if (typeof item === 'object' && item !== null) {
-                return {
-                    id: item.id || Math.random().toString(),
-                    name: item.name || item.label || 'Adicional',
-                    price: Number(item.price || 0)
-                };
+                const name = item.name || item.label || item.title;
+                if (name && !seen.has(name.toLowerCase().trim())) {
+                    seen.add(name.toLowerCase().trim());
+                    unique.push({
+                        id: item.id || Math.random().toString(),
+                        name: name.trim(),
+                        price: Number(item.price || 0)
+                    });
+                }
+            } else if (typeof item === 'string' && item.trim()) {
+                if (!seen.has(item.toLowerCase().trim())) {
+                    seen.add(item.toLowerCase().trim());
+                    unique.push({
+                        id: Math.random().toString(),
+                        name: item.trim(),
+                        price: 0
+                    });
+                }
             }
-            return {
-                id: Math.random().toString(),
-                name: String(item),
-                price: 0
-            };
         });
+
+        return unique;
     }, [biz]);
 
-    // Parse initial services from booking
+    // Parse initial services from booking with full quantity support
     const parseBookingServices = (b) => {
-        const raw = b?.selected_services || b?.selectedServices || b?.additional_services || b?.metadata?.selectedServices || [];
+        const raw = b?.selected_services || b?.selectedServices || b?.additional_services || b?.metadata?.selectedServices || b?.metadata?.selected_services || [];
         if (!Array.isArray(raw)) {
             if (typeof raw === 'string' && raw.trim()) {
-                const found = catalogAdditionals.find(cat => cat.name === raw.trim());
-                return [{ name: raw.trim(), price: found ? found.price : 0 }];
+                const found = catalogAdditionals.find(cat => cat.name.toLowerCase() === raw.trim().toLowerCase());
+                return [{ name: raw.trim(), price: found ? found.price : 0, quantity: 1 }];
             }
             return [];
         }
@@ -58,14 +96,16 @@ const BookingDetailsModal = ({
             if (typeof s === 'object' && s !== null) {
                 return {
                     name: s.name || s.label || s.title || 'Adicional',
-                    price: Number(s.price || 0)
+                    price: Number(s.price || 0),
+                    quantity: Math.max(1, parseInt(s.quantity, 10) || 1)
                 };
             }
             const nameStr = String(s);
-            const found = catalogAdditionals.find(cat => cat.name === nameStr);
+            const found = catalogAdditionals.find(cat => cat.name.toLowerCase() === nameStr.toLowerCase());
             return {
                 name: nameStr,
-                price: found ? found.price : 0
+                price: found ? found.price : 0,
+                quantity: 1
             };
         });
     };
@@ -85,30 +125,32 @@ const BookingDetailsModal = ({
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
-    // Custom additionals input state
-    const [customExtraName, setCustomExtraName] = useState('');
-    const [customExtraPrice, setCustomExtraPrice] = useState('');
-    const [showAddExtraForm, setShowAddExtraForm] = useState(false);
-
     // WhatsApp Menu and Custom Message Modal State
     const [showWhatsappMenu, setShowWhatsappMenu] = useState(false);
     const [previewMessage, setPreviewMessage] = useState(null);
 
-    // Calculate default deposit if missing
+    // Calculate default deposit if missing: (base price * percentage) + 100% of extras
     const defaultTotalPrice = Number(booking.price || booking.total_price || booking.totalPrice || 0);
+    const initialServices = parseBookingServices(booking);
+    const initialExtrasSum = initialServices.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
+    const initialBasePrice = Number(booking.base_price || booking.basePrice || Math.max(0, defaultTotalPrice - initialExtrasSum));
+
     const paymentSettings = biz?.payment_settings || biz?.paymentSettings || {};
     const depositSettings = paymentSettings.deposit || { enabled: false, type: 'percentage', percentage: 30, fixed_amount: 0 };
 
     let calculatedDefaultDeposit = Number(booking.deposit_amount || booking.depositAmount || booking.metadata?.deposit_amount || booking.metadata?.depositAmount || 0);
     if (!calculatedDefaultDeposit) {
-        if (depositSettings.enabled) {
-            if (depositSettings.type === 'percentage') {
-                calculatedDefaultDeposit = Math.round((defaultTotalPrice * (depositSettings.percentage || 30)) / 100);
+        if (depositSettings.enabled !== false) {
+            if (depositSettings.type === 'fixed') {
+                calculatedDefaultDeposit = Number(depositSettings.fixed_amount || depositSettings.fixedAmount || 0) + initialExtrasSum;
             } else {
-                calculatedDefaultDeposit = depositSettings.fixed_amount || depositSettings.fixedAmount || 0;
+                const pct = depositSettings.percentage !== undefined && depositSettings.percentage !== '' && !isNaN(Number(depositSettings.percentage))
+                    ? Number(depositSettings.percentage)
+                    : 30;
+                calculatedDefaultDeposit = Math.round((initialBasePrice * pct) / 100) + initialExtrasSum;
             }
         } else {
-            calculatedDefaultDeposit = Math.round(defaultTotalPrice * 0.3);
+            calculatedDefaultDeposit = Math.round(initialBasePrice * 0.3) + initialExtrasSum;
         }
     }
 
@@ -124,7 +166,6 @@ const BookingDetailsModal = ({
         setIsEditing(false);
         setIsSaving(false);
         setSaveSuccess(false);
-        setShowAddExtraForm(false);
         setShowWhatsappMenu(false);
         setPreviewMessage(null);
     }, [booking?.id, defaultTotalPrice, calculatedDefaultDeposit, currentGuests, notes]);
@@ -132,7 +173,7 @@ const BookingDetailsModal = ({
     const activePrice = Number(editablePrice) || 0;
     const activeDeposit = Number(editableDeposit) || 0;
     const pendingBalance = activePrice - activeDeposit > 0 ? activePrice - activeDeposit : 0;
-    const extrasSum = editableServices.reduce((sum, item) => sum + Number(item.price || 0), 0);
+    const extrasSum = editableServices.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
     const baseRentalPrice = Math.max(0, activePrice - extrasSum);
 
     // WhatsApp Message Builder
@@ -196,47 +237,58 @@ const BookingDetailsModal = ({
     const handleToggleCatalogExtra = (catalogItem) => {
         const existsIndex = editableServices.findIndex(item => item.name.toLowerCase() === catalogItem.name.toLowerCase());
         let updated;
+        const itemPrice = Number(catalogItem.price || 0);
+
         if (existsIndex >= 0) {
-            const removedPrice = Number(editableServices[existsIndex].price || 0);
-            updated = editableServices.filter((_, idx) => idx !== existsIndex);
+            updated = editableServices.map((item, idx) => {
+                if (idx === existsIndex) {
+                    return { ...item, quantity: (item.quantity || 1) + 1 };
+                }
+                return item;
+            });
             setEditableServices(updated);
-            // Deduct from total price
-            const newTotal = Math.max(0, activePrice - removedPrice);
-            setEditablePrice(newTotal);
+            setEditablePrice(activePrice + itemPrice);
         } else {
-            const addedPrice = Number(catalogItem.price || 0);
-            updated = [...editableServices, { name: catalogItem.name, price: addedPrice }];
+            updated = [...editableServices, { name: catalogItem.name, price: itemPrice, quantity: 1 }];
             setEditableServices(updated);
-            // Add to total price
-            setEditablePrice(activePrice + addedPrice);
+            setEditablePrice(activePrice + itemPrice);
         }
     };
 
-    const handleAddCustomExtra = (e) => {
-        e?.preventDefault?.();
-        if (!customExtraName.trim()) return;
+    const handleQuantityChange = (index, delta) => {
+        const currentQty = Number(editableServices[index]?.quantity || 1);
+        const newQty = currentQty + delta;
+        const itemPrice = Number(editableServices[index]?.price || 0);
 
-        const priceNum = parseFloat(customExtraPrice) || 0;
-        const updated = [...editableServices, { name: customExtraName.trim(), price: priceNum }];
-        setEditableServices(updated);
-        setEditablePrice(activePrice + priceNum);
-
-        setCustomExtraName('');
-        setCustomExtraPrice('');
-        setShowAddExtraForm(false);
+        if (newQty <= 0) {
+            handleRemoveExtra(index);
+        } else {
+            const updated = editableServices.map((item, idx) => {
+                if (idx === index) {
+                    return { ...item, quantity: newQty };
+                }
+                return item;
+            });
+            setEditableServices(updated);
+            setEditablePrice(Math.max(0, activePrice + (delta * itemPrice)));
+        }
     };
 
     const handleRemoveExtra = (index) => {
         const removedPrice = Number(editableServices[index]?.price || 0);
+        const removedQty = Number(editableServices[index]?.quantity || 1);
+        const totalDeduct = removedPrice * removedQty;
+
         const updated = editableServices.filter((_, idx) => idx !== index);
         setEditableServices(updated);
-        setEditablePrice(Math.max(0, activePrice - removedPrice));
+        setEditablePrice(Math.max(0, activePrice - totalDeduct));
     };
 
     const handleEditExtraPrice = (index, newPrice) => {
         const priceNum = parseFloat(newPrice) || 0;
         const oldPrice = Number(editableServices[index]?.price || 0);
-        const diff = priceNum - oldPrice;
+        const qty = Number(editableServices[index]?.quantity || 1);
+        const diff = (priceNum - oldPrice) * qty;
 
         const updated = editableServices.map((item, idx) => {
             if (idx === index) {
@@ -251,7 +303,7 @@ const BookingDetailsModal = ({
 
     // Save changes to database
     const handleSaveChanges = async () => {
-        if (editableGuests) {
+        if (isRental && editableGuests) {
             const numGuests = parseInt(editableGuests, 10);
             if (isNaN(numGuests) || numGuests < 1) {
                 showToast('La cantidad de personas debe ser mayor a 0', 'warning');
@@ -265,22 +317,22 @@ const BookingDetailsModal = ({
 
         try {
             setIsSaving(true);
-            const extrasSum = editableServices.reduce((sum, item) => sum + Number(item.price || 0), 0);
+            const calculatedExtrasSum = editableServices.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
 
             const updatePayload = {
                 price: activePrice,
                 total_price: activePrice,
                 deposit_amount: activeDeposit,
-                guest_count: editableGuests ? parseInt(editableGuests, 10) : null,
+                guest_count: isRental && editableGuests ? parseInt(editableGuests, 10) : null,
                 selected_services: editableServices,
-                services_total: extrasSum,
+                services_total: calculatedExtrasSum,
                 notes: editableNotes,
                 metadata: {
                     ...(booking.metadata || {}),
                     notes: editableNotes,
                     deposit_amount: activeDeposit,
                     depositAmount: activeDeposit,
-                    guestCount: editableGuests ? parseInt(editableGuests, 10) : null,
+                    guestCount: isRental && editableGuests ? parseInt(editableGuests, 10) : null,
                     selectedServices: editableServices
                 }
             };
@@ -539,7 +591,7 @@ const BookingDetailsModal = ({
                 </div>
 
                 <div style={{ display: 'grid', gap: '10px' }}>
-                    {/* Top Grid: Date + Guests + Optional Duration */}
+                    {/* Top Grid: Date + Court/Guests + Duration */}
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: hasMultipleDurations ? 'repeat(3, 1fr)' : '1fr 1fr',
@@ -550,54 +602,69 @@ const BookingDetailsModal = ({
                         border: '1px solid var(--border)'
                     }}>
                         <div>
-                            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>📅 Fecha</label>
-                            <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>{formatDisplayDate(booking.date)}</div>
+                            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>
+                                📅 Fecha y Horario
+                            </label>
+                            <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
+                                {formatDisplayDate(booking.date)} {booking.time && booking.time !== '00:00' && booking.time !== '00:00:00' ? `• ${booking.time} hs` : ''}
+                            </div>
                         </div>
 
-                        <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>👥 {isRental ? 'Invitados' : 'Personas'}</label>
-                                {isEditing && (
-                                    <span style={{ fontSize: '10px', color: 'var(--primary-paddle)', fontWeight: '700' }}>
-                                        Máx: {maxCapacity}
-                                    </span>
+                        {isRental ? (
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>👥 Invitados</label>
+                                    {isEditing && (
+                                        <span style={{ fontSize: '10px', color: 'var(--primary-paddle)', fontWeight: '700' }}>
+                                            Máx: {maxCapacity}
+                                        </span>
+                                    )}
+                                </div>
+                                {isEditing ? (
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max={maxCapacity}
+                                        value={editableGuests}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val !== '' && Number(val) > maxCapacity) {
+                                                setEditableGuests(String(maxCapacity));
+                                            } else {
+                                                setEditableGuests(val);
+                                            }
+                                        }}
+                                        placeholder={`Máx ${maxCapacity}`}
+                                        style={{
+                                            width: '100%',
+                                            maxWidth: '120px',
+                                            padding: '3px 8px',
+                                            borderRadius: '6px',
+                                            border: '1px solid var(--border)',
+                                            fontSize: '13px',
+                                            fontWeight: '700',
+                                            background: 'var(--bg-card)',
+                                            color: 'var(--text-primary)'
+                                        }}
+                                    />
+                                ) : (
+                                    <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
+                                        {editableGuests ? `${editableGuests} pers.` : 'No espec.'}
+                                    </div>
                                 )}
                             </div>
-                            {isEditing ? (
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max={maxCapacity}
-                                    value={editableGuests}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (val !== '' && Number(val) > maxCapacity) {
-                                            setEditableGuests(String(maxCapacity));
-                                        } else {
-                                            setEditableGuests(val);
-                                        }
-                                    }}
-                                    placeholder={`Máx ${maxCapacity}`}
-                                    style={{
-                                        width: '100%',
-                                        maxWidth: '120px',
-                                        padding: '3px 8px',
-                                        borderRadius: '6px',
-                                        border: '1px solid var(--border)',
-                                        fontSize: '13px',
-                                        fontWeight: '700',
-                                        background: 'var(--bg-card)',
-                                        color: 'var(--text-primary)'
-                                    }}
-                                />
-                            ) : (
-                                <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
-                                    {editableGuests ? `${editableGuests} pers.` : 'No espec.'}
+                        ) : (
+                            <div>
+                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>
+                                    {isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '🎯 Espacio / Cancha'}
+                                </label>
+                                <div style={{ fontWeight: '800', color: 'var(--primary-paddle)', fontSize: isMobile ? '13px' : '14px' }}>
+                                    {resourceName}
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
-                        {hasMultipleDurations && (
+                        {hasMultipleDurations && isRental && (
                             <div>
                                 <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>🕒 Duración</label>
                                 <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
@@ -880,23 +947,6 @@ const BookingDetailsModal = ({
                             <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                                 ✨ Adicionales ({editableServices.length}):
                             </label>
-                            {isEditing && (
-                                <button
-                                    onClick={() => setShowAddExtraForm(!showAddExtraForm)}
-                                    style={{
-                                        padding: '2px 8px',
-                                        borderRadius: '6px',
-                                        border: '1px solid var(--primary-paddle)',
-                                        background: 'rgba(0, 230, 118, 0.1)',
-                                        color: 'var(--primary-paddle)',
-                                        fontSize: '11px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {showAddExtraForm ? '✕ Cerrar' : '+ Adicional Extra'}
-                                </button>
-                            )}
                         </div>
 
                         {/* Catalog selection in edit mode */}
@@ -933,135 +983,158 @@ const BookingDetailsModal = ({
                             </div>
                         )}
 
-                        {/* Custom Extra Form */}
-                        {isEditing && showAddExtraForm && (
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: isMobile ? '1fr 1fr auto' : '2fr 1fr auto',
-                                gap: '6px',
-                                padding: '8px',
-                                background: 'var(--bg-card)',
-                                borderRadius: '8px',
-                                border: '1px dashed var(--primary-paddle)'
-                            }}>
-                                <input
-                                    type="text"
-                                    value={customExtraName}
-                                    onChange={(e) => setCustomExtraName(e.target.value)}
-                                    placeholder="Nombre adicional"
-                                    style={{
-                                        padding: '4px 8px',
-                                        borderRadius: '6px',
-                                        border: '1px solid var(--border)',
-                                        background: 'var(--bg-main)',
-                                        color: 'var(--text-primary)',
-                                        fontSize: '11px'
-                                    }}
-                                />
-                                <input
-                                    type="number"
-                                    value={customExtraPrice}
-                                    onChange={(e) => setCustomExtraPrice(e.target.value)}
-                                    placeholder="Precio ($)"
-                                    min="0"
-                                    style={{
-                                        padding: '4px 8px',
-                                        borderRadius: '6px',
-                                        border: '1px solid var(--border)',
-                                        background: 'var(--bg-main)',
-                                        color: 'var(--text-primary)',
-                                        fontSize: '11px'
-                                    }}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={handleAddCustomExtra}
-                                    style={{
-                                        padding: '4px 10px',
-                                        borderRadius: '6px',
-                                        border: 'none',
-                                        background: 'var(--primary-paddle)',
-                                        color: 'white',
-                                        fontSize: '11px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Agregar
-                                </button>
-                            </div>
-                        )}
-
                         {/* Services List Display / Editing */}
                         {editableServices.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {editableServices.map((serviceItem, idx) => (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            padding: '4px 8px',
-                                            borderRadius: '6px',
-                                            background: 'var(--bg-card)',
-                                            border: '1px solid var(--border)',
-                                            fontSize: '12px'
-                                        }}
-                                    >
-                                        <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-                                            ✓ {serviceItem.name}
-                                        </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {editableServices.map((serviceItem, idx) => {
+                                    const qty = Number(serviceItem.quantity || 1);
+                                    const price = Number(serviceItem.price || 0);
+                                    const subtotal = price * qty;
 
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            {isEditing ? (
-                                                <>
-                                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>$</span>
-                                                    <input
-                                                        type="number"
-                                                        value={serviceItem.price}
-                                                        onChange={(e) => handleEditExtraPrice(idx, e.target.value)}
-                                                        min="0"
-                                                        style={{
-                                                            width: '70px',
-                                                            padding: '2px 4px',
-                                                            borderRadius: '4px',
-                                                            border: '1px solid var(--border)',
-                                                            fontSize: '12px',
-                                                            fontWeight: '700',
-                                                            textAlign: 'right',
-                                                            background: 'var(--bg-main)',
-                                                            color: 'var(--text-primary)'
-                                                        }}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveExtra(idx)}
-                                                        style={{
-                                                            background: 'transparent',
-                                                            border: 'none',
-                                                            color: '#ff4444',
-                                                            fontSize: '13px',
-                                                            cursor: 'pointer',
-                                                            padding: '2px'
-                                                        }}
-                                                        title="Eliminar adicional"
-                                                    >
-                                                        🗑️
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <span style={{
-                                                    fontWeight: '700',
-                                                    color: Number(serviceItem.price) > 0 ? 'var(--primary-paddle)' : 'var(--text-secondary)',
-                                                    fontSize: '12px'
-                                                }}>
-                                                    {Number(serviceItem.price) > 0 ? `+$${serviceItem.price}` : 'Incluido'}
+                                    return (
+                                        <div
+                                            key={idx}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '6px 10px',
+                                                borderRadius: '8px',
+                                                background: 'var(--bg-card)',
+                                                border: '1px solid var(--border)',
+                                                fontSize: '12px',
+                                                gap: '6px'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                                                    ✓ {serviceItem.name} {qty > 1 && !isEditing ? `(x${qty})` : ''}
                                                 </span>
-                                            )}
+                                                {price > 0 && isEditing && (
+                                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                                                        ${price.toLocaleString('es-AR')} c/u
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {isEditing ? (
+                                                    <>
+                                                        {/* Quantity stepper [-] [ 5 ] [+] */}
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            background: 'var(--bg-main)',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid var(--border)',
+                                                            overflow: 'hidden'
+                                                        }}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleQuantityChange(idx, -1)}
+                                                                style={{
+                                                                    padding: '1px 6px',
+                                                                    background: 'transparent',
+                                                                    border: 'none',
+                                                                    cursor: 'pointer',
+                                                                    color: 'var(--text-primary)',
+                                                                    fontWeight: '800',
+                                                                    fontSize: '12px'
+                                                                }}
+                                                            >
+                                                                -
+                                                            </button>
+                                                            <span style={{
+                                                                padding: '0 4px',
+                                                                fontWeight: '800',
+                                                                fontSize: '11px',
+                                                                color: 'var(--text-primary)',
+                                                                minWidth: '18px',
+                                                                textAlign: 'center'
+                                                            }}>
+                                                                {qty}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleQuantityChange(idx, 1)}
+                                                                style={{
+                                                                    padding: '1px 6px',
+                                                                    background: 'transparent',
+                                                                    border: 'none',
+                                                                    cursor: 'pointer',
+                                                                    color: 'var(--text-primary)',
+                                                                    fontWeight: '800',
+                                                                    fontSize: '12px'
+                                                                }}
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Price input */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>$</span>
+                                                            <input
+                                                                type="number"
+                                                                value={serviceItem.price}
+                                                                onChange={(e) => handleEditExtraPrice(idx, e.target.value)}
+                                                                min="0"
+                                                                style={{
+                                                                    width: '60px',
+                                                                    padding: '2px 4px',
+                                                                    borderRadius: '4px',
+                                                                    border: '1px solid var(--border)',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: '700',
+                                                                    textAlign: 'right',
+                                                                    background: 'var(--bg-main)',
+                                                                    color: 'var(--text-primary)'
+                                                                }}
+                                                            />
+                                                        </div>
+
+                                                        {/* Subtotal badge */}
+                                                        <span style={{
+                                                            fontSize: '11px',
+                                                            fontWeight: '800',
+                                                            color: 'var(--primary-paddle)',
+                                                            minWidth: '50px',
+                                                            textAlign: 'right'
+                                                        }}>
+                                                            =${subtotal.toLocaleString('es-AR')}
+                                                        </span>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveExtra(idx)}
+                                                            style={{
+                                                                background: 'transparent',
+                                                                border: 'none',
+                                                                color: '#ff4444',
+                                                                fontSize: '13px',
+                                                                cursor: 'pointer',
+                                                                padding: '2px'
+                                                            }}
+                                                            title="Eliminar adicional"
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <span style={{
+                                                        fontWeight: '700',
+                                                        color: subtotal > 0 ? 'var(--primary-paddle)' : 'var(--text-secondary)',
+                                                        fontSize: '12px'
+                                                    }}>
+                                                        {subtotal > 0
+                                                            ? `+$${subtotal.toLocaleString('es-AR')}`
+                                                            : 'Incluido'}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>

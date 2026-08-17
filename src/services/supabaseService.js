@@ -2158,9 +2158,15 @@ class SupabaseService {
 
             if (error) throw error;
 
-            const activeBookings = (bookings || []).filter(b => b.status !== 'cancelled' && b.status !== 'rejected');
-            const marketplaceBookings = activeBookings.filter(b => b.metadata?.booking_source === 'marketplace');
-            const directBookings = activeBookings.filter(b => b.metadata?.booking_source !== 'marketplace');
+            const nonBlockedBookings = (bookings || []).filter(b => 
+                b.status !== 'cancelled' && 
+                b.status !== 'rejected' &&
+                b.status !== 'blocked' &&
+                !b.customer_name?.toUpperCase().includes('BLOQUEADO') &&
+                !b.notes?.toUpperCase().includes('BLOQUEO')
+            );
+            const marketplaceBookings = nonBlockedBookings.filter(b => b.metadata?.booking_source === 'marketplace');
+            const directBookings = nonBlockedBookings.filter(b => b.metadata?.booking_source !== 'marketplace');
 
             let totalMarketplaceCommission = 0;
             marketplaceBookings.forEach(b => {
@@ -2172,13 +2178,13 @@ class SupabaseService {
 
             return {
                 month: `${year}-${month}`,
-                totalBookings: activeBookings.length,
+                totalBookings: nonBlockedBookings.length,
                 marketplaceBookings: marketplaceBookings.length,
                 directBookings: directBookings.length,
                 totalMarketplaceCommission,
                 marketplaceList: marketplaceBookings,
                 limit: 100,
-                isLimitReached: activeBookings.length >= 100
+                isLimitReached: nonBlockedBookings.length >= 100
             };
         } catch (e) {
             console.error('Error in getMonthlyBookingsStats:', e);

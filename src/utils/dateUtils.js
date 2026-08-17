@@ -51,18 +51,21 @@ export function parseDate(dateStr) {
 }
 
 /**
- * Formats a date to a long string: "Jueves, 1 de Enero de 2026"
+ * Formats a date to a short, elegant string: "Martes 28 de Julio"
  */
 export function formatLongDate(date) {
     if (!date) return '';
     const d = typeof date === 'string' ? parseDate(date) : date;
     if (!(d instanceof Date) || isNaN(d.getTime())) return String(date);
 
-    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-    const formatted = d.toLocaleDateString('es-ES', options);
+    const weekday = d.toLocaleDateString('es-ES', { weekday: 'long' });
+    const day = d.getDate();
+    const month = d.toLocaleDateString('es-ES', { month: 'long' });
 
-    // Capitalize first letter
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    const capitalizedWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+    const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
+
+    return `${capitalizedWeekday} ${day} de ${capitalizedMonth}`;
 }
 
 /**

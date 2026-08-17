@@ -146,6 +146,21 @@ export const pushService = {
 
     async notifyBusinessNewBooking(businessId, bookingInfo = {}) {
         if (!businessId) return;
+
+        // Never notify for blocked slots or admin blockages
+        const isBlocked = bookingInfo?.status === 'blocked' ||
+            bookingInfo?.is_blocked ||
+            bookingInfo?.isBlocked ||
+            String(bookingInfo?.status || '').toLowerCase() === 'blocked' ||
+            String(bookingInfo?.customerName || '').toUpperCase().includes('BLOQUEADO') ||
+            String(bookingInfo?.customer_name || '').toUpperCase().includes('BLOQUEADO') ||
+            String(bookingInfo?.notes || '').toUpperCase().includes('BLOQUEADO') ||
+            String(bookingInfo?.title || '').toUpperCase().includes('BLOQUEADO') ||
+            String(bookingInfo?.customerPhone || '') === '-' ||
+            String(bookingInfo?.customer_phone || '') === '-';
+
+        if (isBlocked) return;
+
         try {
             const { data: subs, error } = await supabase
                 .from('push_subscriptions')

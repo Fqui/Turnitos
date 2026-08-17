@@ -153,6 +153,24 @@ export default function BusinessPortal() {
     const [peakHours, setPeakHours] = useState(null);
     const [customerInsights, setCustomerInsights] = useState(null);
     const [dateRange, setDateRange] = useState(null);
+    const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
+    // Compute analytics data when entering analytics view or changing date range/business/bookings
+    useEffect(() => {
+        if (!selectedBusinessId || viewMode !== 'analytics') return;
+
+        try {
+            const result = analyticsService.computeAnalyticsFromBookings(bookings, dateRange);
+            if (result) {
+                setMetrics(result.metrics);
+                setTrends(result.trends || []);
+                setPeakHours(result.peakHours);
+                setCustomerInsights(result.customerInsights);
+            }
+        } catch (err) {
+            console.error("Error computing analytics data:", err);
+        }
+    }, [selectedBusinessId, viewMode, dateRange, bookings]);
 
     // Booking Modal State
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -338,20 +356,33 @@ export default function BusinessPortal() {
                         return [...prev, enrichedNew];
                     });
 
-                    // Trigger in-app visual alert card, audio chime, and toast
-                    const customerName = enrichedNew.customer_name || enrichedNew.customerName || 'Un cliente';
-                    setNewBookingAlert(enrichedNew);
-                    playNotificationChime();
-                    showToast(`🔔 ¡Nueva reserva web de ${customerName}!`, 'success', 8000);
+                    // Ignorar bloqueos de horario: no disparar alertas ni notificaciones
+                    const isBlocked = enrichedNew?.status === 'blocked' ||
+                        enrichedNew?.is_blocked ||
+                        enrichedNew?.isBlocked ||
+                        String(enrichedNew?.status || '').toLowerCase() === 'blocked' ||
+                        String(enrichedNew?.customer_name || '').toUpperCase().includes('BLOQUEADO') ||
+                        String(enrichedNew?.customerName || '').toUpperCase().includes('BLOQUEADO') ||
+                        String(enrichedNew?.notes || '').toUpperCase().includes('BLOQUEADO') ||
+                        String(enrichedNew?.customer_email || '') === '-' ||
+                        String(enrichedNew?.customer_phone || '') === '-';
 
-                    // Local desktop browser notification
-                    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                        try {
-                            new Notification('🔔 ¡Nueva Reserva Web Recibida!', {
-                                body: `${customerName} solicitó una reserva para el ${enrichedNew.date || 'día indicado'}`,
-                                icon: '/logo-turnitos.png'
-                            });
-                        } catch (e) { }
+                    if (!isBlocked) {
+                        // Trigger in-app visual alert card, audio chime, and toast
+                        const customerName = enrichedNew.customer_name || enrichedNew.customerName || 'Un cliente';
+                        setNewBookingAlert(enrichedNew);
+                        playNotificationChime();
+                        showToast(`🔔 ¡Nueva reserva web de ${customerName}!`, 'success', 8000);
+
+                        // Local desktop browser notification
+                        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                            try {
+                                new Notification('🔔 ¡Nueva Reserva Web Recibida!', {
+                                    body: `${customerName} solicitó una reserva para el ${enrichedNew.date || 'día indicado'}`,
+                                    icon: '/logo-turnitos.png'
+                                });
+                            } catch (e) { }
+                        }
                     }
                 } else if (payload.eventType === 'UPDATE') {
                     setBookings(prev => prev.map(b => b.id === enrichedNew.id ? enrichedNew : b));
@@ -364,10 +395,19 @@ export default function BusinessPortal() {
             const notifChannel = supabaseService.client
                 ? supabaseService.client.channel(`business-notif-${selectedBusinessId}`)
                     .on('broadcast', { event: 'new_booking' }, (payload) => {
-                        if (payload?.payload?.bookingInfo) {
-                            playNotificationChime();
-                            showToast(payload.payload.title || '🔔 ¡Nueva Reserva Web!', 'success', 8000);
-                        }
+                        const info = payload?.payload?.bookingInfo;
+                        const isBlocked = info?.status === 'blocked' ||
+                            info?.is_blocked ||
+                            info?.isBlocked ||
+                            String(info?.status || '').toLowerCase() === 'blocked' ||
+                            String(info?.customerName || '').toUpperCase().includes('BLOQUEADO') ||
+                            String(info?.customer_name || '').toUpperCase().includes('BLOQUEADO') ||
+                            String(payload?.payload?.title || '').toUpperCase().includes('BLOQUEADO') ||
+                            String(payload?.payload?.body || '').toUpperCase().includes('BLOQUEADO');
+
+                        if (isBlocked) return;
+                        playNotificationChime();
+                        showToast(payload?.payload?.title || '🔔 ¡Nueva Reserva Web!', 'success', 8000);
                     })
                     .subscribe()
                 : null;
@@ -463,30 +503,27 @@ export default function BusinessPortal() {
         }
     };
 
-    const handleCreateBooking = async (arg1, arg2, arg3) => {
-        let date, time;
+    const handleCreateBooking = async (arg1, arg2, arg3, arg4) => {
+        let date, time, passedResource;
 
         // Determine if called with Event (Calendar: e, date, time) or Direct (date, time) or Button (e)
         if (arg1 && (arg1.stopPropagation || arg1.preventDefault)) {
             if (arg2 instanceof Date) {
-                // Called from Calendar: (e, date, time)
                 date = arg2;
                 time = arg3;
+                passedResource = arg4;
             } else {
-                // Called from Generic Button: (e) -> Use current filter date or today
                 const dateStr = listFilters.date || new Date().toISOString().split('T')[0];
                 const [y, m, d] = dateStr.split('-');
                 date = new Date(y, m - 1, d);
-
-                // Default time to next hour or 09:00
                 const now = new Date();
                 const nextHour = now.getHours() + 1;
                 time = `${String(nextHour).padStart(2, '0')}:00`;
             }
         } else {
-            // Direct call: (date, time)
             date = arg1;
             time = arg2;
+            passedResource = arg3;
         }
 
         if (!date || isNaN(date.getTime())) {
@@ -498,22 +535,33 @@ export default function BusinessPortal() {
         const day = String(date.getDate()).padStart(2, '0');
         const dateStr = `${year}-${month}-${day}`;
 
-        // Auto-select first available resource
-        let suggestedResourceId = '';
-        let suggestedPrice = 0;
+        let selectedResId = '';
+        let selectedResName = '';
+        let selectedPrice = 0;
 
-        if (currentBusiness) {
-            // Get all resources
+        if (passedResource) {
+            if (typeof passedResource === 'object' && passedResource !== null) {
+                selectedResId = passedResource.id;
+                selectedResName = passedResource.name;
+                selectedPrice = passedResource.price || 0;
+            } else {
+                selectedResId = passedResource;
+                const allRes = [...(currentBusiness?.courts || []), ...(currentBusiness?.services || [])];
+                const found = allRes.find(r => String(r.id) === String(passedResource));
+                selectedResName = found?.name || '';
+                selectedPrice = found?.price || 0;
+            }
+        }
+
+        if (!selectedResId && currentBusiness) {
             const allResources = [
                 ...(currentBusiness.courts || []),
                 ...(currentBusiness.services || [])
             ];
 
             if (allResources.length > 0) {
-                // Find bookings for this slot
                 const slotBookings = bookings.filter(b => {
                     if (b.time !== time) return false;
-                    // Normalize booking date
                     let bDateKey = b.date;
                     if (b.date.includes('/')) {
                         const [bd, bm, by] = b.date.split('/');
@@ -522,26 +570,41 @@ export default function BusinessPortal() {
                     return bDateKey === dateStr && b.status !== 'cancelled';
                 });
 
-                // Find resources used in this slot
                 const usedResourceIds = slotBookings.map(b => b.court_id || b.service_id).filter(Boolean);
-
-                // Find first free resource
-                const freeResource = allResources.find(r => !usedResourceIds.includes(r.id));
+                const freeResource = allResources.find(r => !usedResourceIds.includes(r.id)) || allResources[0];
 
                 if (freeResource) {
-                    suggestedResourceId = freeResource.id;
-                    suggestedPrice = freeResource.price || 0;
+                    selectedResId = freeResource.id;
+                    selectedResName = freeResource.name;
+                    selectedPrice = freeResource.price || 0;
                 }
             }
         }
+
+        const isRental = currentBusiness?.type === 'venue' ||
+            currentBusiness?.type === 'alquiler' ||
+            (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
+            (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler');
+
+        const defaultDurationMinutes = isRental
+            ? 240
+            : Number(currentBusiness?.slot_duration || currentBusiness?.court_duration || 60);
 
         setNewBookingData({
             date: dateStr,
             time: time,
             customerName: '',
             customerPhone: '',
-            serviceId: suggestedResourceId,
-            price: suggestedPrice
+            customerEmail: '',
+            serviceId: selectedResId,
+            courtId: selectedResId,
+            resourceName: selectedResName,
+            price: selectedPrice,
+            basePrice: selectedPrice,
+            duration: defaultDurationMinutes,
+            durationHours: defaultDurationMinutes / 60,
+            selectedServices: [],
+            servicesTotal: 0
         });
         setShowNewBookingModal(true);
     };
@@ -584,6 +647,20 @@ export default function BusinessPortal() {
 
         const isCourt = currentBusiness?.courts?.some(c => c.id === newBookingData.serviceId);
 
+        const isRentalBusiness = currentBusiness?.type === 'venue' ||
+            currentBusiness?.type === 'alquiler' ||
+            (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
+            (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler');
+
+        const defaultDurationMin = isRentalBusiness
+            ? 240
+            : Number(currentBusiness?.slot_duration || currentBusiness?.court_duration || 60);
+
+        const finalDurationMinutes = Number(newBookingData.duration) ||
+            (newBookingData.durationHours ? Number(newBookingData.durationHours) * 60 : defaultDurationMin);
+
+        const finalDurationHours = Number(newBookingData.durationHours) || (finalDurationMinutes / 60);
+
         const parsedDeposit = (newBookingData.depositAmount !== '' && newBookingData.depositAmount !== null && newBookingData.depositAmount !== undefined && !isNaN(Number(newBookingData.depositAmount)))
             ? Number(newBookingData.depositAmount)
             : Math.round((parseFloat(newBookingData.price) || 0) * 0.3);
@@ -596,8 +673,8 @@ export default function BusinessPortal() {
             specialistId: newBookingData.specialistId || null,
             date: newBookingData.date,
             time: newBookingData.time || '00:00',
-            duration: newBookingData.duration || 240,
-            durationHours: newBookingData.durationHours || (newBookingData.duration ? Math.round(newBookingData.duration / 60) : 4),
+            duration: finalDurationMinutes,
+            durationHours: finalDurationHours,
             guestCount: newBookingData.guestCount ? parseInt(newBookingData.guestCount, 10) : null,
             guest_count: newBookingData.guestCount ? parseInt(newBookingData.guestCount, 10) : null,
             selectedServices: newBookingData.selectedServices || [],
@@ -618,7 +695,8 @@ export default function BusinessPortal() {
                 notes: newBookingData.notes || null,
                 deposit_amount: parsedDeposit,
                 depositAmount: parsedDeposit,
-                duration_hours: newBookingData.durationHours || (newBookingData.duration ? Math.round(newBookingData.duration / 60) : 4)
+                duration_hours: finalDurationHours,
+                duration: finalDurationMinutes
             },
             status: 'pending',
             price: parseFloat(newBookingData.price) || 0,
@@ -1195,273 +1273,417 @@ export default function BusinessPortal() {
                                 {/* Header */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                                     <div>
-                                        <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>📊 Analytics</h2>
+                                        <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span>📊</span> Analytics & Métricas
+                                        </h2>
                                         <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
-                                            Métricas y estadísticas de tu negocio
+                                            Rendimiento, ocupación de canchas, facturación y clientes
                                         </p>
                                     </div>
                                     <DateRangePicker onRangeChange={setDateRange} />
                                 </div>
 
-                                {/* Hero Metrics Cards */}
-                                {metrics && (
-                                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                                {analyticsLoading ? (
+                                    <div style={{ textAlign: 'center', padding: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                                         <div style={{
-                                            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                                            borderRadius: '20px',
-                                            padding: '24px',
-                                            color: 'white',
-                                            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)',
-                                            position: 'relative',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '80px', opacity: 0.15 }}>💰</div>
-                                            <div style={{ position: 'relative', zIndex: 1 }}>
-                                                <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9, marginBottom: '8px' }}>Ingresos Totales</div>
-                                                <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '4px' }}>
-                                                    ${metrics.totalRevenue?.toLocaleString('es-AR') || '0'}
-                                                </div>
-                                                {metrics.growth?.revenue !== undefined && (
-                                                    <div style={{ fontSize: '12px', opacity: 0.9 }}>
-                                                        {metrics.growth.revenue >= 0 ? '↗' : '↘'} {Math.abs(metrics.growth.revenue).toFixed(1)}% vs período anterior
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div style={{
-                                            background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
-                                            borderRadius: '20px',
-                                            padding: '24px',
-                                            color: 'white',
-                                            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.25)',
-                                            position: 'relative',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '80px', opacity: 0.15 }}>📅</div>
-                                            <div style={{ position: 'relative', zIndex: 1 }}>
-                                                <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9, marginBottom: '8px' }}>Total Reservas</div>
-                                                <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '4px' }}>
-                                                    {metrics.totalBookings || 0}
-                                                </div>
-                                                {metrics.growth?.bookings !== undefined && (
-                                                    <div style={{ fontSize: '12px', opacity: 0.9 }}>
-                                                        {metrics.growth.bookings >= 0 ? '↗' : '↘'} {Math.abs(metrics.growth.bookings).toFixed(1)}% vs período anterior
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div style={{
-                                            background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                                            borderRadius: '20px',
-                                            padding: '24px',
-                                            color: 'white',
-                                            boxShadow: '0 8px 24px rgba(245, 158, 11, 0.25)',
-                                            position: 'relative',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '80px', opacity: 0.15 }}>💵</div>
-                                            <div style={{ position: 'relative', zIndex: 1 }}>
-                                                <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9, marginBottom: '8px' }}>Valor Promedio</div>
-                                                <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '4px' }}>
-                                                    ${metrics.avgBookingValue?.toLocaleString('es-AR') || '0'}
-                                                </div>
-                                                <div style={{ fontSize: '12px', opacity: 0.9 }}>
-                                                    Por reserva
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div style={{
-                                            background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
-                                            borderRadius: '20px',
-                                            padding: '24px',
-                                            color: 'white',
-                                            boxShadow: '0 8px 24px rgba(139, 92, 246, 0.25)',
-                                            position: 'relative',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '80px', opacity: 0.15 }}>✅</div>
-                                            <div style={{ position: 'relative', zIndex: 1 }}>
-                                                <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9, marginBottom: '8px' }}>Tasa de Completitud</div>
-                                                <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '4px' }}>
-                                                    {metrics.completionRate?.toFixed(1) || '0'}%
-                                                </div>
-                                                <div style={{ fontSize: '12px', opacity: 0.9 }}>
-                                                    Reservas completadas
-                                                </div>
-                                            </div>
-                                        </div>
+                                            width: '36px', height: '36px',
+                                            border: '3px solid var(--border)',
+                                            borderTopColor: 'var(--primary-paddle)',
+                                            borderRadius: '50%',
+                                            animation: 'spin 0.8s linear infinite'
+                                        }} />
+                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Actualizando métricas...</span>
                                     </div>
-                                )}
-
-                                {/* Booking Status Distribution & Top Performers */}
-                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '20px' }}>
-                                    {/* Booking Status Distribution */}
-                                    {(() => {
-                                        const statusCounts = bookings.reduce((acc, b) => {
-                                            acc[b.status] = (acc[b.status] || 0) + 1;
-                                            return acc;
-                                        }, {});
-                                        const total = bookings.length;
-
-                                        const statusData = [
-                                            { status: 'confirmed', label: 'Confirmadas', color: '#10B981', count: statusCounts.confirmed || 0 },
-                                            { status: 'pending', label: 'Pendientes', color: '#F59E0B', count: statusCounts.pending || 0 },
-                                            { status: 'completed', label: 'Completadas', color: '#10B981', count: statusCounts.completed || 0 },
-                                            { status: 'cancelled', label: 'Canceladas', color: '#EF4444', count: statusCounts.cancelled || 0 },
-                                            { status: 'deposit_paid', label: 'Seña Pagada', color: '#3B82F6', count: statusCounts.deposit_paid || 0 }
-                                        ].filter(s => s.count > 0);
-
-                                        return (
-                                            <div style={{
-                                                background: 'var(--bg-card)',
-                                                borderRadius: '20px',
-                                                padding: '24px',
-                                                border: '1px solid var(--border)',
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                                            }}>
-                                                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: 'var(--text-primary)' }}>
-                                                    Estado de Reservas
-                                                </h3>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                    {statusData.map(({ status, label, color, count }) => {
-                                                        const percentage = total > 0 ? (count / total * 100) : 0;
-                                                        return (
-                                                            <div key={status}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                                                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{label}</span>
-                                                                    <span style={{ fontSize: '13px', fontWeight: '700', color }}>{count} ({percentage.toFixed(0)}%)</span>
-                                                                </div>
-                                                                <div style={{ width: '100%', height: '8px', background: 'var(--bg-main)', borderRadius: '4px', overflow: 'hidden' }}>
-                                                                    <div style={{ width: `${percentage}%`, height: '100%', background: color, transition: 'width 0.3s ease' }}></div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {/* Top Services/Courts */}
-                                    {(() => {
-                                        const itemCounts = bookings.reduce((acc, b) => {
-                                            const name = b.services?.name || b.courts?.name || 'Sin especificar';
-                                            acc[name] = (acc[name] || 0) + 1;
-                                            return acc;
-                                        }, {});
-
-                                        const topItems = Object.entries(itemCounts)
-                                            .sort((a, b) => b[1] - a[1])
-                                            .slice(0, 5);
-
-                                        const maxCount = topItems[0]?.[1] || 1;
-
-                                        return (
-                                            <div style={{
-                                                background: 'var(--bg-card)',
-                                                borderRadius: '20px',
-                                                padding: '24px',
-                                                border: '1px solid var(--border)',
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                                            }}>
-                                                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: 'var(--text-primary)' }}>
-                                                    Más Reservados
-                                                </h3>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                    {topItems.length > 0 ? topItems.map(([name, count], index) => {
-                                                        const percentage = (count / maxCount * 100);
-                                                        const colors = ['#10B981', '#6366F1', '#F59E0B', '#8B5CF6', '#EC4899'];
-                                                        return (
-                                                            <div key={name}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                                                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{name}</span>
-                                                                    <span style={{ fontSize: '13px', fontWeight: '700', color: colors[index] }}>{count} reservas</span>
-                                                                </div>
-                                                                <div style={{ width: '100%', height: '8px', background: 'var(--bg-main)', borderRadius: '4px', overflow: 'hidden' }}>
-                                                                    <div style={{ width: `${percentage}%`, height: '100%', background: colors[index], transition: 'width 0.3s ease' }}></div>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    }) : (
-                                                        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)', fontSize: '14px' }}>
-                                                            No hay datos disponibles
+                                ) : (
+                                    <>
+                                        {/* Hero Metrics Cards */}
+                                        {metrics && (
+                                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px' }}>
+                                                {/* Card 1: Ingresos Totales */}
+                                                <div style={{
+                                                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                                    borderRadius: '20px',
+                                                    padding: isMobile ? '16px' : '22px',
+                                                    color: 'white',
+                                                    boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)',
+                                                    position: 'relative',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    <div style={{ position: 'absolute', top: '-15px', right: '-15px', fontSize: '70px', opacity: 0.15 }}>💰</div>
+                                                    <div style={{ position: 'relative', zIndex: 1 }}>
+                                                        <div style={{ fontSize: '12px', fontWeight: '700', opacity: 0.9, marginBottom: '6px' }}>Facturación Activa</div>
+                                                        <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', marginBottom: '4px' }}>
+                                                            ${metrics.totalRevenue?.toLocaleString('es-AR') || '0'}
                                                         </div>
-                                                    )}
+                                                        <div style={{ fontSize: '11px', opacity: 0.9 }}>
+                                                            ${metrics.collectedRevenue?.toLocaleString('es-AR') || '0'} cobrado en mano/finalizado
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Card 2: Señas Recaudadas */}
+                                                <div style={{
+                                                    background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
+                                                    borderRadius: '20px',
+                                                    padding: isMobile ? '16px' : '22px',
+                                                    color: 'white',
+                                                    boxShadow: '0 8px 24px rgba(14, 165, 233, 0.25)',
+                                                    position: 'relative',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    <div style={{ position: 'absolute', top: '-15px', right: '-15px', fontSize: '70px', opacity: 0.15 }}>🔒</div>
+                                                    <div style={{ position: 'relative', zIndex: 1 }}>
+                                                        <div style={{ fontSize: '12px', fontWeight: '700', opacity: 0.9, marginBottom: '6px' }}>Señas Cobradas</div>
+                                                        <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', marginBottom: '4px' }}>
+                                                            ${metrics.totalDeposits?.toLocaleString('es-AR') || '0'}
+                                                        </div>
+                                                        <div style={{ fontSize: '11px', opacity: 0.9 }}>
+                                                            Garantía y anticipos ingresados
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Card 3: Total Reservas */}
+                                                <div style={{
+                                                    background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                                                    borderRadius: '20px',
+                                                    padding: isMobile ? '16px' : '22px',
+                                                    color: 'white',
+                                                    boxShadow: '0 8px 24px rgba(99, 102, 241, 0.25)',
+                                                    position: 'relative',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    <div style={{ position: 'absolute', top: '-15px', right: '-15px', fontSize: '70px', opacity: 0.15 }}>📅</div>
+                                                    <div style={{ position: 'relative', zIndex: 1 }}>
+                                                        <div style={{ fontSize: '12px', fontWeight: '700', opacity: 0.9, marginBottom: '6px' }}>Total Turnos</div>
+                                                        <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', marginBottom: '4px' }}>
+                                                            {metrics.totalBookings || 0}
+                                                        </div>
+                                                        <div style={{ fontSize: '11px', opacity: 0.9 }}>
+                                                            {metrics.completedBookings || 0} completadas • {metrics.pendingBookings || 0} pendientes
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Card 4: Ticket Promedio */}
+                                                <div style={{
+                                                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                                                    borderRadius: '20px',
+                                                    padding: isMobile ? '16px' : '22px',
+                                                    color: 'white',
+                                                    boxShadow: '0 8px 24px rgba(245, 158, 11, 0.25)',
+                                                    position: 'relative',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    <div style={{ position: 'absolute', top: '-15px', right: '-15px', fontSize: '70px', opacity: 0.15 }}>💵</div>
+                                                    <div style={{ position: 'relative', zIndex: 1 }}>
+                                                        <div style={{ fontSize: '12px', fontWeight: '700', opacity: 0.9, marginBottom: '6px' }}>Ticket Promedio</div>
+                                                        <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', marginBottom: '4px' }}>
+                                                            ${metrics.avgBookingValue?.toLocaleString('es-AR') || '0'}
+                                                        </div>
+                                                        <div style={{ fontSize: '11px', opacity: 0.9 }}>
+                                                            Promedio por turno alquilado
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Card 5: Tasa de Efectividad */}
+                                                <div style={{
+                                                    background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+                                                    borderRadius: '20px',
+                                                    padding: isMobile ? '16px' : '22px',
+                                                    color: 'white',
+                                                    boxShadow: '0 8px 24px rgba(139, 92, 246, 0.25)',
+                                                    position: 'relative',
+                                                    overflow: 'hidden',
+                                                    gridColumn: isMobile ? 'span 2' : 'auto'
+                                                }}>
+                                                    <div style={{ position: 'absolute', top: '-15px', right: '-15px', fontSize: '70px', opacity: 0.15 }}>🎯</div>
+                                                    <div style={{ position: 'relative', zIndex: 1 }}>
+                                                        <div style={{ fontSize: '12px', fontWeight: '700', opacity: 0.9, marginBottom: '6px' }}>Tasa de Efectividad</div>
+                                                        <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: '900', marginBottom: '4px' }}>
+                                                            {metrics.completionRate?.toFixed(1) || '0'}%
+                                                        </div>
+                                                        <div style={{ fontSize: '11px', opacity: 0.9 }}>
+                                                            {metrics.cancelledBookings || 0} cancelaciones registradas
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        );
-                                    })()}
-                                </div>
+                                        )}
 
-                                {/* Charts */}
-                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '20px' }}>
-                                    {trends.length > 0 && (
-                                        <>
-                                            <RevenueChart data={trends} type="revenue" />
-                                            <RevenueChart data={trends} type="bookings" />
-                                        </>
-                                    )}
-                                </div>
+                                        {/* Row 2: Performance de Canchas & Desglose de Adicionales */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '20px' }}>
+                                            {/* Desglose de Canchas / Espacios */}
+                                            <div style={{
+                                                background: 'var(--bg-card)',
+                                                borderRadius: '20px',
+                                                padding: '24px',
+                                                border: '1px solid var(--border)',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                                    <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span>🏟️</span> Rendimiento por Cancha
+                                                    </h3>
+                                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                                        Turnos & Recaudación
+                                                    </span>
+                                                </div>
 
-                                {/* Peak Hours Heatmap */}
-                                {peakHours && (
-                                    <PeakHoursHeatmap data={peakHours.data} labels={peakHours.labels} />
-                                )}
+                                                {metrics?.courtsBreakdown && metrics.courtsBreakdown.length > 0 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                                        {metrics.courtsBreakdown.map((court, idx) => {
+                                                            const colors = ['#00E676', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899'];
+                                                            const color = colors[idx % colors.length];
+                                                            return (
+                                                                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                                                                        <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                                            {court.name}
+                                                                        </span>
+                                                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                                                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                                                                {court.count} turnos ({court.percentage}%)
+                                                                            </span>
+                                                                            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--primary-paddle)' }}>
+                                                                                ${court.revenue.toLocaleString('es-AR')}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div style={{ width: '100%', height: '8px', background: 'var(--bg-main)', borderRadius: '4px', overflow: 'hidden' }}>
+                                                                        <div style={{ width: `${court.percentage}%`, height: '100%', background: color, borderRadius: '4px', transition: 'width 0.3s' }}></div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                        No hay reservas registradas en el período seleccionado.
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                {/* Enhanced Customer Insights */}
-                                {customerInsights && (
-                                    <div style={{
-                                        background: 'var(--bg-card)',
-                                        borderRadius: '20px',
-                                        padding: '24px',
-                                        border: '1px solid var(--border)',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                                    }}>
-                                        <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: 'var(--text-primary)' }}>
-                                            📈 Insights de Clientes
-                                        </h3>
-                                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '20px' }}>
+                                            {/* Desglose de Adicionales / Extras Vendidos */}
                                             <div style={{
-                                                padding: '20px',
-                                                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%)',
-                                                borderRadius: '16px',
-                                                border: '1px solid rgba(16, 185, 129, 0.2)'
+                                                background: 'var(--bg-card)',
+                                                borderRadius: '20px',
+                                                padding: '24px',
+                                                border: '1px solid var(--border)',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                                             }}>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: '600' }}>Total Clientes</div>
-                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#10B981' }}>{customerInsights.totalCustomers}</div>
-                                            </div>
-                                            <div style={{
-                                                padding: '20px',
-                                                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(79, 70, 229, 0.05) 100%)',
-                                                borderRadius: '16px',
-                                                border: '1px solid rgba(99, 102, 241, 0.2)'
-                                            }}>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: '600' }}>Nuevos</div>
-                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#6366F1' }}>{customerInsights.newCustomers}</div>
-                                            </div>
-                                            <div style={{
-                                                padding: '20px',
-                                                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)',
-                                                borderRadius: '16px',
-                                                border: '1px solid rgba(245, 158, 11, 0.2)'
-                                            }}>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: '600' }}>Recurrentes</div>
-                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#F59E0B' }}>{customerInsights.returningCustomers}</div>
-                                            </div>
-                                            <div style={{
-                                                padding: '20px',
-                                                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%)',
-                                                borderRadius: '16px',
-                                                border: '1px solid rgba(139, 92, 246, 0.2)'
-                                            }}>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: '600' }}>Tasa Retención</div>
-                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#8B5CF6' }}>{customerInsights.retentionRate.toFixed(1)}%</div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                                    <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span>✨</span> Adicionales & Extras Vendidos
+                                                    </h3>
+                                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                                        Consumos adicionales
+                                                    </span>
+                                                </div>
+
+                                                {metrics?.additionalsBreakdown && metrics.additionalsBreakdown.length > 0 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                        {metrics.additionalsBreakdown.map((item, idx) => (
+                                                            <div key={idx} style={{
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                padding: '10px 14px',
+                                                                borderRadius: '12px',
+                                                                background: 'var(--bg-main)',
+                                                                border: '1px solid var(--border)'
+                                                            }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)' }}>
+                                                                        • {item.name}
+                                                                    </span>
+                                                                    <span style={{
+                                                                        padding: '2px 8px',
+                                                                        borderRadius: '6px',
+                                                                        background: 'rgba(0, 230, 118, 0.1)',
+                                                                        color: 'var(--primary-paddle)',
+                                                                        fontSize: '11px',
+                                                                        fontWeight: '800'
+                                                                    }}>
+                                                                        {item.quantity} unidades
+                                                                    </span>
+                                                                </div>
+                                                                <span style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-primary)' }}>
+                                                                    ${item.revenue.toLocaleString('es-AR')}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                        No se registraron adicionales en las reservas del período.
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                    </div>
+
+                                        {/* Row 3: Charts */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '20px' }}>
+                                            {trends.length > 0 ? (
+                                                <>
+                                                    <RevenueChart data={trends} type="revenue" />
+                                                    <RevenueChart data={trends} type="bookings" />
+                                                </>
+                                            ) : (
+                                                <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2', padding: '30px', background: 'var(--bg-card)', borderRadius: '20px', textAlign: 'center', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                                                    📈 Los gráficos de tendencias se mostrarán al acumular reservas en el período.
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Row 4: Peak Hours Heatmap */}
+                                        {peakHours && (
+                                            <PeakHoursHeatmap data={peakHours.data} labels={peakHours.labels} />
+                                        )}
+
+                                        {/* Row 5: Top Clientes & Insights */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '20px' }}>
+                                            {/* Top Clientes Más Fieles */}
+                                            <div style={{
+                                                background: 'var(--bg-card)',
+                                                borderRadius: '20px',
+                                                padding: '24px',
+                                                border: '1px solid var(--border)',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                                    <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span>👑</span> Top Clientes Frecuentes
+                                                    </h3>
+                                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                                        Mayor concurrencia
+                                                    </span>
+                                                </div>
+
+                                                {metrics?.topCustomers && metrics.topCustomers.length > 0 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        {metrics.topCustomers.map((cust, idx) => {
+                                                            const cleanPh = (cust.phone || '').replace(/\D/g, '');
+                                                            return (
+                                                                <div key={idx} style={{
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center',
+                                                                    padding: '10px 12px',
+                                                                    borderRadius: '12px',
+                                                                    background: 'var(--bg-main)',
+                                                                    border: '1px solid var(--border)',
+                                                                    fontSize: '13px'
+                                                                }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                        <div style={{
+                                                                            width: '28px',
+                                                                            height: '28px',
+                                                                            borderRadius: '8px',
+                                                                            background: idx === 0 ? '#F59E0B' : 'var(--border)',
+                                                                            color: idx === 0 ? '#000' : 'var(--text-primary)',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            fontWeight: '800',
+                                                                            fontSize: '12px'
+                                                                        }}>
+                                                                            {idx + 1}
+                                                                        </div>
+                                                                        <div>
+                                                                            <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{cust.name}</div>
+                                                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                                                                {cust.bookingsCount} turnos • Total: ${cust.totalSpent.toLocaleString('es-AR')}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    {cleanPh && (
+                                                                        <a
+                                                                            href={`https://wa.me/${cleanPh}`}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            style={{
+                                                                                padding: '4px 10px',
+                                                                                borderRadius: '8px',
+                                                                                background: 'rgba(37, 211, 102, 0.15)',
+                                                                                color: '#25D366',
+                                                                                fontWeight: '700',
+                                                                                fontSize: '11px',
+                                                                                textDecoration: 'none',
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                gap: '4px'
+                                                                            }}
+                                                                        >
+                                                                            <span>💬</span> WhatsApp
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                        No hay clientes registrados en el período.
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Insights de Retención */}
+                                            {customerInsights && (
+                                                <div style={{
+                                                    background: 'var(--bg-card)',
+                                                    borderRadius: '20px',
+                                                    padding: '24px',
+                                                    border: '1px solid var(--border)',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                                }}>
+                                                    <h3 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span>👥</span> Métricas de Comunidad
+                                                    </h3>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                                        <div style={{
+                                                            padding: '16px',
+                                                            background: 'rgba(16, 185, 129, 0.08)',
+                                                            borderRadius: '14px',
+                                                            border: '1px solid rgba(16, 185, 129, 0.2)'
+                                                        }}>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>Total Clientes</div>
+                                                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#10B981' }}>{customerInsights.totalCustomers}</div>
+                                                        </div>
+                                                        <div style={{
+                                                            padding: '16px',
+                                                            background: 'rgba(99, 102, 241, 0.08)',
+                                                            borderRadius: '14px',
+                                                            border: '1px solid rgba(99, 102, 241, 0.2)'
+                                                        }}>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>Nuevos</div>
+                                                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#6366F1' }}>{customerInsights.newCustomers}</div>
+                                                        </div>
+                                                        <div style={{
+                                                            padding: '16px',
+                                                            background: 'rgba(245, 158, 11, 0.08)',
+                                                            borderRadius: '14px',
+                                                            border: '1px solid rgba(245, 158, 11, 0.2)'
+                                                        }}>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>Recurrentes</div>
+                                                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#F59E0B' }}>{customerInsights.returningCustomers}</div>
+                                                        </div>
+                                                        <div style={{
+                                                            padding: '16px',
+                                                            background: 'rgba(139, 92, 246, 0.08)',
+                                                            borderRadius: '14px',
+                                                            border: '1px solid rgba(139, 92, 246, 0.2)'
+                                                        }}>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>Tasa Retención</div>
+                                                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#8B5CF6' }}>{customerInsights.retentionRate?.toFixed(1) || '0'}%</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
                                 )}
                             </div>
                         ) : viewMode === 'subscription' ? (

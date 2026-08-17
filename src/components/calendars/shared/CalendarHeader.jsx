@@ -7,6 +7,7 @@ export default function CalendarHeader({
     dateRangeText,
     viewMode,
     setViewMode,
+    onViewModeChange,
     availableViews,
     onPrevious,
     onToday,
@@ -15,6 +16,7 @@ export default function CalendarHeader({
     showTitle = true,
     showLegend = true
 }) {
+    const handleSetViewMode = setViewMode || onViewModeChange;
     const legendItems = [
         { label: 'Pendiente', color: 'var(--status-pending, #9CA3AF)' },
         { label: 'Señado', color: 'var(--status-deposit, #F59E0B)' },
@@ -69,7 +71,7 @@ export default function CalendarHeader({
                 {showViewToggle && (
                     <ViewModeToggle
                         viewMode={viewMode}
-                        setViewMode={setViewMode}
+                        setViewMode={handleSetViewMode}
                         availableViews={availableViews}
                         isMobile={isMobile}
                     />

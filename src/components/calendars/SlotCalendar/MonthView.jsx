@@ -45,11 +45,14 @@ export default function MonthView({
             {/* Month Days */}
             {displayDays.map((day, i) => {
                 const dateKey = formatDateKey(day);
-                const dayBookings = bookings.filter(b => {
-                    let bDateKey = b.date;
-                    if (b.date.includes('/')) {
-                        const [d, m, y] = b.date.split('/');
+                const dayBookings = (bookings || []).filter(b => {
+                    if (!b || !b.date) return false;
+                    let bDateKey = String(b.date);
+                    if (bDateKey.includes('/')) {
+                        const [d, m, y] = bDateKey.split('/');
                         bDateKey = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    } else {
+                        bDateKey = bDateKey.slice(0, 10);
                     }
                     return bDateKey === dateKey && b.status !== 'cancelled' && b.status !== 'blocked';
                 });

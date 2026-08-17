@@ -1,431 +1,368 @@
 import { supabase } from './supabaseClient';
 
 /**
- * Analytics Service
- * Provides metrics and KPIs for businesses and admin panel
+ * Normaliza cualquier formato de fecha (YYYY-MM-DD o DD/MM/YYYY) a YYYY-MM-DD
  */
+function normalizeDate(rawDate) {
+    if (!rawDate) return '';
+    const str = String(rawDate).trim().split('T')[0];
+    if (str.includes('/')) {
+        const parts = str.split('/');
+        if (parts.length === 3) {
+            const d = parts[0].padStart(2, '0');
+            const m = parts[1].padStart(2, '0');
+            const y = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+            return `${y}-${m}-${d}`;
+        }
+    }
+    return str;
+}
 
+/**
+ * Formatea una fecha YYYY-MM-DD a DD/MM para mostrar en gráficos
+ */
+function formatDisplayDate(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}`;
+    }
+    return dateStr;
+}
+
+/**
+ * Analytics Service
+ * Provides metrics and KPIs for businesses, courts, venues, and admin panel
+ */
 class AnalyticsService {
     /**
-     * Get comprehensive metrics for a specific business
-     * @param {string} businessId - Business ID
-     * @param {Object} dateRange - { start: Date, end: Date }
-     * @returns {Object} Business metrics
+     * Compute full analytics directly from preloaded bookings array
+     * @param {Array} bookings - Array of booking objects
+     * @param {Object} dateRange - { preset, start, end }
+     * @returns {Object} { metrics, trends, peakHours, customerInsights }
      */
-    async getBusinessMetrics(businessId, dateRange = null) {
-        try {
-            const { start, end } = this._getDateRange(dateRange);
+    computeAnalyticsFromBookings(bookings = [], dateRange = null) {
+        const allBookings = Array.isArray(bookings) ? bookings : [];
 
-            // Get all bookings for the business in date range
-            let query = supabase
-                .from('bookings')
-                .select('*, services(name, price)')
-                .eq('business_id', businessId);
-
-            if (start && end) {
-                query = query.gte('date', start).lte('date', end);
-            }
-
-            const { data: bookings, error } = await query;
-            if (error) throw error;
-
-            // Estados válidos para contabilizar ocupación
-            const ACTIVE_STATES = ['confirmed', 'attended', 'completed', 'deposit_paid'];
-
-            // Filtrar reservas válidas (excluir bloqueos y cancelados para métricas de cantidad)
-            const activeBookings = bookings.filter(b => ACTIVE_STATES.includes(b.status));
-
-            // Calculate metrics
-            const totalBookings = activeBookings.length;
-
-            // Revenue only counts 'completed' bookings per user request
-            const revenueBookings = bookings.filter(b => b.status === 'completed');
-            const totalRevenue = revenueBookings.reduce((sum, b) => sum + (b.price || 0), 0);
-
-            // Average booking value based on revenue bookings or all active? 
-            // Usually avg ticket = Revenue / Paying Customers. 
-            // If Revenue is only from completed, Avg should probably be TotalRevenue / CompletedCount.
-            const totalCompleted = revenueBookings.length;
-            const avgBookingValue = totalCompleted > 0 ? totalRevenue / totalCompleted : 0;
-
-            // Calculate completion rate (confirmed/attended/completed vs cancelled)
-            // Total attempts = active + cancelled (ignoring blocked)
-            const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
-            const totalAttempts = totalBookings + cancelledBookings;
-            // Completion rate in this context usually means "Not Cancelled" success rate
-            const completionRate = totalAttempts > 0 ? (totalBookings / totalAttempts) * 100 : 0;
-
-            // Get previous period for comparison
-            const previousPeriod = this._getPreviousPeriod(start, end);
-            const previousMetrics = await this._getBasicMetrics(businessId, previousPeriod);
-
-            return {
-                totalRevenue,
-                totalBookings,
-                avgBookingValue,
-                completionRate,
-                cancelledBookings,
-                growth: {
-                    revenue: this._calculateGrowth(totalRevenue, previousMetrics.revenue),
-                    bookings: this._calculateGrowth(totalBookings, previousMetrics.bookings)
-                }
-            };
-        } catch (error) {
-            console.error('Error fetching business metrics:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get booking trends over time
-     * @param {string} businessId - Business ID
-     * @param {string} period - 'daily', 'weekly', 'monthly'
-     * @param {number} days - Number of days to look back
-     * @returns {Array} Trend data
-     */
-    async getBookingTrends(businessId, period = 'daily', days = 30) {
-        try {
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setDate(startDate.getDate() - days);
-
-            const { data: bookings, error } = await supabase
-                .from('bookings')
-                .select('date, price, status')
-                .eq('business_id', businessId)
-                .gte('date', startDate.toISOString().split('T')[0])
-                .lte('date', endDate.toISOString().split('T')[0])
-                .order('date', { ascending: true });
-
-            if (error) throw error;
-
-            // Group by period
-            const grouped = this._groupByPeriod(bookings, period);
-
-            return grouped.map(item => ({
-                date: item.date,
-                bookings: item.count,
-                revenue: item.revenue
+        // 1. Filtrar bloqueos y normalizar fechas
+        const nonBlocked = allBookings
+            .filter(b => 
+                b.status !== 'blocked' && 
+                !b.customer_name?.toUpperCase().includes('BLOQUEADO') &&
+                !b.customerName?.toUpperCase().includes('BLOQUEADO') &&
+                !b.notes?.toUpperCase().includes('BLOQUEO')
+            )
+            .map(b => ({
+                ...b,
+                _normalizedDate: normalizeDate(b.date || b.start_time || b.created_at)
             }));
-        } catch (error) {
-            console.error('Error fetching booking trends:', error);
-            throw error;
+
+        // 2. Filtrar por rango de fechas si aplica
+        const filteredBookings = nonBlocked.filter(b => {
+            if (!dateRange || dateRange.preset === 'all' || (!dateRange.start && !dateRange.end)) {
+                return true;
+            }
+            const bDate = b._normalizedDate;
+            if (!bDate) return true;
+
+            const startStr = normalizeDate(dateRange.start);
+            const endStr = normalizeDate(dateRange.end);
+
+            if (startStr && bDate < startStr) return false;
+            if (endStr && bDate > endStr) return false;
+            return true;
+        });
+
+        // 3. Métricas Principales
+        const ACTIVE_STATES = ['confirmed', 'attended', 'completed', 'deposit_paid'];
+        const activeBookings = filteredBookings.filter(b => ACTIVE_STATES.includes(b.status));
+
+        const totalBookings = activeBookings.length;
+        const completedBookings = filteredBookings.filter(b => b.status === 'completed' || b.status === 'attended').length;
+        const pendingBookings = filteredBookings.filter(b => b.status === 'pending').length;
+        const cancelledBookings = filteredBookings.filter(b => b.status === 'cancelled').length;
+
+        // Facturación activa total
+        const totalRevenue = activeBookings.reduce((sum, b) => {
+            const val = Number(b.price ?? b.total_price ?? b.totalPrice ?? 0);
+            return sum + (isNaN(val) ? 0 : val);
+        }, 0);
+
+        // Ingresos cobrados
+        const collectedRevenue = filteredBookings
+            .filter(b => b.status === 'completed' || b.status === 'attended')
+            .reduce((sum, b) => {
+                const val = Number(b.price ?? b.total_price ?? b.totalPrice ?? 0);
+                return sum + (isNaN(val) ? 0 : val);
+            }, 0);
+
+        // Total señas cobradas
+        const totalDeposits = activeBookings.reduce((sum, b) => {
+            const dep = Number(b.deposit_amount ?? b.depositAmount ?? b.metadata?.deposit_amount ?? b.metadata?.depositAmount ?? 0);
+            return sum + (isNaN(dep) ? 0 : dep);
+        }, 0);
+
+        // Ticket promedio
+        const avgBookingValue = totalBookings > 0 ? Math.round(totalRevenue / totalBookings) : 0;
+
+        // Tasa de efectividad
+        const totalAttempts = totalBookings + cancelledBookings;
+        const completionRate = totalAttempts > 0 ? (totalBookings / totalAttempts) * 100 : (totalBookings > 0 ? 100 : 0);
+
+        // 4. Rendimiento por Cancha
+        const courtMap = {};
+        activeBookings.forEach(b => {
+            const name = b.courts?.name || b.court_name || b.resource_name || b.resourceName || b.services?.name || b.service_name || 'Cancha Principal';
+            if (!courtMap[name]) {
+                courtMap[name] = { name, count: 0, revenue: 0 };
+            }
+            courtMap[name].count += 1;
+            courtMap[name].revenue += Number(b.price ?? b.total_price ?? b.totalPrice ?? 0) || 0;
+        });
+
+        const courtsBreakdown = Object.values(courtMap)
+            .map(c => ({
+                ...c,
+                percentage: totalBookings > 0 ? Math.round((c.count / totalBookings) * 100) : 0
+            }))
+            .sort((a, b) => b.count - a.count);
+
+        // 5. Desglose de Adicionales Vendidos
+        const additionalsMap = {};
+        activeBookings.forEach(b => {
+            const rawServices = b.selected_services || b.selectedServices || b.additional_services || b.metadata?.selectedServices || [];
+            if (Array.isArray(rawServices)) {
+                rawServices.forEach(item => {
+                    let name = '';
+                    let price = 0;
+                    let qty = 1;
+
+                    if (typeof item === 'object' && item !== null) {
+                        name = item.name || item.label || item.title || 'Adicional';
+                        price = Number(item.price || 0);
+                        qty = Math.max(1, parseInt(item.quantity, 10) || 1);
+                    } else if (typeof item === 'string' && item.trim()) {
+                        name = item.trim();
+                    }
+
+                    if (name) {
+                        if (!additionalsMap[name]) {
+                            additionalsMap[name] = { name, quantity: 0, revenue: 0 };
+                        }
+                        additionalsMap[name].quantity += qty;
+                        additionalsMap[name].revenue += (price * qty);
+                    }
+                });
+            }
+        });
+
+        const additionalsBreakdown = Object.values(additionalsMap).sort((a, b) => b.quantity - a.quantity);
+
+        // 6. Top Clientes
+        const customerMap = {};
+        activeBookings.forEach(b => {
+            const phone = b.customer_phone || b.customerPhone || '';
+            const name = b.customer_name || b.customerName || 'Cliente';
+            const key = phone || name;
+
+            if (key && key !== 'Cliente') {
+                if (!customerMap[key]) {
+                    customerMap[key] = {
+                        name,
+                        phone,
+                        bookingsCount: 0,
+                        totalSpent: 0,
+                        lastDate: b._normalizedDate
+                    };
+                }
+                customerMap[key].bookingsCount += 1;
+                customerMap[key].totalSpent += Number(b.price ?? b.total_price ?? b.totalPrice ?? 0) || 0;
+                if (b._normalizedDate > customerMap[key].lastDate) {
+                    customerMap[key].lastDate = b._normalizedDate;
+                }
+            }
+        });
+
+        const topCustomers = Object.values(customerMap)
+            .sort((a, b) => b.bookingsCount - a.bookingsCount || b.totalSpent - a.totalSpent)
+            .slice(0, 5);
+
+        // 7. Gráficos de Tendencias Continuos (Timeline)
+        // Mapeamos reservas por fecha normalizada
+        const dateTrendsMap = {};
+        activeBookings.forEach(b => {
+            const d = b._normalizedDate;
+            if (!d) return;
+
+            if (!dateTrendsMap[d]) {
+                dateTrendsMap[d] = { count: 0, revenue: 0 };
+            }
+            dateTrendsMap[d].count += 1;
+            dateTrendsMap[d].revenue += Number(b.price ?? b.total_price ?? b.totalPrice ?? 0) || 0;
+        });
+
+        // Generar rango de días continuo para que la gráfica siempre sea fluida
+        const recordedDates = Object.keys(dateTrendsMap).sort();
+        let timelineStart = '';
+        let timelineEnd = '';
+
+        if (dateRange && dateRange.start && dateRange.end) {
+            timelineStart = normalizeDate(dateRange.start);
+            timelineEnd = normalizeDate(dateRange.end);
+        } else if (recordedDates.length > 0) {
+            // Desde 3 días antes de la primera reserva hasta 3 días después de la última
+            const minD = new Date(recordedDates[0] + 'T00:00:00');
+            minD.setDate(minD.getDate() - 2);
+            timelineStart = minD.toISOString().split('T')[0];
+
+            const maxD = new Date(recordedDates[recordedDates.length - 1] + 'T00:00:00');
+            maxD.setDate(maxD.getDate() + 2);
+            timelineEnd = maxD.toISOString().split('T')[0];
+        } else {
+            const now = new Date();
+            const past7 = new Date();
+            past7.setDate(now.getDate() - 6);
+            timelineStart = past7.toISOString().split('T')[0];
+            timelineEnd = now.toISOString().split('T')[0];
         }
-    }
 
-    /**
-     * Get peak hours analysis
-     * @param {string} businessId - Business ID
-     * @returns {Object} Heatmap data
-     */
-    async getPeakHours(businessId) {
-        try {
-            const { data: bookings, error } = await supabase
-                .from('bookings')
-                .select('date, time')
-                .eq('business_id', businessId)
-                .in('status', ['confirmed', 'attended', 'completed', 'deposit_paid']);
+        const trends = [];
+        if (timelineStart && timelineEnd) {
+            const cur = new Date(timelineStart + 'T00:00:00');
+            const end = new Date(timelineEnd + 'T00:00:00');
+            let safetyLimit = 0;
 
-            if (error) throw error;
+            while (cur <= end && safetyLimit < 120) {
+                const curStr = cur.toISOString().split('T')[0];
+                const dayData = dateTrendsMap[curStr] || { count: 0, revenue: 0 };
+                trends.push({
+                    date: formatDisplayDate(curStr),
+                    rawDate: curStr,
+                    bookings: dayData.count,
+                    revenue: dayData.revenue
+                });
+                cur.setDate(cur.getDate() + 1);
+                safetyLimit++;
+            }
+        }
 
-            // Create heatmap: days of week x hours
-            // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-            const heatmap = Array(7).fill(null).map(() => Array(24).fill(0));
+        // 8. Mapa de Calor de Horas Pico (7 días x 24 hs)
+        const heatmap = Array(7).fill(null).map(() => Array(24).fill(0));
+        activeBookings.forEach(booking => {
+            if (!booking._normalizedDate || !booking.time) return;
 
-            bookings.forEach(booking => {
-                // Fix timezone issue:
-                // When parsing "2023-10-25" with new Date("2023-10-25"), it assumes UTC.
-                // If local timezone is UTC-3, it might shift to previus day if not careful.
-                // Safer approach: split the string and use Y, M, D directly.
-                const [year, month, day] = booking.date.split('-').map(Number);
-                // Create date with local components (no timezone shift) or use UTC logic if consistent
-                // const date = new Date(year, month - 1, day); 
-                // date.getDay() returns local day. 
+            const parts = booking._normalizedDate.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                const d = new Date(year, month, day);
+                const dayOfWeek = d.getDay();
 
-                // OR simpler: create Date from string + "T00:00:00" to force local time?
-                // Actually, new Date("YYYY-MM-DD") is UTC. new Date("YYYY-MM-DDT00:00") is local.
-                // Let's use UTCDay to be consistent with the "YYYY-MM-DD" string being date-only.
-                // new Date("2026-01-26").getUTCDay() -> 1 (Monday)
-
-                const date = new Date(booking.date);
-                const dayOfWeek = date.getUTCDay(); // Use UTC day to match the date string exactly
-
-                const hour = parseInt(booking.time.split(':')[0]);
+                const hour = parseInt(String(booking.time).split(':')[0], 10);
 
                 if (dayOfWeek >= 0 && dayOfWeek <= 6 && hour >= 0 && hour <= 23) {
                     heatmap[dayOfWeek][hour]++;
                 }
-            });
-
-            return {
-                data: heatmap,
-                labels: {
-                    days: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
-                    hours: Array.from({ length: 24 }, (_, i) => `${i}:00`)
-                }
-            };
-        } catch (error) {
-            console.error('Error fetching peak hours:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get customer insights
-     * @param {string} businessId - Business ID
-     * @returns {Object} Customer metrics
-     */
-    async getCustomerInsights(businessId) {
-        try {
-            const { data: bookings, error } = await supabase
-                .from('bookings')
-                .select('customer_name, customer_phone, date, services(name)')
-                .eq('business_id', businessId)
-                .in('status', ['confirmed', 'attended', 'completed', 'deposit_paid']);
-
-            if (error) throw error;
-
-            // Track unique customers by phone
-            const customerMap = new Map();
-
-            bookings.forEach(booking => {
-                const key = booking.customer_phone;
-                if (!customerMap.has(key)) {
-                    customerMap.set(key, {
-                        name: booking.customer_name,
-                        bookings: 0,
-                        firstVisit: booking.date,
-                        lastVisit: booking.date
-                    });
-                }
-
-                const customer = customerMap.get(key);
-                customer.bookings++;
-                if (booking.date < customer.firstVisit) customer.firstVisit = booking.date;
-                if (booking.date > customer.lastVisit) customer.lastVisit = booking.date;
-            });
-
-            const totalCustomers = customerMap.size;
-            const returningCustomers = Array.from(customerMap.values()).filter(c => c.bookings > 1).length;
-            const newCustomers = totalCustomers - returningCustomers;
-            const retentionRate = totalCustomers > 0 ? (returningCustomers / totalCustomers) * 100 : 0;
-
-            // Top services
-            const serviceCount = {};
-            bookings.forEach(booking => {
-                const serviceName = booking.services?.name || 'Unknown';
-                serviceCount[serviceName] = (serviceCount[serviceName] || 0) + 1;
-            });
-
-            const topServices = Object.entries(serviceCount)
-                .map(([name, count]) => ({ name, count }))
-                .sort((a, b) => b.count - a.count)
-                .slice(0, 5);
-
-            return {
-                totalCustomers,
-                newCustomers,
-                returningCustomers,
-                retentionRate,
-                topServices
-            };
-        } catch (error) {
-            console.error('Error fetching customer insights:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get platform-wide metrics (Admin only)
-     * @returns {Object} Platform metrics
-     */
-    async getAdminMetrics() {
-        try {
-            // Get all businesses
-            const { data: businesses, error: bizError } = await supabase
-                .from('businesses')
-                .select('id, name, type, created_at');
-
-            if (bizError) throw bizError;
-
-            // Get all bookings
-            const { data: bookings, error: bookError } = await supabase
-                .from('bookings')
-                .select('business_id, price, status, created_at');
-
-            if (bookError) throw bookError;
-
-            const totalBusinesses = businesses.length;
-            const totalBookings = bookings.length;
-            const totalRevenue = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
-
-            // New businesses this month
-            const thisMonth = new Date();
-            thisMonth.setDate(1);
-            const newBusinesses = businesses.filter(b =>
-                new Date(b.created_at) >= thisMonth
-            ).length;
-
-            // Category breakdown
-            const sportBusinesses = businesses.filter(b => b.type === 'sport').length;
-            const serviceBusinesses = businesses.filter(b => b.type === 'service').length;
-
-            return {
-                totalBusinesses,
-                totalBookings,
-                totalRevenue,
-                newBusinesses,
-                categoryBreakdown: {
-                    sport: sportBusinesses,
-                    service: serviceBusinesses
-                }
-            };
-        } catch (error) {
-            console.error('Error fetching admin metrics:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get business performance comparison (Admin only)
-     * @returns {Array} Business leaderboard
-     */
-    async getBusinessComparison() {
-        try {
-            const { data: businesses, error: bizError } = await supabase
-                .from('businesses')
-                .select('id, name, type');
-
-            if (bizError) throw bizError;
-
-            const { data: bookings, error: bookError } = await supabase
-                .from('bookings')
-                .select('business_id, price, status');
-
-            if (bookError) throw bookError;
-
-            // Calculate metrics per business
-            const businessMetrics = businesses.map(business => {
-                const bizBookings = bookings.filter(b => b.business_id === business.id);
-                const revenue = bizBookings.reduce((sum, b) => sum + (b.price || 0), 0);
-
-                return {
-                    id: business.id,
-                    name: business.name,
-                    type: business.type,
-                    totalBookings: bizBookings.length,
-                    revenue
-                };
-            });
-
-            // Sort by revenue
-            return businessMetrics.sort((a, b) => b.revenue - a.revenue);
-        } catch (error) {
-            console.error('Error fetching business comparison:', error);
-            throw error;
-        }
-    }
-
-    // Helper methods
-
-    _getDateRange(dateRange) {
-        if (dateRange && dateRange.start && dateRange.end) {
-            return {
-                start: dateRange.start instanceof Date
-                    ? dateRange.start.toISOString().split('T')[0]
-                    : dateRange.start,
-                end: dateRange.end instanceof Date
-                    ? dateRange.end.toISOString().split('T')[0]
-                    : dateRange.end
-            };
-        }
-
-        // Default: last 30 days to next 30 days (broad window for default view)
-        const end = new Date();
-        end.setDate(end.getDate() + 30); // Include future bookings by default
-
-        const start = new Date();
-        start.setDate(start.getDate() - 30);
-
-        return {
-            start: start.toISOString().split('T')[0],
-            end: end.toISOString().split('T')[0]
-        };
-    }
-
-    _getPreviousPeriod(start, end) {
-        const startDate = new Date(start);
-        const endDate = new Date(end);
-        const duration = endDate - startDate;
-
-        const prevEnd = new Date(startDate);
-        prevEnd.setDate(prevEnd.getDate() - 1);
-
-        const prevStart = new Date(prevEnd);
-        prevStart.setTime(prevStart.getTime() - duration);
-
-        return {
-            start: prevStart.toISOString().split('T')[0],
-            end: prevEnd.toISOString().split('T')[0]
-        };
-    }
-
-    async _getBasicMetrics(businessId, dateRange) {
-        const { start, end } = dateRange;
-
-        const { data: bookings } = await supabase
-            .from('bookings')
-            .select('price')
-            .eq('business_id', businessId)
-            .gte('date', start)
-            .lte('date', end);
-
-        const validBookings = bookings?.filter(b => ['confirmed', 'attended', 'completed', 'deposit_paid'].includes(b.status)) || [];
-        const completedBookings = bookings?.filter(b => b.status === 'completed') || [];
-
-        return {
-            bookings: validBookings.length,
-            revenue: completedBookings.reduce((sum, b) => sum + (b.price || 0), 0)
-        };
-    }
-
-    _calculateGrowth(current, previous) {
-        if (previous === 0) return current > 0 ? 100 : 0;
-        return ((current - previous) / previous) * 100;
-    }
-
-    _groupByPeriod(bookings, period) {
-        const grouped = {};
-
-        bookings.forEach(booking => {
-            let key;
-            const date = new Date(booking.date);
-
-            if (period === 'daily') {
-                key = booking.date;
-            } else if (period === 'weekly') {
-                const weekStart = new Date(date);
-                weekStart.setDate(date.getDate() - date.getDay());
-                key = weekStart.toISOString().split('T')[0];
-            } else if (period === 'monthly') {
-                key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            }
-
-            if (!grouped[key]) {
-                grouped[key] = { date: key, count: 0, revenue: 0 };
-            }
-
-            if (['cancelled', 'blocked'].includes(booking.status)) return;
-
-            grouped[key].count++;
-
-            // Only add revenue if completed
-            if (booking.status === 'completed') {
-                grouped[key].revenue += booking.price || 0;
             }
         });
 
-        return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
+        const peakHours = {
+            data: heatmap,
+            labels: {
+                days: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+                hours: Array.from({ length: 24 }, (_, i) => `${i}:00`)
+            }
+        };
+
+        // 9. Customer Insights
+        const totalUniqueCustomers = Object.keys(customerMap).length;
+        const returningCustomers = Object.values(customerMap).filter(c => c.bookingsCount > 1).length;
+        const newCustomers = totalUniqueCustomers - returningCustomers;
+        const retentionRate = totalUniqueCustomers > 0 ? (returningCustomers / totalUniqueCustomers) * 100 : 0;
+
+        const customerInsights = {
+            totalCustomers: totalUniqueCustomers,
+            newCustomers,
+            returningCustomers,
+            retentionRate
+        };
+
+        return {
+            metrics: {
+                totalRevenue,
+                collectedRevenue,
+                totalDeposits,
+                totalBookings,
+                completedBookings,
+                pendingBookings,
+                cancelledBookings,
+                avgBookingValue,
+                completionRate,
+                courtsBreakdown,
+                additionalsBreakdown,
+                topCustomers
+            },
+            trends,
+            peakHours,
+            customerInsights
+        };
+    }
+
+    async getBusinessMetrics(businessId, dateRange = null) {
+        try {
+            const { data: bookings, error } = await supabase
+                .from('bookings')
+                .select('*, services(name), courts(name)')
+                .eq('business_id', businessId);
+            if (error) throw error;
+            return this.computeAnalyticsFromBookings(bookings || [], dateRange).metrics;
+        } catch (error) {
+            console.error('Error in getBusinessMetrics:', error);
+            return null;
+        }
+    }
+
+    async getBookingTrends(businessId, period = 'daily', dateRange = null) {
+        try {
+            const { data: bookings, error } = await supabase
+                .from('bookings')
+                .select('*')
+                .eq('business_id', businessId);
+            if (error) throw error;
+            return this.computeAnalyticsFromBookings(bookings || [], dateRange).trends;
+        } catch (error) {
+            console.error('Error in getBookingTrends:', error);
+            return [];
+        }
+    }
+
+    async getPeakHours(businessId, dateRange = null) {
+        try {
+            const { data: bookings, error } = await supabase
+                .from('bookings')
+                .select('*')
+                .eq('business_id', businessId);
+            if (error) throw error;
+            return this.computeAnalyticsFromBookings(bookings || [], dateRange).peakHours;
+        } catch (error) {
+            console.error('Error in getPeakHours:', error);
+            return null;
+        }
+    }
+
+    async getCustomerInsights(businessId, dateRange = null) {
+        try {
+            const { data: bookings, error } = await supabase
+                .from('bookings')
+                .select('*')
+                .eq('business_id', businessId);
+            if (error) throw error;
+            return this.computeAnalyticsFromBookings(bookings || [], dateRange).customerInsights;
+        } catch (error) {
+            console.error('Error in getCustomerInsights:', error);
+            return null;
+        }
     }
 }
 

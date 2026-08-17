@@ -103,8 +103,9 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
 
     const finalPrice = price - promoDiscount;
 
-    // Calculate deposit (based on basePriceAfterPromo, NOT including extras!)
+    // Calculate deposit: (Base price percentage) + 100% of additional services
     const basePriceAfterPromo = Math.max(0, basePrice - promoDiscount);
+    const extrasTotal = selectedExtras.reduce((sum, e) => sum + (Number(e.price) * (e.quantity || 1)), 0);
     let depositAmount = 0;
     let depositLabel = 'Seña';
 
@@ -115,14 +116,14 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
         const fixed = parseInt(depositSettings.fixed_amount);
 
         if (depositSettings.percentage && !isNaN(percentage) && percentage > 0) {
-            depositAmount = Math.round(basePriceAfterPromo * (percentage / 100));
-            depositLabel = `Seña (${percentage}%)`;
+            depositAmount = Math.round(basePriceAfterPromo * (percentage / 100)) + extrasTotal;
+            depositLabel = `Seña (${percentage}%)` + (extrasTotal > 0 ? ' + Adicionales' : '');
         } else if (!isNaN(fixed) && fixed > 0) {
-            depositAmount = fixed;
-            depositLabel = 'Seña (Monto Fijo)';
+            depositAmount = fixed + extrasTotal;
+            depositLabel = 'Seña (Monto Fijo)' + (extrasTotal > 0 ? ' + Adicionales' : '');
         } else {
-            depositAmount = 0;
-            depositLabel = 'Seña';
+            depositAmount = Math.round(basePriceAfterPromo * 0.3) + extrasTotal;
+            depositLabel = 'Seña (30%)' + (extrasTotal > 0 ? ' + Adicionales' : '');
         }
     }
 
