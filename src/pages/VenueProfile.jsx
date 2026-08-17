@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
-import { pushService } from '../services/pushService';
 import { useNotification } from '../contexts/NotificationContext';
 import SEOHead from '../components/SEOHead';
+import AmenityIcon from '../components/common/AmenityIcon';
 import 'leaflet/dist/leaflet.css';
 
 // Fix Leaflet default icon issue
@@ -890,7 +890,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     userSelect: 'none'
                                                 }}
                                             >
-                                                <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center' }}>{icon}</span>
+                                                <AmenityIcon icon={icon} size={16} />
                                                 <span>{name}</span>
                                             </div>
                                         );
@@ -929,9 +929,10 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    fontSize: '20px'
+                                                    fontSize: '20px',
+                                                    color: 'var(--primary-paddle, #84CC16)'
                                                 }}>
-                                                    {icon}
+                                                    <AmenityIcon icon={icon} size={22} />
                                                 </div>
                                                 <div style={{
                                                     fontSize: '13px',

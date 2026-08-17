@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import serviceAdapter from '../../services/serviceAdapter';
 import { useNotification } from '../../contexts/NotificationContext';
+import AmenityIcon, { IconPickerModal } from '../common/AmenityIcon';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -47,6 +48,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
     const [quickBlockReason, setQuickBlockReason] = useState('');
     const [newAmenityName, setNewAmenityName] = useState('');
     const [newAmenityIcon, setNewAmenityIcon] = useState('✨');
+    const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
 
     const formatDateKey = (d) => {
         if (!d) return '';
@@ -1253,30 +1255,59 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                 Agrega comodidades adicionales que ofrece tu lugar (ej: Cancha de Bochas, Cama Elástica, Grupo Electrógeno, Barra de Tragos):
                             </p>
 
-                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                                {['✨', '🎯', '🥩', '🍸', '🎪', '🪑', '⛱️', '🎵', '🛁', '🔌', '👶', '🐎'].map(emoji => (
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '14px' }}>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                     <button
-                                        key={emoji}
                                         type="button"
-                                        onClick={() => setNewAmenityIcon(emoji)}
+                                        onClick={() => setIsIconPickerOpen(true)}
                                         style={{
-                                            fontSize: '18px',
-                                            padding: '6px 10px',
-                                            borderRadius: '8px',
-                                            border: newAmenityIcon === emoji ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
-                                            background: newAmenityIcon === emoji ? 'rgba(132, 204, 22, 0.2)' : 'var(--bg-card)',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            padding: '8px 14px',
+                                            borderRadius: '10px',
+                                            border: '1.5px solid var(--primary-paddle, #84CC16)',
+                                            background: 'rgba(132, 204, 22, 0.15)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '13px',
+                                            fontWeight: '700',
                                             cursor: 'pointer'
                                         }}
                                     >
-                                        {emoji}
+                                        <AmenityIcon icon={newAmenityIcon} size={18} />
+                                        <span>🎨 Cambiar Ícono (+60 disponibles)</span>
                                     </button>
-                                ))}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    {['Flame', 'Waves', 'Beer', 'Speaker', 'Gamepad2', 'Trees', 'Snowflake', 'Baby', 'Plug', 'ShieldCheck', 'Bath', 'Tv'].map(iconKey => (
+                                        <button
+                                            key={iconKey}
+                                            type="button"
+                                            onClick={() => setNewAmenityIcon(iconKey)}
+                                            style={{
+                                                padding: '6px 8px',
+                                                borderRadius: '8px',
+                                                border: newAmenityIcon === iconKey ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                background: newAmenityIcon === iconKey ? 'rgba(132, 204, 22, 0.2)' : 'var(--bg-card)',
+                                                color: newAmenityIcon === iconKey ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}
+                                            title={iconKey}
+                                        >
+                                            <AmenityIcon icon={iconKey} size={16} />
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                                 <input
                                     type="text"
-                                    placeholder="Nombre de la comodidad personalizada (ej: Cama Elástica)..."
+                                    placeholder="Nombre de la comodidad personalizada (ej: Cama Elástica, Barra de Tragos)..."
                                     value={newAmenityName}
                                     onChange={(e) => setNewAmenityName(e.target.value)}
                                     onKeyDown={(e) => {
@@ -1354,7 +1385,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                                         color: 'var(--text-primary)'
                                                     }}
                                                 >
-                                                    <span style={{ fontSize: '16px' }}>{icon}</span>
+                                                    <AmenityIcon icon={icon} size={18} />
                                                     <span>{name}</span>
                                                     <button
                                                         type="button"
@@ -1383,6 +1414,17 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                 );
                             })()}
                         </div>
+
+                        {/* Icon Picker Modal */}
+                        <IconPickerModal
+                            isOpen={isIconPickerOpen}
+                            onClose={() => setIsIconPickerOpen(false)}
+                            onSelect={(selectedIcon) => {
+                                setNewAmenityIcon(selectedIcon);
+                                showToast(`Ícono seleccionado`, 'info');
+                            }}
+                            currentIcon={newAmenityIcon}
+                        />
                     </div>
                 )}
 
