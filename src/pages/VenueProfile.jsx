@@ -6,7 +6,7 @@ import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
 import SEOHead from '../components/SEOHead';
-import AmenityIcon from '../components/common/AmenityIcon';
+import AmenityIcon, { parseAmenity } from '../components/common/AmenityIcon';
 import 'leaflet/dist/leaflet.css';
 
 // Fix Leaflet default icon issue
@@ -423,39 +423,41 @@ export default function VenueProfile({ business: initialBusiness }) {
 
     // Get icon for amenity
     const getAmenityIcon = (amenity) => {
-        if (typeof amenity === 'object' && amenity !== null && amenity.icon) {
-            return amenity.icon;
-        }
-        const name = typeof amenity === 'object' ? amenity.name : String(amenity);
+        const parsed = parseAmenity(amenity);
+        if (parsed.icon) return parsed.icon;
+        const name = parsed.name;
         const icons = {
-            'Piscina': '🏊',
-            'Parrilla': '🔥',
-            'Parrilla / Asador': '🔥',
-            'WiFi': '📶',
-            'WiFi Libre': '📶',
-            'Aire Acondicionado': '❄️',
-            'Parking': '🚗',
-            'Estacionamiento Privado': '🚗',
-            'Sonido': '🔊',
-            'Equipo de Sonido': '🔊',
-            'Cocina Equipada': '🍳',
-            'Baños Completos': '🚿',
-            'Baños Privados': '🚿',
-            'Jardín': '🌳',
-            'Amplio Jardín / Parque': '🌳',
-            'Quincho Cubierto': '🏠',
-            'Zona de Juegos': '🎮',
-            'Iluminación LED': '💡',
-            'Televisor': '📺',
-            'Televisor / Pantalla': '📺',
+            'Piscina': 'Waves',
+            'Parrilla': 'Flame',
+            'Parrilla / Asador': 'Flame',
+            'WiFi': 'Wifi',
+            'WiFi Libre': 'Wifi',
+            'Aire Acondicionado': 'Snowflake',
+            'Parking': 'Car',
+            'Estacionamiento Privado': 'Car',
+            'Sonido': 'Speaker',
+            'Equipo de Sonido': 'Speaker',
+            'Cocina Equipada': 'ChefHat',
+            'Baños Completos': 'ShowerHead',
+            'Baños Privados': 'ShowerHead',
+            'Jardín': 'Trees',
+            'Amplio Jardín / Parque': 'Trees',
+            'Quincho Cubierto': 'House',
+            'Zona de Juegos': 'Gamepad2',
+            'Iluminación LED': 'Lightbulb',
+            'Televisor': 'Tv',
+            'Televisor / Pantalla': 'Tv',
             'Mesa de Pool': '🎱',
             'Metegol': '⚽',
             'Ping Pong': '🏓',
-            'Freezer': '🧊',
-            'Freezer / Heladeras': '🧊',
-            'Juegos Infantiles': '🧸'
+            'Freezer': 'Refrigerator',
+            'Freezer / Heladeras': 'Refrigerator',
+            'Juegos Infantiles': 'Baby',
+            'Living / Sillones': 'Armchair',
+            'Predio Cerrado': 'Lock',
+            'Seguridad Privada': 'ShieldCheck'
         };
-        return icons[name] || '✨';
+        return icons[name] || 'Sparkles';
     };
 
     const primaryColor = business?.primary_color || business?.button_color || business?.buttonColor || '#84CC16';
@@ -870,8 +872,9 @@ export default function VenueProfile({ business: initialBusiness }) {
                                     gap: '8px'
                                 }}>
                                     {amenities.map((amenity, idx) => {
-                                        const name = typeof amenity === 'object' ? amenity.name : amenity;
-                                        const icon = getAmenityIcon(amenity);
+                                        const parsed = parseAmenity(amenity);
+                                        const name = parsed.name;
+                                        const icon = parsed.icon || getAmenityIcon(amenity);
                                         return (
                                             <div
                                                 key={idx}
@@ -903,8 +906,9 @@ export default function VenueProfile({ business: initialBusiness }) {
                                     gap: '14px'
                                 }}>
                                     {amenities.map((amenity, idx) => {
-                                        const name = typeof amenity === 'object' ? amenity.name : amenity;
-                                        const icon = getAmenityIcon(amenity);
+                                        const parsed = parseAmenity(amenity);
+                                        const name = parsed.name;
+                                        const icon = parsed.icon || getAmenityIcon(amenity);
                                         return (
                                             <div
                                                 key={idx}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import serviceAdapter from '../../services/serviceAdapter';
 import { useNotification } from '../../contexts/NotificationContext';
-import AmenityIcon, { IconPickerModal } from '../common/AmenityIcon';
+import AmenityIcon, { IconPickerModal, parseAmenity } from '../common/AmenityIcon';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -1202,7 +1202,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                     { name: 'Freezer', icon: '🧊' },
                                     { name: 'Juegos Infantiles', icon: '🧸' }
                                 ].map((preset, idx) => {
-                                    const currentAmenities = (formData.amenities || []).map(a => typeof a === 'object' ? a.name : a);
+                                    const currentAmenities = (formData.amenities || []).map(a => parseAmenity(a).name);
                                     const isSelected = currentAmenities.includes(preset.name);
 
                                     return (
@@ -1212,7 +1212,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                             onClick={() => {
                                                 let updated;
                                                 if (isSelected) {
-                                                    updated = (formData.amenities || []).filter(a => (typeof a === 'object' ? a.name : a) !== preset.name);
+                                                    updated = (formData.amenities || []).filter(a => parseAmenity(a).name !== preset.name);
                                                 } else {
                                                     updated = [...(formData.amenities || []), { name: preset.name, icon: preset.icon }];
                                                 }
@@ -1357,18 +1357,15 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                             {/* Active Custom Amenities list */}
                             {(() => {
                                 const presetNames = ['Piscina', 'Parrilla', 'Quincho Cubierto', 'WiFi', 'Aire Acondicionado', 'Parking', 'Sonido', 'Cocina Equipada', 'Zona de Juegos', 'Mesa de Pool', 'Metegol', 'Ping Pong', 'Televisor', 'Iluminación LED', 'Jardín', 'Baños Completos', 'Freezer', 'Juegos Infantiles'];
-                                const customItems = (formData.amenities || []).filter(a => {
-                                    const name = typeof a === 'object' ? a.name : a;
-                                    return !presetNames.includes(name);
-                                });
+                                const customItems = (formData.amenities || [])
+                                    .map(a => parseAmenity(a))
+                                    .filter(item => item.name && !presetNames.includes(item.name));
 
                                 if (customItems.length === 0) return null;
 
                                 return (
                                     <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                         {customItems.map((item, idx) => {
-                                            const name = typeof item === 'object' ? item.name : item;
-                                            const icon = typeof item === 'object' ? item.icon : '✨';
                                             return (
                                                 <div
                                                     key={idx}
@@ -1385,12 +1382,12 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                                         color: 'var(--text-primary)'
                                                     }}
                                                 >
-                                                    <AmenityIcon icon={icon} size={18} />
-                                                    <span>{name}</span>
+                                                    <AmenityIcon icon={item.icon || '✨'} size={18} />
+                                                    <span>{item.name}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => {
-                                                            const updated = (formData.amenities || []).filter(a => (typeof a === 'object' ? a.name : a) !== name);
+                                                            const updated = (formData.amenities || []).filter(a => parseAmenity(a).name !== item.name);
                                                             handleInputChange('amenities', updated);
                                                         }}
                                                         style={{

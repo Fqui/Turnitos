@@ -107,6 +107,35 @@ export const AMENITY_ICON_CATEGORIES = [
     }
 ];
 
+// Helper to safely parse any amenity format (object, JSON string, or simple text)
+export function parseAmenity(amenity) {
+    if (!amenity) return { name: '', icon: '' };
+    if (typeof amenity === 'object' && amenity !== null) {
+        return {
+            name: amenity.name || amenity.label || '',
+            icon: amenity.icon || '✨'
+        };
+    }
+    if (typeof amenity === 'string') {
+        const trimmed = amenity.trim();
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (parsed && typeof parsed === 'object') {
+                    return {
+                        name: parsed.name || parsed.label || trimmed,
+                        icon: parsed.icon || '✨'
+                    };
+                }
+            } catch (e) {
+                // Not valid json, continue as text
+            }
+        }
+        return { name: trimmed, icon: '' };
+    }
+    return { name: String(amenity), icon: '' };
+}
+
 // Helper to render an amenity icon whether it's a Lucide icon identifier, emoji, or text
 export default function AmenityIcon({ icon, size = 18, style = {}, className = '' }) {
     if (!icon) {
