@@ -511,20 +511,20 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
             {/* Sidebar Navigation */}
             <div style={sidebarStyle}>
                 {[
-                    { id: 'general', label: 'General y Ubicación', icon: '📍' },
-                    { id: 'appearance', label: 'Apariencia y Colores', icon: '🎨' },
-                    { id: 'gallery', label: 'Galería de Fotos', icon: '📸' },
-                    { id: 'pricing', label: 'Precios y Capacidad', icon: '💰' },
-                    { id: 'services', label: 'Servicios Adicionales', icon: '✨' },
-                    { id: 'whatsapp', label: 'Mensajes de WhatsApp', icon: '💬' },
-                    { id: 'amenities', label: 'Comodidades', icon: '🛋️' }
+                    { id: 'general', label: 'General y Ubicación', icon: 'MapPin' },
+                    { id: 'appearance', label: 'Apariencia y Colores', icon: 'Palette' },
+                    { id: 'gallery', label: 'Galería de Fotos', icon: 'Image' },
+                    { id: 'pricing', label: 'Precios y Capacidad', icon: 'DollarSign' },
+                    { id: 'services', label: 'Servicios Adicionales', icon: 'Sparkles' },
+                    { id: 'whatsapp', label: 'Mensajes de WhatsApp', icon: 'MessageCircle' },
+                    { id: 'amenities', label: 'Comodidades', icon: 'Armchair' }
                 ].map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         style={tabButtonStyle(activeTab === tab.id)}
                     >
-                        <span>{tab.icon}</span>
+                        <AmenityIcon icon={tab.icon} size={18} />
                         {tab.label}
                     </button>
                 ))}
