@@ -746,3 +746,5 @@ const LinkBio = ({ overrideSlug = null }) => {
         </div>
     );
 }
+
+export default LinkBio;
