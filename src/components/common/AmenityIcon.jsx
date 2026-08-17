@@ -136,35 +136,60 @@ export function parseAmenity(amenity) {
     return { name: String(amenity), icon: '' };
 }
 
-// Helper to render an amenity icon whether it's a Lucide icon identifier, emoji, or text
+const EMOJI_TO_LUCIDE = {
+    '🏊': 'Waves',
+    '🔥': 'Flame',
+    '🏠': 'House',
+    '📶': 'Wifi',
+    '❄️': 'Snowflake',
+    '🚗': 'Car',
+    '🔊': 'Speaker',
+    '🍳': 'ChefHat',
+    '🎮': 'Gamepad2',
+    '🎱': 'Dices',
+    '⚽': 'Trophy',
+    '🏓': 'Activity',
+    '📺': 'Tv',
+    '💡': 'Lightbulb',
+    '🌳': 'Trees',
+    '🚿': 'ShowerHead',
+    '🧊': 'Refrigerator',
+    '🧸': 'Baby',
+    '✨': 'Sparkles',
+    '🥩': 'Flame',
+    '🍸': 'Wine',
+    '🍺': 'Beer',
+    '🍻': 'Beer',
+    '🎯': 'Target',
+    '🎪': 'Tent',
+    '🪑': 'Armchair',
+    '⛱️': 'Umbrella',
+    '🎵': 'Music',
+    '🛁': 'Bath',
+    '🔌': 'Plug',
+    '👶': 'Baby',
+    '🐕': 'Dog',
+    '🐶': 'Dog',
+    '🐎': 'Trophy',
+    '☕': 'Coffee',
+    '🔒': 'Lock',
+    '🛡️': 'ShieldCheck'
+};
+
+// Helper to render an amenity icon strictly using modern Lucide vector icons
 export default function AmenityIcon({ icon, size = 18, style = {}, className = '' }) {
-    if (!icon) {
-        return <LucideIcons.Sparkles size={size} style={style} className={className} />;
+    let iconName = icon;
+
+    if (icon && typeof icon === 'string' && EMOJI_TO_LUCIDE[icon]) {
+        iconName = EMOJI_TO_LUCIDE[icon];
     }
 
-    // Check if icon is a valid Lucide component name
-    if (typeof icon === 'string' && LucideIcons[icon]) {
-        const IconComponent = LucideIcons[icon];
-        return <IconComponent size={size} style={{ display: 'inline-block', verticalAlign: 'middle', ...style }} className={className} />;
+    if (iconName && typeof iconName === 'string' && LucideIcons[iconName]) {
+        const IconComponent = LucideIcons[iconName];
+        return <IconComponent size={size} style={{ display: 'inline-block', verticalAlign: 'middle', strokeWidth: 2, ...style }} className={className} />;
     }
 
-    // Otherwise render as emoji / string
-    return (
-        <span
-            style={{
-                fontSize: `${size}px`,
-                lineHeight: 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                verticalAlign: 'middle',
-                ...style
-            }}
-            className={className}
-        >
-            {icon}
-        </span>
-    );
+    return <LucideIcons.Sparkles size={size} style={{ display: 'inline-block', verticalAlign: 'middle', strokeWidth: 2, ...style }} className={className} />;
 }
 
 // Interactive Icon Picker Modal

@@ -1183,24 +1183,24 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
                                 {[
-                                    { name: 'Piscina', icon: '🏊' },
-                                    { name: 'Parrilla', icon: '🔥' },
-                                    { name: 'Quincho Cubierto', icon: '🏠' },
-                                    { name: 'WiFi', icon: '📶' },
-                                    { name: 'Aire Acondicionado', icon: '❄️' },
-                                    { name: 'Parking', icon: '🚗' },
-                                    { name: 'Sonido', icon: '🔊' },
-                                    { name: 'Cocina Equipada', icon: '🍳' },
-                                    { name: 'Zona de Juegos', icon: '🎮' },
-                                    { name: 'Mesa de Pool', icon: '🎱' },
-                                    { name: 'Metegol', icon: '⚽' },
-                                    { name: 'Ping Pong', icon: '🏓' },
-                                    { name: 'Televisor', icon: '📺' },
-                                    { name: 'Iluminación LED', icon: '💡' },
-                                    { name: 'Jardín', icon: '🌳' },
-                                    { name: 'Baños Completos', icon: '🚿' },
-                                    { name: 'Freezer', icon: '🧊' },
-                                    { name: 'Juegos Infantiles', icon: '🧸' }
+                                    { name: 'Piscina', icon: 'Waves' },
+                                    { name: 'Parrilla', icon: 'Flame' },
+                                    { name: 'Quincho Cubierto', icon: 'House' },
+                                    { name: 'WiFi', icon: 'Wifi' },
+                                    { name: 'Aire Acondicionado', icon: 'Snowflake' },
+                                    { name: 'Parking', icon: 'Car' },
+                                    { name: 'Sonido', icon: 'Speaker' },
+                                    { name: 'Cocina Equipada', icon: 'ChefHat' },
+                                    { name: 'Zona de Juegos', icon: 'Gamepad2' },
+                                    { name: 'Mesa de Pool', icon: 'Dices' },
+                                    { name: 'Metegol', icon: 'Trophy' },
+                                    { name: 'Ping Pong', icon: 'Activity' },
+                                    { name: 'Televisor', icon: 'Tv' },
+                                    { name: 'Iluminación LED', icon: 'Lightbulb' },
+                                    { name: 'Jardín', icon: 'Trees' },
+                                    { name: 'Baños Completos', icon: 'ShowerHead' },
+                                    { name: 'Freezer', icon: 'Refrigerator' },
+                                    { name: 'Juegos Infantiles', icon: 'Baby' }
                                 ].map((preset, idx) => {
                                     const currentAmenities = (formData.amenities || []).map(a => parseAmenity(a).name);
                                     const isSelected = currentAmenities.includes(preset.name);
@@ -1226,14 +1226,14 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                                                 borderRadius: '12px',
                                                 border: isSelected ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
                                                 background: isSelected ? 'rgba(132, 204, 22, 0.12)' : 'var(--bg-card)',
-                                                color: 'var(--text-primary)',
+                                                color: isSelected ? 'var(--primary-paddle)' : 'var(--text-primary)',
                                                 cursor: 'pointer',
                                                 fontWeight: isSelected ? '700' : '500',
                                                 fontSize: '13px',
                                                 transition: 'all 0.2s ease'
                                             }}
                                         >
-                                            <span style={{ fontSize: '20px' }}>{preset.icon}</span>
+                                            <AmenityIcon icon={preset.icon} size={20} />
                                             <span>{preset.name}</span>
                                         </button>
                                     );
