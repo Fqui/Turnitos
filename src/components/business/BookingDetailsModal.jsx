@@ -1477,38 +1477,25 @@ const BookingDetailsModal = ({
                                         Confirmar Turno
                                     </button>
                                 )}
-                                {booking.status === 'confirmed' && (
-                                    <button
-                                        onClick={() => onAction('confirm_attendance')}
-                                        style={{
-                                            padding: '10px 14px',
-                                            borderRadius: '12px',
-                                            border: 'none',
-                                            background: 'var(--primary-paddle)',
-                                            color: 'white',
-                                            fontWeight: '700',
-                                            cursor: 'pointer',
-                                            fontSize: '14px'
-                                        }}
-                                    >
-                                        Confirmar Asistencia
-                                    </button>
-                                )}
-                                {booking.status === 'attended' && (
+                                {(booking.status === 'confirmed' || booking.status === 'attended') && (
                                     <button
                                         onClick={() => onAction('complete_booking')}
                                         style={{
                                             padding: '10px 14px',
                                             borderRadius: '12px',
                                             border: 'none',
-                                            background: '#00E676',
+                                            background: 'var(--primary-paddle, #10B981)',
                                             color: 'white',
                                             fontWeight: '700',
                                             cursor: 'pointer',
-                                            fontSize: '14px'
+                                            fontSize: '14px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px'
                                         }}
                                     >
-                                        Finalizar Turno
+                                        <span>✓</span> Finalizar Turno
                                     </button>
                                 )}
                                 {booking.status !== 'cancelled' && booking.status !== 'completed' && (

@@ -48,7 +48,11 @@ const LinkBio = ({ overrideSlug = null }) => {
                 const foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
                 if (foundBusiness) {
                     if (isFreePlan(foundBusiness.subscription_plan_id || foundBusiness.subscription_plan_name)) {
-                        navigate(`/${foundBusiness.slug || businessSlug}`, { replace: true });
+                        if (overrideSlug) {
+                            navigate('/turnos', { replace: true });
+                        } else {
+                            navigate(`/${foundBusiness.slug || businessSlug}`, { replace: true });
+                        }
                         return;
                     }
                     setBusiness(foundBusiness);
@@ -61,7 +65,7 @@ const LinkBio = ({ overrideSlug = null }) => {
         };
 
         fetchBusiness();
-    }, [businessSlug]);
+    }, [businessSlug, overrideSlug]);
 
     // Theme Management
     useEffect(() => {
@@ -176,9 +180,11 @@ const LinkBio = ({ overrideSlug = null }) => {
     ];
 
     const bannerUrl = business.banner_image || business.banner || business.image || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&q=80';
-    const isDesktop = window.innerWidth > 768;
+    const locationStr = typeof business.location === 'string'
+        ? business.location
+        : (business.location?.address || business.address || '');
 
-    const totalLinksCount = mainLinks.length + (business.whatsapp ? 1 : 0) + (business.location ? 1 : 0);
+    const totalLinksCount = mainLinks.length + (business.whatsapp ? 1 : 0) + (locationStr ? 1 : 0);
     const isCompact = totalLinksCount >= 4;
 
     const bannerHeight = isCompact ? (isDesktop ? '155px' : '175px') : (isDesktop ? '180px' : '210px');
@@ -673,13 +679,13 @@ const LinkBio = ({ overrideSlug = null }) => {
                     </motion.button>
                 )}
                 {/* Location Button */}
-                {business.location && (
+                {locationStr && (
                     <motion.button
                         className="linkbio-link-btn"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.3 }}
-                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.location)}`, '_blank')}
+                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationStr)}`, '_blank')}
                         style={{
                             width: '100%',
                             padding: linkBtnPadding,
@@ -727,7 +733,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                                 textOverflow: 'ellipsis',
                                 maxWidth: '200px'
                             }}>
-                                {business.location}
+                                {locationStr}
                             </div>
                         </div>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

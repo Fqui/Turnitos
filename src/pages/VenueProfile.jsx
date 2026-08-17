@@ -53,16 +53,25 @@ export default function VenueProfile({ business: initialBusiness }) {
     useEffect(() => {
         if (initialBusiness) {
             setBusiness(initialBusiness);
+            setLoading(false);
+        } else if (!business && slug) {
+            fetchBusiness();
         }
-    }, [initialBusiness]);
+    }, [initialBusiness, slug]);
 
     useEffect(() => {
-        if (!business) {
-            fetchBusiness();
-        } else if (business.id) {
+        if (!business?.id) return;
+        fetchVenueBookings(business.id);
+
+        // 🔴 LIVE REALTIME SYNCHRONIZATION
+        const sub = serviceAdapter.subscribeToBookings(business.id, () => {
             fetchVenueBookings(business.id);
-        }
-    }, [slug, business]);
+        });
+
+        return () => {
+            if (sub && sub.unsubscribe) sub.unsubscribe();
+        };
+    }, [business?.id]);
 
     const fetchVenueBookings = async (bId) => {
         try {
@@ -135,6 +144,42 @@ export default function VenueProfile({ business: initialBusiness }) {
                 setDuration(options[0]);
             }
         }
+    }, [business]);
+
+    // Sync root CSS variables with business theme
+    useEffect(() => {
+        if (business) {
+            const root = document.documentElement;
+            const color = business.primary_color || business.button_color || business.buttonColor || '#84CC16';
+            root.style.setProperty('--primary-paddle', color);
+
+            const isDarkTheme = (business.theme || business.metadata?.theme) === 'dark';
+            root.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+
+            if (!isDarkTheme) {
+                root.style.setProperty('--bg-main', '#F5F7FA');
+                root.style.setProperty('--bg-card', '#FFFFFF');
+                root.style.setProperty('--text-primary', '#1A1A1A');
+                root.style.setProperty('--text-secondary', '#4A4A4A');
+                root.style.setProperty('--border', '#E0E0E0');
+            } else {
+                root.style.setProperty('--bg-main', '#121212');
+                root.style.setProperty('--bg-card', '#1E1E1E');
+                root.style.setProperty('--text-primary', '#FFFFFF');
+                root.style.setProperty('--text-secondary', '#A0A0A0');
+                root.style.setProperty('--border', '#333333');
+            }
+        }
+        return () => {
+            const root = document.documentElement;
+            root.removeAttribute('data-theme');
+            root.style.removeProperty('--primary-paddle');
+            root.style.removeProperty('--bg-main');
+            root.style.removeProperty('--bg-card');
+            root.style.removeProperty('--text-primary');
+            root.style.removeProperty('--text-secondary');
+            root.style.removeProperty('--border');
+        };
     }, [business]);
 
     // Calculate price based on guest count and pricing tiers
@@ -246,13 +291,17 @@ export default function VenueProfile({ business: initialBusiness }) {
         const dateStr = formatDateStr(date);
 
         // 1. Check owner blocked dates
-        const isOwnerBlocked = (business?.blocked_dates || []).some(b => {
-            const bStr = typeof b === 'string' ? b : b.date;
+        const blockedList = [
+            ...(business?.blocked_dates || []),
+            ...(business?.metadata?.blocked_dates || [])
+        ];
+        const isOwnerBlocked = blockedList.some(b => {
+            const bStr = typeof b === 'string' ? b : (b?.date || '');
             return formatDateStr(bStr) === dateStr;
         });
         if (isOwnerBlocked) return true;
 
-        // 2. Check confirmed client bookings
+        // 2. Check confirmed client bookings or blocks in bookings list
         const bookingsList = venueBookings.length > 0 ? venueBookings : (business?.bookings || []);
         const isBooked = bookingsList.some(b => {
             if (b.status === 'cancelled' || b.status === 'rejected') return false;
@@ -377,56 +426,6 @@ export default function VenueProfile({ business: initialBusiness }) {
         return icons[name] || '✨';
     };
 
-    if (loading) {
-        return (
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                minHeight: '100vh',
-                background: '#F8F9FA'
-            }}>
-                <div style={{ fontSize: '18px', color: '#64748B' }}>Cargando...</div>
-            </div>
-        );
-    }
-
-    // Sync root CSS variables with business theme
-    useEffect(() => {
-        if (business) {
-            const root = document.documentElement;
-            const color = business.primary_color || business.button_color || business.buttonColor || '#84CC16';
-            root.style.setProperty('--primary-paddle', color);
-
-            const isDarkTheme = (business.theme || business.metadata?.theme) === 'dark';
-            root.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
-
-            if (!isDarkTheme) {
-                root.style.setProperty('--bg-main', '#F5F7FA');
-                root.style.setProperty('--bg-card', '#FFFFFF');
-                root.style.setProperty('--text-primary', '#1A1A1A');
-                root.style.setProperty('--text-secondary', '#4A4A4A');
-                root.style.setProperty('--border', '#E0E0E0');
-            } else {
-                root.style.setProperty('--bg-main', '#121212');
-                root.style.setProperty('--bg-card', '#1E1E1E');
-                root.style.setProperty('--text-primary', '#FFFFFF');
-                root.style.setProperty('--text-secondary', '#A0A0A0');
-                root.style.setProperty('--border', '#333333');
-            }
-        }
-        return () => {
-            const root = document.documentElement;
-            root.removeAttribute('data-theme');
-            root.style.removeProperty('--primary-paddle');
-            root.style.removeProperty('--bg-main');
-            root.style.removeProperty('--bg-card');
-            root.style.removeProperty('--text-primary');
-            root.style.removeProperty('--text-secondary');
-            root.style.removeProperty('--border');
-        };
-    }, [business]);
-
     const primaryColor = business?.primary_color || business?.button_color || business?.buttonColor || '#84CC16';
     const isDark = (business?.theme || business?.metadata?.theme) === 'dark';
     const pageBg = isDark ? '#121212' : '#F5F7FA';
@@ -437,8 +436,8 @@ export default function VenueProfile({ business: initialBusiness }) {
     const subCardBg = isDark ? '#2A2A2A' : '#F8F9FA';
     const btnBg = isDark ? '#333333' : '#FFFFFF';
     const galleryImages = getGalleryImages();
-    const amenities = business.amenities || [];
-    const additionalServices = business.additional_services || [];
+    const amenities = business?.amenities || [];
+    const additionalServices = business?.additional_services || [];
     const daysInMonth = getDaysInMonth(currentMonth);
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 

@@ -113,6 +113,8 @@ export default function DayCell({
                 }
             }}
             style={{
+                width: '100%',
+                boxSizing: 'border-box',
                 backgroundColor: isCurrentMonth
                     ? (isBooked && config ? config.bg : 'var(--bg-card)')
                     : 'rgba(0,0,0,0.02)',

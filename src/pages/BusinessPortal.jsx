@@ -967,28 +967,50 @@ export default function BusinessPortal() {
                     return;
                 }
 
-                if (String(selectedBooking.id).startsWith('blocked-') || selectedBooking.is_blocked) {
-                    const targetDate = selectedBooking.date;
-                    const currentBusiness = businesses.find(b => b.id === selectedBusinessId);
-                    const currentBlocked = (currentBusiness?.blocked_dates || []).filter(b => {
-                        const d = typeof b === 'string' ? b : b?.date;
-                        return d !== targetDate;
-                    });
-                    await serviceAdapter.patchBusiness(selectedBusinessId, {
-                        blocked_dates: currentBlocked,
-                        metadata: {
-                            ...(currentBusiness?.metadata || {}),
-                            blocked_dates: currentBlocked
-                        }
-                    });
-                    setBusinesses(prev => prev.map(b => String(b.id) === String(selectedBusinessId) ? {
-                        ...b,
-                        blocked_dates: currentBlocked,
-                        metadata: { ...(b.metadata || {}), blocked_dates: currentBlocked }
-                    } : b));
-                } else {
-                    await serviceAdapter.deleteBooking(selectedBooking.id);
+                const targetDate = selectedBooking.date;
+                const currentBiz = businesses.find(b => String(b.id) === String(selectedBusinessId));
+
+                // 1. Remove from business blocked_dates array
+                const currentBlocked = (currentBiz?.blocked_dates || currentBiz?.metadata?.blocked_dates || []).filter(b => {
+                    const d = typeof b === 'string' ? b : b?.date;
+                    return d !== targetDate;
+                });
+
+                await serviceAdapter.patchBusiness(selectedBusinessId, {
+                    blocked_dates: currentBlocked,
+                    metadata: {
+                        ...(currentBiz?.metadata || {}),
+                        blocked_dates: currentBlocked
+                    }
+                });
+
+                setBusinesses(prev => prev.map(b => String(b.id) === String(selectedBusinessId) ? {
+                    ...b,
+                    blocked_dates: currentBlocked,
+                    metadata: { ...(b.metadata || {}), blocked_dates: currentBlocked }
+                } : b));
+
+                // 2. Delete the booking row itself if it exists
+                if (!String(selectedBooking.id).startsWith('blocked-')) {
+                    try {
+                        await serviceAdapter.deleteBooking(selectedBooking.id);
+                    } catch (e) {
+                        console.error('Error deleting booking during unblock:', e);
+                    }
                 }
+
+                // 3. Also clean up any other blocked bookings on that date
+                const otherBlocked = (bookings || []).filter(b => b.date === targetDate && (b.status === 'blocked' || b.is_blocked || String(b.customer_name).toUpperCase().includes('BLOQUEADO')));
+                for (const ob of otherBlocked) {
+                    if (ob.id && !String(ob.id).startsWith('blocked-')) {
+                        try {
+                            await serviceAdapter.deleteBooking(ob.id);
+                        } catch (e) {
+                            // ignore
+                        }
+                    }
+                }
+
                 await fetchBookings();
                 setShowBookingModal(false);
             }

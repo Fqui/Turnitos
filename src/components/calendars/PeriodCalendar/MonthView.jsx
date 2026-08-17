@@ -19,10 +19,12 @@ export default function MonthView({
     return (
         <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
+            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+            width: '100%',
             gap: '6px',
             maxWidth: '1200px',
-            margin: '0 auto'
+            margin: '0 auto',
+            boxSizing: 'border-box'
         }}>
             {/* Day Names Header */}
             {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (

@@ -92,7 +92,8 @@ export default function PeriodCalendar({
                     padding: isMobile ? '10px 8px 16px 8px' : '14px 18px',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'center'
+                    width: '100%',
+                    boxSizing: 'border-box'
                 }}>
                     {viewMode === 'month' && (
                         <MonthView
