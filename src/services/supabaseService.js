@@ -70,15 +70,18 @@ class SupabaseService {
         }
 
         // Extract blocked_dates, pricing_tiers, and duration_discounts from metadata if present
-        if (!business.blocked_dates && business.metadata?.blocked_dates) {
-            business.blocked_dates = business.metadata.blocked_dates;
-        }
-        if (!business.pricing_tiers && business.metadata?.pricing_tiers) {
-            business.pricing_tiers = business.metadata.pricing_tiers;
-        }
-        if (!business.duration_discounts && business.metadata?.duration_discounts) {
-            business.duration_discounts = business.metadata.duration_discounts;
-        }
+        const directBlocked = Array.isArray(business.blocked_dates) ? business.blocked_dates : [];
+        const metaBlocked = Array.isArray(business.metadata?.blocked_dates) ? business.metadata.blocked_dates : [];
+        business.blocked_dates = directBlocked.length > 0 ? directBlocked : metaBlocked;
+
+        const directTiers = Array.isArray(business.pricing_tiers) ? business.pricing_tiers : [];
+        const metaTiers = Array.isArray(business.metadata?.pricing_tiers) ? business.metadata.pricing_tiers : [];
+        business.pricing_tiers = directTiers.length > 0 ? directTiers : metaTiers;
+
+        const directDiscounts = Array.isArray(business.duration_discounts) ? business.duration_discounts : [];
+        const metaDiscounts = Array.isArray(business.metadata?.duration_discounts) ? business.metadata.duration_discounts : [];
+        business.duration_discounts = directDiscounts.length > 0 ? directDiscounts : metaDiscounts;
+
         if (!business.whatsapp_templates && business.metadata?.whatsapp_templates) {
             business.whatsapp_templates = business.metadata.whatsapp_templates;
         }

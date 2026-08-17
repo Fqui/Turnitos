@@ -824,6 +824,24 @@ export default function BusinessPortal() {
                     blocked_dates: newBlocked,
                     metadata: { ...(b.metadata || {}), blocked_dates: newBlocked }
                 } : b));
+
+                // Also persist in bookings table so Realtime immediately notifies all public visitors
+                try {
+                    await serviceAdapter.createBooking({
+                        business_id: selectedBusinessId,
+                        businessId: selectedBusinessId,
+                        date: dateStr,
+                        time: '00:00',
+                        customer_name: 'BLOQUEADO POR ADMIN',
+                        customerName: 'BLOQUEADO POR ADMIN',
+                        status: 'blocked',
+                        is_blocked: true,
+                        notes: reason || 'Bloqueado por el negocio'
+                    });
+                    await fetchBookings();
+                } catch (e) {
+                    console.warn('Booking record already exists or could not be created:', e);
+                }
             }
         } catch (error) {
             console.error('Error blocking date:', error);
