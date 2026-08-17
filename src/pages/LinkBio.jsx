@@ -180,6 +180,7 @@ const LinkBio = ({ overrideSlug = null }) => {
     ];
 
     const bannerUrl = business.banner_image || business.banner || business.image || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&q=80';
+    const isDesktop = typeof window !== 'undefined' ? window.innerWidth > 768 : false;
     const locationStr = typeof business.location === 'string'
         ? business.location
         : (business.location?.address || business.address || '');
