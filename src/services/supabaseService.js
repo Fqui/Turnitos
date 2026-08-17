@@ -1879,6 +1879,24 @@ class SupabaseService {
             .subscribe();
     }
 
+    subscribeToBusiness(businessId, callback) {
+        return supabase
+            .channel(`business-live-${businessId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'businesses',
+                    filter: `id=eq.${businessId}`
+                },
+                (payload) => {
+                    callback(payload);
+                }
+            )
+            .subscribe();
+    }
+
     // --- Promotions ---
 
     async getPromotions() {

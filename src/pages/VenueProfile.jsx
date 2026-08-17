@@ -50,6 +50,33 @@ export default function VenueProfile({ business: initialBusiness }) {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    const refreshDataSilently = async (bId) => {
+        if (!bId) return;
+        try {
+            // 1. Refresh bookings list
+            const res = await serviceAdapter.getBookings(bId);
+            const list = Array.isArray(res) ? res : (res && Array.isArray(res.bookings) ? res.bookings : []);
+            setVenueBookings(list);
+
+            // 2. Refresh business details (including blocked_dates) silently without setting loading state
+            const freshBiz = await serviceAdapter.getBusinessById(bId);
+            if (freshBiz) {
+                setBusiness(prev => ({
+                    ...(prev || {}),
+                    ...freshBiz,
+                    blocked_dates: freshBiz.blocked_dates || freshBiz.metadata?.blocked_dates || [],
+                    metadata: {
+                        ...(prev?.metadata || {}),
+                        ...(freshBiz.metadata || {}),
+                        blocked_dates: freshBiz.blocked_dates || freshBiz.metadata?.blocked_dates || []
+                    }
+                }));
+            }
+        } catch (err) {
+            console.error('Silent refresh error in VenueProfile:', err);
+        }
+    };
+
     useEffect(() => {
         if (initialBusiness) {
             setBusiness(initialBusiness);
@@ -61,27 +88,32 @@ export default function VenueProfile({ business: initialBusiness }) {
 
     useEffect(() => {
         if (!business?.id) return;
-        fetchVenueBookings(business.id);
+        const bId = business.id;
+        
+        // Initial silent fetch
+        refreshDataSilently(bId);
 
-        // 🔴 LIVE REALTIME SYNCHRONIZATION
-        const sub = serviceAdapter.subscribeToBookings(business.id, () => {
-            fetchVenueBookings(business.id);
+        // 🔴 LIVE REALTIME SYNCHRONIZATION: Bookings
+        const bookingsSub = serviceAdapter.subscribeToBookings(bId, () => {
+            refreshDataSilently(bId);
         });
 
+        // 🔴 LIVE REALTIME SYNCHRONIZATION: Business Settings / Blocked Dates
+        const bizSub = serviceAdapter.subscribeToBusiness(bId, () => {
+            refreshDataSilently(bId);
+        });
+
+        // 🔄 Polling fallback every 5 seconds in background
+        const interval = setInterval(() => {
+            refreshDataSilently(bId);
+        }, 5000);
+
         return () => {
-            if (sub && sub.unsubscribe) sub.unsubscribe();
+            if (bookingsSub && bookingsSub.unsubscribe) bookingsSub.unsubscribe();
+            if (bizSub && bizSub.unsubscribe) bizSub.unsubscribe();
+            clearInterval(interval);
         };
     }, [business?.id]);
-
-    const fetchVenueBookings = async (bId) => {
-        try {
-            const res = await serviceAdapter.getBookings(bId);
-            const list = Array.isArray(res) ? res : (res && Array.isArray(res.bookings) ? res.bookings : []);
-            setVenueBookings(list);
-        } catch (err) {
-            console.error('Error fetching venue bookings:', err);
-        }
-    };
 
     const fetchBusiness = async () => {
         try {

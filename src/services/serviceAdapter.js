@@ -186,6 +186,11 @@ class ServiceAdapter {
         return this.service.subscribeToBookings(businessId, callback);
     }
 
+    subscribeToBusiness(businessId, callback) {
+        if (this.isDemoMode || !this.service.subscribeToBusiness) return { unsubscribe: () => {} };
+        return this.service.subscribeToBusiness(businessId, callback);
+    }
+
     // Utility method to check if in demo mode
     isDemo() {
         return this.isDemoMode;

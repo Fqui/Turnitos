@@ -30,6 +30,13 @@ class MockService {
         };
     }
 
+    subscribeToBusiness(businessId, callback) {
+        // No-op for mock service
+        return {
+            unsubscribe: () => { }
+        };
+    }
+
     // --- Businesses ---
 
     async getBusinesses() {
