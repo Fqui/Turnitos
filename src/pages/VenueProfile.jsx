@@ -888,21 +888,18 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                         style={{
                                                             display: 'flex',
                                                             alignItems: 'center',
-                                                            gap: '10px',
-                                                            padding: windowWidth < 768 ? '10px 12px' : '12px 16px',
+                                                            gap: windowWidth < 768 ? '8px' : '10px',
+                                                            padding: windowWidth < 768 ? '8px 10px' : '12px 16px',
                                                             background: subCardBg,
                                                             borderRadius: '14px',
                                                             border: `1px solid ${borderColor}`,
-                                                            fontSize: windowWidth < 768 ? '12px' : '13px',
-                                                            fontWeight: '600',
-                                                            color: textColor,
-                                                            minHeight: '44px',
+                                                            minHeight: windowWidth < 768 ? '48px' : '52px',
                                                             boxSizing: 'border-box'
                                                         }}
                                                     >
                                                         <div style={{
-                                                            width: '28px',
-                                                            height: '28px',
+                                                            width: windowWidth < 768 ? '26px' : '30px',
+                                                            height: windowWidth < 768 ? '26px' : '30px',
                                                             borderRadius: '8px',
                                                             background: 'rgba(132, 204, 22, 0.12)',
                                                             display: 'flex',
@@ -911,12 +908,14 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                             color: primaryColor,
                                                             flexShrink: 0
                                                         }}>
-                                                            <AmenityIcon icon={icon} size={16} />
+                                                            <AmenityIcon icon={icon} size={windowWidth < 768 ? 15 : 17} />
                                                         </div>
                                                         <span style={{
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap',
+                                                            fontSize: windowWidth < 768 ? '11.5px' : '13px',
+                                                            lineHeight: '1.25',
+                                                            fontWeight: '600',
+                                                            color: textColor,
+                                                            wordBreak: 'break-word',
                                                             flex: 1
                                                         }}>
                                                             {name}
