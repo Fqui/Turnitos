@@ -78,9 +78,17 @@ class SupabaseService {
         const metaTiers = Array.isArray(business.metadata?.pricing_tiers) ? business.metadata.pricing_tiers : [];
         business.pricing_tiers = directTiers.length > 0 ? directTiers : metaTiers;
 
-        const directDiscounts = Array.isArray(business.duration_discounts) ? business.duration_discounts : [];
-        const metaDiscounts = Array.isArray(business.metadata?.duration_discounts) ? business.metadata.duration_discounts : [];
-        business.duration_discounts = directDiscounts.length > 0 ? directDiscounts : metaDiscounts;
+        const parseDiscounts = (val) => {
+            if (val && typeof val === 'object' && !Array.isArray(val)) return val;
+            if (typeof val === 'string') {
+                try {
+                    const parsed = JSON.parse(val);
+                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+                } catch (e) {}
+            }
+            return null;
+        };
+        business.duration_discounts = parseDiscounts(business.duration_discounts) || parseDiscounts(business.metadata?.duration_discounts) || {};
 
         if (!business.whatsapp_templates && business.metadata?.whatsapp_templates) {
             business.whatsapp_templates = business.metadata.whatsapp_templates;
@@ -1589,14 +1597,18 @@ class SupabaseService {
 
         // 2. Resolve Business Plan
         let businessPlanId = bookingData.subscriptionPlanId || bookingData.subscription_plan_id;
-        if (!businessPlanId && targetBusinessId) {
+        let targetBusinessType = null;
+        if (targetBusinessId) {
             try {
                 const { data: bData } = await supabase
                     .from('businesses')
-                    .select('subscription_plan_id')
+                    .select('subscription_plan_id, type')
                     .eq('id', targetBusinessId)
                     .single();
-                if (bData) businessPlanId = bData.subscription_plan_id;
+                if (bData) {
+                    if (!businessPlanId) businessPlanId = bData.subscription_plan_id;
+                    targetBusinessType = bData.type;
+                }
             } catch (e) {
                 // Ignore fallback error
             }
@@ -1634,7 +1646,8 @@ class SupabaseService {
         const commissionAmount = calculateBookingCommission({
             planId: businessPlanId,
             price: bookingPrice,
-            isMarketplace: bookingSource === 'marketplace'
+            isMarketplace: bookingSource === 'marketplace',
+            businessType: targetBusinessType
         });
 
         const safeMetadata = {
@@ -1956,7 +1969,31 @@ class SupabaseService {
             .order('name', { ascending: true });
 
         if (error) throw error;
-        return this._processBusinessData(data);
+
+        // Clean up / filter out administrative blocks accidentally inserted as customers
+        const validCustomers = (data || []).filter(c => {
+            const name = (c.name || '').toUpperCase();
+            return !name.includes('BLOQUEADO') && !name.includes('BLOQUEO') && name.trim() !== '';
+        });
+
+        // Also asynchronously purge any dummy blocked entries from the DB so table remains clean
+        const blockedIds = (data || [])
+            .filter(c => {
+                const name = (c.name || '').toUpperCase();
+                return name.includes('BLOQUEADO') || name.includes('BLOQUEO');
+            })
+            .map(c => c.id);
+
+        if (blockedIds.length > 0) {
+            supabase
+                .from('customers')
+                .delete()
+                .in('id', blockedIds)
+                .then(() => {})
+                .catch(() => {});
+        }
+
+        return this._processBusinessData(validCustomers);
     }
 
     async updateCustomer(customerId, customerData) {

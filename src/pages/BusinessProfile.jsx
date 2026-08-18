@@ -18,6 +18,7 @@ import SpecialistsShowcase from '../components/SpecialistsShowcase';
 import BookingSuccessModal from '../components/BookingSuccessModal';
 import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import SEOHead from '../components/SEOHead';
+import AmenityIcon from '../components/common/AmenityIcon';
 import { formatDisplayDate } from '../utils/dateUtils';
 
 // Fix for default marker icon
@@ -1111,7 +1112,19 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                             }}
                                         >
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <span style={{ fontSize: '28px' }}>{service.icon || '🎯'}</span>
+                                                <div style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '10px',
+                                                    background: 'rgba(132, 204, 22, 0.1)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: primaryColor,
+                                                    flexShrink: 0
+                                                }}>
+                                                    <AmenityIcon icon={service.icon || 'Sparkles'} preferEmoji size={24} />
+                                                </div>
                                                 <div>
                                                     <div style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '15px' }}>
                                                         {service.name}
@@ -2016,7 +2029,19 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                             }}
                                         >
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <span style={{ fontSize: '24px' }}>{service.icon || '✨'}</span>
+                                                <div style={{
+                                                    width: '36px',
+                                                    height: '36px',
+                                                    borderRadius: '8px',
+                                                    background: 'rgba(132, 204, 22, 0.1)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: primaryColor,
+                                                    flexShrink: 0
+                                                }}>
+                                                    <AmenityIcon icon={service.icon || 'Sparkles'} preferEmoji size={22} />
+                                                </div>
                                                 <div>
                                                     <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{service.name}</div>
                                                     <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>+ ${service.price}</div>

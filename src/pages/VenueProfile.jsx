@@ -165,9 +165,11 @@ export default function VenueProfile({ business: initialBusiness }) {
     };
 
     const maxCapacity = Number(business?.capacity_limit || business?.metadata?.capacity_limit || (business?.max_capacity && business.max_capacity > 1 ? business.max_capacity : null) || 100);
+    const hasInitializedRef = useRef(false);
 
     useEffect(() => {
-        if (business) {
+        if (business?.id && !hasInitializedRef.current) {
+            hasInitializedRef.current = true;
             const maxCap = Number(business.capacity_limit || business.metadata?.capacity_limit || (business.max_capacity && business.max_capacity > 1 ? business.max_capacity : null) || 100);
             const halfCap = Math.max(5, Math.min(maxCap, Math.round((maxCap / 2) / 5) * 5));
             setGuestCount(halfCap);
@@ -177,7 +179,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                 setDuration(options[0]);
             }
         }
-    }, [business]);
+    }, [business?.id]);
 
     // Sync root CSS variables with business theme
     useEffect(() => {
@@ -472,7 +474,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const btnBg = isDark ? '#333333' : '#FFFFFF';
     const galleryImages = getGalleryImages();
     const amenities = business?.amenities || [];
-    const additionalServices = business?.additional_services || [];
+    const additionalServices = (business?.additional_services || []).filter(s => s.enabled !== false);
     const daysInMonth = getDaysInMonth(currentMonth);
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 
@@ -950,7 +952,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                 <span>
                                                     {showAllAmenities
                                                         ? '▲ Mostrar menos'
-                                                        : `▼ Ver todas las comodidades (${amenities.length})`}
+                                                        : '▼ Ver todas las comodidades'}
                                                 </span>
                                             </button>
                                         )}
@@ -1026,11 +1028,11 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                fontSize: '22px',
+                                                color: primaryColor,
                                                 flexShrink: 0,
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                                             }}>
-                                                {service.icon || '✨'}
+                                                <AmenityIcon icon={service.icon || 'Sparkles'} preferEmoji size={24} />
                                             </div>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{ fontSize: '15px', fontWeight: '700', color: textColor, lineHeight: '1.3' }}>
@@ -1471,7 +1473,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                 }}>
                                                     <motion.button
                                                         whileTap={{ scale: 0.9 }}
-                                                        onClick={() => setGuestCount(Math.max(5, guestCount - 5))}
+                                                        onClick={() => setGuestCount(prev => Math.max(5, (Number(prev) || 30) - 5))}
                                                         disabled={guestCount <= 5}
                                                         style={{
                                                             background: btnBg,
@@ -1505,7 +1507,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                     </div>
                                                     <motion.button
                                                         whileTap={{ scale: 0.9 }}
-                                                        onClick={() => setGuestCount(Math.min(maxCapacity, guestCount + 5))}
+                                                        onClick={() => setGuestCount(prev => Math.min(maxCapacity, (Number(prev) || 30) + 5))}
                                                         disabled={guestCount >= maxCapacity}
                                                         style={{
                                                             background: btnBg,
@@ -1670,7 +1672,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                                     color: isSelected ? 'white' : secondaryTextColor,
                                                                     transition: 'all 0.2s ease'
                                                                 }}>
-                                                                    {isSelected ? '✓' : service.icon || '✨'}
+                                                                    {isSelected ? '✓' : <AmenityIcon icon={service.icon || 'Sparkles'} preferEmoji size={22} />}
                                                                 </div>
                                                                 <div>
                                                                     <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>
@@ -2045,7 +2047,7 @@ function BookingPanel({
                         padding: '12px'
                     }}>
                         <button
-                            onClick={() => setGuestCount(Math.max(5, guestCount - 5))}
+                            onClick={() => setGuestCount(prev => Math.max(5, (Number(prev) || 30) - 5))}
                             disabled={guestCount <= 5}
                             style={{
                                 background: 'white',
@@ -2069,7 +2071,7 @@ function BookingPanel({
                             <div style={{ fontSize: '11px', color: '#64748B' }}>personas</div>
                         </div>
                         <button
-                            onClick={() => setGuestCount(Math.min(maxCapacity, guestCount + 5))}
+                            onClick={() => setGuestCount(prev => Math.min(maxCapacity, (Number(prev) || 30) + 5))}
                             disabled={guestCount >= maxCapacity}
                             style={{
                                 background: 'white',

@@ -503,26 +503,44 @@ export default function BusinessPortal() {
         }
     };
 
-    const handleCreateBooking = async (arg1, arg2, arg3, arg4) => {
-        let date, time, passedResource;
+    const handleCreateBooking = (arg1, arg2, arg3, arg4) => {
+        let date = null;
+        let time = '';
+        let passedResource = null;
 
-        // Determine if called with Event (Calendar: e, date, time) or Direct (date, time) or Button (e)
+        const isRental = currentBusiness?.type === 'venue' ||
+            currentBusiness?.type === 'rental' ||
+            currentBusiness?.type === 'alquiler' ||
+            currentBusiness?.is_rental ||
+            (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
+            (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
+            (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
+            (currentBusiness?.category || '').toLowerCase().includes('salon') ||
+            (currentBusiness?.category || '').toLowerCase().includes('salón') ||
+            (currentBusiness?.name || '').toLowerCase().includes('quincho') ||
+            (currentBusiness?.name || '').toLowerCase().includes('salon') ||
+            (currentBusiness?.name || '').toLowerCase().includes('salón');
+
         if (arg1 && (arg1.stopPropagation || arg1.preventDefault)) {
             if (arg2 instanceof Date) {
                 date = arg2;
-                time = arg3;
+                time = arg3 || (isRental ? '00:00' : '');
                 passedResource = arg4;
             } else {
                 const dateStr = listFilters.date || new Date().toISOString().split('T')[0];
                 const [y, m, d] = dateStr.split('-');
                 date = new Date(y, m - 1, d);
-                const now = new Date();
-                const nextHour = now.getHours() + 1;
-                time = `${String(nextHour).padStart(2, '0')}:00`;
+                if (isRental) {
+                    time = '00:00';
+                } else {
+                    const now = new Date();
+                    const nextHour = now.getHours() + 1;
+                    time = `${String(nextHour).padStart(2, '0')}:00`;
+                }
             }
         } else {
             date = arg1;
-            time = arg2;
+            time = arg2 || (isRental ? '00:00' : '');
             passedResource = arg3;
         }
 
@@ -581,18 +599,13 @@ export default function BusinessPortal() {
             }
         }
 
-        const isRental = currentBusiness?.type === 'venue' ||
-            currentBusiness?.type === 'alquiler' ||
-            (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-            (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler');
-
         const defaultDurationMinutes = isRental
             ? 240
             : Number(currentBusiness?.slot_duration || currentBusiness?.court_duration || 60);
 
         setNewBookingData({
             date: dateStr,
-            time: time,
+            time: time || (isRental ? '00:00' : '08:00'),
             customerName: '',
             customerPhone: '',
             customerEmail: '',
@@ -611,6 +624,47 @@ export default function BusinessPortal() {
 
     const handleSubmitNewBooking = async (e) => {
         e.preventDefault();
+
+        if (!newBookingData.date) {
+            alert('Por favor seleccione una fecha válida para la reserva');
+            return;
+        }
+
+        const isRentalBiz = currentBusiness?.type === 'venue' ||
+            currentBusiness?.type === 'rental' ||
+            currentBusiness?.type === 'alquiler' ||
+            currentBusiness?.is_rental ||
+            (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
+            (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
+            (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
+            (currentBusiness?.category || '').toLowerCase().includes('salon') ||
+            (currentBusiness?.category || '').toLowerCase().includes('salón') ||
+            (currentBusiness?.name || '').toLowerCase().includes('quincho') ||
+            (currentBusiness?.name || '').toLowerCase().includes('salon') ||
+            (currentBusiness?.name || '').toLowerCase().includes('salón');
+
+        // Check if date is already booked for rental
+        if (isRentalBiz) {
+            const hasConflict = bookings.some(b => {
+                if (b.status === 'cancelled') return false;
+                let bDate = b.date;
+                if (bDate && bDate.includes('/')) {
+                    const [d, m, y] = bDate.split('/');
+                    bDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                }
+                if (bDate !== newBookingData.date) return false;
+                const targetRes = newBookingData.courtId || newBookingData.serviceId;
+                if (targetRes && (b.court_id || b.service_id)) {
+                    return String(b.court_id || b.service_id) === String(targetRes);
+                }
+                return true;
+            });
+
+            if (hasConflict) {
+                alert(`La fecha seleccionada (${newBookingData.date}) ya se encuentra reservada u ocupada.`);
+                return;
+            }
+        }
 
         if (!newBookingData.customerName || !newBookingData.customerPhone) {
             alert('Por favor complete nombre y teléfono del cliente');
@@ -1142,7 +1196,28 @@ export default function BusinessPortal() {
         return <div style={{ fontWeight: '600', color: 'var(--text-secondary)', fontSize: '13px' }}>🗓️ Jornada completa</div>;
     };
 
+    const isBookingBlocked = (booking) => {
+        return booking?.status === 'blocked' ||
+            booking?.is_blocked ||
+            String(booking?.customer_name || booking?.customerName || '').toUpperCase().includes('BLOQUEADO');
+    };
+
     const getBookingRentalDetails = (booking) => {
+        if (isBookingBlocked(booking)) {
+            const reason = booking.notes || booking.metadata?.notes || 'Bloqueo administrativo';
+            const resource = booking.services?.name || booking.courts?.name || 'Espacio completo';
+            return (
+                <div style={{ whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: '700', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span>🔒</span> <span>{resource}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                        {reason}
+                    </div>
+                </div>
+            );
+        }
+
         const guests = booking.guest_count || booking.guestCount || booking.metadata?.guest_count || booking.metadata?.guestCount;
         
         let services = [];
@@ -1187,6 +1262,14 @@ export default function BusinessPortal() {
     };
 
     const getBookingFinancials = (booking) => {
+        if (isBookingBlocked(booking)) {
+            return (
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
+                    —
+                </div>
+            );
+        }
+
         const total = Number(booking.price || booking.total_price || booking.totalPrice || 0);
         const deposit = Number(booking.deposit_amount || booking.depositAmount || booking.metadata?.deposit_amount || booking.metadata?.depositAmount || 0);
 
@@ -1988,76 +2071,93 @@ export default function BusinessPortal() {
                                                     const startIndex = (currentPage - 1) * itemsPerPage;
                                                     const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
 
-                                                    return paginated.map((booking, index) => (
-                                                        <div
-                                                            key={index}
-                                                            onClick={() => handleBookingClick(booking)}
-                                                            style={{
-                                                                background: 'var(--bg-card)',
-                                                                padding: '16px',
-                                                                borderRadius: '16px',
-                                                                border: '1px solid var(--border)',
-                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                                                <div>
-                                                                    {isRentalBusiness ? (
-                                                                        <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                                            {formatDisplayDate(booking.date)}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <div>
-                                                                            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{booking.time} hs</div>
-                                                                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                    return paginated.map((booking, index) => {
+                                                        const isBlocked = isBookingBlocked(booking);
+                                                        return (
+                                                            <div
+                                                                key={index}
+                                                                onClick={() => handleBookingClick(booking)}
+                                                                style={{
+                                                                    background: isBlocked ? 'rgba(100, 116, 139, 0.05)' : 'var(--bg-card)',
+                                                                    padding: '16px',
+                                                                    borderRadius: '16px',
+                                                                    border: isBlocked ? '1px dashed rgba(100, 116, 139, 0.3)' : '1px solid var(--border)',
+                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                                                    <div>
+                                                                        {isRentalBusiness ? (
+                                                                            <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
                                                                                 {formatDisplayDate(booking.date)}
+                                                                            </span>
+                                                                        ) : (
+                                                                            <div>
+                                                                                <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{booking.time} hs</div>
+                                                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                                    {formatDisplayDate(booking.date)}
+                                                                                </div>
                                                                             </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <span style={{
+                                                                        padding: '4px 10px',
+                                                                        borderRadius: 'var(--radius-full)',
+                                                                        fontSize: '10px',
+                                                                        fontWeight: '800',
+                                                                        letterSpacing: '0.03em',
+                                                                        background: isBlocked ? 'rgba(100, 116, 139, 0.15)' : getStatusStyle(booking.status).bg,
+                                                                        color: isBlocked ? '#94A3B8' : getStatusStyle(booking.status).color,
+                                                                        border: isBlocked ? '1px solid rgba(100, 116, 139, 0.25)' : 'none'
+                                                                    }}>
+                                                                        {isBlocked ? '🚫 BLOQUEADO' : getStatusLabel(booking.status).toUpperCase()}
+                                                                    </span>
+                                                                </div>
+
+                                                                {isBlocked ? (
+                                                                    <div style={{ marginBottom: '10px' }}>
+                                                                        <div style={{ fontWeight: '700', color: '#94A3B8', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                            <span>🚫</span> Bloqueo de Disponibilidad
+                                                                        </div>
+                                                                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                            {booking.notes || booking.metadata?.notes || 'Bloqueado por el negocio'}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <div style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '3px', fontSize: '15px' }}>
+                                                                            {booking.customer_name || booking.customerName || '-'}
+                                                                        </div>
+                                                                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                                                                            {booking.customer_phone || booking.customerPhone || ''}
+                                                                        </div>
+                                                                    </>
+                                                                )}
+
+                                                                <div style={{ background: 'var(--bg-main)', padding: '10px 12px', borderRadius: '12px', marginBottom: '10px', border: '1px solid var(--border)' }}>
+                                                                    {isRentalBusiness ? (
+                                                                        getBookingRentalDetails(booking)
+                                                                    ) : (
+                                                                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                                            {booking.services?.name || booking.courts?.name || booking.service || '-'}
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                                <span style={{
-                                                                    padding: '4px 10px',
-                                                                    borderRadius: 'var(--radius-full)',
-                                                                    fontSize: '10px',
-                                                                    fontWeight: '700',
-                                                                    letterSpacing: '0.03em',
-                                                                    background: getStatusStyle(booking.status).bg,
-                                                                    color: getStatusStyle(booking.status).color
-                                                                }}>
-                                                                    {getStatusLabel(booking.status).toUpperCase()}
-                                                                </span>
-                                                            </div>
 
-                                                            <div style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '3px', fontSize: '15px' }}>
-                                                                {booking.customer_name || booking.customerName || '-'}
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', paddingTop: '4px' }}>
+                                                                    {isRentalBusiness ? (
+                                                                        getBookingFinancials(booking)
+                                                                    ) : (
+                                                                        <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                                            {booking.price ? `$${Number(booking.price).toLocaleString('es-AR')}` : ''}
+                                                                        </span>
+                                                                    )}
+                                                                    <span style={{ color: 'var(--primary-paddle, #84CC16)', fontWeight: '700', fontSize: '12px' }}>Ver detalles →</span>
+                                                                </div>
                                                             </div>
-                                                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
-                                                                {booking.customer_phone || booking.customerPhone || ''}
-                                                            </div>
-
-                                                            <div style={{ background: 'var(--bg-main)', padding: '10px 12px', borderRadius: '12px', marginBottom: '10px', border: '1px solid var(--border)' }}>
-                                                                {isRentalBusiness ? (
-                                                                    getBookingRentalDetails(booking)
-                                                                ) : (
-                                                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                                                        {booking.services?.name || booking.courts?.name || booking.service || '-'}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', paddingTop: '4px' }}>
-                                                                {isRentalBusiness ? (
-                                                                    getBookingFinancials(booking)
-                                                                ) : (
-                                                                    <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                                        {booking.price ? `$${Number(booking.price).toLocaleString('es-AR')}` : ''}
-                                                                    </span>
-                                                                )}
-                                                                <span style={{ color: 'var(--primary-paddle, #84CC16)', fontWeight: '700', fontSize: '12px' }}>Ver detalles →</span>
-                                                            </div>
-                                                        </div>
-                                                    ))
+                                                        );
+                                                    })
                                                 })()}
                                             </div>
                                         ) : (
@@ -2066,9 +2166,9 @@ export default function BusinessPortal() {
                                                     <tr>
                                                         <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Fecha</th>
                                                         {!isRentalBusiness && (
-                                                            <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Hora</th>
+                                                             <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Hora</th>
                                                         )}
-                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Cliente</th>
+                                                        <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>Cliente / Estado</th>
                                                         <th style={{ padding: '16px', textAlign: 'left', color: 'var(--text-secondary)' }}>
                                                             {isRentalBusiness ? 'Detalle del Alquiler' : 'Servicio'}
                                                         </th>
@@ -2108,70 +2208,94 @@ export default function BusinessPortal() {
                                                         const startIndex = (currentPage - 1) * itemsPerPage;
                                                         const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
 
-                                                        return paginated.map((booking, index) => (
-                                                            <tr key={index} style={{ borderTop: '1px solid var(--border)' }}>
-                                                                <td style={{ padding: '16px', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                                                                    {formatDisplayDate(booking.date)}
-                                                                </td>
-                                                                {!isRentalBusiness && (
-                                                                    <td style={{ padding: '16px', fontWeight: 'bold' }}>{booking.time}</td>
-                                                                )}
-                                                                <td style={{ padding: '16px' }}>
-                                                                    <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '15px' }}>
-                                                                        {booking.customer_name || booking.customerName || '-'}
-                                                                    </div>
-                                                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                                                        {booking.customer_phone || booking.customerPhone || '-'}
-                                                                    </div>
-                                                                </td>
-                                                                <td style={{ padding: '16px' }}>
-                                                                    {isRentalBusiness ? (
-                                                                        getBookingRentalDetails(booking)
-                                                                    ) : (
-                                                                        booking.services?.name || booking.courts?.name || booking.service || '-'
-                                                                    )}
-                                                                </td>
-                                                                {isRentalBusiness && (
-                                                                    <td style={{ padding: '16px' }}>
-                                                                        {getBookingFinancials(booking)}
+                                                        return paginated.map((booking, index) => {
+                                                            const isBlocked = isBookingBlocked(booking);
+                                                            return (
+                                                                <tr key={index} style={{
+                                                                    borderTop: '1px solid var(--border)',
+                                                                    background: isBlocked ? 'rgba(100, 116, 139, 0.04)' : 'transparent'
+                                                                }}>
+                                                                    <td style={{ padding: '16px', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                                                                        {formatDisplayDate(booking.date)}
                                                                     </td>
-                                                                )}
-                                                                <td style={{ padding: '16px' }}>
-                                                                    <span style={{
-                                                                        padding: '4px 10px',
-                                                                        borderRadius: 'var(--radius-full)',
-                                                                        fontSize: '10px',
-                                                                        fontWeight: '700',
-                                                                        letterSpacing: '0.03em',
-                                                                        background: getStatusStyle(booking.status).bg,
-                                                                        color: getStatusStyle(booking.status).color
-                                                                    }}>
-                                                                        {getStatusLabel(booking.status).toUpperCase()}
-                                                                    </span>
-                                                                </td>
-                                                                <td style={{ padding: '16px', textAlign: 'right', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                                                    <button
-                                                                        onClick={() => handleBookingClick(booking)}
-                                                                        style={{
-                                                                            padding: '6px 10px',
-                                                                            borderRadius: '8px',
-                                                                            border: '1px solid var(--border)',
-                                                                            background: 'var(--bg-main)',
-                                                                            color: 'var(--text-primary)',
-                                                                            cursor: 'pointer',
-                                                                            fontSize: '16px',
-                                                                            display: 'flex',
+                                                                    {!isRentalBusiness && (
+                                                                        <td style={{ padding: '16px', fontWeight: 'bold' }}>{booking.time}</td>
+                                                                    )}
+                                                                    <td style={{ padding: '16px' }}>
+                                                                        {isBlocked ? (
+                                                                            <div style={{ whiteSpace: 'nowrap' }}>
+                                                                                <div style={{ fontWeight: '700', color: '#94A3B8', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                    <span>🚫</span> <span>Horario Bloqueado</span>
+                                                                                </div>
+                                                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                                    Admin / No disponible
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div style={{ whiteSpace: 'nowrap' }}>
+                                                                                <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '15px' }}>
+                                                                                    {booking.customer_name || booking.customerName || '-'}
+                                                                                </div>
+                                                                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                                                                    {booking.customer_phone || booking.customerPhone || '-'}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </td>
+                                                                    <td style={{ padding: '16px' }}>
+                                                                        {isRentalBusiness ? (
+                                                                            getBookingRentalDetails(booking)
+                                                                        ) : (
+                                                                            booking.services?.name || booking.courts?.name || booking.service || '-'
+                                                                        )}
+                                                                    </td>
+                                                                    {isRentalBusiness && (
+                                                                        <td style={{ padding: '16px' }}>
+                                                                            {getBookingFinancials(booking)}
+                                                                        </td>
+                                                                    )}
+                                                                    <td style={{ padding: '16px', whiteSpace: 'nowrap' }}>
+                                                                        <span style={{
+                                                                            padding: '4px 10px',
+                                                                            borderRadius: 'var(--radius-full)',
+                                                                            fontSize: '10px',
+                                                                            fontWeight: '800',
+                                                                            letterSpacing: '0.03em',
+                                                                            background: isBlocked ? 'rgba(100, 116, 139, 0.15)' : getStatusStyle(booking.status).bg,
+                                                                            color: isBlocked ? '#94A3B8' : getStatusStyle(booking.status).color,
+                                                                            border: isBlocked ? '1px solid rgba(100, 116, 139, 0.25)' : 'none',
+                                                                            display: 'inline-flex',
                                                                             alignItems: 'center',
-                                                                            justifyContent: 'center',
-                                                                            transition: 'all 0.2s'
-                                                                        }}
-                                                                        title="Ver detalles"
-                                                                    >
-                                                                        👁️
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        ));
+                                                                            gap: '4px',
+                                                                            whiteSpace: 'nowrap'
+                                                                        }}>
+                                                                            {isBlocked ? '🚫 BLOQUEADO' : getStatusLabel(booking.status).toUpperCase()}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td style={{ padding: '16px', textAlign: 'right', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                                        <button
+                                                                            onClick={() => handleBookingClick(booking)}
+                                                                            style={{
+                                                                                padding: '6px 10px',
+                                                                                borderRadius: '8px',
+                                                                                border: '1px solid var(--border)',
+                                                                                background: 'var(--bg-main)',
+                                                                                color: 'var(--text-primary)',
+                                                                                cursor: 'pointer',
+                                                                                fontSize: '16px',
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center',
+                                                                                transition: 'all 0.2s'
+                                                                            }}
+                                                                            title="Ver detalles"
+                                                                        >
+                                                                            👁️
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        });
                                                     })()}
                                                 </tbody>
                                             </table>

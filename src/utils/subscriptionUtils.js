@@ -110,8 +110,9 @@ export const PLANS_CATALOG = [
         has_linkbio: true,
         has_store: true,
         direct_commission_fixed: 0,
-        marketplace_commission_fixed: 500,
-        description: '$15.000 / mes fijo. Todo incluido para espacios y quinchos.'
+        marketplace_commission_fixed: null,
+        marketplace_commission_percent: 0.03,
+        description: '$15.000 / mes fijo. Todo incluido para espacios y quinchos. 3% de comisión por reserva desde TurnitosLR.'
     }
 ];
 
@@ -136,14 +137,14 @@ export function getPlanDetails(planIdOrName, businessType = null, unitsCount = 1
     if (found) return found;
 
     // Fallbacks by business type
+    if (businessType === 'venue' || businessType === 'rental') {
+        return PLANS_CATALOG.find(p => p.id === PLAN_IDS.RENTAL);
+    }
     if (businessType === 'sport') {
         const count = Number(unitsCount) || 1;
         if (count >= 6) return PLANS_CATALOG.find(p => p.id === PLAN_IDS.COURTS_6_PLUS);
         if (count >= 4) return PLANS_CATALOG.find(p => p.id === PLAN_IDS.COURTS_4_5);
         return PLANS_CATALOG.find(p => p.id === PLAN_IDS.COURTS_1_3);
-    }
-    if (businessType === 'venue' || businessType === 'rental') {
-        return PLANS_CATALOG.find(p => p.id === PLAN_IDS.RENTAL);
     }
     if (businessType === 'services' || businessType === 'beauty' || businessType === 'health') {
         const count = Number(unitsCount) || 1;
@@ -157,11 +158,11 @@ export function getPlanDetails(planIdOrName, businessType = null, unitsCount = 1
 /**
  * Calculates monthly subscription fee based on plan and capacity
  */
-export function calculateMonthlyFee(planIdOrName, unitsCount = 1) {
+export function calculateMonthlyFee(planIdOrName, unitsCount = 1, businessType = null) {
     if (isFreePlan(planIdOrName)) return 0;
 
     const count = Math.max(1, Number(unitsCount) || 1);
-    const plan = getPlanDetails(planIdOrName, null, count);
+    const plan = getPlanDetails(planIdOrName, businessType, count);
 
     if (!plan) return 18000;
 
@@ -181,11 +182,14 @@ export function calculateMonthlyFee(planIdOrName, unitsCount = 1) {
 /**
  * Calculates commission for a booking
  */
-export function calculateBookingCommission({ planId, price = 0, isMarketplace = false }) {
+export function calculateBookingCommission({ planId, price = 0, isMarketplace = false, businessType = null }) {
     if (isFreePlan(planId)) {
         return Math.round(Number(price || 0) * 0.05);
     }
     if (isMarketplace) {
+        if (planId === PLAN_IDS.RENTAL || businessType === 'rental' || businessType === 'venue') {
+            return Math.round(Number(price || 0) * 0.03);
+        }
         return 500;
     }
     return 0;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import serviceAdapter from '../../services/serviceAdapter';
 import { useNotification } from '../../contexts/NotificationContext';
-import AmenityIcon, { IconPickerModal, parseAmenity } from '../common/AmenityIcon';
+import AmenityIcon, { IconPickerModal, EmojiPickerModal, parseAmenity } from '../common/AmenityIcon';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -47,8 +47,69 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
     const [quickBlockDay, setQuickBlockDay] = useState(null);
     const [quickBlockReason, setQuickBlockReason] = useState('');
     const [newAmenityName, setNewAmenityName] = useState('');
-    const [newAmenityIcon, setNewAmenityIcon] = useState('✨');
+    const [newAmenityIcon, setNewAmenityIcon] = useState('Sparkles');
     const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
+    const [serviceIconPickerIndex, setServiceIconPickerIndex] = useState(null);
+
+    // Gallery enhancement states
+    const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+    const [previewGalleryImage, setPreviewGalleryImage] = useState(null);
+    const [galleryDragOver, setGalleryDragOver] = useState(false);
+    const [galleryFilterCategory, setGalleryFilterCategory] = useState('Todos');
+
+    const handleImageUpload = async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+        await processGalleryFiles(files);
+    };
+
+    const processGalleryFiles = async (files) => {
+        setIsUploadingGallery(true);
+        showToast(`Subiendo ${files.length} foto(s)...`, 'info');
+
+        const currentGallery = formData.metadata?.venue_gallery || [];
+        const uploadedItems = [];
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            try {
+                const url = await serviceAdapter.uploadImage(file);
+                if (url) {
+                    uploadedItems.push({
+                        url,
+                        caption: '',
+                        category: 'General',
+                        is_featured: currentGallery.length === 0 && uploadedItems.length === 0
+                    });
+                }
+            } catch (err) {
+                console.error('Error uploading gallery image:', err);
+            }
+        }
+
+        if (uploadedItems.length > 0) {
+            const updated = [...currentGallery, ...uploadedItems];
+            handleMetadataChange('venue_gallery', updated);
+            handleInputChange('gallery_images', updated.map(i => i.url));
+            showToast(`¡${uploadedItems.length} foto(s) agregadas a la galería!`, 'success');
+        } else {
+            showToast('No se pudieron subir las imágenes', 'error');
+        }
+        setIsUploadingGallery(false);
+    };
+
+    const moveGalleryItem = (index, direction) => {
+        const current = [...(formData.metadata?.venue_gallery || [])];
+        const targetIndex = index + direction;
+        if (targetIndex < 0 || targetIndex >= current.length) return;
+
+        const temp = current[index];
+        current[index] = current[targetIndex];
+        current[targetIndex] = temp;
+
+        handleMetadataChange('venue_gallery', current);
+        handleInputChange('gallery_images', current.map(i => i.url));
+    };
 
     const formatDateKey = (d) => {
         if (!d) return '';
@@ -441,69 +502,83 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
         fontSize: '14px'
     };
 
-    // --- Sub-components logic ---
-
-    // Gallery Logic
-    const handleImageUpload = async (e) => {
-        const files = Array.from(e.target.files);
-        if (!files.length) return;
-
-        try {
-            showToast('Subiendo imágenes...', 'info');
-            const newGalleryItems = [];
-
-            for (const file of files) {
-                const url = await serviceAdapter.uploadImage(file);
-                newGalleryItems.push({
-                    url,
-                    caption: '',
-                    category: 'General'
-                });
-            }
-
-            const currentGallery = formData.metadata?.venue_gallery ||
-                (formData.gallery_images || []).map(url => ({ url, caption: '', category: 'General' }));
-
-            const updatedGallery = [...currentGallery, ...newGalleryItems];
-
-            handleMetadataChange('venue_gallery', updatedGallery);
-            // Also update the legacy array
-            handleInputChange('gallery_images', updatedGallery.map(i => i.url));
-
-            showToast('Imágenes subidas', 'success');
-        } catch (error) {
-            console.error(error);
-            showToast('Error al subir imágenes', 'error');
-        }
-    };
-
-    // Tiers Logic
+    // Tiers Logic (Smart capacity-aware ranges)
     const addTier = () => {
-        const maxCap = parseInt(formData.capacity_limit || formData.max_capacity) || 50;
-        const currentTiers = formData.pricing_tiers || [];
+        const maxCap = parseInt(formData.capacity_limit || formData.max_capacity) || 100;
+        const currentTiers = [...(formData.pricing_tiers || [])];
 
         if (currentTiers.length === 0) {
-            handleInputChange('pricing_tiers', [{ min_guests: 5, max_guests: maxCap, price: formData.price_per_hour || 0 }]);
+            handleInputChange('pricing_tiers', [{ min_guests: 5, max_guests: maxCap, price: formData.price_per_hour || 20000 }]);
             return;
         }
 
         const lastTier = currentTiers[currentTiers.length - 1];
-        const nextMin = (parseInt(lastTier.max_guests) || 5) + 1;
-        const nextMax = Math.max(nextMin + 10, maxCap);
+        const lastMin = parseInt(lastTier.min_guests) || 5;
+        const lastMax = parseInt(lastTier.max_guests) || maxCap;
+        const lastPrice = parseInt(lastTier.price) || 20000;
 
-        const newTier = {
-            min_guests: nextMin,
-            max_guests: nextMax,
-            price: (parseInt(lastTier.price) || 0) + 5000
-        };
-
-        handleInputChange('pricing_tiers', [...currentTiers, newTier]);
+        // If the last tier already reaches or exceeds max capacity, split it gracefully
+        if (lastMax >= maxCap) {
+            if (lastMax - lastMin >= 6) {
+                const midpoint = Math.floor((lastMin + lastMax) / 2);
+                currentTiers[currentTiers.length - 1] = {
+                    ...lastTier,
+                    max_guests: midpoint
+                };
+                const newTier = {
+                    min_guests: midpoint + 1,
+                    max_guests: maxCap,
+                    price: lastPrice + 5000
+                };
+                handleInputChange('pricing_tiers', [...currentTiers, newTier]);
+                showToast(`Nuevo rango creado: ${midpoint + 1} a ${maxCap} personas`, 'success');
+            } else {
+                showToast(`El rango actual no tiene suficiente espacio para subdividir dentro de los ${maxCap} invitados`, 'warning');
+            }
+        } else {
+            // Last tier ends before maxCap: add new tier reaching maxCap
+            const nextMin = lastMax + 1;
+            const newTier = {
+                min_guests: nextMin,
+                max_guests: maxCap,
+                price: lastPrice + 5000
+            };
+            handleInputChange('pricing_tiers', [...currentTiers, newTier]);
+            showToast(`Nuevo rango agregado de ${nextMin} a ${maxCap} personas`, 'success');
+        }
     };
 
     const updateTier = (index, field, value) => {
+        const maxCap = parseInt(formData.capacity_limit || formData.max_capacity) || 100;
         const newTiers = [...(formData.pricing_tiers || [])];
-        newTiers[index] = { ...newTiers[index], [field]: parseInt(value) || 0 };
+        let val = parseInt(value) || 0;
+
+        // Automatically prevent max_guests from exceeding venue maxCap
+        if (field === 'max_guests' && val > maxCap) {
+            val = maxCap;
+        }
+
+        newTiers[index] = { ...newTiers[index], [field]: val };
         handleInputChange('pricing_tiers', newTiers);
+    };
+
+    const removeTier = (index) => {
+        const maxCap = parseInt(formData.capacity_limit || formData.max_capacity) || 100;
+        const currentTiers = [...(formData.pricing_tiers || [])];
+        if (currentTiers.length <= 1) {
+            showToast('Debe existir al menos un rango de precios', 'warning');
+            return;
+        }
+        currentTiers.splice(index, 1);
+        // Extend the remaining last tier to cover up to maxCap
+        if (currentTiers.length > 0) {
+            currentTiers[currentTiers.length - 1] = {
+                ...currentTiers[currentTiers.length - 1],
+                max_guests: maxCap
+            };
+        }
+        handleInputChange('pricing_tiers', currentTiers);
+        showToast('Rango eliminado y capacidad recalculada', 'info');
     };
 
     return (
@@ -791,91 +866,453 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
 
                 {activeTab === 'gallery' && (
                     <div style={cardStyle}>
-                        <h2 style={sectionTitleStyle}>Galería de Fotos</h2>
-                        <div style={{ marginBottom: '20px', padding: '20px', background: 'rgba(0,0,0,0.02)', borderRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+                            <div>
+                                <h2 style={{ ...sectionTitleStyle, marginBottom: '4px' }}>📸 Galería de Fotos del Predio</h2>
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                                    Sube fotos de alta calidad de tu quincho, parque, piscina e instalaciones. La primera foto será la portada de tu página.
+                                </p>
+                            </div>
+                            <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: 'rgba(132, 204, 22, 0.12)',
+                                color: 'var(--primary-paddle, #84CC16)',
+                                padding: '6px 14px',
+                                borderRadius: '20px',
+                                fontSize: '13px',
+                                fontWeight: '700'
+                            }}>
+                                <span>🖼️ {(formData.metadata?.venue_gallery || []).length} Fotos</span>
+                            </div>
+                        </div>
+
+                        {/* Modern Drag & Drop Zone */}
+                        <div
+                            onDragOver={(e) => { e.preventDefault(); setGalleryDragOver(true); }}
+                            onDragLeave={() => setGalleryDragOver(false)}
+                            onDrop={async (e) => {
+                                e.preventDefault();
+                                setGalleryDragOver(false);
+                                const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+                                if (files.length > 0) await processGalleryFiles(files);
+                            }}
+                            style={{
+                                border: galleryDragOver ? '2px dashed var(--primary-paddle)' : '2px dashed var(--border)',
+                                background: galleryDragOver ? 'rgba(132, 204, 22, 0.08)' : 'var(--bg-card)',
+                                borderRadius: '16px',
+                                padding: '32px 20px',
+                                textAlign: 'center',
+                                marginBottom: '24px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                position: 'relative'
+                            }}
+                        >
                             <input
                                 type="file"
                                 id="gallery-upload"
                                 multiple
                                 accept="image/*"
                                 onChange={handleImageUpload}
-                                style={{ display: 'none' }}
+                                style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    opacity: 0,
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    height: '100%',
+                                    zIndex: 2
+                                }}
                             />
-                            <label htmlFor="gallery-upload" style={{ ...buttonStyle, display: 'inline-block' }}>
-                                + Subir Fotos
-                            </label>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
-                            {(formData.metadata?.venue_gallery || []).map((item, index) => (
-                                <div key={index} style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', background: 'var(--bg-card)' }}>
-                                    <div style={{ aspectRatio: '4/3', overflow: 'hidden', position: 'relative' }}>
-                                        <img src={item.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        <button
-                                            onClick={() => {
-                                                const newGallery = [...formData.metadata.venue_gallery];
-                                                newGallery.splice(index, 1);
-                                                handleMetadataChange('venue_gallery', newGallery);
-                                                handleInputChange('gallery_images', newGallery.map(i => i.url));
-                                            }}
-                                            style={{ position: 'absolute', top: 5, right: 5, background: 'red', color: 'white', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer' }}
-                                        >
-                                            ×
-                                        </button>
+                            {isUploadingGallery ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        border: '3px solid var(--border)',
+                                        borderTopColor: 'var(--primary-paddle)',
+                                        borderRadius: '50%',
+                                        animation: 'spin 0.8s linear infinite'
+                                    }} />
+                                    <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                        Subiendo y optimizando imágenes...
                                     </div>
-                                    <div style={{ padding: '10px' }}>
-                                        <input
-                                            placeholder="Descripción de la foto"
-                                            value={item.caption || ''}
-                                            onChange={(e) => {
-                                                const newGallery = [...formData.metadata.venue_gallery];
-                                                newGallery[index].caption = e.target.value;
-                                                handleMetadataChange('venue_gallery', newGallery);
-                                            }}
-                                            style={{ ...inputStyle, padding: '8px', fontSize: '12px', marginBottom: '8px' }}
-                                        />
-                                        <select
-                                            value={item.category || 'General'}
-                                            onChange={(e) => {
-                                                const newGallery = [...formData.metadata.venue_gallery];
-                                                newGallery[index].category = e.target.value;
-                                                handleMetadataChange('venue_gallery', newGallery);
-                                            }}
-                                            style={{ ...inputStyle, padding: '4px', marginBottom: '8px' }}
-                                        >
-                                            <option value="General">General</option>
-                                            <option value="Piscina">Piscina</option>
-                                            <option value="Salón">Salón</option>
-                                            <option value="Exterior">Exterior</option>
-                                            <option value="Baños">Baños</option>
-                                        </select>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const newGallery = (formData.metadata?.venue_gallery || []).map((gItem, i) => ({
-                                                    ...gItem,
-                                                    is_featured: i === index
-                                                }));
-                                                handleMetadataChange('venue_gallery', newGallery);
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                borderRadius: '8px',
-                                                border: item.is_featured ? 'none' : '1px solid var(--border)',
-                                                background: item.is_featured ? 'var(--primary-paddle)' : 'var(--bg-main)',
-                                                color: item.is_featured ? '#000' : 'var(--text-primary)',
-                                                fontWeight: '700',
-                                                fontSize: '11px',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            {item.is_featured ? '⭐ Destacada (Principal)' : '☆ Marcar como Principal'}
-                                        </button>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                        Por favor espera un momento
                                     </div>
                                 </div>
-                            ))}
+                            ) : (
+                                <div>
+                                    <div style={{
+                                        width: '56px',
+                                        height: '56px',
+                                        borderRadius: '16px',
+                                        background: 'rgba(132, 204, 22, 0.15)',
+                                        color: 'var(--primary-paddle, #84CC16)',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '28px',
+                                        marginBottom: '12px'
+                                    }}>
+                                        ☁️
+                                    </div>
+                                    <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                        Arrastra tus fotos aquí o haz clic para subir
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                                        Puedes seleccionar múltiples fotos a la vez (JPG, PNG, WEBP)
+                                    </div>
+                                    <span style={{
+                                        display: 'inline-block',
+                                        padding: '10px 20px',
+                                        borderRadius: '12px',
+                                        background: 'var(--primary-paddle)',
+                                        color: '#000',
+                                        fontWeight: '700',
+                                        fontSize: '13px',
+                                        boxShadow: '0 4px 12px rgba(132, 204, 22, 0.25)'
+                                    }}>
+                                        + Seleccionar Fotos desde el Dispositivo
+                                    </span>
+                                </div>
+                            )}
                         </div>
+
+                        {/* Gallery Grid */}
+                        {(formData.metadata?.venue_gallery || []).length === 0 ? (
+                            <div style={{
+                                padding: '40px 20px',
+                                textAlign: 'center',
+                                background: 'var(--bg-card)',
+                                borderRadius: '16px',
+                                border: '1px solid var(--border)'
+                            }}>
+                                <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>📸</span>
+                                <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                    Aún no has agregado fotos a la galería
+                                </div>
+                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                    Las fotos atractivas aumentan un 80% las reservas de tu quincho.
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                                    gap: '16px',
+                                    marginBottom: '24px'
+                                }}>
+                                    {(formData.metadata?.venue_gallery || []).map((item, index) => {
+                                        const isFirst = index === 0;
+                                        const isFeatured = item.is_featured || isFirst;
+
+                                        return (
+                                            <div
+                                                key={index}
+                                                style={{
+                                                    border: isFeatured ? '2px solid var(--primary-paddle, #84CC16)' : '1px solid var(--border)',
+                                                    borderRadius: '16px',
+                                                    overflow: 'hidden',
+                                                    background: 'var(--bg-card)',
+                                                    boxShadow: isFeatured ? '0 6px 20px rgba(132, 204, 22, 0.18)' : '0 2px 8px rgba(0,0,0,0.04)',
+                                                    transition: 'all 0.2s ease',
+                                                    display: 'flex',
+                                                    flexDirection: 'column'
+                                                }}
+                                            >
+                                                {/* Image Thumbnail with Overlay Controls */}
+                                                <div style={{ aspectRatio: '16/10', position: 'relative', overflow: 'hidden', background: '#000' }}>
+                                                    <img
+                                                        src={item.url}
+                                                        alt={item.caption || 'Foto del predio'}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    />
+
+                                                    {/* Top Badges */}
+                                                    <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 2, display: 'flex', gap: '6px' }}>
+                                                        <span style={{
+                                                            background: 'rgba(0,0,0,0.7)',
+                                                            color: 'white',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '6px',
+                                                            fontSize: '11px',
+                                                            fontWeight: '800',
+                                                            backdropFilter: 'blur(4px)'
+                                                        }}>
+                                                            #{index + 1}
+                                                        </span>
+                                                        {isFeatured && (
+                                                            <span style={{
+                                                                background: 'var(--primary-paddle, #84CC16)',
+                                                                color: '#000',
+                                                                padding: '2px 8px',
+                                                                borderRadius: '6px',
+                                                                fontSize: '11px',
+                                                                fontWeight: '800',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '3px'
+                                                            }}>
+                                                                ⭐ Portada
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Quick Actions (Delete & Preview) */}
+                                                    <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 2, display: 'flex', gap: '6px' }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPreviewGalleryImage(item.url)}
+                                                            title="Ver foto en tamaño completo"
+                                                            style={{
+                                                                background: 'rgba(0,0,0,0.65)',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '8px',
+                                                                width: '30px',
+                                                                height: '30px',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontSize: '14px',
+                                                                backdropFilter: 'blur(4px)'
+                                                            }}
+                                                        >
+                                                            👁️
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newGallery = [...(formData.metadata?.venue_gallery || [])];
+                                                                newGallery.splice(index, 1);
+                                                                handleMetadataChange('venue_gallery', newGallery);
+                                                                handleInputChange('gallery_images', newGallery.map(i => i.url));
+                                                                showToast('Foto eliminada de la galería', 'info');
+                                                            }}
+                                                            title="Eliminar foto"
+                                                            style={{
+                                                                background: 'rgba(239, 68, 68, 0.85)',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '8px',
+                                                                width: '30px',
+                                                                height: '30px',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontSize: '14px',
+                                                                backdropFilter: 'blur(4px)'
+                                                            }}
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Reorder Buttons (Move Left/Right) */}
+                                                    <div style={{ position: 'absolute', bottom: 8, right: 8, zIndex: 2, display: 'flex', gap: '4px' }}>
+                                                        <button
+                                                            type="button"
+                                                            disabled={index === 0}
+                                                            onClick={() => moveGalleryItem(index, -1)}
+                                                            title="Mover antes"
+                                                            style={{
+                                                                background: index === 0 ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.7)',
+                                                                color: index === 0 ? '#888' : 'white',
+                                                                border: 'none',
+                                                                borderRadius: '6px',
+                                                                padding: '4px 8px',
+                                                                cursor: index === 0 ? 'not-allowed' : 'pointer',
+                                                                fontSize: '11px',
+                                                                fontWeight: '700'
+                                                            }}
+                                                        >
+                                                            ◀
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            disabled={index === (formData.metadata?.venue_gallery || []).length - 1}
+                                                            onClick={() => moveGalleryItem(index, 1)}
+                                                            title="Mover después"
+                                                            style={{
+                                                                background: index === (formData.metadata?.venue_gallery || []).length - 1 ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.7)',
+                                                                color: index === (formData.metadata?.venue_gallery || []).length - 1 ? '#888' : 'white',
+                                                                border: 'none',
+                                                                borderRadius: '6px',
+                                                                padding: '4px 8px',
+                                                                cursor: index === (formData.metadata?.venue_gallery || []).length - 1 ? 'not-allowed' : 'pointer',
+                                                                fontSize: '11px',
+                                                                fontWeight: '700'
+                                                            }}
+                                                        >
+                                                            ▶
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Card Metadata Fields */}
+                                                <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                                                    <div>
+                                                        <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                            Descripción / Epígrafe
+                                                        </label>
+                                                        <input
+                                                            placeholder="Ej: Piscina iluminada de noche, Salón para 50 personas..."
+                                                            value={item.caption || ''}
+                                                            onChange={(e) => {
+                                                                const newGallery = [...(formData.metadata?.venue_gallery || [])];
+                                                                newGallery[index].caption = e.target.value;
+                                                                handleMetadataChange('venue_gallery', newGallery);
+                                                            }}
+                                                            style={{ ...inputStyle, padding: '8px 10px', fontSize: '12px', margin: 0 }}
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                            Sector / Categoría
+                                                        </label>
+                                                        <select
+                                                            value={item.category || 'General'}
+                                                            onChange={(e) => {
+                                                                const newGallery = [...(formData.metadata?.venue_gallery || [])];
+                                                                newGallery[index].category = e.target.value;
+                                                                handleMetadataChange('venue_gallery', newGallery);
+                                                            }}
+                                                            style={{ ...inputStyle, padding: '8px 10px', fontSize: '12px', margin: 0 }}
+                                                        >
+                                                            <option value="General">📸 General</option>
+                                                            <option value="Piscina">🏊 Piscina / Solárium</option>
+                                                            <option value="Salón">🏠 Salón / Quincho Cubierto</option>
+                                                            <option value="Exterior">🌳 Parque / Jardín</option>
+                                                            <option value="Parrilla">🔥 Asador / Parrilla</option>
+                                                            <option value="Baños">🚿 Baños & Vestuarios</option>
+                                                            <option value="Juegos">🎮 Juegos & Entretenimiento</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newGallery = (formData.metadata?.venue_gallery || []).map((gItem, i) => ({
+                                                                ...gItem,
+                                                                is_featured: i === index
+                                                            }));
+                                                            // Also move featured to first index for maximum prominence
+                                                            const [featuredItem] = newGallery.splice(index, 1);
+                                                            newGallery.unshift(featuredItem);
+
+                                                            handleMetadataChange('venue_gallery', newGallery);
+                                                            handleInputChange('gallery_images', newGallery.map(i => i.url));
+                                                            showToast('⭐ Foto marcada como portada principal', 'success');
+                                                        }}
+                                                        style={{
+                                                            marginTop: '6px',
+                                                            width: '100%',
+                                                            padding: '8px 12px',
+                                                            borderRadius: '10px',
+                                                            border: isFeatured ? 'none' : '1px solid var(--border)',
+                                                            background: isFeatured ? 'var(--primary-paddle, #84CC16)' : 'var(--bg-main)',
+                                                            color: isFeatured ? '#000' : 'var(--text-primary)',
+                                                            fontWeight: '800',
+                                                            fontSize: '11.5px',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s ease',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '6px'
+                                                        }}
+                                                    >
+                                                        <span>{isFeatured ? '⭐ Portada Principal Seleccionada' : '☆ Marcar como Portada Principal'}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Save Button at bottom of gallery */}
+                                <button
+                                    onClick={saveChanges}
+                                    disabled={saving}
+                                    style={{
+                                        ...buttonStyle,
+                                        width: '100%',
+                                        padding: '16px',
+                                        fontSize: '15px',
+                                        fontWeight: '800',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '10px',
+                                        boxShadow: '0 8px 24px rgba(132, 204, 22, 0.25)'
+                                    }}
+                                >
+                                    <span>{saving ? 'Guardando Galería...' : '💾 Guardar Galería de Fotos'}</span>
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Lightbox Preview Modal */}
+                        {previewGalleryImage && (
+                            <div
+                                onClick={() => setPreviewGalleryImage(null)}
+                                style={{
+                                    position: 'fixed',
+                                    inset: 0,
+                                    background: 'rgba(0,0,0,0.85)',
+                                    backdropFilter: 'blur(8px)',
+                                    zIndex: 9999,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '24px'
+                                }}
+                            >
+                                <div
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                        position: 'relative',
+                                        maxWidth: '90vw',
+                                        maxHeight: '90vh',
+                                        borderRadius: '16px',
+                                        overflow: 'hidden',
+                                        boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+                                    }}
+                                >
+                                    <button
+                                        onClick={() => setPreviewGalleryImage(null)}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '16px',
+                                            right: '16px',
+                                            background: 'rgba(0,0,0,0.7)',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '50%',
+                                            width: '36px',
+                                            height: '36px',
+                                            fontSize: '18px',
+                                            cursor: 'pointer',
+                                            zIndex: 2
+                                        }}
+                                    >
+                                        ✕
+                                    </button>
+                                    <img
+                                        src={previewGalleryImage}
+                                        alt="Vista previa"
+                                        style={{ width: '100%', height: 'auto', maxHeight: '85vh', objectFit: 'contain', display: 'block' }}
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -898,44 +1335,86 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                         </div>
 
                         <div style={{ marginBottom: '30px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <label style={labelStyle}>Esquema de Precios por Cantidad de Personas *</label>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                                <label style={{ ...labelStyle, margin: 0 }}>Esquema de Precios por Cantidad de Personas *</label>
+                                <span style={{
+                                    fontSize: '12px',
+                                    fontWeight: '700',
+                                    color: 'var(--primary-paddle, #84CC16)',
+                                    background: 'rgba(132, 204, 22, 0.1)',
+                                    padding: '4px 10px',
+                                    borderRadius: '8px'
+                                }}>
+                                    Capacidad del local: hasta {formData.capacity_limit || formData.max_capacity || 100} personas
+                                </span>
                             </div>
+                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+                                Define cuánto cobras por hora según la cantidad de invitados. Cada rango se ajusta automáticamente dentro de tu capacidad máxima.
+                            </p>
+
                             {(!formData.pricing_tiers || formData.pricing_tiers.length === 0) && (
                                 <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px dashed #ef4444', borderRadius: '10px', marginBottom: '16px', color: 'var(--text-primary)', fontSize: '13px' }}>
                                     ⚠️ Ingresa la capacidad máxima o haz clic en <strong>"+ Agregar Rango de Precios"</strong> para configurar los precios.
                                 </div>
                             )}
                             {formData.pricing_tiers?.map((tier, index) => (
-                                <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center' }}>
+                                <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '10px', alignItems: 'center', background: 'var(--bg-card)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
                                     <div style={{ flex: 1 }}>
                                         <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)' }}>Desde (personas)</label>
                                         <input type="number" style={inputStyle} value={tier.min_guests} onChange={e => updateTier(index, 'min_guests', e.target.value)} />
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)' }}>Hasta (personas)</label>
-                                        <input type="number" style={inputStyle} value={tier.max_guests} onChange={e => updateTier(index, 'max_guests', e.target.value)} />
+                                        <input
+                                            type="number"
+                                            max={formData.capacity_limit || formData.max_capacity || 100}
+                                            style={inputStyle}
+                                            value={tier.max_guests}
+                                            onChange={e => updateTier(index, 'max_guests', e.target.value)}
+                                        />
                                     </div>
                                     <div style={{ flex: 1.5 }}>
-                                        <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)' }}>Precio Base ($) *</label>
+                                        <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)' }}>Precio por Hora ($) *</label>
                                         <input type="number" style={inputStyle} value={tier.price} placeholder="Ej: 50000" onChange={e => updateTier(index, 'price', e.target.value)} />
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            const newTiers = [...formData.pricing_tiers];
-                                            newTiers.splice(index, 1);
-                                            handleInputChange('pricing_tiers', newTiers);
+                                        onClick={() => removeTier(index)}
+                                        style={{
+                                            background: 'rgba(239, 68, 68, 0.1)',
+                                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                                            borderRadius: '8px',
+                                            color: '#ef4444',
+                                            cursor: 'pointer',
+                                            marginTop: '15px',
+                                            width: '36px',
+                                            height: '36px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '15px'
                                         }}
-                                        style={{ background: 'transparent', border: 'none', color: 'red', cursor: 'pointer', marginTop: '15px', fontSize: '16px' }}
                                         title="Eliminar rango"
                                     >
                                         🗑️
                                     </button>
                                 </div>
                             ))}
-                            <button type="button" onClick={addTier} style={{ ...buttonStyle, background: 'transparent', border: '1px dashed var(--primary-paddle)', color: 'var(--text-primary)' }}>
-                                + Agregar Rango de Precios
+                            <button
+                                type="button"
+                                onClick={addTier}
+                                style={{
+                                    ...buttonStyle,
+                                    background: 'transparent',
+                                    border: '1.5px dashed var(--primary-paddle)',
+                                    color: 'var(--text-primary)',
+                                    width: '100%',
+                                    padding: '12px',
+                                    marginTop: '8px',
+                                    fontWeight: '700'
+                                }}
+                            >
+                                + Agregar Rango de Precios (Subdividir Capacidad)
                             </button>
                         </div>
 
@@ -1018,154 +1497,400 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
 
                 {activeTab === 'services' && (
                     <div style={cardStyle}>
-                        <h2 style={sectionTitleStyle}>Servicios Adicionales (Opcionales)</h2>
-                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-                            Configura los extras que los clientes pueden sumar a su reserva (limpieza, DJ, vajilla, etc.). Escribe un emoji o selecciona uno de la barra rápida:
-                        </p>
-
-                        <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
-                            {(formData.additional_services || []).map((service, index) => (
-                                <div key={index} style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', background: 'var(--bg-card)' }}>
-                                    <div style={{ display: 'flex', gap: '12px', marginBottom: '10px', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                                            <input
-                                                placeholder="Ícono"
-                                                value={service.icon || '✨'}
-                                                onChange={e => {
-                                                    const newServices = [...formData.additional_services];
-                                                    newServices[index].icon = e.target.value;
-                                                    handleInputChange('additional_services', newServices);
-                                                }}
-                                                style={{ ...inputStyle, width: '60px', textAlign: 'center', fontSize: '22px', padding: '6px' }}
-                                            />
-                                        </div>
-
-                                        <input
-                                            placeholder="Nombre del servicio (ej: Limpieza Post-Evento)"
-                                            value={service.name}
-                                            onChange={e => {
-                                                const newServices = [...formData.additional_services];
-                                                newServices[index].name = e.target.value;
-                                                handleInputChange('additional_services', newServices);
-                                            }}
-                                            style={{ ...inputStyle, flex: 2 }}
-                                        />
-                                        <input
-                                            type="number"
-                                            placeholder="Valor ($)"
-                                            value={service.price}
-                                            onChange={e => {
-                                                const newServices = [...formData.additional_services];
-                                                newServices[index].price = parseInt(e.target.value) || 0;
-                                                handleInputChange('additional_services', newServices);
-                                            }}
-                                            style={{ ...inputStyle, flex: 1 }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const newServices = [...formData.additional_services];
-                                                newServices.splice(index, 1);
-                                                handleInputChange('additional_services', newServices);
-                                            }}
-                                            style={{ background: 'transparent', border: 'none', color: 'red', cursor: 'pointer', fontSize: '18px' }}
-                                        >
-                                            🗑️
-                                        </button>
-                                    </div>
-
-                                    {/* Quick Emoji Picker Bar */}
-                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginRight: '4px' }}>Elegir ícono:</span>
-                                        {['🧹', '🎧', '🍽️', '🏰', '🥩', '🍷', '🧊', '🔊', '💡', '☕', '🎂', '🏊', '🎈', '✨'].map(emoji => (
-                                            <button
-                                                key={emoji}
-                                                type="button"
-                                                onClick={() => {
-                                                    const newServices = [...formData.additional_services];
-                                                    newServices[index].icon = emoji;
-                                                    handleInputChange('additional_services', newServices);
-                                                }}
-                                                style={{
-                                                    background: service.icon === emoji ? 'var(--primary-paddle)' : 'rgba(0,0,0,0.05)',
-                                                    border: service.icon === emoji ? 'none' : '1px solid var(--border)',
-                                                    borderRadius: '6px',
-                                                    padding: '2px 6px',
-                                                    fontSize: '14px',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                {emoji}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    <input
-                                        placeholder="Descripción corta (ej: Limpieza completa del predio post-evento)"
-                                        value={service.description || ''}
-                                        onChange={e => {
-                                            const newServices = [...formData.additional_services];
-                                            newServices[index].description = e.target.value;
-                                            handleInputChange('additional_services', newServices);
-                                        }}
-                                        style={{ ...inputStyle, fontSize: '13px' }}
-                                    />
-                                </div>
-                            ))}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+                            <div>
+                                <h2 style={{ ...sectionTitleStyle, marginBottom: '4px' }}>✨ Servicios Adicionales (Opcionales)</h2>
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                                    Configura los extras que los clientes pueden sumar a su reserva (limpieza, DJ, vajilla, etc.). El valor se suma automáticamente al total.
+                                </p>
+                            </div>
+                            <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: 'rgba(132, 204, 22, 0.12)',
+                                color: 'var(--primary-paddle, #84CC16)',
+                                padding: '6px 14px',
+                                borderRadius: '20px',
+                                fontSize: '13px',
+                                fontWeight: '700'
+                            }}>
+                                <span>🟢 {(formData.additional_services || []).filter(s => s.enabled !== false).length} Activos</span>
+                            </div>
                         </div>
 
-                        {/* Preset Quick Add Buttons */}
-                        <div style={{ marginBottom: '20px' }}>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                💡 Plantillas Sugeridas de Servicios:
+                        {/* Preset Quick Add Badges */}
+                        <div style={{ marginBottom: '24px', background: 'var(--bg-card)', padding: '16px', borderRadius: '14px', border: '1px solid var(--border)' }}>
+                            <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>💡 Plantillas de Servicios Frecuentes (1 Clic para Agregar):</span>
                             </div>
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                 {[
-                                    { icon: '🧹', name: 'Limpieza Post-Evento', price: 12000, description: 'Limpieza completa del predio post-evento' },
-                                    { icon: '🎧', name: 'Servicio de DJ y Luces', price: 35000, description: 'Sonido profesional e iluminación de pista' },
-                                    { icon: '🍽️', name: 'Vajilla y Mantelería', price: 15000, description: 'Platos, cubiertos, copas y manteles completos' },
-                                    { icon: '🏰', name: 'Castillo Inflable', price: 28000, description: 'Juego inflable grande durante todo el evento' },
-                                    { icon: '🥩', name: 'Servicio de Asador', price: 25000, description: 'Parrillero capacitado para preparar el asado' },
-                                    { icon: '🧊', name: 'Barra y Hielo', price: 18000, description: 'Conservadora, bolsas de hielo y espacio de barra' }
-                                ].map((preset, idx) => (
-                                    <button
-                                        key={idx}
-                                        type="button"
-                                        onClick={() => {
-                                            handleInputChange('additional_services', [
-                                                ...(formData.additional_services || []),
-                                                preset
-                                            ]);
-                                        }}
-                                        style={{
-                                            padding: '6px 12px',
-                                            borderRadius: '8px',
-                                            border: '1px dashed var(--border)',
-                                            background: 'var(--bg-main)',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '12px',
-                                            fontWeight: '600',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        + {preset.icon} {preset.name} (${preset.price.toLocaleString()})
-                                    </button>
-                                ))}
+                                    { icon: '🧹', name: 'Limpieza Post-Evento', price: 15000, description: 'Limpieza profunda del quincho, parque y baños al finalizar el evento', allow_quantity: false, enabled: true },
+                                    { icon: '🎧', name: 'Servicio de DJ y Luces', price: 40000, description: 'Sonido profesional de alta potencia e iluminación robótica de pista', allow_quantity: false, enabled: true },
+                                    { icon: '🍽️', name: 'Vajilla y Mantelería', price: 18000, description: 'Juego completo de platos, cubiertos, copas de vidrio y manteles', allow_quantity: true, enabled: true },
+                                    { icon: '🥩', name: 'Servicio de Asador', price: 30000, description: 'Parrillero profesional a cargo del fuego y servido de carnes', allow_quantity: false, enabled: true },
+                                    { icon: '🏰', name: 'Castillo Inflable', price: 28000, description: 'Juego inflable infantil instalado durante todo el horario de la reserva', allow_quantity: false, enabled: true },
+                                    { icon: '🧊', name: 'Barra, Hielera y Hielo', price: 20000, description: 'Conservadora gigante, espacio de barra y 4 bolsas de hielo de 10kg', allow_quantity: true, enabled: true },
+                                    { icon: '🎈', name: 'Decoración y Globología', price: 25000, description: 'Arco de globos orgánico y fondo temático para fotos', allow_quantity: false, enabled: true },
+                                    { icon: '🎂', name: 'Torta y Mesa Dulce', price: 22000, description: 'Torta artesanal personalizada y variedad de mini tartas dulces', allow_quantity: false, enabled: true },
+                                    { icon: '🍸', name: 'Bartender & Tragos', price: 35000, description: 'Servicio de barra libre con coctelería clásica y de autor', allow_quantity: false, enabled: true },
+                                    { icon: '🪩', name: 'Luces & Pista Boliche', price: 30000, description: 'Efectos láser, humo y esfera de espejos para baile nocturno', allow_quantity: false, enabled: true },
+                                    { icon: '🏓', name: 'Mesa de Ping Pong', price: 15000, description: 'Mesa profesional con 4 paletas y pelotitas de repuesto', allow_quantity: false, enabled: true }
+                                ].map((preset, idx) => {
+                                    const alreadyAdded = (formData.additional_services || []).some(s => s.name.toLowerCase() === preset.name.toLowerCase());
+                                    return (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => {
+                                                if (alreadyAdded) {
+                                                    showToast('Este servicio ya está en tu lista', 'info');
+                                                    return;
+                                                }
+                                                handleInputChange('additional_services', [
+                                                    ...(formData.additional_services || []),
+                                                    preset
+                                                ]);
+                                                showToast(`Servicio "${preset.name}" agregado`, 'success');
+                                            }}
+                                            style={{
+                                                padding: '8px 14px',
+                                                borderRadius: '10px',
+                                                border: alreadyAdded ? '1px solid var(--border)' : '1.5px dashed var(--primary-paddle)',
+                                                background: alreadyAdded ? 'rgba(0,0,0,0.03)' : 'rgba(132, 204, 22, 0.06)',
+                                                color: alreadyAdded ? 'var(--text-secondary)' : 'var(--text-primary)',
+                                                fontSize: '12.5px',
+                                                fontWeight: '700',
+                                                cursor: alreadyAdded ? 'default' : 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '18px', lineHeight: 1 }}>{preset.icon}</span>
+                                            <span>{preset.name}</span>
+                                            <span style={{ fontSize: '11px', color: 'var(--primary-paddle, #84CC16)', fontWeight: '800' }}>
+                                                ${preset.price.toLocaleString()}
+                                            </span>
+                                            {alreadyAdded && <span style={{ fontSize: '11px', color: '#10B981' }}>✓</span>}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={() => {
-                                handleInputChange('additional_services', [
-                                    ...(formData.additional_services || []),
-                                    { icon: '✨', name: '', price: 0, description: '' }
-                                ]);
-                            }}
-                            style={{ ...buttonStyle, background: 'transparent', border: '1px dashed var(--primary-paddle)', color: 'var(--text-primary)' }}
-                        >
-                            + Agregar Servicio Personalizado
-                        </button>
+                        {/* Configured Services List */}
+                        <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
+                            {(formData.additional_services || []).length === 0 ? (
+                                <div style={{
+                                    padding: '36px 20px',
+                                    textAlign: 'center',
+                                    background: 'var(--bg-card)',
+                                    borderRadius: '14px',
+                                    border: '1px dashed var(--border)'
+                                }}>
+                                    <span style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }}>✨</span>
+                                    <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                        No has configurado servicios adicionales todavía
+                                    </div>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                        Haz clic en las plantillas de arriba o en "+ Agregar Servicio Personalizado".
+                                    </div>
+                                </div>
+                            ) : (
+                                (formData.additional_services || []).map((service, index) => {
+                                    const isEnabled = service.enabled !== false;
+                                    return (
+                                        <div
+                                            key={index}
+                                            style={{
+                                                border: isEnabled ? '1px solid var(--border)' : '1px dashed rgba(255,255,255,0.1)',
+                                                borderRadius: '16px',
+                                                padding: '18px',
+                                                background: isEnabled ? 'var(--bg-card)' : 'rgba(0,0,0,0.02)',
+                                                opacity: isEnabled ? 1 : 0.7,
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            {/* Card Top Row */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{
+                                                        background: 'rgba(0,0,0,0.06)',
+                                                        color: 'var(--text-secondary)',
+                                                        fontSize: '11px',
+                                                        fontWeight: '800',
+                                                        padding: '3px 8px',
+                                                        borderRadius: '6px'
+                                                    }}>
+                                                        #{index + 1}
+                                                    </span>
+                                                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                        {service.name || 'Nuevo Servicio'}
+                                                    </span>
+                                                </div>
+
+                                                {/* Actions (Toggle status & Delete) */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newServices = [...formData.additional_services];
+                                                            newServices[index].enabled = !isEnabled;
+                                                            handleInputChange('additional_services', newServices);
+                                                        }}
+                                                        style={{
+                                                            background: isEnabled ? 'rgba(16, 185, 129, 0.12)' : 'rgba(100, 116, 139, 0.12)',
+                                                            color: isEnabled ? '#10B981' : 'var(--text-secondary)',
+                                                            border: 'none',
+                                                            padding: '5px 12px',
+                                                            borderRadius: '8px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '700',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '5px'
+                                                        }}
+                                                    >
+                                                        <span>{isEnabled ? '🟢 Disponible' : '⚪ Pausado'}</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newServices = [...formData.additional_services];
+                                                            newServices.splice(index, 1);
+                                                            handleInputChange('additional_services', newServices);
+                                                            showToast('Servicio eliminado', 'info');
+                                                        }}
+                                                        style={{
+                                                            background: 'rgba(239, 68, 68, 0.1)',
+                                                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                                                            color: '#ef4444',
+                                                            borderRadius: '8px',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            fontSize: '14px'
+                                                        }}
+                                                        title="Eliminar servicio"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Card Input Grid */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '80px 1fr 180px', gap: '12px', marginBottom: '12px' }}>
+                                                <div>
+                                                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                        Ícono
+                                                    </label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setServiceIconPickerIndex(index)}
+                                                        style={{
+                                                            ...inputStyle,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            height: '42px',
+                                                            padding: '6px',
+                                                            fontSize: '22px'
+                                                        }}
+                                                        title="Elegir ícono a color (+100 opciones)"
+                                                    >
+                                                        <span>{service.icon || '✨'}</span>
+                                                    </button>
+                                                </div>
+
+                                                <div>
+                                                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                        Nombre del Servicio *
+                                                    </label>
+                                                    <input
+                                                        placeholder="Ej: Limpieza Post-Evento, Sonido DJ, etc."
+                                                        value={service.name}
+                                                        onChange={e => {
+                                                            const newServices = [...formData.additional_services];
+                                                            newServices[index].name = e.target.value;
+                                                            handleInputChange('additional_services', newServices);
+                                                        }}
+                                                        style={{ ...inputStyle, padding: '10px 12px', fontWeight: '600' }}
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                        Precio Total ($) *
+                                                    </label>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <input
+                                                            type="number"
+                                                            placeholder="Ej: 15000"
+                                                            value={service.price}
+                                                            onChange={e => {
+                                                                const newServices = [...formData.additional_services];
+                                                                newServices[index].price = parseInt(e.target.value) || 0;
+                                                                handleInputChange('additional_services', newServices);
+                                                            }}
+                                                            style={{ ...inputStyle, padding: '10px 12px 10px 24px', fontWeight: '700' }}
+                                                        />
+                                                        <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                                                            $
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Quantity Modality Selector */}
+                                            <div style={{ marginBottom: '12px' }}>
+                                                <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '6px', display: 'block' }}>
+                                                    Modalidad de Contratación:
+                                                </label>
+                                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newServices = [...formData.additional_services];
+                                                            newServices[index].allow_quantity = false;
+                                                            handleInputChange('additional_services', newServices);
+                                                        }}
+                                                        style={{
+                                                            padding: '6px 14px',
+                                                            borderRadius: '8px',
+                                                            border: service.allow_quantity === true ? '1px solid var(--border)' : '1.5px solid var(--primary-paddle)',
+                                                            background: service.allow_quantity === true ? 'transparent' : 'rgba(132, 204, 22, 0.12)',
+                                                            color: service.allow_quantity === true ? 'var(--text-secondary)' : 'var(--text-primary)',
+                                                            fontWeight: service.allow_quantity === true ? '500' : '700',
+                                                            fontSize: '12px',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            transition: 'all 0.15s'
+                                                        }}
+                                                    >
+                                                        <span>{service.allow_quantity !== true ? '🔘' : '⚪'}</span>
+                                                        <span>Servicio Único (Precio fijo por evento)</span>
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newServices = [...formData.additional_services];
+                                                            newServices[index].allow_quantity = true;
+                                                            handleInputChange('additional_services', newServices);
+                                                        }}
+                                                        style={{
+                                                            padding: '6px 14px',
+                                                            borderRadius: '8px',
+                                                            border: service.allow_quantity === true ? '1.5px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                            background: service.allow_quantity === true ? 'rgba(132, 204, 22, 0.12)' : 'transparent',
+                                                            color: service.allow_quantity === true ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                            fontWeight: service.allow_quantity === true ? '700' : '500',
+                                                            fontSize: '12px',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            transition: 'all 0.15s'
+                                                        }}
+                                                    >
+                                                        <span>{service.allow_quantity === true ? '🔘' : '⚪'}</span>
+                                                        <span>Por Cantidad (Permite sumar unidades)</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Description Input */}
+                                            <div>
+                                                <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
+                                                    ¿Qué incluye este servicio? (Descripción para el cliente)
+                                                </label>
+                                                <input
+                                                    placeholder="Ej: Limpieza de todo el quincho y parque después del evento para que no tengas que preocuparte..."
+                                                    value={service.description || ''}
+                                                    onChange={e => {
+                                                        const newServices = [...formData.additional_services];
+                                                        newServices[index].description = e.target.value;
+                                                        handleInputChange('additional_services', newServices);
+                                                    }}
+                                                    style={{ ...inputStyle, padding: '10px 12px', fontSize: '13px' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '12px' }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    handleInputChange('additional_services', [
+                                        ...(formData.additional_services || []),
+                                        { icon: '✨', name: '', price: 0, description: '', enabled: true }
+                                    ]);
+                                }}
+                                style={{
+                                    ...buttonStyle,
+                                    background: 'transparent',
+                                    border: '1.5px dashed var(--primary-paddle)',
+                                    color: 'var(--text-primary)',
+                                    flex: 1,
+                                    padding: '14px',
+                                    fontWeight: '700'
+                                }}
+                            >
+                                + Agregar Servicio Personalizado
+                            </button>
+
+                            <button
+                                onClick={saveChanges}
+                                disabled={saving}
+                                style={{
+                                    ...buttonStyle,
+                                    flex: 1.5,
+                                    padding: '14px',
+                                    fontSize: '14px',
+                                    fontWeight: '800',
+                                    boxShadow: '0 4px 16px rgba(132, 204, 22, 0.25)'
+                                }}
+                            >
+                                <span>{saving ? 'Guardando...' : '💾 Guardar Servicios Adicionales'}</span>
+                            </button>
+                        </div>
+
+                        {/* Service Emoji Picker Modal */}
+                        {serviceIconPickerIndex !== null && (
+                            <EmojiPickerModal
+                                isOpen={serviceIconPickerIndex !== null}
+                                onClose={() => setServiceIconPickerIndex(null)}
+                                title="🎨 Elegir Ícono a Color para el Servicio"
+                                selectedIcon={formData.additional_services?.[serviceIconPickerIndex]?.icon || '✨'}
+                                onSelect={(emoji) => {
+                                    const newServices = [...(formData.additional_services || [])];
+                                    if (newServices[serviceIconPickerIndex]) {
+                                        newServices[serviceIconPickerIndex] = {
+                                            ...newServices[serviceIconPickerIndex],
+                                            icon: emoji
+                                        };
+                                        handleInputChange('additional_services', newServices);
+                                    }
+                                    setServiceIconPickerIndex(null);
+                                }}
+                            />
+                        )}
                     </div>
                 )}
 

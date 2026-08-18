@@ -11,20 +11,40 @@ const NewBookingModal = ({
     bookings
 }) => {
     const [isManualDeposit, setIsManualDeposit] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [calendarMonth, setCalendarMonth] = useState(() => {
+        if (newBookingData?.date) {
+            const [y, m, d] = newBookingData.date.split('-');
+            if (y && m) return new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+        }
+        return new Date();
+    });
 
-    // Reset manual deposit when modal closes
+    // Reset state when modal closes
     useEffect(() => {
         if (!isOpen) {
             setIsManualDeposit(false);
+            setShowDatePicker(false);
+        } else if (newBookingData?.date) {
+            const [y, m, d] = newBookingData.date.split('-');
+            if (y && m) setCalendarMonth(new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1));
         }
-    }, [isOpen]);
+    }, [isOpen, newBookingData?.date]);
 
     // Detect Business Types
     const isRental = currentBusiness?.type === 'venue' ||
+        currentBusiness?.type === 'rental' ||
         currentBusiness?.type === 'alquiler' ||
+        currentBusiness?.is_rental ||
         (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
+        (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
         (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salon');
+        (currentBusiness?.category || '').toLowerCase().includes('salon') ||
+        (currentBusiness?.category || '').toLowerCase().includes('salón') ||
+        (currentBusiness?.name || '').toLowerCase().includes('quincho') ||
+        (currentBusiness?.name || '').toLowerCase().includes('salon') ||
+        (currentBusiness?.name || '').toLowerCase().includes('salón') ||
+        currentBusiness?.subscription_plan_id === 'rental';
 
     const isPadel = !isRental && (
         (currentBusiness?.sport_type || '').toLowerCase().includes('padel') ||
@@ -245,18 +265,30 @@ const NewBookingModal = ({
         });
     };
 
+    const allowsQuantity = (name, itemObj) => {
+        if (itemObj?.allow_quantity !== undefined) return Boolean(itemObj.allow_quantity);
+        if (itemObj?.allows_quantity !== undefined) return Boolean(itemObj.allows_quantity);
+        if (itemObj?.is_quantity !== undefined) return Boolean(itemObj.is_quantity);
+        
+        const n = (name || '').toLowerCase();
+        const quantityKeywords = ['silla', 'mesa', 'hielo', 'leña', 'lena', 'fardo', 'cubierto', 'plato', 'copa', 'vajilla por', 'persona', 'invitado', 'bolsa', 'pack', 'unidad'];
+        return quantityKeywords.some(kw => n.includes(kw));
+    };
+
     const handleToggleCatalogExtra = (catalogItem) => {
         const existsIndex = selectedAdditionals.findIndex(item => item.name.toLowerCase() === catalogItem.name.toLowerCase());
         let updated;
         if (existsIndex >= 0) {
-            updated = selectedAdditionals.map((item, idx) => {
-                if (idx === existsIndex) {
-                    return { ...item, quantity: (item.quantity || 1) + 1 };
-                }
-                return item;
-            });
+            // Clicking again toggles off
+            updated = selectedAdditionals.filter((_, idx) => idx !== existsIndex);
         } else {
-            updated = [...selectedAdditionals, { name: catalogItem.name, price: Number(catalogItem.price || 0), quantity: 1 }];
+            // First click adds 1 unit
+            updated = [...selectedAdditionals, { 
+                name: catalogItem.name, 
+                price: Number(catalogItem.price || 0), 
+                quantity: 1,
+                allowQuantity: allowsQuantity(catalogItem.name, catalogItem)
+            }];
         }
         updateSelectedServices(updated);
     };
@@ -281,6 +313,124 @@ const NewBookingModal = ({
         const updated = selectedAdditionals.filter((_, idx) => idx !== index);
         updateSelectedServices(updated);
     };
+
+    const formatDateKey = (y, m, d) => {
+        return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    };
+
+    const formatNiceDate = (dateStr) => {
+        if (!dateStr) return 'Seleccionar fecha...';
+        try {
+            const [y, m, d] = dateStr.split('-');
+            const dateObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+            const formatted = dateObj.toLocaleDateString('es-AR', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+            return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+        } catch (e) {
+            return dateStr;
+        }
+    };
+
+    const getDateAvailability = (dateKey) => {
+        if (!dateKey) return { status: 'invalid', label: 'Sin fecha', selectable: false };
+
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        if (dateKey < todayStr) {
+            return { status: 'past', label: 'Pasada', selectable: false };
+        }
+
+        // Check business blocked dates
+        const blockedDates = currentBusiness?.blocked_dates || currentBusiness?.metadata?.blocked_dates || [];
+        if (blockedDates.includes(dateKey)) {
+            return { status: 'blocked', label: 'Bloqueado', selectable: false };
+        }
+
+        const blockedRanges = currentBusiness?.blocked_ranges || currentBusiness?.metadata?.blocked_ranges || [];
+        for (const range of blockedRanges) {
+            if (range.start && range.end && dateKey >= range.start && dateKey <= range.end) {
+                return { status: 'blocked', label: 'Bloqueado', selectable: false };
+            }
+        }
+
+        // Check bookings
+        const targetResourceId = newBookingData.courtId || newBookingData.serviceId;
+        const dayBookings = (bookings || []).filter(b => {
+            if (b.status === 'cancelled') return false;
+            let bDate = b.date;
+            if (bDate && bDate.includes('/')) {
+                const [d, m, y] = bDate.split('/');
+                bDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            }
+            if (bDate !== dateKey) return false;
+
+            if (isRental) {
+                if (targetResourceId && (b.court_id || b.service_id)) {
+                    return String(b.court_id || b.service_id) === String(targetResourceId);
+                }
+                return true;
+            }
+            return true;
+        });
+
+        if (dayBookings.length > 0) {
+            const isBlockedSlot = dayBookings.some(b => b.status === 'blocked' || b.customer_name?.toUpperCase().includes('BLOQUEADO'));
+            if (isBlockedSlot) {
+                return { status: 'blocked', label: 'Bloqueado', selectable: false };
+            }
+            return { status: 'occupied', label: 'Reservado', selectable: false, booking: dayBookings[0] };
+        }
+
+        return { status: 'available', label: 'Disponible', selectable: true };
+    };
+
+    const selectedDateAvailability = getDateAvailability(newBookingData.date);
+
+    // Days of Month Generator for Custom Calendar
+    const calYear = calendarMonth.getFullYear();
+    const calMonth = calendarMonth.getMonth();
+    const monthYearLabel = calendarMonth.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+    const capitalizedMonth = monthYearLabel.charAt(0).toUpperCase() + monthYearLabel.slice(1);
+
+    const firstDayIndex = new Date(calYear, calMonth, 1).getDay(); // 0 = Domingo
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
+
+    const prevDays = [];
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+        prevDays.push({
+            day: daysInPrevMonth - i,
+            isCurrentMonth: false,
+            dateKey: formatDateKey(calMonth === 0 ? calYear - 1 : calYear, calMonth === 0 ? 11 : calMonth - 1, daysInPrevMonth - i)
+        });
+    }
+
+    const currentDays = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+        currentDays.push({
+            day: i,
+            isCurrentMonth: true,
+            dateKey: formatDateKey(calYear, calMonth, i)
+        });
+    }
+
+    const totalGridCells = (prevDays.length + currentDays.length) <= 35 ? 35 : 42;
+    const nextDaysCount = totalGridCells - (prevDays.length + currentDays.length);
+    const nextDays = [];
+    for (let i = 1; i <= nextDaysCount; i++) {
+        nextDays.push({
+            day: i,
+            isCurrentMonth: false,
+            dateKey: formatDateKey(calMonth === 11 ? calYear + 1 : calYear, calMonth === 11 ? 0 : calMonth + 1, i)
+        });
+    }
+
+    const allCalendarDays = [...prevDays, ...currentDays, ...nextDays];
 
     if (!isOpen) return null;
 
@@ -335,48 +485,296 @@ const NewBookingModal = ({
                 </div>
 
                 <form onSubmit={onSubmit} style={{ display: 'grid', gap: '14px' }}>
-                    {/* Row 1: Fecha (Left) | Cancha/Espacio Seleccionado (Right - Auto-set y Fijo) */}
+                    {/* Row 1: Fecha (Left) | Cancha/Espacio Seleccionado (Right) */}
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                        <div>
+                        <div style={{ position: 'relative' }}>
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                📅 Fecha y Horario
+                                {isRental ? '📅 Fecha del Evento / Alquiler *' : '📅 Fecha del Turno *'}
                             </label>
-                            <input
-                                type="text"
-                                value={`${newBookingData.date || ''}${newBookingData.time ? ` • ${newBookingData.time} hs` : ''}`}
-                                disabled
+                            
+                            <button
+                                type="button"
+                                onClick={() => setShowDatePicker(prev => !prev)}
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
                                     borderRadius: '10px',
-                                    border: '1px solid var(--border)',
+                                    border: (newBookingData.date && selectedDateAvailability.status !== 'available')
+                                        ? '1px solid #EF4444'
+                                        : (showDatePicker ? '1px solid var(--primary-paddle)' : '1px solid var(--border)'),
                                     background: 'var(--bg-main)',
                                     color: 'var(--text-primary)',
                                     fontSize: '13px',
-                                    fontWeight: '700'
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '6px',
+                                    textAlign: 'left'
                                 }}
-                            />
+                            >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <span>📅</span>
+                                    <span>{newBookingData.date ? formatNiceDate(newBookingData.date) : 'Seleccionar fecha...'}</span>
+                                </span>
+
+                                {newBookingData.date && (
+                                    <span style={{
+                                        fontSize: '11px',
+                                        fontWeight: '800',
+                                        padding: '2px 7px',
+                                        borderRadius: '6px',
+                                        flexShrink: 0,
+                                        background: selectedDateAvailability.status === 'available' ? 'rgba(0, 230, 118, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                        color: selectedDateAvailability.status === 'available' ? 'var(--primary-paddle)' : '#EF4444'
+                                    }}>
+                                        {selectedDateAvailability.status === 'available' ? '✓ Disponible' : selectedDateAvailability.label}
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* Custom Dark Calendar Dropdown */}
+                            {showDatePicker && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 'calc(100% + 6px)',
+                                    left: 0,
+                                    zIndex: 9999,
+                                    width: isMobile ? '100%' : '300px',
+                                    background: 'var(--bg-card, #1A1E24)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '16px',
+                                    padding: '14px',
+                                    boxShadow: '0 16px 40px rgba(0, 0, 0, 0.55)'
+                                }}>
+                                    {/* Header: Month & Year + Arrows */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                                            style={{
+                                                background: 'var(--bg-main)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '8px',
+                                                color: 'var(--text-primary)',
+                                                width: '28px',
+                                                height: '28px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                fontWeight: '700'
+                                            }}
+                                        >
+                                            ❮
+                                        </button>
+                                        <div style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-primary)' }}>
+                                            {capitalizedMonth}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                                            style={{
+                                                background: 'var(--bg-main)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '8px',
+                                                color: 'var(--text-primary)',
+                                                width: '28px',
+                                                height: '28px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                fontWeight: '700'
+                                            }}
+                                        >
+                                            ❯
+                                        </button>
+                                    </div>
+
+                                    {/* Day of Week Labels */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center', marginBottom: '6px' }}>
+                                        {['DO', 'LU', 'MA', 'MI', 'JU', 'VI', 'SA'].map(d => (
+                                            <div key={d} style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)' }}>
+                                                {d}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Calendar Grid */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+                                        {allCalendarDays.map((cell, idx) => {
+                                            const isSelected = newBookingData.date === cell.dateKey;
+                                            const availability = getDateAvailability(cell.dateKey);
+                                            const isSelectable = cell.isCurrentMonth && availability.selectable;
+
+                                            let bg = 'transparent';
+                                            let textColor = 'var(--text-muted)';
+                                            let border = '1px solid transparent';
+                                            let cursor = 'default';
+
+                                            if (!cell.isCurrentMonth) {
+                                                textColor = 'rgba(255, 255, 255, 0.12)';
+                                            } else if (isSelected) {
+                                                bg = 'var(--primary-paddle, #00E676)';
+                                                textColor = '#000000';
+                                                border = '1px solid var(--primary-paddle)';
+                                                cursor = 'pointer';
+                                            } else if (availability.status === 'occupied') {
+                                                bg = 'rgba(239, 68, 68, 0.15)';
+                                                textColor = '#EF4444';
+                                                border = '1px solid rgba(239, 68, 68, 0.3)';
+                                                cursor = 'not-allowed';
+                                            } else if (availability.status === 'blocked') {
+                                                bg = 'rgba(255, 255, 255, 0.05)';
+                                                textColor = '#9CA3AF';
+                                                border = '1px dashed rgba(255, 255, 255, 0.15)';
+                                                cursor = 'not-allowed';
+                                            } else if (availability.status === 'past') {
+                                                textColor = 'rgba(255, 255, 255, 0.18)';
+                                                cursor = 'not-allowed';
+                                            } else {
+                                                // available
+                                                bg = 'var(--bg-main)';
+                                                textColor = 'var(--text-primary)';
+                                                border = '1px solid var(--border)';
+                                                cursor = 'pointer';
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    disabled={!isSelectable && !isSelected}
+                                                    onClick={() => {
+                                                        if (isSelectable) {
+                                                            setNewBookingData(prev => ({ ...prev, date: cell.dateKey }));
+                                                            setShowDatePicker(false);
+                                                        }
+                                                    }}
+                                                    title={cell.isCurrentMonth ? `${cell.dateKey}: ${availability.label}` : ''}
+                                                    style={{
+                                                        height: '32px',
+                                                        borderRadius: '8px',
+                                                        background: bg,
+                                                        color: textColor,
+                                                        border: border,
+                                                        cursor: cursor,
+                                                        fontWeight: isSelected ? '900' : '600',
+                                                        fontSize: '12px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        transition: 'all 0.15s'
+                                                    }}
+                                                >
+                                                    {cell.day}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Legend */}
+                                    <div style={{
+                                        marginTop: '10px',
+                                        paddingTop: '8px',
+                                        borderTop: '1px solid var(--border)',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        fontSize: '10px',
+                                        color: 'var(--text-secondary)'
+                                    }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary-paddle)' }}></span>
+                                            Disponible
+                                        </span>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444' }}></span>
+                                            Ocupado
+                                        </span>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#9CA3AF' }}></span>
+                                            Bloqueado
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Warning if selected date is occupied/blocked */}
+                            {newBookingData.date && selectedDateAvailability.status !== 'available' && (
+                                <div style={{
+                                    marginTop: '6px',
+                                    padding: '6px 10px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(239, 68, 68, 0.12)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    color: '#EF4444',
+                                    fontSize: '11px',
+                                    fontWeight: '600'
+                                }}>
+                                    ⚠️ Esta fecha {selectedDateAvailability.label.toLowerCase()} (no disponible).
+                                </div>
+                            )}
                         </div>
 
                         <div>
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                {isRental ? '🏡 Espacio Asignado' : isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '🎯 Espacio / Cancha'}
+                                {isRental ? '🏡 Espacio / Salón Asignado' : isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '🎯 Espacio / Cancha'}
                             </label>
-                            <input
-                                type="text"
-                                value={selectedResourceInfo.displayText}
-                                disabled
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 12px',
-                                    borderRadius: '10px',
-                                    border: '1px solid var(--border)',
-                                    background: 'var(--bg-main)',
-                                    color: 'var(--primary-paddle)',
-                                    fontSize: '13px',
-                                    fontWeight: '800'
-                                }}
-                            />
+                            {((currentBusiness?.courts?.length || 0) + (currentBusiness?.services?.length || 0)) > 1 ? (
+                                <select
+                                    value={newBookingData.courtId || newBookingData.serviceId || ''}
+                                    onChange={(e) => {
+                                        const id = e.target.value;
+                                        const court = (currentBusiness?.courts || []).find(c => String(c.id) === String(id));
+                                        const service = (currentBusiness?.services || []).find(s => String(s.id) === String(id));
+                                        const res = court || service;
+                                        setNewBookingData(prev => ({
+                                            ...prev,
+                                            courtId: id,
+                                            serviceId: id,
+                                            resourceName: res?.name || '',
+                                            price: Number(res?.price || prev.price || 0),
+                                            basePrice: Number(res?.price || prev.basePrice || 0)
+                                        }));
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 12px',
+                                        borderRadius: '10px',
+                                        border: '1px solid var(--border)',
+                                        background: 'var(--bg-main)',
+                                        color: 'var(--primary-paddle)',
+                                        fontSize: '13px',
+                                        fontWeight: '800',
+                                        outline: 'none'
+                                    }}
+                                >
+                                    {(currentBusiness?.courts || []).map(c => (
+                                        <option key={c.id} value={c.id}>{c.name} {c.price ? `• $${Number(c.price).toLocaleString('es-AR')}` : ''}</option>
+                                    ))}
+                                    {(currentBusiness?.services || []).map(s => (
+                                        <option key={s.id} value={s.id}>{s.name} {s.price ? `• $${Number(s.price).toLocaleString('es-AR')}` : ''}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <input
+                                    type="text"
+                                    value={selectedResourceInfo.displayText}
+                                    disabled
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 12px',
+                                        borderRadius: '10px',
+                                        border: '1px solid var(--border)',
+                                        background: 'var(--bg-main)',
+                                        color: 'var(--primary-paddle)',
+                                        fontSize: '13px',
+                                        fontWeight: '800'
+                                    }}
+                                />
+                            )}
                         </div>
                     </div>
 
@@ -657,12 +1055,13 @@ const NewBookingModal = ({
                             {/* Quick-add chips from catalog */}
                             <div>
                                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                                    Catálogo de adicionales (tocá para sumar o incrementar cantidad):
+                                    Catálogo de adicionales (tocá para activar o desactivar):
                                 </span>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                     {catalogAdditionals.map((catItem, idx) => {
                                         const selected = selectedAdditionals.find(s => s.name.toLowerCase() === catItem.name.toLowerCase());
                                         const isSelected = !!selected;
+                                        const isQty = allowsQuantity(catItem.name, catItem);
                                         return (
                                             <button
                                                 key={idx}
@@ -683,7 +1082,7 @@ const NewBookingModal = ({
                                                     transition: 'all 0.15s'
                                                 }}
                                             >
-                                                <span>{isSelected ? `✓ (${selected.quantity})` : '+'}</span>
+                                                <span>{isSelected ? (isQty && selected.quantity > 1 ? `✓ (${selected.quantity})` : '✓') : '+'}</span>
                                                 <span>{catItem.name}</span>
                                                 {catItem.price > 0 && <span style={{ opacity: 0.85 }}>(${catItem.price.toLocaleString('es-AR')})</span>}
                                             </button>
@@ -703,6 +1102,7 @@ const NewBookingModal = ({
                                 paddingTop: '8px'
                             }}>
                                 {selectedAdditionals.map((item, idx) => {
+                                    const isQty = allowsQuantity(item.name, item);
                                     const itemTotal = Number(item.price || 0) * (item.quantity || 1);
                                     return (
                                         <div key={idx} style={{
@@ -722,62 +1122,64 @@ const NewBookingModal = ({
                                                 </span>
                                                 {item.price > 0 && (
                                                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                                        ${item.price.toLocaleString('es-AR')} c/u
+                                                        ${item.price.toLocaleString('es-AR')}{isQty ? ' c/u' : ''}
                                                     </span>
                                                 )}
                                             </div>
 
-                                            {/* Quantity selector [-] qty [+] */}
+                                            {/* Quantity selector or Unique Badge */}
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <div style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    background: 'var(--bg-main)',
-                                                    borderRadius: '8px',
-                                                    border: '1px solid var(--border)',
-                                                    overflow: 'hidden'
-                                                }}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleQuantityChange(idx, -1)}
-                                                        style={{
-                                                            padding: '2px 8px',
-                                                            background: 'transparent',
-                                                            border: 'none',
-                                                            cursor: 'pointer',
-                                                            color: 'var(--text-primary)',
-                                                            fontWeight: '800',
-                                                            fontSize: '14px'
-                                                        }}
-                                                    >
-                                                        -
-                                                    </button>
-                                                    <span style={{
-                                                        padding: '0 6px',
-                                                        fontWeight: '800',
-                                                        fontSize: '12px',
-                                                        color: 'var(--text-primary)',
-                                                        minWidth: '20px',
-                                                        textAlign: 'center'
+                                                {isQty && (
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        background: 'var(--bg-main)',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid var(--border)',
+                                                        overflow: 'hidden'
                                                     }}>
-                                                        {item.quantity || 1}
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleQuantityChange(idx, 1)}
-                                                        style={{
-                                                            padding: '2px 8px',
-                                                            background: 'transparent',
-                                                            border: 'none',
-                                                            cursor: 'pointer',
-                                                            color: 'var(--text-primary)',
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleQuantityChange(idx, -1)}
+                                                            style={{
+                                                                padding: '2px 8px',
+                                                                background: 'transparent',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                color: 'var(--text-primary)',
+                                                                fontWeight: '800',
+                                                                fontSize: '14px'
+                                                            }}
+                                                        >
+                                                            -
+                                                        </button>
+                                                        <span style={{
+                                                            padding: '0 6px',
                                                             fontWeight: '800',
-                                                            fontSize: '14px'
-                                                        }}
-                                                    >
-                                                        +
-                                                    </button>
-                                                </div>
+                                                            fontSize: '12px',
+                                                            color: 'var(--text-primary)',
+                                                            minWidth: '20px',
+                                                            textAlign: 'center'
+                                                        }}>
+                                                            {item.quantity || 1}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleQuantityChange(idx, 1)}
+                                                            style={{
+                                                                padding: '2px 8px',
+                                                                background: 'transparent',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                color: 'var(--text-primary)',
+                                                                fontWeight: '800',
+                                                                fontSize: '14px'
+                                                            }}
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+                                                )}
 
                                                 <span style={{ fontWeight: '800', color: 'var(--primary-paddle)', minWidth: '60px', textAlign: 'right' }}>
                                                     ${itemTotal.toLocaleString('es-AR')}
@@ -899,22 +1301,36 @@ const NewBookingModal = ({
                     {/* Submit Button */}
                     <button
                         type="submit"
+                        disabled={!newBookingData.date || selectedDateAvailability.status !== 'available'}
                         style={{
                             width: '100%',
                             padding: '12px',
-                            background: 'var(--primary-paddle)',
-                            color: '#000000',
+                            background: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                                ? 'var(--border)'
+                                : 'var(--primary-paddle)',
+                            color: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                                ? 'var(--text-muted)'
+                                : '#000000',
                             border: 'none',
                             borderRadius: '10px',
                             fontWeight: '800',
                             fontSize: '14px',
-                            cursor: 'pointer',
+                            cursor: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                                ? 'not-allowed'
+                                : 'pointer',
                             marginTop: '6px',
-                            transition: 'opacity 0.2s',
-                            boxShadow: '0 4px 14px rgba(0, 230, 118, 0.25)'
+                            transition: 'all 0.2s',
+                            boxShadow: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                                ? 'none'
+                                : '0 4px 14px rgba(0, 230, 118, 0.25)'
                         }}
                     >
-                        Crear Reserva
+                        {!newBookingData.date 
+                            ? 'Selecciona una Fecha Disponible'
+                            : selectedDateAvailability.status !== 'available'
+                                ? `Fecha No Disponible (${selectedDateAvailability.label})`
+                                : 'Crear Reserva'
+                        }
                     </button>
                 </form>
             </div>

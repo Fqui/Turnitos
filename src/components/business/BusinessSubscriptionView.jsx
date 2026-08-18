@@ -8,9 +8,29 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
     const [loading, setLoading] = useState(true);
 
     const isFree = isFreePlan(business?.subscription_plan_id || business?.subscription_plan_name);
+    
+    // Detección robusta de tipo de negocio
+    const bType = String(business?.type || '').toLowerCase();
+    const bCat = String(business?.category || '').toLowerCase();
+    const bCatId = String(business?.category_id || '').toLowerCase();
+    const bName = String(business?.name || '').toLowerCase();
+
+    const isRental = bType === 'rental' ||
+        bType === 'venue' ||
+        bType === 'alquiler' ||
+        business?.is_rental ||
+        bCat === 'rental' ||
+        bCat === 'alquiler' ||
+        bCat === 'venue' ||
+        bCatId.includes('venue') ||
+        bCatId.includes('alquiler') ||
+        bName.includes('quincho') ||
+        bName.includes('salon') ||
+        bName.includes('salón') ||
+        business?.subscription_plan_id === 'rental';
 
     // Detección de canchas y cálculo dinámico de abono
-    const isSport = business?.type === 'sport' || business?.type === 'courts' || (business?.courts && business.courts.length > 0) || !business?.type;
+    const isSport = !isRental && (bType === 'sport' || bType === 'courts' || (business?.courts && business.courts.length > 0));
     const courtsCount = Math.max(1, business?.courts?.length || business?.capacity || 1);
 
     // Escala de precios por cancha
@@ -31,7 +51,10 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
         totalServicesPrice = 36000 + (extra * 10000);
     }
 
-    const monthlyPrice = isFree ? 0 : (isSport ? totalCourtsPrice : totalServicesPrice);
+    // Quinchos / Salones
+    const totalRentalPrice = 15000;
+
+    const monthlyPrice = isFree ? 0 : (isRental ? totalRentalPrice : (isSport ? totalCourtsPrice : totalServicesPrice));
 
     // Fechas de ciclo y vencimiento
     const now = new Date();
@@ -89,12 +112,18 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
         !item.notes?.toUpperCase().includes('BLOQUEO')
     );
 
+    const getItemCommission = (item) => {
+        if (isFree) return Math.round(Number(item.price || 0) * 0.05);
+        if (isRental) return Math.round(Number(item.price || 0) * 0.03);
+        if (item.metadata?.commission_amount !== undefined && item.metadata?.commission_amount !== null) {
+            return Number(item.metadata.commission_amount);
+        }
+        return 500;
+    };
+
     const marketplaceCount = filteredMarketplaceList.length;
     const totalMarketplaceCommission = filteredMarketplaceList.reduce((acc, item) => {
-        const comm = item.metadata?.commission_amount !== undefined 
-            ? Number(item.metadata.commission_amount) 
-            : (isFree ? Math.round(Number(item.price || 0) * 0.05) : 500);
-        return acc + comm;
+        return acc + getItemCommission(item);
     }, 0);
 
     return (
@@ -151,15 +180,25 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                     <h3 style={{ margin: '0 0 6px 0', fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)' }}>
                         {isFree 
                             ? 'Plan Básico (Hasta 100 turnos/mes)'
-                            : isSport 
-                                ? `Canchas (${courtsCount} ${courtsCount === 1 ? 'Cancha' : 'Canchas'})`
-                                : `Servicios (${specialistsCount} ${specialistsCount === 1 ? 'Agenda' : 'Agendas'})`
+                            : isRental
+                                ? 'Alquileres (Quinchos y Salones)'
+                                : isSport 
+                                    ? `Canchas (${courtsCount} ${courtsCount === 1 ? 'Cancha' : 'Canchas'})`
+                                    : `Servicios (${specialistsCount} ${specialistsCount === 1 ? 'Agenda' : 'Agendas'})`
                         }
                     </h3>
 
                     <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '520px', lineHeight: '1.5' }}>
                         {isFree ? (
                             'Hasta 100 reservas al mes. 5% de comisión por turno.'
+                        ) : isRental ? (
+                            <span>
+                                <strong style={{ color: 'var(--text-primary)' }}>
+                                    Abono fijo $15.000 / mes.
+                                </strong>
+                                <br />
+                                Reservas ilimitadas, $0 comisión directa por tu link, 3% por reserva desde TurnitosLR.
+                            </span>
                         ) : isSport ? (
                             <span>
                                 <strong style={{ color: 'var(--text-primary)' }}>
@@ -357,7 +396,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                             Comisión por Turno
                         </div>
                         <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary-paddle)' }}>
-                            {isFree ? '5%' : '$500'}
+                            {isFree ? '5%' : (isRental ? '3%' : '$500')}
                         </div>
                     </div>
 
@@ -411,9 +450,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                                 </thead>
                                 <tbody>
                                     {filteredMarketplaceList.map((item, idx) => {
-                                        const comm = item.metadata?.commission_amount !== undefined 
-                                            ? Number(item.metadata.commission_amount) 
-                                            : (isFree ? Math.round(Number(item.price || 0) * 0.05) : 500);
+                                        const comm = getItemCommission(item);
                                         return (
                                             <tr key={item.id || idx} style={{ borderBottom: '1px solid var(--border)' }}>
                                                 <td style={{ padding: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>
@@ -438,6 +475,41 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                             </table>
                         </div>
                     )}
+                </div>
+            </div>
+
+            {/* Total Settlement Summary Card */}
+            <div style={{
+                background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.08) 0%, rgba(20, 25, 30, 0.95) 100%)',
+                borderRadius: '20px',
+                padding: '24px',
+                border: '1px solid rgba(0, 230, 118, 0.25)',
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                gap: '20px'
+            }}>
+                <div>
+                    <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary-paddle)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.04em' }}>
+                        💳 Resumen de Liquidación del Período
+                    </div>
+                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                        <span>Abono Mensual ({isRental ? 'Quinchos' : isSport ? 'Canchas' : 'Servicios'}): <strong style={{ color: 'var(--text-primary)' }}>${monthlyPrice.toLocaleString('es-AR')}</strong></span>
+                        <br />
+                        <span>+ Comisiones Marketplace ({marketplaceCount} {marketplaceCount === 1 ? 'reserva' : 'reservas'}): <strong style={{ color: 'var(--text-primary)' }}>${totalMarketplaceCommission.toLocaleString('es-AR')}</strong></span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                        Próximo vencimiento de pago: <strong style={{ color: 'var(--text-primary)' }}>{nextDueDate}</strong> (del 1 al 10)
+                    </div>
+                </div>
+                <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>
+                        Total a Transferir
+                    </div>
+                    <div style={{ fontSize: '32px', fontWeight: '900', color: 'var(--primary-paddle)' }}>
+                        ${(monthlyPrice + totalMarketplaceCommission).toLocaleString('es-AR')}
+                    </div>
                 </div>
             </div>
         </motion.div>
