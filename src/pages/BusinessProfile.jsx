@@ -486,13 +486,19 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
             await serviceAdapter.createBooking(bookingData);
 
-            // Notify business owner devices
-            pushService.notifyBusinessNewBooking(business.id, {
-                customerName: customerName,
-                date: formatDisplayDate(selectedDate),
-                time: selectedTime,
-                businessName: business.name
-            });
+            // Notify business owner devices (non-blocking)
+            try {
+                if (pushService?.notifyBusinessNewBooking) {
+                    pushService.notifyBusinessNewBooking(business.id, {
+                        customerName: customerName,
+                        date: formatDisplayDate(selectedDate),
+                        time: selectedTime,
+                        businessName: business.name
+                    });
+                }
+            } catch (pushErr) {
+                console.warn('[BusinessProfile] Push notification failed:', pushErr);
+            }
 
             // Close booking modal and show success modal
             setShowModal(false);
