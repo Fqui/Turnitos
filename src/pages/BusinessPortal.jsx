@@ -303,34 +303,42 @@ export default function BusinessPortal() {
         }
     };
 
-    const fetchBookings = async () => {
-        setLoading(true);
+    const fetchBookings = async (isSilent = false) => {
+        if (!isSilent) {
+            setLoading(true);
+        }
         try {
             const response = await serviceAdapter.getBookings(selectedBusinessId);
             if (response.bookings) {
                 setBookings(response.bookings);
             }
 
-            const businessData = await serviceAdapter.getBusinessById(selectedBusinessId);
-            if (businessData) {
-                setBusinesses(prev => {
-                    const exists = prev.some(b => String(b.id) === String(businessData.id));
-                    return exists
-                        ? prev.map(b => String(b.id) === String(businessData.id) ? businessData : b)
-                        : [...prev, businessData];
-                });
+            if (!isSilent) {
+                const businessData = await serviceAdapter.getBusinessById(selectedBusinessId);
+                if (businessData) {
+                    setBusinesses(prev => {
+                        const exists = prev.some(b => String(b.id) === String(businessData.id));
+                        return exists
+                            ? prev.map(b => String(b.id) === String(businessData.id) ? businessData : b)
+                            : [...prev, businessData];
+                    });
+                }
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
-            alert('Error al cargar reservas. Revisa la consola.');
+            if (!isSilent) {
+                showToast('Error al actualizar reservas', 'error');
+            }
         } finally {
-            setLoading(false);
+            if (!isSilent) {
+                setLoading(false);
+            }
         }
     };
 
     useEffect(() => {
         if (isLoggedIn && selectedBusinessId) {
-            fetchBookings();
+            fetchBookings(bookings.length > 0);
 
             const handleNewBookingAlert = (bookingData, customTitle) => {
                 if (!bookingData) return;
@@ -361,25 +369,25 @@ export default function BusinessPortal() {
                 }
             };
 
-            // 1. Sincronización en tiempo real vía Postgres Changes
+            // 1. Sincronización en tiempo real vía Postgres Changes (SILENT)
             const subscription = serviceAdapter.subscribeToBookings(selectedBusinessId, (payload) => {
-                fetchBookings();
+                fetchBookings(true);
 
                 if (payload.eventType === 'INSERT' && payload.new) {
                     handleNewBookingAlert(payload.new);
                 }
             });
 
-            // 2. Realtime notification broadcast channel vía Supabase
+            // 2. Realtime notification broadcast channel vía Supabase (SILENT)
             const notifChannel = supabase.channel(`business-notif-${selectedBusinessId}`)
                 .on('broadcast', { event: 'new_booking' }, (payload) => {
                     const info = payload?.payload?.bookingInfo;
                     handleNewBookingAlert(info, payload?.payload?.title);
-                    fetchBookings();
+                    fetchBookings(true);
                 })
                 .subscribe();
 
-            // 3. Multi-tab instant sync via native HTML5 BroadcastChannel
+            // 3. Multi-tab instant sync via native HTML5 BroadcastChannel (SILENT)
             let localBroadcast = null;
             try {
                 if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -387,7 +395,7 @@ export default function BusinessPortal() {
                     localBroadcast.onmessage = (event) => {
                         if (event?.data?.type === 'new_booking') {
                             handleNewBookingAlert(event.data.bookingInfo, event.data.title);
-                            fetchBookings();
+                            fetchBookings(true);
                         }
                     };
                 }
@@ -395,10 +403,10 @@ export default function BusinessPortal() {
                 console.warn('BroadcastChannel error:', bcErr);
             }
 
-            // 4. Polling fallback every 10 seconds to ensure 100% data sync
+            // 4. Polling fallback every 30 seconds (SILENT background update)
             const pollingInterval = setInterval(() => {
-                fetchBookings();
-            }, 10000);
+                fetchBookings(true);
+            }, 30000);
 
             return () => {
                 if (subscription && typeof subscription.unsubscribe === 'function') {

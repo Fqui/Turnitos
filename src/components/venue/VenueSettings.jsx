@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import serviceAdapter from '../../services/serviceAdapter';
 import { useNotification } from '../../contexts/NotificationContext';
 import AmenityIcon, { IconPickerModal, EmojiPickerModal, parseAmenity } from '../common/AmenityIcon';
+import LinkBioButtonsSettings from './LinkBioButtonsSettings';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -36,7 +37,8 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
 
     const [formData, setFormData] = useState({
         ...business,
-        whatsapp_templates: business?.whatsapp_templates || business?.metadata?.whatsapp_templates || {}
+        whatsapp_templates: business?.whatsapp_templates || business?.metadata?.whatsapp_templates || {},
+        custom_links: business?.custom_links || business?.metadata?.custom_links || []
     });
 
     // Calendar optimization state
@@ -254,7 +256,10 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 rental_duration_options: prev.rental_duration_options || business.rental_duration_options || [4, 6, 8, 12, 24],
                 duration_discounts: prev.duration_discounts || business.duration_discounts || business.metadata?.duration_discounts || {},
                 amenities: prev.amenities || business.amenities || [],
-                whatsapp_templates: prev.whatsapp_templates || business.whatsapp_templates || business.metadata?.whatsapp_templates || {}
+                whatsapp_templates: prev.whatsapp_templates || business.whatsapp_templates || business.metadata?.whatsapp_templates || {},
+                custom_links: (prev.custom_links && prev.custom_links.length > 0)
+                    ? prev.custom_links
+                    : (business.custom_links || business.metadata?.custom_links || [])
             }));
         }
     }, [business]);
@@ -371,6 +376,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 blocked_dates: formData.blocked_dates || business?.blocked_dates || [],
                 rental_duration_options: durationOpts,
                 whatsapp_templates: whatsappTemplates,
+                custom_links: formData.custom_links || business?.custom_links || [],
                 metadata: {
                     ...(business?.metadata || {}),
                     ...(formData.metadata || {}),
@@ -379,7 +385,8 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     duration_discounts: durationDiscounts,
                     blocked_dates: formData.blocked_dates || business?.blocked_dates || [],
                     venue_gallery: formData.metadata?.venue_gallery || [],
-                    whatsapp_templates: whatsappTemplates
+                    whatsapp_templates: whatsappTemplates,
+                    custom_links: formData.custom_links || business?.custom_links || []
                 },
                 gallery_images: formData.metadata?.venue_gallery?.map(item => item.url) || formData.gallery_images || business?.gallery_images
             };
@@ -588,6 +595,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 {[
                     { id: 'general', label: 'General y Ubicación', icon: 'MapPin' },
                     { id: 'appearance', label: 'Apariencia y Colores', icon: 'Palette' },
+                    { id: 'linkbio', label: 'Botones del LinkBio', icon: 'Link' },
                     { id: 'gallery', label: 'Galería de Fotos', icon: 'Image' },
                     { id: 'pricing', label: 'Precios y Capacidad', icon: 'DollarSign' },
                     { id: 'services', label: 'Servicios Adicionales', icon: 'Sparkles' },
@@ -2476,6 +2484,17 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {activeTab === 'linkbio' && (
+                    <LinkBioButtonsSettings
+                        customLinks={formData.custom_links || []}
+                        onChange={(newLinks) => {
+                            handleInputChange('custom_links', newLinks);
+                            handleMetadataChange('custom_links', newLinks);
+                        }}
+                        primaryColor={formData.primary_color || business?.primary_color}
+                    />
                 )}
 
             </div>

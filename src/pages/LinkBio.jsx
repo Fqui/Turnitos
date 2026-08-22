@@ -160,6 +160,40 @@ const LinkBio = ({ overrideSlug = null }) => {
         return (now - createdAt) < twentyFourHours;
     });
 
+    // Parse custom buttons created by the business
+    const customLinks = (business.custom_links || business.metadata?.custom_links || [])
+        .filter(link => link && link.enabled !== false && (link.file_url || link.url));
+
+    const customButtons = customLinks.map((link) => {
+        const isPdf = (link.file_url || link.url || '').toLowerCase().includes('.pdf');
+        let btnBg = 'var(--bg-card)';
+        let btnColor = 'var(--text-primary)';
+        let isColored = false;
+
+        if (link.button_color === 'primary' || (link.highlight && !link.button_color)) {
+            btnBg = primaryColor;
+            btnColor = '#FFFFFF';
+            isColored = true;
+        } else if (link.button_color && link.button_color !== 'card') {
+            btnBg = link.button_color;
+            btnColor = '#FFFFFF';
+            isColored = true;
+        }
+
+        return {
+            title: link.title || 'Enlace',
+            subtitle: link.subtitle || (link.file_name ? `Archivo: ${link.file_name}` : null),
+            icon: link.icon || (isPdf ? '📄' : '🔗'),
+            action: () => {
+                const target = link.file_url || link.url;
+                if (target) window.open(target, '_blank');
+            },
+            bgColor: btnBg,
+            textColor: btnColor,
+            highlight: isColored
+        };
+    });
+
     // Filter out social/location links from the main list as they will have their own sections
     const mainLinks = [
         {
@@ -170,6 +204,7 @@ const LinkBio = ({ overrideSlug = null }) => {
             action: () => navigate(getBookingPath()),
             highlight: true
         },
+        ...customButtons,
         ...(business.store_enabled ? [{
             title: 'Tienda',
             subtitle: business.metadata?.store_banner_title || business.metadata?.store_banner_subtitle || 'Conocé nuestros productos',
@@ -569,8 +604,8 @@ const LinkBio = ({ overrideSlug = null }) => {
                             padding: linkBtnPadding,
                             borderRadius: '16px',
                             border: '1px solid var(--border)',
-                            backgroundColor: link.highlight ? primaryColor : 'var(--bg-card)',
-                            color: link.highlight ? 'white' : 'var(--text-primary)',
+                            backgroundColor: link.bgColor || (link.highlight ? primaryColor : 'var(--bg-card)'),
+                            color: link.textColor || (link.highlight ? 'white' : 'var(--text-primary)'),
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
@@ -590,7 +625,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                     >
                         <span className="linkbio-link-icon-wrapper" style={{
                             fontSize: linkIconFontSize,
-                            backgroundColor: link.highlight ? 'rgba(255,255,255,0.2)' : 'var(--bg-main)',
+                            backgroundColor: (link.highlight || link.bgColor) && link.bgColor !== 'var(--bg-card)' ? 'rgba(255,255,255,0.2)' : 'var(--bg-main)',
                             width: linkIconBoxSize,
                             height: linkIconBoxSize,
                             display: 'flex',
@@ -604,13 +639,13 @@ const LinkBio = ({ overrideSlug = null }) => {
                             <div className="linkbio-link-title" style={{ fontWeight: '700', fontSize: linkTitleFontSize }}>{link.title}</div>
                             <div className="linkbio-link-subtitle" style={{
                                 fontSize: linkSubtitleFontSize,
-                                opacity: 0.8,
-                                color: link.highlight ? 'white' : 'var(--text-secondary)'
+                                opacity: 0.85,
+                                color: (link.highlight || (link.textColor === '#FFFFFF')) ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)'
                             }}>
                                 {link.subtitle}
                             </div>
                         </div>
-                        {!link.highlight && (
+                        {(!link.highlight && (!link.bgColor || link.bgColor === 'var(--bg-card)')) && (
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M9 18l6-6-6-6" />
                             </svg>
