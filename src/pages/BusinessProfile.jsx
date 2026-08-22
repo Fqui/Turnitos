@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
 import { pushService } from '../services/pushService';
+import { supabase } from '../services/supabaseClient';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import ServiceSelector from '../components/ServiceSelector';
 import Calendar from '../components/Calendar';
@@ -306,6 +307,53 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const refreshBookings = () => {
         setBookingRefreshTrigger(prev => prev + 1);
     };
+
+    // 🔴 Realtime synchronization for BusinessProfile
+    useEffect(() => {
+        if (!business?.id) return;
+        const bId = business.id;
+
+        // 1. Subscribe to Bookings via serviceAdapter
+        const bookingsSub = serviceAdapter.subscribeToBookings(bId, () => {
+            refreshBookings();
+        });
+
+        // 2. Subscribe to Broadcast channel
+        const notifChannel = supabase.channel(`business-notif-${bId}`)
+            .on('broadcast', { event: 'new_booking' }, () => {
+                refreshBookings();
+            })
+            .subscribe();
+
+        // 3. Multi-tab BroadcastChannel
+        let localBroadcast = null;
+        try {
+            if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                localBroadcast = new BroadcastChannel(`turnitos-live-${bId}`);
+                localBroadcast.onmessage = () => {
+                    refreshBookings();
+                };
+            }
+        } catch (bcErr) {
+            console.warn('BroadcastChannel error in BusinessProfile:', bcErr);
+        }
+
+        // 4. Polling fallback every 8 seconds
+        const pollingInterval = setInterval(() => {
+            refreshBookings();
+        }, 8000);
+
+        return () => {
+            if (bookingsSub && bookingsSub.unsubscribe) bookingsSub.unsubscribe();
+            if (notifChannel) {
+                try { supabase.removeChannel(notifChannel); } catch (e) { }
+            }
+            if (localBroadcast) {
+                try { localBroadcast.close(); } catch (e) { }
+            }
+            clearInterval(pollingInterval);
+        };
+    }, [business?.id]);
 
     // Auto-select sport logic
     useEffect(() => {

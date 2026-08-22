@@ -8,6 +8,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import SEOHead from '../components/SEOHead';
 import AmenityIcon, { parseAmenity } from '../components/common/AmenityIcon';
 import { pushService } from '../services/pushService';
+import { supabase } from '../services/supabaseClient';
 import 'leaflet/dist/leaflet.css';
 
 // Fix Leaflet default icon issue
@@ -105,6 +106,26 @@ export default function VenueProfile({ business: initialBusiness }) {
             refreshDataSilently(bId);
         });
 
+        // 🔴 LIVE Broadcast notification listener
+        const notifChannel = supabase.channel(`business-notif-${bId}`)
+            .on('broadcast', { event: 'new_booking' }, () => {
+                refreshDataSilently(bId);
+            })
+            .subscribe();
+
+        // 🔴 Multi-tab BroadcastChannel listener
+        let localBroadcast = null;
+        try {
+            if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                localBroadcast = new BroadcastChannel(`turnitos-live-${bId}`);
+                localBroadcast.onmessage = () => {
+                    refreshDataSilently(bId);
+                };
+            }
+        } catch (bcErr) {
+            console.warn('BroadcastChannel error in VenueProfile:', bcErr);
+        }
+
         // 🔄 Polling fallback every 5 seconds in background
         const interval = setInterval(() => {
             refreshDataSilently(bId);
@@ -113,6 +134,12 @@ export default function VenueProfile({ business: initialBusiness }) {
         return () => {
             if (bookingsSub && bookingsSub.unsubscribe) bookingsSub.unsubscribe();
             if (bizSub && bizSub.unsubscribe) bizSub.unsubscribe();
+            if (notifChannel) {
+                try { supabase.removeChannel(notifChannel); } catch (e) { }
+            }
+            if (localBroadcast) {
+                try { localBroadcast.close(); } catch (e) { }
+            }
             clearInterval(interval);
         };
     }, [business?.id]);

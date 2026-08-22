@@ -161,44 +161,76 @@ export const pushService = {
 
         if (isBlocked) return;
 
+        const customerName = bookingInfo.customerName || bookingInfo.customer_name || 'Un cliente';
+        const title = '🔔 ¡Nueva Reserva Web Recibida!';
+        const body = `${customerName} solicitó una reserva para el ${bookingInfo.date || 'día indicado'} en ${bookingInfo.businessName || 'tu negocio'}.`;
+
+        // 1. Instant local HTML5 BroadcastChannel for multi-tab synchronization in same browser
+        try {
+            if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                const bc = new BroadcastChannel(`turnitos-live-${businessId}`);
+                bc.postMessage({
+                    type: 'new_booking',
+                    businessId,
+                    bookingInfo: { ...bookingInfo, customerName },
+                    title,
+                    body,
+                    timestamp: Date.now()
+                });
+                setTimeout(() => {
+                    try { bc.close(); } catch (e) { }
+                }, 1000);
+            }
+        } catch (bcErr) {
+            console.warn('[pushService] Local BroadcastChannel warning:', bcErr);
+        }
+
+        // 2. Supabase Realtime Channel Broadcast for cross-device / open portal instances
+        try {
+            const channel = supabase.channel(`business-notif-${businessId}`);
+            channel.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    try {
+                        await channel.send({
+                            type: 'broadcast',
+                            event: 'new_booking',
+                            payload: { title, body, bookingInfo: { ...bookingInfo, customerName } }
+                        });
+                    } catch (sendErr) {
+                        console.warn('[pushService] Realtime channel send error:', sendErr);
+                    } finally {
+                        setTimeout(() => {
+                            try { supabase.removeChannel(channel); } catch (e) { }
+                        }, 3000);
+                    }
+                }
+            });
+        } catch (e) {
+            console.warn('[pushService] Supabase broadcast error:', e);
+        }
+
+        // 3. Trigger local desktop browser notification if active
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+                new Notification(title, {
+                    body: body,
+                    icon: '/logo-turnitos.png',
+                    badge: '/logo-turnitos.png'
+                });
+            } catch (e) { }
+        }
+
+        // 4. FCM push notification tokens in database
         try {
             const { data: subs, error } = await supabase
                 .from('push_subscriptions')
                 .select('token')
                 .eq('business_id', businessId);
 
-            const title = '🔔 ¡Nueva Reserva Web Recibida!';
-            const body = `${bookingInfo.customerName ? bookingInfo.customerName : 'Un cliente'} solicitó una reserva para el ${bookingInfo.date || 'día indicado'} en ${bookingInfo.businessName || 'tu negocio'}.`;
-
-            // Broadcast via Supabase Realtime for open portal instances
-            try {
-                const channel = supabase.channel(`business-notif-${businessId}`);
-                channel.send({
-                    type: 'broadcast',
-                    event: 'new_booking',
-                    payload: { title, body, bookingInfo }
-                });
-            } catch (e) {
-                console.warn('[pushService] Realtime broadcast error:', e);
-            }
-
-            // Trigger local browser notification if active on this device
-            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                try {
-                    new Notification(title, {
-                        body: body,
-                        icon: '/logo-turnitos.png',
-                        badge: '/logo-turnitos.png'
-                    });
-                } catch (e) { }
-            }
-
             if (error || !subs || subs.length === 0) {
-                console.log('[pushService] Sin suscripciones push activas para el negocio:', businessId);
                 return;
             }
 
-            // Dispatch to registered tokens
             for (const sub of subs) {
                 if (!sub.token) continue;
                 try {
@@ -226,7 +258,7 @@ export const pushService = {
                 }
             }
         } catch (err) {
-            console.error('[pushService] Error notifying business of new booking:', err);
+            console.warn('[pushService] FCM push notification warning:', err);
         }
     }
 };

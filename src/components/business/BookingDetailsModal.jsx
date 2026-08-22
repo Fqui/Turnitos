@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
+import CustomDropdown from '../common/CustomDropdown';
 
 const BookingDetailsModal = ({
     isOpen,
@@ -40,8 +41,11 @@ const BookingDetailsModal = ({
     );
 
     // Durations
-    const durationOptions = biz?.rental_duration_options || biz?.rentalDurationOptions || [];
-    const hasMultipleDurations = isRental && Array.isArray(durationOptions) && durationOptions.length > 1;
+    const rawDurations = biz?.rental_duration_options || biz?.rentalDurationOptions || [];
+    const durationOptions = Array.isArray(rawDurations) && rawDurations.length > 0
+        ? rawDurations
+        : [4, 6, 8, 12, 24];
+    const hasMultipleDurations = isRental;
 
     // Capacity limit
     const maxCapacity = Number(biz?.capacity_limit || biz?.capacity || 100);
@@ -135,6 +139,14 @@ const BookingDetailsModal = ({
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
+    // Initial duration detection
+    const initialDurationHours = Number(booking.durationHours) ||
+        Number(booking.metadata?.durationHours) ||
+        Number(booking.metadata?.duration) ||
+        (booking.duration ? Math.round(Number(booking.duration) / 60) : null) ||
+        (durationOptions.length > 0 ? durationOptions[0] : 8);
+    const [editableDuration, setEditableDuration] = useState(initialDurationHours);
+
     // WhatsApp Menu and Custom Message Modal State
     const [showWhatsappMenu, setShowWhatsappMenu] = useState(false);
     const [previewMessage, setPreviewMessage] = useState(null);
@@ -171,6 +183,7 @@ const BookingDetailsModal = ({
         setEditablePrice(defaultTotalPrice);
         setEditableDeposit(calculatedDefaultDeposit);
         setEditableGuests(currentGuests ? String(currentGuests) : '');
+        setEditableDuration(initialDurationHours);
         setEditableNotes(notes || '');
         setEditableServices(parseBookingServices(booking));
         setIsEditing(false);
@@ -178,7 +191,7 @@ const BookingDetailsModal = ({
         setSaveSuccess(false);
         setShowWhatsappMenu(false);
         setPreviewMessage(null);
-    }, [booking?.id, defaultTotalPrice, calculatedDefaultDeposit, currentGuests, notes]);
+    }, [booking?.id, defaultTotalPrice, calculatedDefaultDeposit, currentGuests, initialDurationHours, notes]);
 
     const activePrice = Number(editablePrice) || 0;
     const activeDeposit = Number(editableDeposit) || 0;
@@ -334,6 +347,7 @@ const BookingDetailsModal = ({
                 total_price: activePrice,
                 deposit_amount: activeDeposit,
                 guest_count: isRental && editableGuests ? parseInt(editableGuests, 10) : null,
+                duration: isRental && editableDuration ? Number(editableDuration) * 60 : (booking.duration || 60),
                 selected_services: editableServices,
                 services_total: calculatedExtrasSum,
                 notes: editableNotes,
@@ -343,6 +357,9 @@ const BookingDetailsModal = ({
                     deposit_amount: activeDeposit,
                     depositAmount: activeDeposit,
                     guestCount: isRental && editableGuests ? parseInt(editableGuests, 10) : null,
+                    guest_count: isRental && editableGuests ? parseInt(editableGuests, 10) : null,
+                    duration: isRental && editableDuration ? Number(editableDuration) : (booking.metadata?.duration || null),
+                    durationHours: isRental && editableDuration ? Number(editableDuration) : (booking.metadata?.durationHours || null),
                     selectedServices: editableServices
                 }
             };
@@ -365,6 +382,7 @@ const BookingDetailsModal = ({
         setEditablePrice(defaultTotalPrice);
         setEditableDeposit(calculatedDefaultDeposit);
         setEditableGuests(currentGuests ? String(currentGuests) : '');
+        setEditableDuration(initialDurationHours);
         setEditableNotes(notes || '');
         setEditableServices(parseBookingServices(booking));
         setIsEditing(false);
@@ -635,7 +653,7 @@ const BookingDetailsModal = ({
                     {/* Top Grid: Date + Court/Guests + Duration */}
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: hasMultipleDurations ? 'repeat(3, 1fr)' : '1fr 1fr',
+                        gridTemplateColumns: isRental ? (isMobile ? '1fr' : '1.2fr 1fr 1fr') : '1fr 1fr',
                         gap: '8px',
                         padding: '10px 14px',
                         background: 'var(--bg-main)',
@@ -679,7 +697,7 @@ const BookingDetailsModal = ({
                                         style={{
                                             width: '100%',
                                             maxWidth: '120px',
-                                            padding: '3px 8px',
+                                            padding: '4px 8px',
                                             borderRadius: '6px',
                                             border: '1px solid var(--border)',
                                             fontSize: '13px',
@@ -705,14 +723,28 @@ const BookingDetailsModal = ({
                             </div>
                         )}
 
-                        {hasMultipleDurations && isRental && (
+                        {isRental && (
                             <div>
-                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>🕒 Duración</label>
-                                <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
-                                    {(!booking.time || booking.time === '00:00' || booking.time === '00:00:00')
-                                        ? (booking.metadata?.duration || booking.duration ? `${booking.metadata?.duration || (booking.duration / 60)} hs` : 'Jornada')
-                                        : `${booking.time} hs`}
-                                </div>
+                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>
+                                    ⏱️ Duración
+                                </label>
+                                {isEditing ? (
+                                    <div style={{ maxWidth: '130px' }}>
+                                        <CustomDropdown
+                                            size="compact"
+                                            value={editableDuration || 8}
+                                            options={durationOptions.map(h => ({
+                                                value: h,
+                                                label: `${h} Horas`
+                                            }))}
+                                            onChange={(val) => setEditableDuration(Number(val))}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
+                                        {editableDuration ? `${editableDuration} hs` : (booking.metadata?.duration || booking.duration ? `${booking.metadata?.duration || (booking.duration / 60)} hs` : 'Jornada')}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

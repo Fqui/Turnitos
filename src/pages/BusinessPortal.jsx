@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../services/supabaseClient';
 import supabaseService from '../services/supabaseService';
 import serviceAdapter from '../services/serviceAdapter';
 import analyticsService from '../services/analyticsService';
@@ -23,6 +24,7 @@ import BlockSlotModal from '../components/business/BlockSlotModal';
 import ChangePasswordModal from '../components/seller/ChangePasswordModal';
 import ConfirmModal from '../components/common/ConfirmModal';
 import BusinessSubscriptionView from '../components/business/BusinessSubscriptionView';
+import UpcomingRemindersCard from '../components/business/UpcomingRemindersCard';
 import { useNotification } from '../contexts/NotificationContext';
 
 const playNotificationChime = () => {
@@ -330,95 +332,85 @@ export default function BusinessPortal() {
         if (isLoggedIn && selectedBusinessId) {
             fetchBookings();
 
-            // Sincronización en tiempo real
+            const handleNewBookingAlert = (bookingData, customTitle) => {
+                if (!bookingData) return;
+                const isBlocked = bookingData?.status === 'blocked' ||
+                    bookingData?.is_blocked ||
+                    bookingData?.isBlocked ||
+                    String(bookingData?.status || '').toLowerCase() === 'blocked' ||
+                    String(bookingData?.customer_name || '').toUpperCase().includes('BLOQUEADO') ||
+                    String(bookingData?.customerName || '').toUpperCase().includes('BLOQUEADO') ||
+                    String(bookingData?.notes || '').toUpperCase().includes('BLOQUEADO') ||
+                    String(bookingData?.customer_email || '') === '-' ||
+                    String(bookingData?.customer_phone || '') === '-';
+
+                if (!isBlocked) {
+                    const customerName = bookingData.customer_name || bookingData.customerName || 'Un cliente';
+                    setNewBookingAlert(bookingData);
+                    playNotificationChime();
+                    showToast(customTitle || `🔔 ¡Nueva reserva web de ${customerName}!`, 'success', 8000);
+
+                    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                        try {
+                            new Notification('🔔 ¡Nueva Reserva Web Recibida!', {
+                                body: `${customerName} solicitó una reserva para el ${bookingData.date || 'día indicado'}`,
+                                icon: '/logo-turnitos.png'
+                            });
+                        } catch (e) { }
+                    }
+                }
+            };
+
+            // 1. Sincronización en tiempo real vía Postgres Changes
             const subscription = serviceAdapter.subscribeToBookings(selectedBusinessId, (payload) => {
-                // Enriquecer el payload con datos de la empresa actual (nombres de servicios/canchas)
-                const enrichBooking = (b) => {
-                    if (!b) return null;
-                    const businessData = businesses.find(bus => bus.id === selectedBusinessId);
-                    if (businessData) {
-                        const court = businessData.courts?.find(c => c.id === b.court_id);
-                        const service = businessData.services?.find(s => s.id === b.service_id);
-                        return {
-                            ...b,
-                            courts: court ? { name: court.name } : null,
-                            services: service ? { name: service.name } : null
-                        };
-                    }
-                    return b;
-                };
+                fetchBookings();
 
-                const enrichedNew = enrichBooking(payload.new);
-
-                if (payload.eventType === 'INSERT') {
-                    setBookings(prev => {
-                        if (prev.some(b => String(b.id) === String(enrichedNew.id))) return prev;
-                        return [...prev, enrichedNew];
-                    });
-
-                    // Ignorar bloqueos de horario: no disparar alertas ni notificaciones
-                    const isBlocked = enrichedNew?.status === 'blocked' ||
-                        enrichedNew?.is_blocked ||
-                        enrichedNew?.isBlocked ||
-                        String(enrichedNew?.status || '').toLowerCase() === 'blocked' ||
-                        String(enrichedNew?.customer_name || '').toUpperCase().includes('BLOQUEADO') ||
-                        String(enrichedNew?.customerName || '').toUpperCase().includes('BLOQUEADO') ||
-                        String(enrichedNew?.notes || '').toUpperCase().includes('BLOQUEADO') ||
-                        String(enrichedNew?.customer_email || '') === '-' ||
-                        String(enrichedNew?.customer_phone || '') === '-';
-
-                    if (!isBlocked) {
-                        // Trigger in-app visual alert card, audio chime, and toast
-                        const customerName = enrichedNew.customer_name || enrichedNew.customerName || 'Un cliente';
-                        setNewBookingAlert(enrichedNew);
-                        playNotificationChime();
-                        showToast(`🔔 ¡Nueva reserva web de ${customerName}!`, 'success', 8000);
-
-                        // Local desktop browser notification
-                        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                            try {
-                                new Notification('🔔 ¡Nueva Reserva Web Recibida!', {
-                                    body: `${customerName} solicitó una reserva para el ${enrichedNew.date || 'día indicado'}`,
-                                    icon: '/logo-turnitos.png'
-                                });
-                            } catch (e) { }
-                        }
-                    }
-                } else if (payload.eventType === 'UPDATE') {
-                    setBookings(prev => prev.map(b => b.id === enrichedNew.id ? enrichedNew : b));
-                } else if (payload.eventType === 'DELETE') {
-                    setBookings(prev => prev.filter(b => b.id !== payload.old.id));
+                if (payload.eventType === 'INSERT' && payload.new) {
+                    handleNewBookingAlert(payload.new);
                 }
             });
 
-            // Realtime notification broadcast channel
-            const notifChannel = supabaseService.client
-                ? supabaseService.client.channel(`business-notif-${selectedBusinessId}`)
-                    .on('broadcast', { event: 'new_booking' }, (payload) => {
-                        const info = payload?.payload?.bookingInfo;
-                        const isBlocked = info?.status === 'blocked' ||
-                            info?.is_blocked ||
-                            info?.isBlocked ||
-                            String(info?.status || '').toLowerCase() === 'blocked' ||
-                            String(info?.customerName || '').toUpperCase().includes('BLOQUEADO') ||
-                            String(info?.customer_name || '').toUpperCase().includes('BLOQUEADO') ||
-                            String(payload?.payload?.title || '').toUpperCase().includes('BLOQUEADO') ||
-                            String(payload?.payload?.body || '').toUpperCase().includes('BLOQUEADO');
+            // 2. Realtime notification broadcast channel vía Supabase
+            const notifChannel = supabase.channel(`business-notif-${selectedBusinessId}`)
+                .on('broadcast', { event: 'new_booking' }, (payload) => {
+                    const info = payload?.payload?.bookingInfo;
+                    handleNewBookingAlert(info, payload?.payload?.title);
+                    fetchBookings();
+                })
+                .subscribe();
 
-                        if (isBlocked) return;
-                        playNotificationChime();
-                        showToast(payload?.payload?.title || '🔔 ¡Nueva Reserva Web!', 'success', 8000);
-                    })
-                    .subscribe()
-                : null;
+            // 3. Multi-tab instant sync via native HTML5 BroadcastChannel
+            let localBroadcast = null;
+            try {
+                if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                    localBroadcast = new BroadcastChannel(`turnitos-live-${selectedBusinessId}`);
+                    localBroadcast.onmessage = (event) => {
+                        if (event?.data?.type === 'new_booking') {
+                            handleNewBookingAlert(event.data.bookingInfo, event.data.title);
+                            fetchBookings();
+                        }
+                    };
+                }
+            } catch (bcErr) {
+                console.warn('BroadcastChannel error:', bcErr);
+            }
+
+            // 4. Polling fallback every 10 seconds to ensure 100% data sync
+            const pollingInterval = setInterval(() => {
+                fetchBookings();
+            }, 10000);
 
             return () => {
                 if (subscription && typeof subscription.unsubscribe === 'function') {
                     subscription.unsubscribe();
                 }
-                if (notifChannel && typeof notifChannel.unsubscribe === 'function') {
-                    notifChannel.unsubscribe();
+                if (notifChannel) {
+                    try { supabase.removeChannel(notifChannel); } catch (e) { }
                 }
+                if (localBroadcast) {
+                    try { localBroadcast.close(); } catch (e) { }
+                }
+                clearInterval(pollingInterval);
             };
         }
     }, [isLoggedIn, selectedBusinessId]);
@@ -1823,6 +1815,15 @@ export default function BusinessPortal() {
                         ) : viewMode === 'calendar' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
+                                {/* Smart Upcoming Reminders Notification Card */}
+                                <UpcomingRemindersCard
+                                    bookings={bookings}
+                                    currentBusiness={currentBusiness}
+                                    isMobile={isMobile}
+                                    onBookingUpdated={(updated) => {
+                                        setBookings(prev => prev.map(b => b.id === updated.id ? { ...b, ...updated } : b));
+                                    }}
+                                />
 
                                 {reschedulingBooking && (
                                     <div style={{

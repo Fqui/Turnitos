@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
+import CustomDropdown from '../common/CustomDropdown';
 
 const NewBookingModal = ({
     isOpen,
@@ -723,10 +724,19 @@ const NewBookingModal = ({
                                 {isRental ? '🏡 Espacio / Salón Asignado' : isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '🎯 Espacio / Cancha'}
                             </label>
                             {((currentBusiness?.courts?.length || 0) + (currentBusiness?.services?.length || 0)) > 1 ? (
-                                <select
+                                <CustomDropdown
                                     value={newBookingData.courtId || newBookingData.serviceId || ''}
-                                    onChange={(e) => {
-                                        const id = e.target.value;
+                                    options={[
+                                        ...(currentBusiness?.courts || []).map(c => ({
+                                            value: c.id,
+                                            label: `${c.name} ${c.price ? `• $${Number(c.price).toLocaleString('es-AR')}` : ''}`
+                                        })),
+                                        ...(currentBusiness?.services || []).map(s => ({
+                                            value: s.id,
+                                            label: `${s.name} ${s.price ? `• $${Number(s.price).toLocaleString('es-AR')}` : ''}`
+                                        }))
+                                    ]}
+                                    onChange={(id) => {
                                         const court = (currentBusiness?.courts || []).find(c => String(c.id) === String(id));
                                         const service = (currentBusiness?.services || []).find(s => String(s.id) === String(id));
                                         const res = court || service;
@@ -739,25 +749,7 @@ const NewBookingModal = ({
                                             basePrice: Number(res?.price || prev.basePrice || 0)
                                         }));
                                     }}
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px 12px',
-                                        borderRadius: '10px',
-                                        border: '1px solid var(--border)',
-                                        background: 'var(--bg-main)',
-                                        color: 'var(--primary-paddle)',
-                                        fontSize: '13px',
-                                        fontWeight: '800',
-                                        outline: 'none'
-                                    }}
-                                >
-                                    {(currentBusiness?.courts || []).map(c => (
-                                        <option key={c.id} value={c.id}>{c.name} {c.price ? `• $${Number(c.price).toLocaleString('es-AR')}` : ''}</option>
-                                    ))}
-                                    {(currentBusiness?.services || []).map(s => (
-                                        <option key={s.id} value={s.id}>{s.name} {s.price ? `• $${Number(s.price).toLocaleString('es-AR')}` : ''}</option>
-                                    ))}
-                                </select>
+                                />
                             ) : (
                                 <input
                                     type="text"
