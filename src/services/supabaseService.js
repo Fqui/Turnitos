@@ -224,7 +224,7 @@ class SupabaseService {
             .eq('business_id', id);
 
         // Map specialist_id and full specialist data to services
-        if (data.services && specialists) {
+        if (data.services && Array.isArray(data.services)) {
             data.services = data.services.map(service => {
                 // Extract specialist from the nested service_specialists join table
                 const serviceSpecialistRelation = service.service_specialists?.[0];
@@ -232,11 +232,16 @@ class SupabaseService {
                 const specialistId = nestedSpecialist?.id || serviceSpecialistRelation?.specialist_id || '';
 
                 // Find the full specialist object from our specialists list
-                const specialist = specialists.find(s => s.id === specialistId);
+                let specialist = specialists ? specialists.find(s => s.id === specialistId) : null;
+
+                // Fallback: If no specialist explicitly linked via join table, fallback to first specialist
+                if (!specialist && specialists && specialists.length > 0) {
+                    specialist = specialists[0];
+                }
 
                 return {
                     ...service,
-                    specialist_id: specialistId,
+                    specialist_id: specialist?.id || specialistId,
                     specialist: specialist || null // Add full specialist object
                 };
             });
@@ -284,7 +289,12 @@ class SupabaseService {
                         category_id
                     )
                 ),
-                services (*),
+                services (
+                    *,
+                    service_specialists (
+                        specialists (*)
+                    )
+                ),
                 courts (*),
                 specialists (*)
             `)
@@ -299,15 +309,21 @@ class SupabaseService {
             .select('*')
             .eq('business_id', data.id);
 
-        if (data.services && specialists) {
+        if (data.services && Array.isArray(data.services)) {
             data.services = data.services.map(service => {
                 const serviceSpecialistRelation = service.service_specialists?.[0];
                 const nestedSpecialist = serviceSpecialistRelation?.specialists;
                 const specialistId = nestedSpecialist?.id || serviceSpecialistRelation?.specialist_id || '';
-                const specialist = specialists.find(s => s.id === specialistId);
+                let specialist = specialists ? specialists.find(s => s.id === specialistId) : null;
+
+                // Fallback: If no specialist explicitly linked via join table, fallback to the first specialist of the business
+                if (!specialist && specialists && specialists.length > 0) {
+                    specialist = specialists[0];
+                }
+
                 return {
                     ...service,
-                    specialist_id: specialistId,
+                    specialist_id: specialist?.id || specialistId,
                     specialist: specialist || null
                 };
             });

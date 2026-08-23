@@ -84,26 +84,27 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         if (activeTab === 'services' && formData.services?.length > 0) {
             const fetchAssignments = async () => {
                 const assignments = {};
-                // Parallelize fetching
-                await Promise.all(formData.services.map(async (service) => {
-                    // Only for existing services (with ID)
+                for (const service of formData.services) {
                     if (service.id) {
                         try {
-                            const specialists = await serviceAdapter.getQualifiedSpecialists(service.id);
-                            assignments[service.id] = specialists.map(s => s.id);
+                            const targetBizId = business?.id || formData?.id;
+                            const specialists = await serviceAdapter.getQualifiedSpecialists(service.id, targetBizId);
+                            if (specialists && specialists.length > 0) {
+                                assignments[service.id] = specialists.map(s => s.id);
+                            } else if (formData.specialists?.length > 0) {
+                                // Default all specialists if none specifically assigned
+                                assignments[service.id] = formData.specialists.map(s => s.id);
+                            }
                         } catch (err) {
                             console.error(`Error fetching specialists for service ${service.id}:`, err);
                         }
                     }
-                }));
-                // Only update if we have data to avoid wiping state on quick tab switches if fetch is slow
-                if (Object.keys(assignments).length > 0) {
-                    setServiceSpecialists(prev => ({ ...prev, ...assignments }));
                 }
+                setServiceSpecialists(prev => ({ ...assignments, ...prev }));
             };
             fetchAssignments();
         }
-    }, [activeTab]); // Run when entering tab
+    }, [activeTab, formData.services?.length]);
 
     useEffect(() => {
         if (business) {
@@ -432,14 +433,21 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
             }
 
             // Save service-specialist assignments for services that have IDs
-            if (activeTab === 'services' && Object.keys(serviceSpecialists).length > 0) {
+            const servicesToProcess = dataToSave.services || formData.services || [];
+            if (servicesToProcess.length > 0) {
                 const updatePromises = [];
-                for (const service of (dataToSave.services || [])) {
-                    // Only update if service has ID and we have local changes/data for it
-                    if (service?.id && serviceSpecialists[service.id]) {
-                        updatePromises.push(
-                            serviceAdapter.updateServiceSpecialists(service.id, serviceSpecialists[service.id])
-                        );
+                for (const service of servicesToProcess) {
+                    if (service?.id) {
+                        let specIds = serviceSpecialists[service.id];
+                        // If not explicitly set in state, default to all current specialists
+                        if (!specIds || specIds.length === 0) {
+                            specIds = (formData.specialists || business?.specialists || []).map(s => s.id);
+                        }
+                        if (specIds && specIds.length > 0) {
+                            updatePromises.push(
+                                serviceAdapter.updateServiceSpecialists(service.id, specIds)
+                            );
+                        }
                     }
                 }
 
@@ -1608,6 +1616,45 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             <p style={hintStyle}>Recomendado: Formato panorámico (1200x400px o 16:9). Peso máx. 5MB.</p>
                         </div>
 
+                        {/* Theme Selector */}
+                        <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
+                            <h4 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Estilo de Tema General</h4>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 16px 0' }}>
+                                Selecciona la estética general de tu página pública (Modo Claro limpio o Modo Oscuro elegante).
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                {[
+                                    { id: 'light', label: '☀️ Modo Claro', desc: 'Fondo blanco luminoso y texto oscuro' },
+                                    { id: 'dark', label: '🌙 Modo Oscuro', desc: 'Fondo oscuro elegante y moderno' }
+                                ].map(t => {
+                                    const isThemeSelected = (formData.theme || 'light') === t.id;
+                                    return (
+                                        <div
+                                            key={t.id}
+                                            onClick={() => handleInputChange('theme', t.id)}
+                                            style={{
+                                                padding: '16px',
+                                                borderRadius: '14px',
+                                                background: t.id === 'dark' ? '#1E293B' : '#FFFFFF',
+                                                color: t.id === 'dark' ? '#F8FAFC' : '#1E293B',
+                                                border: isThemeSelected ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                boxShadow: isThemeSelected ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{ fontWeight: '800', fontSize: '15px', marginBottom: '4px' }}>{t.label}</div>
+                                            <div style={{ fontSize: '12px', opacity: 0.8 }}>{t.desc}</div>
+                                            {isThemeSelected && (
+                                                <div style={{ position: 'absolute', top: '12px', right: '12px', color: 'var(--primary-paddle)', fontWeight: '800' }}>✓</div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                         {/* Brand Color Theme */}
                         <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
                             <h4 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Color de Marca</h4>
@@ -1620,14 +1667,21 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     <button
                                         key={color}
                                         type="button"
-                                        onClick={() => handleInputChange('brand_color', color)}
+                                        onClick={() => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                brand_color: color,
+                                                primary_color: color,
+                                                button_color: color
+                                            }));
+                                        }}
                                         style={{
                                             width: '36px',
                                             height: '36px',
                                             borderRadius: '50%',
                                             background: color,
-                                            border: currentBrandColor === color ? '3px solid #fff' : '2px solid transparent',
-                                            boxShadow: currentBrandColor === color ? '0 0 0 2px ' + color : 'none',
+                                            border: currentBrandColor.toLowerCase() === color.toLowerCase() ? '3px solid #fff' : '2px solid transparent',
+                                            boxShadow: currentBrandColor.toLowerCase() === color.toLowerCase() ? '0 0 0 2px ' + color : 'none',
                                             cursor: 'pointer',
                                             transition: 'transform 0.15s'
                                         }}
@@ -1638,7 +1692,15 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     <input
                                         type="color"
                                         value={currentBrandColor}
-                                        onChange={(e) => handleInputChange('brand_color', e.target.value)}
+                                        onChange={(e) => {
+                                            const newColor = e.target.value;
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                brand_color: newColor,
+                                                primary_color: newColor,
+                                                button_color: newColor
+                                            }));
+                                        }}
                                         style={{ width: '40px', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
                                     />
                                     <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{currentBrandColor}</span>
@@ -1652,7 +1714,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 logo_url: formData.logo || formData.logo_url,
                                 banner_image: formData.banner_image,
                                 banner_url: formData.banner_image || formData.banner_url,
-                                brand_color: formData.brand_color || formData.primary_color
+                                brand_color: formData.brand_color || formData.primary_color || '#10B981',
+                                primary_color: formData.brand_color || formData.primary_color || '#10B981',
+                                button_color: formData.brand_color || formData.primary_color || '#10B981',
+                                theme: formData.theme || 'light'
                             })}
                             style={saveButtonStyle}
                             disabled={saving}
@@ -1962,10 +2027,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     normalizedHours[day] = {
                                         isOpen: current.isOpen !== false,
                                         isSplit: !!current.isSplit,
-                                        open: current.open || '18:00',
-                                        close: current.close || '23:00',
-                                        breakStart: current.breakStart || null,
-                                        breakEnd: current.breakEnd || null
+                                        open: current.open || '08:00',
+                                        close: current.close || '20:00',
+                                        breakStart: current.isSplit ? (current.breakStart || '13:00') : null,
+                                        breakEnd: current.isSplit ? (current.breakEnd || '16:00') : null
                                     };
                                 });
                                 if (formData.special_days) {

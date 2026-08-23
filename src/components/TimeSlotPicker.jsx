@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import TimeSlotGrid from './TimeSlotGrid';
 import CourtSelector from './CourtSelector';
 
@@ -28,10 +28,11 @@ const TimeSlotPicker = ({
     //     existingBookings: existingBookings?.length
     // });
 
-    // Helper: Convert "HH:MM" to minutes
+    // Helper: Convert "HH:MM" to minutes safely
     const timeToMinutes = (time) => {
+        if (!time || typeof time !== 'string' || !time.includes(':')) return 0;
         const [h, m] = time.split(':').map(Number);
-        return h * 60 + m;
+        return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
     };
 
     // Helper: Convert minutes to "HH:MM"
@@ -41,9 +42,18 @@ const TimeSlotPicker = ({
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     };
 
+    const validTimeRanges = useMemo(() => {
+        if (!Array.isArray(timeRanges)) return [];
+        return timeRanges.filter(r => r && typeof r.open === 'string' && typeof r.close === 'string' && r.open.trim() && r.close.trim());
+    }, [timeRanges]);
+
+    const effectiveOpen = openingTime || '08:00';
+    const effectiveClose = closingTime || '20:00';
+
     // Helper: Check if a time slot falls within operating hours (handles midnight crossing & split shifts)
     const isWithinOperatingHours = (slotMinutes) => {
         const checkRange = (sMin, openStr, closeStr) => {
+            if (!openStr || !closeStr) return true;
             const rangeStart = timeToMinutes(openStr);
             let rangeClose = timeToMinutes(closeStr);
             const rangeEnd = rangeClose <= rangeStart ? rangeClose + 1440 : rangeClose;
@@ -55,11 +65,11 @@ const TimeSlotPicker = ({
             return normalizedSlot >= rangeStart && normalizedSlot < rangeEnd;
         };
 
-        if (!timeRanges || timeRanges.length === 0) {
-            return checkRange(slotMinutes, openingTime, closingTime);
+        if (validTimeRanges.length === 0) {
+            return checkRange(slotMinutes, effectiveOpen, effectiveClose);
         }
 
-        return timeRanges.some(range => checkRange(slotMinutes, range.open, range.close));
+        return validTimeRanges.some(range => checkRange(slotMinutes, range.open, range.close));
     };
 
     // Helper: Check if a time slot is in the past (only for today)
@@ -333,109 +343,72 @@ const TimeSlotPicker = ({
         // For services: generate unified time slots with BUSINESS-LEVEL capacity
         const generateUnifiedServiceSlots = () => {
             const slots = [];
-            let startMinutes, endMinutes;
 
-
-            if (timeRanges && timeRanges.length > 0) {
-                startMinutes = Math.min(...timeRanges.map(r => timeToMinutes(r.open)));
-                endMinutes = Math.max(...timeRanges.map(r => {
-                    const closeMinutes = timeToMinutes(r.close);
-                    return closeMinutes < startMinutes ? closeMinutes + 1440 : closeMinutes;
-                }));
-            } else {
-                startMinutes = timeToMinutes(openingTime);
-                const closeMinutes = timeToMinutes(closingTime);
-                endMinutes = closeMinutes < startMinutes ? closeMinutes + 1440 : closeMinutes;
+            // 1. Determine base operating ranges
+            let activeRanges = [];
+            if (Array.isArray(timeRanges) && timeRanges.length > 0) {
+                activeRanges = timeRanges.filter(r => r && r.open && r.close);
             }
 
-            // Get business capacity (total spaces)
-            const totalCapacity = businessCapacity || providedResources?.length || 1;
-
-            // Duration to check (default to interval or 60 if not provided)
-            const durationToCheck = serviceDuration || interval || 60;
-
-            for (let minutes = startMinutes; minutes < endMinutes; minutes += interval) {
-                const time = minutesToTime(minutes);
-
-                // 1. Check if START time is within operating hours
-                // 1. Check if START time is within operating hours
-                if (!isWithinOperatingHours(minutes)) continue;
-
-                // Skip past times
-                if (isPastTime(minutes)) continue;
-
-                // 2. Check if END time extends beyond closing time
-                // For services, we MUST finish before closing (or the end of the shift)
-                const proposedEndMinutes = minutes + durationToCheck;
-
-                // If using time ranges (split shifts), ensure the WHOLE duration fits in the SAME range
-                let fitsInShift = false;
-                if (timeRanges && timeRanges.length > 0) {
-                    fitsInShift = timeRanges.some(range => {
-                        const rStart = timeToMinutes(range.open);
-                        const rClose = timeToMinutes(range.close);
-                        const rEnd = rClose < rStart ? rClose + 1440 : rClose;
-                        return minutes >= rStart && proposedEndMinutes <= rEnd;
-                    });
-                } else {
-                    // Continuous hours
-                    // Note: endMinutes is already the closing time (potentially +1440)
-                    fitsInShift = proposedEndMinutes <= endMinutes;
-                }
-
-                if (!fitsInShift) continue; // Skip if finish time is outside business hours
-
-                // 3. Check capacity availability for the WHOLE duration
-                // We check availability at every 'interval' step within the duration
-                // e.g. for 60m duration and 30m interval: check at t+0 and t+30
-                let isFullyAvailable = true;
-                let maxSlotsUsed = 0;
-
-                for (let checkTime = minutes; checkTime < proposedEndMinutes; checkTime += interval) {
-                    // Check if this specific intermediate slot is even within operating hours
-                    if (!isWithinOperatingHours(checkTime)) {
-                        isFullyAvailable = false;
-                        break;
-                    }
-
-                    // Count bookings active at 'checkTime'
-                    const slotDate = selectedDate instanceof Date
-                        ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
-                        : selectedDate;
-
-                    const bookingsAtThisStep = existingBookings?.filter(booking => {
-                        if (booking.status === 'cancelled') return false;
-
-                        const bookingDateObj = new Date(booking.date + 'T00:00:00');
-                        const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
-
-                        if (bookingDate !== slotDate) return false;
-
-                        const bookingStart = timeToMinutes(booking.time);
-                        const bookingDuration = booking.duration || 60;
-                        const bookingEnd = bookingStart + bookingDuration;
-
-                        // Check if booking is active at 'checkTime' (inclusive start, exclusive end)
-                        return bookingStart <= checkTime && checkTime < bookingEnd;
-                    }).length || 0;
-
-                    if (bookingsAtThisStep >= totalCapacity) {
-                        isFullyAvailable = false;
-                        break;
-                    }
-
-                    maxSlotsUsed = Math.max(maxSlotsUsed, bookingsAtThisStep);
-                }
-
-                if (isFullyAvailable) {
-                    slots.push({
-                        time,
-                        status: 'available',
-                        slotsUsed: maxSlotsUsed,
-                        totalCapacity: totalCapacity
-                    });
-                }
+            if (activeRanges.length === 0) {
+                const o = (openingTime && openingTime !== '00:00') ? openingTime : '08:00';
+                const c = (closingTime && closingTime !== '00:00') ? closingTime : '20:00';
+                activeRanges = [{ open: o, close: c }];
             }
+
+            const durationToCheck = serviceDuration || interval || 30;
+            const stepInterval = interval || 30;
+            const totalCap = Math.max(1, businessCapacity || providedResources?.length || 1);
+
+            const slotDate = selectedDate instanceof Date
+                ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+                : (typeof selectedDate === 'string' ? selectedDate.split('T')[0] : '');
+
+            // For each operating range (e.g. 08:00-13:00, 16:00-20:00)
+            activeRanges.forEach(range => {
+                const rStart = timeToMinutes(range.open);
+                let rClose = timeToMinutes(range.close);
+                const rEnd = rClose <= rStart ? rClose + 1440 : rClose;
+
+                for (let min = rStart; min + durationToCheck <= rEnd; min += stepInterval) {
+                    if (isPastTime(min)) continue;
+
+                    const timeStr = minutesToTime(min);
+
+                    // Check booking conflicts
+                    let isAvailable = true;
+                    let maxUsed = 0;
+
+                    for (let checkMin = min; checkMin < min + durationToCheck; checkMin += stepInterval) {
+                        const activeBookings = (existingBookings || []).filter(b => {
+                            if (b.status === 'cancelled') return false;
+                            const bDate = typeof b.date === 'string' ? b.date.split('T')[0] : '';
+                            if (bDate && slotDate && bDate !== slotDate) return false;
+
+                            const bStart = timeToMinutes(b.time);
+                            const bDur = b.duration || 60;
+                            const bEnd = bStart + bDur;
+
+                            return bStart <= checkMin && checkMin < bEnd;
+                        }).length;
+
+                        if (activeBookings >= totalCap) {
+                            isAvailable = false;
+                            break;
+                        }
+                        maxUsed = Math.max(maxUsed, activeBookings);
+                    }
+
+                    if (isAvailable) {
+                        slots.push({
+                            time: timeStr,
+                            status: 'available',
+                            slotsUsed: maxUsed,
+                            totalCapacity: totalCap
+                        });
+                    }
+                }
+            });
 
             return slots;
         };

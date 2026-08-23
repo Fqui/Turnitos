@@ -72,21 +72,26 @@ export default function BusinessProfile({ business: initialBusiness }) {
     // Helper to parse business hours
     const getBusinessHours = (date) => {
         let hours = business?.hours;
+        const defaultHours = { open: '08:00', close: '20:00' };
 
-        if (!hours) return { open: '08:00', close: '22:00' };
+        if (!hours) return defaultHours;
 
         // Try to parse if string and looks like JSON
         if (typeof hours === 'string') {
             try {
-                if (hours.trim().startsWith('{')) {
-                    const parsed = JSON.parse(hours);
-                    if (typeof parsed === 'object') {
-                        hours = parsed;
-                    }
+                if (hours.trim().startsWith('{') || hours.trim().startsWith('[')) {
+                    hours = JSON.parse(hours);
                 }
-            } catch (e) {
-                // Not JSON, continue as string
+            } catch (e) {}
+        }
+
+        // If still string, try regex matching "08:00 - 20:00"
+        if (typeof hours === 'string') {
+            const matches = hours.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+            if (matches) {
+                return { open: matches[1], close: matches[2] };
             }
+            return defaultHours;
         }
 
         // Check special_days override first
@@ -94,7 +99,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
         if (specialDays.length > 0 && date) {
             const dateObj = date instanceof Date
                 ? date
-                : new Date(date.includes('T') ? date : date + 'T00:00:00');
+                : new Date(typeof date === 'string' && !date.includes('T') ? `${date}T00:00:00` : date);
             const year = dateObj.getFullYear();
             const month = String(dateObj.getMonth() + 1).padStart(2, '0');
             const day = String(dateObj.getDate()).padStart(2, '0');
@@ -103,7 +108,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
             const matchedSpecialDay = specialDays.find(sd => sd.date === dateStr);
             if (matchedSpecialDay) {
                 if (matchedSpecialDay.type === 'closed' || matchedSpecialDay.type === 'holiday') {
-                    return { open: '00:00', close: '00:00' }; // Closed all day
+                    return { open: '00:00', close: '00:00', isClosed: true };
                 }
                 if (matchedSpecialDay.type === 'special_hours' && matchedSpecialDay.open && matchedSpecialDay.close) {
                     return { open: matchedSpecialDay.open, close: matchedSpecialDay.close };
@@ -111,117 +116,61 @@ export default function BusinessProfile({ business: initialBusiness }) {
             }
         }
 
-        // Handle new object format (Detailed Schedule)
-        if (typeof hours === 'object' && !hours.weekday) {
-            if (!date) return { open: '08:00', close: '22:00' };
+        if (!date) return defaultHours;
 
-            const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            // Ensure date is a Date object, handling timezone issues for string inputs
-            // Adding 'T00:00:00' forces browser to parse as local time instead of UTC for ISO dates
-            const dateObj = date instanceof Date
-                ? date
-                : new Date(date.includes('T') ? date : date + 'T00:00:00');
+        const daysEn = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const daysEs = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+        const daysEsAccents = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
-            const dayIndex = dateObj.getDay();
-            const dayName = days[dayIndex];
-            const schedule = hours[dayName];
+        const dateObj = date instanceof Date
+            ? date
+            : new Date(typeof date === 'string' && !date.includes('T') ? `${date}T00:00:00` : date);
 
+        const dayIndex = dateObj.getDay();
+        const dayNameEn = daysEn[dayIndex];
+        const dayNameEs = daysEs[dayIndex];
+        const dayNameEsAcc = daysEsAccents[dayIndex];
 
-            // console.log('📅 getBusinessHours for', dayName, ':', {
-            //     schedule,
-            //     isOpen: schedule?.isOpen,
-            //     isSplit: schedule?.isSplit,
-            //     hasRanges: schedule?.ranges,
-            //     rangesLength: schedule?.ranges?.length,
-            //     breakStart: schedule?.breakStart,
-            //     breakEnd: schedule?.breakEnd
-            // });
-
-            if (!schedule) {
-                return { open: '08:00', close: '23:00' };
-            }
-
-            // If day explicitly marked as closed
-            if (schedule.isOpen === false) {
-                return { open: '00:00', close: '00:00' };
-            }
-                // console.log('✅ Schedule is OPEN for', dayName);
-
-                // Check if split schedule is enabled in the new format (from BusinessSettings)
-                if (schedule.isSplit) {
-                    // console.log('🔄 SPLIT SHIFT detected for', dayName);
-
-                    // ✅ NEW LOGIC: Handle open/close + open2/close2 format
-                    // This format implies: Shift 1 = open-close, Shift 2 = open2-close2
-                    if (schedule.open2 && schedule.close2) {
-                        const derivedRanges = [
-                            { open: schedule.open, close: schedule.close },
-                            { open: schedule.open2, close: schedule.close2 }
-                        ];
-                        // console.log(`🕒 Generated split ranges (Type 2) for ${dayName}:`, derivedRanges);
-                        return {
-                            open: schedule.open,
-                            close: schedule.close2, // Global close is the end of second shift
-                            ranges: derivedRanges
-                        };
-                    }
-
-                    // Use breakStart/breakEnd (the actual fields saved by BusinessSettings)
-                    const breakStart = schedule.breakStart || '13:00';
-                    const breakEnd = schedule.breakEnd || '16:00';
-
-                    // Create ranges from the split schedule
-                    // Range 1: Open time to Break Start
-                    // Range 2: Break End to Close time
-                    const derivedRanges = [
-                        { open: schedule.open, close: breakStart },
-                        { open: breakEnd, close: schedule.close }
-                    ];
-
-                    // console.log(`🕒 Generated split ranges for ${dayName}:`, derivedRanges);
-
-                    return {
-                        open: schedule.open,
-                        close: schedule.close,
-                        ranges: derivedRanges
-                    };
-                }
-
-                // console.log('➡️ Continuous shift for', dayName);
-
-                return {
-                    open: schedule.open || '08:00',
-                    close: schedule.close || '23:00',
-                    ranges: (schedule.ranges && schedule.ranges.length > 0) ? schedule.ranges : undefined
-                };
+        let schedule = null;
+        if (typeof hours === 'object' && hours !== null) {
+            schedule = hours[dayNameEn] || 
+                       hours[dayNameEs] || 
+                       hours[dayNameEsAcc] || 
+                       hours[dayNameEn.toUpperCase()] || 
+                       hours[dayNameEs.toUpperCase()] || 
+                       hours[dayIndex];
         }
 
-        // Handle legacy object format (weekday/weekend)
-        if (typeof hours === 'object' && hours.weekday) {
-            // Simple logic: Weekend is Sat/Sun
-            const dateObj = date instanceof Date ? date : new Date(date);
-            const isWeekend = date && (dateObj.getDay() === 0 || dateObj.getDay() === 6);
-            const timeString = isWeekend ? hours.weekend : hours.weekday;
-
-            const matches = timeString.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
-            if (matches && matches.length >= 3) {
-                let closeTime = matches[2];
-                if (closeTime === '00:00') closeTime = '24:00';
-                return { open: matches[1], close: closeTime };
-            }
+        if (!schedule) {
+            return defaultHours;
         }
 
-        // Handle legacy string format
-        if (typeof hours === 'string') {
-            const matches = hours.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
-            if (matches && matches.length >= 3) {
-                let closeTime = matches[2];
-                if (closeTime === '00:00') closeTime = '24:00';
-                return { open: matches[1], close: closeTime };
-            }
+        if (schedule.isOpen === false) {
+            return { open: '00:00', close: '00:00', isClosed: true };
         }
 
-        return { open: '08:00', close: '22:00' };
+        // Split shift
+        if (schedule.isSplit) {
+            const o1 = schedule.open || '08:00';
+            const c1 = schedule.breakStart || '13:00';
+            const o2 = schedule.breakEnd || '16:00';
+            const c2 = schedule.close || '20:00';
+            return {
+                open: o1,
+                close: c2,
+                ranges: [
+                    { open: o1, close: c1 },
+                    { open: o2, close: c2 }
+                ]
+            };
+        }
+
+        // Continuous shift
+        return {
+            open: schedule.open || '08:00',
+            close: schedule.close || '20:00',
+            ranges: (Array.isArray(schedule.ranges) && schedule.ranges.length > 0) ? schedule.ranges : undefined
+        };
     };
 
     // Scroll to top when component mounts
@@ -424,8 +373,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
             const root = document.documentElement;
             const body = document.body;
 
-            // Calculate primary color
-            const color = business.primary_color || business.button_color || business.buttonColor ||
+            // Calculate primary color - prioritize brand_color, primary_color, button_color
+            const color = business.brand_color || business.primary_color || business.button_color || business.buttonColor ||
                 (business.category === 'beauty' ? '#FF4081' :
                     business.category === 'health' ? '#2979FF' : '#00E676');
 
@@ -436,17 +385,17 @@ export default function BusinessProfile({ business: initialBusiness }) {
             root.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
 
             if (!isDarkTheme) {
-                root.style.setProperty('--bg-main', '#F5F7FA');
+                root.style.setProperty('--bg-main', '#F8FAFC');
                 root.style.setProperty('--bg-card', '#FFFFFF');
-                root.style.setProperty('--text-primary', '#1A1A1A');
-                root.style.setProperty('--text-secondary', '#4A4A4A');
-                root.style.setProperty('--border', '#E0E0E0');
+                root.style.setProperty('--text-primary', '#0F172A');
+                root.style.setProperty('--text-secondary', '#475569');
+                root.style.setProperty('--border', '#E2E8F0');
             } else {
-                root.style.setProperty('--bg-main', '#121212');
-                root.style.setProperty('--bg-card', '#1E1E1E');
-                root.style.setProperty('--text-primary', '#FFFFFF');
-                root.style.setProperty('--text-secondary', '#A0A0A0');
-                root.style.setProperty('--border', '#333333');
+                root.style.setProperty('--bg-main', '#0B0F17');
+                root.style.setProperty('--bg-card', '#151D2A');
+                root.style.setProperty('--text-primary', '#F8FAFC');
+                root.style.setProperty('--text-secondary', '#94A3B8');
+                root.style.setProperty('--border', '#1E293B');
             }
         }
         return () => {
@@ -470,7 +419,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
     if (!business) return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
 
     // Use custom button color from business or fallback to category-based color
-    const primaryColor = business.primary_color || business.button_color || business.buttonColor ||
+    const primaryColor = business.brand_color || business.primary_color || business.button_color || business.buttonColor ||
         (business.category === 'beauty' ? '#FF4081' :
             business.category === 'health' ? '#2979FF' : '#00E676');
 
