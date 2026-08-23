@@ -89,11 +89,15 @@ export default function BusinessPortal() {
                 try {
                     const biz = JSON.parse(storedBusiness);
                     if (biz && biz.id) {
-                        const businessesData = await serviceAdapter.getBusinesses();
-                        const fullBiz = businessesData.find(b => String(b.id) === String(biz.id)) || biz;
-                        const finalBusinesses = businessesData.some(b => String(b.id) === String(fullBiz.id))
-                            ? businessesData
-                            : [...businessesData, fullBiz];
+                        const [businessesData, detailedBiz] = await Promise.all([
+                            serviceAdapter.getBusinesses(),
+                            serviceAdapter.getBusinessById(biz.id).catch(() => null)
+                        ]);
+                        const fullBiz = detailedBiz || businessesData.find(b => String(b.id) === String(biz.id)) || biz;
+                        const finalBusinesses = businessesData.map(b => String(b.id) === String(fullBiz.id) ? fullBiz : b);
+                        if (!finalBusinesses.some(b => String(b.id) === String(fullBiz.id))) {
+                            finalBusinesses.push(fullBiz);
+                        }
 
                         if (mustChangePassword || fullBiz.password_changed === false) {
                             setRequirePasswordChange(true);
@@ -123,15 +127,19 @@ export default function BusinessPortal() {
                     const businessesData = await serviceAdapter.getBusinesses();
                     const biz = businessesData.find(b => b.email === storedEmail);
                     if (biz) {
-                        if (mustChangePassword || biz.password_changed === false) {
+                        const detailedBiz = await serviceAdapter.getBusinessById(biz.id).catch(() => null);
+                        const fullBiz = detailedBiz || biz;
+                        const finalBusinesses = businessesData.map(b => String(b.id) === String(fullBiz.id) ? fullBiz : b);
+
+                        if (mustChangePassword || fullBiz.password_changed === false) {
                             setRequirePasswordChange(true);
-                            setCurrentBusinessId(biz.id);
-                            setSelectedBusinessId(biz.id);
-                            setBusinesses(businessesData);
+                            setCurrentBusinessId(fullBiz.id);
+                            setSelectedBusinessId(fullBiz.id);
+                            setBusinesses(finalBusinesses);
                             return;
                         }
-                        setSelectedBusinessId(biz.id);
-                        setBusinesses(businessesData);
+                        setSelectedBusinessId(fullBiz.id);
+                        setBusinesses(finalBusinesses);
                         setIsLoggedIn(true);
                     }
                 } catch (err) {
@@ -231,13 +239,24 @@ export default function BusinessPortal() {
         const loadBusinesses = async () => {
             try {
                 const data = await serviceAdapter.getBusinesses();
+                if (selectedBusinessId) {
+                    const detailedBiz = await serviceAdapter.getBusinessById(selectedBusinessId).catch(() => null);
+                    if (detailedBiz) {
+                        const merged = data.map(b => String(b.id) === String(selectedBusinessId) ? detailedBiz : b);
+                        if (!merged.some(b => String(b.id) === String(selectedBusinessId))) {
+                            merged.push(detailedBiz);
+                        }
+                        setBusinesses(merged);
+                        return;
+                    }
+                }
                 setBusinesses(data);
             } catch (error) {
                 console.error('Error loading businesses:', error);
             }
         };
         loadBusinesses();
-    }, []);
+    }, [selectedBusinessId]);
 
     // Theme Management
     const [theme, setTheme] = useState(() => {
@@ -719,6 +738,10 @@ export default function BusinessPortal() {
             ? Number(newBookingData.depositAmount)
             : Math.round((parseFloat(newBookingData.price) || 0) * 0.3);
 
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const isHistorical = Boolean(newBookingData.date && newBookingData.date < todayStr);
+
         const bookingData = {
             businessId: selectedBusinessId,
             business_id: selectedBusinessId,
@@ -743,23 +766,28 @@ export default function BusinessPortal() {
             customerEmail: newBookingData.customerEmail || null,
             customer_email: newBookingData.customerEmail || null,
             notes: newBookingData.notes || null,
-            depositAmount: parsedDeposit,
-            deposit_amount: parsedDeposit,
+            depositAmount: isHistorical ? (parseFloat(newBookingData.price) || 0) : parsedDeposit,
+            deposit_amount: isHistorical ? (parseFloat(newBookingData.price) || 0) : parsedDeposit,
+            payment_status: isHistorical ? 'paid' : 'pending',
+            is_historical: isHistorical,
             metadata: {
                 notes: newBookingData.notes || null,
-                deposit_amount: parsedDeposit,
-                depositAmount: parsedDeposit,
+                deposit_amount: isHistorical ? (parseFloat(newBookingData.price) || 0) : parsedDeposit,
+                depositAmount: isHistorical ? (parseFloat(newBookingData.price) || 0) : parsedDeposit,
                 duration_hours: finalDurationHours,
-                duration: finalDurationMinutes
+                duration: finalDurationMinutes,
+                is_historical: isHistorical,
+                reminderSent: isHistorical,
+                reminder_sent_at: isHistorical ? new Date().toISOString() : null
             },
-            status: 'pending',
+            status: isHistorical ? 'completed' : 'pending',
             price: parseFloat(newBookingData.price) || 0,
             history: [
                 {
                     action: 'creation',
-                    label: 'Reserva Creada (Manual)',
+                    label: isHistorical ? 'Carga Histórica (Finalizada)' : 'Reserva Creada (Manual)',
                     timestamp: new Date().toISOString(),
-                    status: 'pending'
+                    status: isHistorical ? 'completed' : 'pending'
                 }
             ]
         };

@@ -153,35 +153,43 @@ export function getSlotConfig(type) {
 export function getResourcesByType(business, type) {
     if (!business) return [];
 
-    const expectedCount = Math.max(
-        business.resources_count || 0,
-        business.capacity || 0,
-        business.courts?.length || 0,
-        business.specialists?.length || 0,
-        2
-    );
-
     if (type === 'service') {
         let specs = (business.specialists && business.specialists.length > 0)
             ? business.specialists
-            : (business.resources && business.resources.length > 0 ? business.resources : []);
+            : (business.resources && business.resources.length > 0 ? business.resources.filter(r => r.type === 'service' || !r.type) : []);
 
-        if (specs.length < expectedCount) {
-            specs = Array.from({ length: expectedCount }, (_, i) => {
-                return specs[i] || { id: `specialist-${i + 1}`, name: `Especialista ${i + 1}` };
-            });
+        if (specs && specs.length > 0) {
+            return specs;
         }
-        return specs;
+
+        const expectedCount = Math.max(
+            business.resources_count || 0,
+            business.capacity || 0,
+            business.capacity_limit || 0,
+            1
+        );
+
+        return Array.from({ length: expectedCount }, (_, i) => ({
+            id: `specialist-${i + 1}`,
+            name: `Especialista ${i + 1}`
+        }));
     }
 
     let courts = (business.courts && business.courts.length > 0)
         ? business.courts
-        : (business.resources && business.resources.length > 0 ? business.resources : []);
+        : (business.resources && business.resources.length > 0 ? business.resources.filter(r => r.type === 'court' || !r.type) : []);
 
-    if (courts.length < expectedCount) {
-        courts = Array.from({ length: expectedCount }, (_, i) => {
-            return courts[i] || { id: `court-${i + 1}`, name: `Cancha ${i + 1}` };
-        });
+    if (!courts || courts.length === 0) {
+        const expectedCount = Math.max(
+            business.resources_count || 0,
+            business.capacity || 0,
+            business.capacity_limit || 0,
+            1
+        );
+        courts = Array.from({ length: expectedCount }, (_, i) => ({
+            id: `court-${i + 1}`,
+            name: `Cancha ${i + 1}`
+        }));
     }
 
     if (type === 'futbol') {

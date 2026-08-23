@@ -43,11 +43,12 @@ const Toast = () => {
             position: 'fixed',
             top: '20px',
             right: '20px',
-            zIndex: 9999,
+            zIndex: 99999,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
-            maxWidth: '400px'
+            maxWidth: '420px',
+            pointerEvents: 'none'
         }}>
             <AnimatePresence>
                 {toasts.map((toast) => {
@@ -63,46 +64,63 @@ const Toast = () => {
                             style={{
                                 background: `linear-gradient(135deg, ${colors.bg} 0%, ${colors.border} 100%)`,
                                 color: 'white',
-                                padding: '16px 20px',
+                                padding: '14px 18px',
                                 borderRadius: '12px',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                                boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '12px',
-                                minWidth: '300px'
+                                minWidth: '280px',
+                                pointerEvents: 'auto',
+                                cursor: 'default'
                             }}
                         >
                             <div style={{
-                                fontSize: '20px',
+                                fontSize: '18px',
                                 fontWeight: '700',
-                                width: '24px',
-                                height: '24px',
+                                width: '26px',
+                                height: '26px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: 'rgba(255,255,255,0.2)',
-                                borderRadius: '50%'
+                                background: 'rgba(255,255,255,0.25)',
+                                borderRadius: '50%',
+                                flexShrink: 0
                             }}>
                                 {getIcon(toast.type)}
                             </div>
-                            <div style={{ flex: 1, fontSize: '14px', fontWeight: '500' }}>
+                            <div style={{ flex: 1, fontSize: '14px', fontWeight: '600', lineHeight: 1.3 }}>
                                 {toast.message}
                             </div>
                             <button
-                                onClick={() => removeToast(toast.id)}
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    removeToast(toast.id);
+                                }}
+                                aria-label="Cerrar"
                                 style={{
-                                    background: 'rgba(255,255,255,0.2)',
+                                    background: 'rgba(255,255,255,0.25)',
                                     border: 'none',
                                     color: 'white',
                                     cursor: 'pointer',
-                                    padding: '4px 8px',
-                                    borderRadius: '6px',
-                                    fontSize: '16px',
-                                    fontWeight: '700',
-                                    lineHeight: 1
+                                    padding: '6px 8px',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: '800',
+                                    lineHeight: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                    transition: 'background 0.2s',
+                                    pointerEvents: 'auto'
                                 }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.4)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
                             >
-                                ×
+                                ✕
                             </button>
                         </motion.div>
                     );

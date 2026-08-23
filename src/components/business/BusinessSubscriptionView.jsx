@@ -184,7 +184,9 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                                 ? 'Alquileres (Quinchos y Salones)'
                                 : isSport 
                                     ? `Canchas (${courtsCount} ${courtsCount === 1 ? 'Cancha' : 'Canchas'})`
-                                    : `Servicios (${specialistsCount} ${specialistsCount === 1 ? 'Agenda' : 'Agendas'})`
+                                    : specialistsCount === 1
+                                        ? 'Servicios - Individual (1 Agenda)'
+                                        : `Servicios - Equipos (${specialistsCount} Agendas)`
                         }
                     </h3>
 

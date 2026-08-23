@@ -43,8 +43,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedTime, setSelectedTime] = useState(null);
     const [existingBookings, setExistingBookings] = useState([]); // State for bookings on selected date
-    const [loadingBookings, setLoadingBookings] = useState(false); // 🆕 Loading state for bookings
-    const [bookingRefreshTrigger, setBookingRefreshTrigger] = useState(0); // 🆕 Trigger to force refresh
+    const [loadingBookings, setLoadingBookings] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -274,54 +273,60 @@ export default function BusinessProfile({ business: initialBusiness }) {
         }
     }, [businessSlug, business]);
 
-    // Fetch bookings when date is selected
-    useEffect(() => {
-        const fetchBookingsForDate = async () => {
-            if (business?.id && selectedDate) {
-                setLoadingBookings(true); // 🆕 Start loading
-                try {
-                    // Format date to YYYY-MM-DD using LOCAL timezone (not UTC)
-                    const dateStr = selectedDate instanceof Date
-                        ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
-                        : selectedDate;
-
-                    const { bookings } = await serviceAdapter.getBookings(business.id, dateStr);
-                    // console.log('📅 Fetched bookings for date:', dateStr, bookings);
-                    setExistingBookings(bookings || []);
-                } catch (error) {
-                    console.error("Error fetching bookings:", error);
-                    setExistingBookings([]);
-                } finally {
-                    setLoadingBookings(false); // 🆕 End loading
-                }
-            } else {
-                setExistingBookings([]);
-                setLoadingBookings(false);
+    // Fetch bookings when date is selected (with support for silent background revalidation)
+    const fetchBookingsForDate = async (isBackground = false) => {
+        if (business?.id && selectedDate) {
+            if (!isBackground) {
+                setLoadingBookings(true);
             }
-        };
+            try {
+                // Format date to YYYY-MM-DD using LOCAL timezone (not UTC)
+                const dateStr = selectedDate instanceof Date
+                    ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+                    : selectedDate;
 
-        fetchBookingsForDate();
-    }, [business?.id, selectedDate, bookingRefreshTrigger]); // 🆕 Added bookingRefreshTrigger
-
-    // 🆕 Function to refresh bookings after creating a new one
-    const refreshBookings = () => {
-        setBookingRefreshTrigger(prev => prev + 1);
+                const { bookings } = await serviceAdapter.getBookings(business.id, dateStr);
+                setExistingBookings(bookings || []);
+            } catch (error) {
+                console.error("Error fetching bookings:", error);
+                if (!isBackground) {
+                    setExistingBookings([]);
+                }
+            } finally {
+                if (!isBackground) {
+                    setLoadingBookings(false);
+                }
+            }
+        } else {
+            setExistingBookings([]);
+            setLoadingBookings(false);
+        }
     };
 
-    // 🔴 Realtime synchronization for BusinessProfile
+    // Fetch bookings on initial load and whenever selectedDate changes
+    useEffect(() => {
+        fetchBookingsForDate(false);
+    }, [business?.id, selectedDate]);
+
+    // Function to refresh bookings silently (e.g. after booking creation)
+    const refreshBookings = () => {
+        fetchBookingsForDate(true);
+    };
+
+    // 🔴 Realtime synchronization for BusinessProfile (100% silent background updates)
     useEffect(() => {
         if (!business?.id) return;
         const bId = business.id;
 
         // 1. Subscribe to Bookings via serviceAdapter
         const bookingsSub = serviceAdapter.subscribeToBookings(bId, () => {
-            refreshBookings();
+            fetchBookingsForDate(true);
         });
 
         // 2. Subscribe to Broadcast channel
         const notifChannel = supabase.channel(`business-notif-${bId}`)
             .on('broadcast', { event: 'new_booking' }, () => {
-                refreshBookings();
+                fetchBookingsForDate(true);
             })
             .subscribe();
 
@@ -331,17 +336,17 @@ export default function BusinessProfile({ business: initialBusiness }) {
             if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
                 localBroadcast = new BroadcastChannel(`turnitos-live-${bId}`);
                 localBroadcast.onmessage = () => {
-                    refreshBookings();
+                    fetchBookingsForDate(true);
                 };
             }
         } catch (bcErr) {
             console.warn('BroadcastChannel error in BusinessProfile:', bcErr);
         }
 
-        // 4. Polling fallback every 8 seconds
+        // 4. Polling fallback every 20 seconds (completely silent, never interrupts user)
         const pollingInterval = setInterval(() => {
-            refreshBookings();
-        }, 8000);
+            fetchBookingsForDate(true);
+        }, 20000);
 
         return () => {
             if (bookingsSub && bookingsSub.unsubscribe) bookingsSub.unsubscribe();
@@ -353,7 +358,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
             }
             clearInterval(pollingInterval);
         };
-    }, [business?.id]);
+    }, [business?.id, selectedDate]);
 
     // Auto-select sport logic
     useEffect(() => {
@@ -1505,8 +1510,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     );
                                 }
 
-                                // 🆕 Show loading state while fetching bookings
-                                if (loadingBookings) {
+                                // Show loading state while fetching bookings (only on initial load)
+                                if (loadingBookings && existingBookings.length === 0) {
                                     return (
                                         <div style={{
                                             textAlign: 'center',

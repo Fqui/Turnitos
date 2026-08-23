@@ -3,9 +3,35 @@ import { motion, AnimatePresence } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 
 const BusinessFormModal = ({ business, categories = [], subcategories = [], sellers = [], onClose, onSave }) => {
+    const formatSlug = (text) => {
+        return (text || '')
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+            .replace(/[^a-z0-9\s-]/g, '') // keep only alphanumeric, spaces, hyphens
+            .trim()
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+    };
+
+    const extractSubcategoryIds = (b) => {
+        if (!b) return [];
+        if (Array.isArray(b.subcategories) && b.subcategories.length > 0) {
+            return b.subcategories.map(s => (typeof s === 'object' ? s.id : s)).filter(Boolean);
+        }
+        if (Array.isArray(b.business_subcategories) && b.business_subcategories.length > 0) {
+            return b.business_subcategories.map(bs => bs.subcategory_id || bs.subcategories?.id).filter(Boolean);
+        }
+        if (b.subcategory_id) {
+            return [b.subcategory_id];
+        }
+        return [];
+    };
+
     const [formData, setFormData] = useState({
         name: business?.name || '',
+        slug: business?.slug || '',
         category_id: business?.category_id || business?.categories?.id || '',
+        subcategory_ids: extractSubcategoryIds(business),
         subcategory_id: business?.subcategory_id || (business?.subcategories?.[0]?.id) || '',
         location: business?.location || '',
         whatsapp: business?.whatsapp || '',
@@ -17,11 +43,15 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
         resources_count: business?.courts?.length || business?.specialists?.length || 2
     });
 
+    const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(Boolean(business?.slug));
+
     useEffect(() => {
         if (business) {
             setFormData({
                 name: business.name || '',
+                slug: business.slug || '',
                 category_id: business.category_id || business.categories?.id || '',
+                subcategory_ids: extractSubcategoryIds(business),
                 subcategory_id: business.subcategory_id || (business.subcategories?.[0]?.id) || '',
                 location: business.location || '',
                 whatsapp: business.whatsapp || '',
@@ -32,12 +62,58 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 subscription_plan_id: business.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb',
                 resources_count: business.courts?.length || business.specialists?.length || 2
             });
+            setIsSlugManuallyEdited(Boolean(business.slug));
         }
     }, [business]);
+
+    const handleToggleSubcategory = (subId) => {
+        setFormData(prev => {
+            const current = prev.subcategory_ids || [];
+            const exists = current.includes(subId);
+            const updated = exists
+                ? current.filter(id => id !== subId)
+                : [...current, subId];
+            return {
+                ...prev,
+                subcategory_ids: updated,
+                subcategory_id: updated[0] || ''
+            };
+        });
+    };
+
+    const handleNameChange = (newName) => {
+        if (!isSlugManuallyEdited) {
+            setFormData(prev => ({
+                ...prev,
+                name: newName,
+                slug: formatSlug(newName)
+            }));
+        } else {
+            setFormData(prev => ({ ...prev, name: newName }));
+        }
+    };
+
+    const handleSlugChange = (newSlug) => {
+        setIsSlugManuallyEdited(true);
+        setFormData(prev => ({
+            ...prev,
+            slug: formatSlug(newSlug)
+        }));
+    };
 
     const [loading, setLoading] = useState(false);
     const [createdCredentials, setCreatedCredentials] = useState(null);
     const [showCredentials, setShowCredentials] = useState(false);
+
+    const [localSubcategories, setLocalSubcategories] = useState(subcategories || []);
+    useEffect(() => {
+        if (subcategories && subcategories.length > 0) {
+            setLocalSubcategories(subcategories);
+        }
+    }, [subcategories]);
+
+    const [subSearch, setSubSearch] = useState('');
+    const [creatingSub, setCreatingSub] = useState(false);
 
     // Custom dropdown state
     const [categoryOpen, setCategoryOpen] = useState(false);
@@ -77,23 +153,73 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
     );
     const resolvedCategoryId = currentCategory ? currentCategory.id : formData.category_id;
 
-    // Combine top-level subcategories + category's nested subcategories
-    const categorySubcategories = currentCategory?.subcategories || [];
-    const rawSubcategories = [
-        ...(subcategories || []).filter(sub =>
-            resolvedCategoryId && (String(sub.category_id) === String(resolvedCategoryId) || String(sub.category_id) === String(formData.category_id))
-        ),
-        ...categorySubcategories
-    ];
-
-    // Deduplicate by ID
-    const filteredSubcategories = Array.from(
-        new Map(rawSubcategories.map(s => [s.id, s])).values()
+    // All available subcategories (local + category nested)
+    const allAvailableSubcategories = Array.from(
+        new Map(
+            [
+                ...(localSubcategories || []),
+                ...(currentCategory?.subcategories || [])
+            ].map(s => [s.id, s])
+        ).values()
     );
 
-    const selectedSubcategory = filteredSubcategories.find(
-        s => String(s.id) === String(formData.subcategory_id)
+    // Primary: matching category
+    const categorySpecificSubcategories = allAvailableSubcategories.filter(sub =>
+        resolvedCategoryId && (String(sub.category_id) === String(resolvedCategoryId) || String(sub.category_id) === String(formData.category_id))
     );
+
+    // Other platform subcategories
+    const otherSubcategories = allAvailableSubcategories.filter(sub =>
+        !categorySpecificSubcategories.some(cs => cs.id === sub.id)
+    );
+
+    // Search filtering
+    const searchLower = subSearch.toLowerCase().trim();
+    const searchFilteredCategorySubs = categorySpecificSubcategories.filter(s =>
+        !searchLower || s.name.toLowerCase().includes(searchLower)
+    );
+    const searchFilteredOtherSubs = otherSubcategories.filter(s =>
+        !searchLower || s.name.toLowerCase().includes(searchLower)
+    );
+
+    const hasExactMatch = allAvailableSubcategories.some(
+        s => s.name.toLowerCase() === searchLower
+    );
+
+    const handleQuickCreateSubcategory = async (nameToCreate) => {
+        const trimmed = (nameToCreate || subSearch).trim();
+        if (!trimmed) return;
+        setCreatingSub(true);
+        try {
+            const newSubData = {
+                category_id: formData.category_id || (categories[0]?.id) || null,
+                name: trimmed,
+                slug: formatSlug(trimmed),
+                icon: '✨',
+                display_order: localSubcategories.length
+            };
+            const created = await supabaseService.createSubcategory(newSubData);
+            if (created) {
+                setLocalSubcategories(prev => [...prev, created]);
+                handleToggleSubcategory(created.id);
+                setSubSearch('');
+            }
+        } catch (err) {
+            console.warn('Could not persist subcategory to DB, using local entry:', err);
+            const fakeId = 'sub_' + Math.random().toString(36).substring(2, 9);
+            const fallbackSub = {
+                id: fakeId,
+                category_id: formData.category_id,
+                name: trimmed,
+                slug: formatSlug(trimmed)
+            };
+            setLocalSubcategories(prev => [...prev, fallbackSub]);
+            handleToggleSubcategory(fakeId);
+            setSubSearch('');
+        } finally {
+            setCreatingSub(false);
+        }
+    };
     // Base input style
     const inputStyle = {
         width: '100%',
@@ -123,16 +249,9 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
             const derivedType = cat ? (TYPE_BY_CATEGORY_NAME[cat.name] || null) : null;
 
             // Auto-generate slug from name if missing
-            let slug = formData.slug || '';
+            let slug = formatSlug(formData.slug || formData.name);
             if (!slug && formData.name) {
-                slug = formData.name
-                    .toLowerCase()
-                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents
-                    .replace(/[^a-z0-9\s-]/g, '') // strip non-alphanumeric
-                    .trim()
-                    .replace(/\s+/g, '-')
-                    .replace(/-+/g, '-');
-                // Ensure uniqueness by appending random suffix
+                slug = formatSlug(formData.name);
                 slug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
             }
 
@@ -172,7 +291,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 password: ownerPassword,
                 type: derivedType || formData.type,
                 seller_id: formData.seller_id || null,
-                subcategories: formData.subcategory_id ? [formData.subcategory_id] : []
+                subcategories: (formData.subcategory_ids && formData.subcategory_ids.length > 0)
+                    ? formData.subcategory_ids
+                    : (formData.subcategory_id ? [formData.subcategory_id] : []),
+                subcategory_id: (formData.subcategory_ids && formData.subcategory_ids[0]) || formData.subcategory_id || null
             };
 
             if (business) {
@@ -244,7 +366,8 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             type="text"
                             required
                             value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            onChange={(e) => handleNameChange(e.target.value)}
+                            placeholder="Ej: Aura Estética & Spa"
                             style={{
                                 width: '100%',
                                 padding: '14px',
@@ -255,205 +378,519 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                 fontSize: '15px',
                                 outline: 'none'
                             }}
-                            onFocus={(e) => e.target.style.borderColor = 'var(--primary-paddle)'}
+                            onFocus={(e) => e.target.style.borderColor = 'var(--primary-paddle, #00E676)'}
                             onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
                         />
                     </div>
 
+                    {/* Slug / Public URL */}
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <label style={{ fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                🔗 Slug (URL del negocio) *
+                            </label>
+                            {isSlugManuallyEdited && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsSlugManuallyEdited(false);
+                                        setFormData(prev => ({ ...prev, slug: formatSlug(prev.name) }));
+                                    }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#00E676',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        textDecoration: 'underline',
+                                        padding: 0
+                                    }}
+                                >
+                                    Sincronizar con nombre
+                                </button>
+                            )}
+                        </div>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            transition: 'border-color 0.2s'
+                        }}>
+                            <span style={{
+                                padding: '14px 12px 14px 16px',
+                                color: 'rgba(255,255,255,0.4)',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                userSelect: 'none',
+                                borderRight: '1px solid rgba(255,255,255,0.08)',
+                                backgroundColor: 'rgba(255,255,255,0.02)',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                turnitoslr.com/
+                            </span>
+                            <input
+                                type="text"
+                                required
+                                value={formData.slug}
+                                onChange={(e) => handleSlugChange(e.target.value)}
+                                placeholder="ej: aura-estetica"
+                                style={{
+                                    flex: 1,
+                                    padding: '14px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'white',
+                                    fontSize: '15px',
+                                    fontWeight: '600',
+                                    outline: 'none'
+                                }}
+                                onFocus={(e) => e.target.parentElement.style.borderColor = '#00E676'}
+                                onBlur={(e) => e.target.parentElement.style.borderColor = 'rgba(255,255,255,0.1)'}
+                            />
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>🌐 Link público directo:</span>
+                            <strong style={{ color: '#00E676' }}>
+                                https://www.turnitoslr.com/{formData.slug || 'nombre-negocio'}
+                            </strong>
+                        </div>
+                    </div>
+
                     {/* Category & Subcategory */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                            <div ref={categoryRef} style={{ position: 'relative' }}>
-                                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
-                                                    Categoría *
-                                                </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div ref={categoryRef} style={{ position: 'relative' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
+                                Categoría *
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => { setCategoryOpen(o => !o); setSubcategoryOpen(false); }}
+                                style={{
+                                    ...inputStyle,
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '8px'
+                                }}
+                            >
+                                <span style={{ color: formData.category_id && categories.find(c => c.id === formData.category_id) ? 'white' : 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {(() => {
+                                        const cat = categories.find(c => c.id === formData.category_id);
+                                        return cat ? (
+                                            <>
+                                                <span style={{ fontSize: '18px' }}>{cat.icon}</span>
+                                                {cat.name}
+                                            </>
+                                        ) : (
+                                            'Seleccionar categoría...'
+                                        );
+                                    })()}
+                                </span>
+                                <motion.svg
+                                    animate={{ rotate: categoryOpen ? 180 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    width="16" height="16" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
+                                >
+                                    <path d="M8 11L3 6h10z" />
+                                </motion.svg>
+                            </button>
+                            <AnimatePresence>
+                                {categoryOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 'calc(100% + 6px)',
+                                            left: 0,
+                                            right: 0,
+                                            zIndex: 1000,
+                                            backgroundColor: '#1a1a1a',
+                                            border: '1px solid rgba(255,255,255,0.15)',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                                            maxHeight: '320px',
+                                            overflowY: 'auto'
+                                        }}
+                                    >
+                                        {categories.map(cat => (
+                                            <div
+                                                key={cat.id}
+                                                onClick={() => {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        category_id: cat.id,
+                                                        subcategory_ids: [],
+                                                        subcategory_id: ''
+                                                    }));
+                                                    setCategoryOpen(false);
+                                                }}
+                                                style={{
+                                                    padding: '12px 16px',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '12px',
+                                                    backgroundColor: formData.category_id === cat.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = formData.category_id === cat.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
+                                            >
+                                                {cat.icon && (
+                                                    <span style={{
+                                                        fontSize: '20px',
+                                                        width: '36px',
+                                                        height: '36px',
+                                                        borderRadius: '50%',
+                                                        background: cat.color || 'rgba(255,255,255,0.1)',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        {cat.icon}
+                                                    </span>
+                                                )}
+                                                <span style={{ flex: 1, color: 'white', fontSize: '15px', fontWeight: '500' }}>
+                                                    {cat.name}
+                                                </span>
+                                                {formData.category_id === cat.id && (
+                                                    <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
+                                                        <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
+                        <div ref={subcategoryRef} style={{ position: 'relative' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <label style={{ fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
+                                    Subcategorías
+                                </label>
+                                {(formData.subcategory_ids?.length > 0) && (
+                                    <span style={{ fontSize: '11px', color: '#00E676', fontWeight: '700' }}>
+                                        {formData.subcategory_ids.length} elegida{formData.subcategory_ids.length !== 1 ? 's' : ''}
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => { setSubcategoryOpen(o => !o); setCategoryOpen(false); }}
+                                style={{
+                                    ...inputStyle,
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    opacity: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '8px'
+                                }}
+                            >
+                                <span style={{
+                                    color: (formData.subcategory_ids?.length > 0) ? 'white' : 'rgba(255,255,255,0.5)',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                }}>
+                                    {(() => {
+                                        const count = (formData.subcategory_ids || []).length;
+                                        if (count === 0) return 'Seleccionar o crear subcategorías (ej: Estética, Spa)...';
+                                        const names = allAvailableSubcategories
+                                            .filter(s => (formData.subcategory_ids || []).map(String).includes(String(s.id)))
+                                            .map(s => s.name);
+                                        if (count === 1) return names[0] || '1 subcategoría';
+                                        return `${count} subcategorías (${names.join(', ')})`;
+                                    })()}
+                                </span>
+                                <motion.svg
+                                    animate={{ rotate: subcategoryOpen ? 180 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    width="16" height="16" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
+                                >
+                                    <path d="M8 11L3 6h10z" />
+                                </motion.svg>
+                            </button>
+                            <AnimatePresence>
+                                {subcategoryOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 'calc(100% + 6px)',
+                                            left: 0,
+                                            right: 0,
+                                            zIndex: 1000,
+                                            backgroundColor: '#1a1a1a',
+                                            border: '1px solid rgba(255,255,255,0.15)',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                                            maxHeight: '360px',
+                                            overflowY: 'auto'
+                                        }}
+                                    >
+                                        {/* Search or Quick-add Bar */}
+                                        <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'sticky', top: 0, background: '#1a1a1a', zIndex: 2 }}>
+                                            <input
+                                                type="text"
+                                                value={subSearch}
+                                                onChange={(e) => setSubSearch(e.target.value)}
+                                                placeholder="🔍 Buscar o escribir nueva (ej: Spa, Estética)..."
+                                                onClick={(e) => e.stopPropagation()}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '8px 12px',
+                                                    background: 'rgba(255,255,255,0.07)',
+                                                    border: '1px solid rgba(255,255,255,0.15)',
+                                                    borderRadius: '8px',
+                                                    color: 'white',
+                                                    fontSize: '13px',
+                                                    outline: 'none'
+                                                }}
+                                            />
+                                        </div>
+
+                                        {/* Quick Create Subcategory Button */}
+                                        {subSearch.trim() && !hasExactMatch && (
+                                            <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                                                 <button
                                                     type="button"
-                                                    onClick={() => { setCategoryOpen(o => !o); setSubcategoryOpen(false); }}
+                                                    disabled={creatingSub}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleQuickCreateSubcategory(subSearch);
+                                                    }}
                                                     style={{
-                                                        ...inputStyle,
-                                                        textAlign: 'left',
+                                                        width: '100%',
+                                                        padding: '8px 12px',
+                                                        background: 'rgba(0, 230, 118, 0.15)',
+                                                        border: '1px dashed #00E676',
+                                                        borderRadius: '8px',
+                                                        color: '#00E676',
+                                                        fontSize: '13px',
+                                                        fontWeight: '700',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        gap: '8px'
+                                                        justifyContent: 'center',
+                                                        gap: '6px'
                                                     }}
                                                 >
-                                                    <span style={{ color: formData.category_id && categories.find(c => c.id === formData.category_id) ? 'white' : 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        {(() => {
-                                                            const cat = categories.find(c => c.id === formData.category_id);
-                                                            return cat ? (
-                                                                <>
-                                                                    <span style={{ fontSize: '18px' }}>{cat.icon}</span>
-                                                                    {cat.name}
-                                                                </>
-                                                            ) : (
-                                                                'Seleccionar categoría...'
-                                                            );
-                                                        })()}
-                                                    </span>
-                                                    <motion.svg
-                                                        animate={{ rotate: categoryOpen ? 180 : 0 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        width="16" height="16" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
-                                                    >
-                                                        <path d="M8 11L3 6h10z" />
-                                                    </motion.svg>
+                                                    {creatingSub ? '⏳ Creando...' : `➕ Crear y seleccionar "${subSearch.trim()}"`}
                                                 </button>
-                                                <AnimatePresence>
-                                                    {categoryOpen && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                            exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                                                            transition={{ duration: 0.18, ease: 'easeOut' }}
-                                                            style={{
-                                                                position: 'absolute',
-                                                                top: 'calc(100% + 6px)',
-                                                                left: 0,
-                                                                right: 0,
-                                                                zIndex: 1000,
-                                                                backgroundColor: '#1a1a1a',
-                                                                border: '1px solid rgba(255,255,255,0.15)',
-                                                                borderRadius: '12px',
-                                                                boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-                                                                maxHeight: '320px',
-                                                                overflowY: 'auto'
-                                                            }}
-                                                        >
-                                                            {categories.map(cat => (
-                                                                <div
-                                                                    key={cat.id}
-                                                                    onClick={() => {
-                                                                        setFormData({ ...formData, category_id: cat.id, subcategory_id: '' });
-                                                                        setCategoryOpen(false);
-                                                                    }}
-                                                                    style={{
-                                                                        padding: '12px 16px',
-                                                                        cursor: 'pointer',
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '12px',
-                                                                        backgroundColor: formData.category_id === cat.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
-                                                                        borderBottom: '1px solid rgba(255,255,255,0.05)'
-                                                                    }}
-                                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
-                                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = formData.category_id === cat.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
-                                                                >
-                                                                    {cat.icon && (
-                                                                        <span style={{
-                                                                            fontSize: '20px',
-                                                                            width: '36px',
-                                                                            height: '36px',
-                                                                            borderRadius: '50%',
-                                                                            background: cat.color || 'rgba(255,255,255,0.1)',
-                                                                            display: 'inline-flex',
-                                                                            alignItems: 'center',
-                                                                            justifyContent: 'center',
-                                                                            flexShrink: 0
-                                                                        }}>
-                                                                            {cat.icon}
-                                                                        </span>
-                                                                    )}
-                                                                    <span style={{ flex: 1, color: 'white', fontSize: '15px', fontWeight: '500' }}>
-                                                                        {cat.name}
-                                                                    </span>
-                                                                    {formData.category_id === cat.id && (
-                                                                        <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
-                                                                            <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
-                                                                        </svg>
-                                                                    )}
-                                                                </div>
-                                                            ))}
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
                                             </div>
+                                        )}
 
-                                            <div ref={subcategoryRef} style={{ position: 'relative' }}>
-                                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
-                                                    Subcategoría
-                                                </label>
+                                        {/* Category Subcategories */}
+                                        {searchFilteredCategorySubs.length > 0 && (
+                                            <div>
+                                                <div style={{ padding: '8px 12px 4px', fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
+                                                    {currentCategory ? `Subcategorías de ${currentCategory.name}:` : 'Subcategorías sugeridas:'}
+                                                </div>
+                                                {searchFilteredCategorySubs.map(sub => {
+                                                    const isSelected = (formData.subcategory_ids || []).map(String).includes(String(sub.id));
+                                                    return (
+                                                        <div
+                                                            key={sub.id}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleToggleSubcategory(sub.id);
+                                                            }}
+                                                            style={{
+                                                                padding: '10px 16px',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '12px',
+                                                                backgroundColor: isSelected ? 'rgba(0, 230, 118, 0.12)' : 'transparent',
+                                                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                                userSelect: 'none'
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isSelected ? 'rgba(0, 230, 118, 0.18)' : 'rgba(255,255,255,0.06)'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isSelected ? 'rgba(0, 230, 118, 0.12)' : 'transparent'}
+                                                        >
+                                                            <div style={{
+                                                                width: '18px',
+                                                                height: '18px',
+                                                                borderRadius: '4px',
+                                                                border: isSelected ? '2px solid #00E676' : '2px solid rgba(255,255,255,0.3)',
+                                                                backgroundColor: isSelected ? '#00E676' : 'transparent',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                flexShrink: 0
+                                                            }}>
+                                                                {isSelected && (
+                                                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="#000">
+                                                                        <path d="M13.5 3.5l-8 8-4-4 1.5-1.5 2.5 2.5 6.5-6.5z" />
+                                                                    </svg>
+                                                                )}
+                                                            </div>
+                                                            <span style={{ flex: 1, color: isSelected ? 'white' : 'rgba(255,255,255,0.85)', fontSize: '14px', fontWeight: isSelected ? '600' : '400' }}>
+                                                                {sub.name}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+
+                                        {/* Other Subcategories */}
+                                        {searchFilteredOtherSubs.length > 0 && (
+                                            <div>
+                                                <div style={{ padding: '10px 12px 4px', fontSize: '11px', fontWeight: '700', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', borderTop: searchFilteredCategorySubs.length > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                                                    Otras subcategorías:
+                                                </div>
+                                                {searchFilteredOtherSubs.map(sub => {
+                                                    const isSelected = (formData.subcategory_ids || []).map(String).includes(String(sub.id));
+                                                    const subCat = categories.find(c => String(c.id) === String(sub.category_id));
+                                                    return (
+                                                        <div
+                                                            key={sub.id}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleToggleSubcategory(sub.id);
+                                                            }}
+                                                            style={{
+                                                                padding: '10px 16px',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '12px',
+                                                                backgroundColor: isSelected ? 'rgba(0, 230, 118, 0.12)' : 'transparent',
+                                                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                                userSelect: 'none'
+                                                            }}
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isSelected ? 'rgba(0, 230, 118, 0.18)' : 'rgba(255,255,255,0.06)'}
+                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isSelected ? 'rgba(0, 230, 118, 0.12)' : 'transparent'}
+                                                        >
+                                                            <div style={{
+                                                                width: '18px',
+                                                                height: '18px',
+                                                                borderRadius: '4px',
+                                                                border: isSelected ? '2px solid #00E676' : '2px solid rgba(255,255,255,0.3)',
+                                                                backgroundColor: isSelected ? '#00E676' : 'transparent',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                flexShrink: 0
+                                                            }}>
+                                                                {isSelected && (
+                                                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="#000">
+                                                                        <path d="M13.5 3.5l-8 8-4-4 1.5-1.5 2.5 2.5 6.5-6.5z" />
+                                                                    </svg>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <span style={{ color: isSelected ? 'white' : 'rgba(255,255,255,0.85)', fontSize: '14px', fontWeight: isSelected ? '600' : '400' }}>
+                                                                    {sub.name}
+                                                                </span>
+                                                                {subCat && (
+                                                                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: '4px' }}>
+                                                                        {subCat.name}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+
+                                        {searchFilteredCategorySubs.length === 0 && searchFilteredOtherSubs.length === 0 && !subSearch.trim() && (
+                                            <div style={{ padding: '20px 16px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>
+                                                Escribí arriba para crear tu primera subcategoría (ej: <em>Estética</em> o <em>Spa</em>).
+                                            </div>
+                                        )}
+
+                                        <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'flex-end', position: 'sticky', bottom: 0, background: '#1a1a1a' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSubcategoryOpen(false)}
+                                                style={{
+                                                    background: '#00E676',
+                                                    border: 'none',
+                                                    color: '#000',
+                                                    padding: '4px 14px',
+                                                    borderRadius: '6px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '700',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Listo
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Subcategory Chips */}
+                            {formData.subcategory_ids?.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                                    {formData.subcategory_ids.map(subId => {
+                                        const subObj = allAvailableSubcategories.find(s => String(s.id) === String(subId));
+                                        return (
+                                            <span
+                                                key={subId}
+                                                style={{
+                                                    background: 'rgba(0, 230, 118, 0.15)',
+                                                    border: '1px solid rgba(0, 230, 118, 0.35)',
+                                                    color: '#00E676',
+                                                    borderRadius: '16px',
+                                                    padding: '3px 10px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '600',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px'
+                                                }}
+                                            >
+                                                {subObj ? subObj.name : subId}
                                                 <button
                                                     type="button"
-                                                    onClick={() => { if (formData.category_id) { setSubcategoryOpen(o => !o); setCategoryOpen(false); } }}
-                                                    disabled={!formData.category_id}
-                                                    style={{
-                                                        ...inputStyle,
-                                                        textAlign: 'left',
-                                                        cursor: formData.category_id ? 'pointer' : 'not-allowed',
-                                                        opacity: formData.category_id ? 1 : 0.5,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        gap: '8px'
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleToggleSubcategory(subId);
                                                     }}
+                                                    style={{
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        color: '#00E676',
+                                                        cursor: 'pointer',
+                                                        padding: 0,
+                                                        fontSize: '13px',
+                                                        lineHeight: 1,
+                                                        display: 'flex',
+                                                        alignItems: 'center'
+                                                    }}
+                                                    title="Quitar subcategoría"
                                                 >
-                                                    <span style={{ color: selectedSubcategory ? 'white' : 'rgba(255,255,255,0.5)' }}>
-                                                        {selectedSubcategory ? selectedSubcategory.name : 'Seleccionar subcategoría...'}
-                                                    </span>
-                                                    <motion.svg
-                                                        animate={{ rotate: subcategoryOpen ? 180 : 0 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        width="16" height="16" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
-                                                    >
-                                                        <path d="M8 11L3 6h10z" />
-                                                    </motion.svg>
+                                                    ✕
                                                 </button>
-                                                <AnimatePresence>
-                                                    {subcategoryOpen && filteredSubcategories.length > 0 && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                                                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                                                            exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                                                            transition={{ duration: 0.18, ease: 'easeOut' }}
-                                                            style={{
-                                                                position: 'absolute',
-                                                                top: 'calc(100% + 6px)',
-                                                                left: 0,
-                                                                right: 0,
-                                                                zIndex: 1000,
-                                                                backgroundColor: '#1a1a1a',
-                                                                border: '1px solid rgba(255,255,255,0.15)',
-                                                                borderRadius: '12px',
-                                                                boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-                                                                maxHeight: '320px',
-                                                                overflowY: 'auto'
-                                                            }}
-                                                        >
-                                                            {filteredSubcategories.map(sub => (
-                                                                <div
-                                                                    key={sub.id}
-                                                                    onClick={() => {
-                                                                        setFormData({ ...formData, subcategory_id: sub.id });
-                                                                        setSubcategoryOpen(false);
-                                                                    }}
-                                                                    style={{
-                                                                        padding: '12px 16px',
-                                                                        cursor: 'pointer',
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'space-between',
-                                                                        gap: '12px',
-                                                                        backgroundColor: formData.subcategory_id === sub.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
-                                                                        borderBottom: '1px solid rgba(255,255,255,0.05)'
-                                                                    }}
-                                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'}
-                                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = formData.subcategory_id === sub.id ? 'rgba(0, 230, 118, 0.1)' : 'transparent'}
-                                                                >
-                                                                    <span style={{ flex: 1, color: 'white', fontSize: '15px' }}>{sub.name}</span>
-                                                                    {formData.subcategory_id === sub.id && (
-                                                                        <svg width="18" height="18" viewBox="0 0 18 18" fill="#00E676">
-                                                                            <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
-                                                                        </svg>
-                                                                    )}
-                                                                </div>
-                                                            ))}
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        </div>
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                     {/* Location */}
                     <div>
@@ -558,16 +995,54 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
                         if (isRental) return null;
 
+                        const isService = selectedCatObj
+                            ? (selectedCatObj.name !== 'Deportes' && selectedCatObj.type !== 'sport')
+                            : (formData.type === 'service');
+
+                        const count = formData.resources_count || 1;
+                        let planLabel = '';
+                        let priceLabel = '';
+
+                        if (isService) {
+                            if (count === 1) {
+                                planLabel = 'Plan Individual (1 Agenda)';
+                                priceLabel = '$18.000/mes';
+                            } else if (count <= 3) {
+                                planLabel = `Plan Equipos (Hasta 3 Agendas)`;
+                                priceLabel = '$36.000/mes';
+                            } else {
+                                const extra = count - 3;
+                                planLabel = `Plan Equipos (${count} Agendas)`;
+                                priceLabel = `$${(36000 + extra * 10000).toLocaleString('es-AR')}/mes`;
+                            }
+                        } else {
+                            if (count <= 3) {
+                                planLabel = `Canchas (${count} Canchas)`;
+                                priceLabel = `$${(count * 20000).toLocaleString('es-AR')}/mes ($20.000/cancha)`;
+                            } else if (count <= 5) {
+                                planLabel = `Canchas (${count} Canchas)`;
+                                priceLabel = `$${(count * 17000).toLocaleString('es-AR')}/mes ($17.000/cancha)`;
+                            } else {
+                                planLabel = `Canchas (${count} Canchas)`;
+                                priceLabel = `$${(count * 15000).toLocaleString('es-AR')}/mes ($15.000/cancha)`;
+                            }
+                        }
+
                         return (
                             <div>
-                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
-                                    ⚙️ Cantidad de Canchas / Especialistas
-                                </label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', color: 'rgba(255,255,255,0.9)' }}>
+                                        {isService ? '👥 Cantidad de Especialistas / Agendas' : '🏟️ Cantidad de Canchas'}
+                                    </label>
+                                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#10B981', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '6px' }}>
+                                        {planLabel} • {priceLabel}
+                                    </span>
+                                </div>
                                 <input
                                     type="number"
                                     min="1"
                                     max="30"
-                                    value={formData.resources_count || 2}
+                                    value={formData.resources_count || 1}
                                     onChange={(e) => setFormData({ ...formData, resources_count: parseInt(e.target.value) || 1 })}
                                     style={{
                                         width: '100%',
@@ -583,8 +1058,8 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                 />
                                 <small style={{ display: 'block', marginTop: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
                                     {business
-                                        ? 'Modificar este valor ajustará automáticamente la cantidad de canchas/especialistas creados en el sistema.'
-                                        : 'Se generarán automáticamente al crear el negocio (ej: Cancha 1, Cancha 2, etc.)'
+                                        ? `Modificar este valor ajustará automáticamente la cantidad de ${isService ? 'especialistas' : 'canchas'} creados y actualizará el plan a ${planLabel} (${priceLabel}).`
+                                        : `Se generarán automáticamente ${count} ${isService ? 'especialistas' : 'canchas'} y se asignará el ${planLabel} (${priceLabel}).`
                                     }
                                 </small>
                             </div>

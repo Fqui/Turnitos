@@ -7,6 +7,7 @@ import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
 import SEOHead from '../components/SEOHead';
 import AmenityIcon, { parseAmenity } from '../components/common/AmenityIcon';
+import CouponInput from '../components/common/CouponInput';
 import { pushService } from '../services/pushService';
 import { supabase } from '../services/supabaseClient';
 import 'leaflet/dist/leaflet.css';
@@ -31,6 +32,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const [guestCount, setGuestCount] = useState(30);
     const [duration, setDuration] = useState(4);
     const [selectedServices, setSelectedServices] = useState([]);
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [venueBookings, setVenueBookings] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [bookingStep, setBookingStep] = useState(1);
@@ -277,7 +279,9 @@ export default function VenueProfile({ business: initialBusiness }) {
     const durationDiscountAmount = durationDiscountPct > 0 ? Math.round(rawBasePrice * (durationDiscountPct / 100)) : 0;
     const basePrice = rawBasePrice - durationDiscountAmount;
     const servicesTotal = selectedServices.reduce((sum, service) => sum + service.price, 0);
-    const totalPrice = basePrice + servicesTotal;
+    const subtotalPrice = basePrice + servicesTotal;
+    const couponDiscountAmount = Number(appliedCoupon?.discountAmount || 0);
+    const totalPrice = Math.max(0, subtotalPrice - couponDiscountAmount);
 
     // Toggle service selection
     const toggleService = (service) => {
@@ -405,6 +409,11 @@ export default function VenueProfile({ business: initialBusiness }) {
                 time: '00:00',
                 duration: duration * 60, // Venue duration in minutes
                 price: totalPrice,
+                totalPrice: totalPrice,
+                total_price: totalPrice,
+                coupon_code: appliedCoupon?.coupon?.code || null,
+                discount_amount: couponDiscountAmount,
+                gift_benefit: appliedCoupon?.giftBenefit || null,
                 guestCount: guestCount,
                 guest_count: guestCount,
                 selectedServices: selectedServices,
@@ -413,8 +422,6 @@ export default function VenueProfile({ business: initialBusiness }) {
                 services_total: servicesTotal,
                 basePrice: basePrice,
                 base_price: basePrice,
-                totalPrice: totalPrice,
-                total_price: totalPrice,
                 customerName: bookingDetails.customerName,
                 customer_name: bookingDetails.customerName,
                 customerPhone: bookingDetails.customerPhone,
@@ -422,6 +429,12 @@ export default function VenueProfile({ business: initialBusiness }) {
                 customerEmail: bookingDetails.customerEmail,
                 customer_email: bookingDetails.customerEmail,
                 notes: bookingDetails.notes,
+                metadata: {
+                    coupon_code: appliedCoupon?.coupon?.code || null,
+                    discount_amount: couponDiscountAmount,
+                    gift_benefit: appliedCoupon?.giftBenefit || null,
+                    original_price: subtotalPrice
+                },
                 status: 'pending'
             };
 
@@ -1774,6 +1787,30 @@ export default function VenueProfile({ business: initialBusiness }) {
                                                         <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>+${service.price.toLocaleString()}</span>
                                                     </div>
                                                 ))}
+
+                                                {couponDiscountAmount > 0 && (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10B981', fontSize: '14px', fontWeight: '700' }}>
+                                                        <span>Cupón ({appliedCoupon.coupon?.code})</span>
+                                                        <span>-${couponDiscountAmount.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+
+                                                {appliedCoupon?.giftBenefit && (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#3B82F6', fontSize: '14px', fontWeight: '700' }}>
+                                                        <span>🎁 Beneficio incluido:</span>
+                                                        <span>{appliedCoupon.giftBenefit}</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Coupon Input */}
+                                                <CouponInput
+                                                    coupons={business?.coupons || business?.metadata?.coupons || []}
+                                                    totalAmount={subtotalPrice}
+                                                    bookingDate={selectedDate}
+                                                    appliedCoupon={appliedCoupon}
+                                                    onApplyCoupon={(res) => setAppliedCoupon(res)}
+                                                    onRemoveCoupon={() => setAppliedCoupon(null)}
+                                                />
 
                                                 <div style={{ height: '1px', background: borderColor, margin: '8px 0' }} />
 

@@ -1154,8 +1154,13 @@ const BusinessesTab = ({ businesses, onDelete, onEdit, onCreate, onExportCSV, fi
                                     <div style={{ fontWeight: '700', fontSize: '14px', color: '#f9fafb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {business.name}
                                     </div>
-                                    <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                        {business.categories?.name}
+                                    <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                        <span>{business.categories?.name}</span>
+                                        {Array.isArray(business.subcategories) && business.subcategories.length > 0 && (
+                                            <span style={{ color: '#00E676', fontWeight: '600' }}>
+                                                · {business.subcategories.map(s => s.name || s).join(', ')}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

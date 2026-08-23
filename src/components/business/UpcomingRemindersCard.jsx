@@ -50,7 +50,7 @@ export default function UpcomingRemindersCard({
                 if (hoursElapsed >= 1 && !reminderSent) {
                     const totalPrice = Number(b.price || b.total_price || b.totalPrice || 0);
                     const depositReq = Number(b.deposit_amount || b.depositAmount || b.metadata?.deposit_amount || b.metadata?.depositAmount || Math.round(totalPrice * 0.3));
-                    
+
                     deposits.push({
                         ...b,
                         type: 'deposit_pending',
@@ -103,10 +103,10 @@ export default function UpcomingRemindersCard({
 
     if (totalReminders.length === 0) return null;
 
-    const displayedList = activeTab === 'deposits' 
-        ? depositReminders 
-        : activeTab === 'events' 
-            ? eventReminders 
+    const displayedList = activeTab === 'deposits'
+        ? depositReminders
+        : activeTab === 'events'
+            ? eventReminders
             : totalReminders;
 
     const handleSendWhatsApp = (item) => {
@@ -191,13 +191,12 @@ export default function UpcomingRemindersCard({
 
     return (
         <div style={{
-            background: 'linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(28, 28, 28, 0.98))',
-            border: depositReminders.length > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(245, 158, 11, 0.35)',
+            background: 'var(--bg-card, #1E1E1E)',
+            border: depositReminders.length > 0 ? '1.5px solid rgba(239, 68, 68, 0.45)' : '1px solid var(--border)',
             borderRadius: '16px',
             padding: isMobile ? '14px 16px' : '16px 20px',
             marginBottom: '20px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
-            backdropFilter: 'blur(10px)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
             transition: 'all 0.2s ease'
         }}>
             {/* Card Header */}
@@ -208,23 +207,24 @@ export default function UpcomingRemindersCard({
                 cursor: 'pointer',
                 userSelect: 'none'
             }} onClick={() => setIsCollapsed(prev => !prev)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
-                        width: '36px',
-                        height: '36px',
+                        width: '38px',
+                        height: '38px',
                         borderRadius: '10px',
                         background: depositReminders.length > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                        border: depositReminders.length > 0 ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
+                        border: depositReminders.length > 0 ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(245, 158, 11, 0.35)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '18px'
+                        fontSize: '18px',
+                        flexShrink: 0
                     }}>
                         {depositReminders.length > 0 ? '⏳' : '🔔'}
                     </div>
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <h4 style={{ margin: 0, fontSize: isMobile ? '14px' : '15px', fontWeight: '800', color: 'var(--text-primary, #FFF)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <h4 style={{ margin: 0, fontSize: isMobile ? '14px' : '15.5px', fontWeight: '800', color: 'var(--text-primary)' }}>
                                 Recordatorios y Señas Pendientes
                             </h4>
                             <span style={{
@@ -238,7 +238,7 @@ export default function UpcomingRemindersCard({
                                 {totalReminders.length}
                             </span>
                         </div>
-                        <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary, #A0A0A0)' }}>
+                        <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
                             {depositReminders.length > 0 ? `⚠️ ${depositReminders.length} cliente(s) llevan +1h sin enviar comprobante de seña` : 'Avisa a los clientes con fecha próxima por WhatsApp'}
                         </p>
                     </div>
@@ -247,11 +247,11 @@ export default function UpcomingRemindersCard({
                 <button
                     type="button"
                     style={{
-                        background: 'rgba(255, 255, 255, 0.06)',
-                        border: '1px solid var(--border, #333)',
+                        background: 'var(--bg-main)',
+                        border: '1px solid var(--border)',
                         borderRadius: '8px',
-                        color: 'var(--text-primary, #FFF)',
-                        padding: '4px 10px',
+                        color: 'var(--text-primary)',
+                        padding: '6px 12px',
                         fontSize: '12px',
                         fontWeight: '700',
                         cursor: 'pointer'
@@ -263,16 +263,16 @@ export default function UpcomingRemindersCard({
 
             {/* Filter Tabs if both types exist */}
             {!isCollapsed && (depositReminders.length > 0 && eventReminders.length > 0) && (
-                <div style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '14px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                     <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setActiveTab('all'); }}
                         style={{
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            background: activeTab === 'all' ? 'var(--primary-paddle, #84CC16)' : 'rgba(255, 255, 255, 0.06)',
-                            color: activeTab === 'all' ? '#000' : 'var(--text-secondary, #AAA)',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            border: activeTab === 'all' ? 'none' : '1px solid var(--border)',
+                            background: activeTab === 'all' ? 'var(--primary-paddle, #84CC16)' : 'var(--bg-main)',
+                            color: activeTab === 'all' ? '#000' : 'var(--text-secondary)',
                             fontSize: '12px',
                             fontWeight: '700',
                             cursor: 'pointer'
@@ -284,11 +284,11 @@ export default function UpcomingRemindersCard({
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setActiveTab('deposits'); }}
                         style={{
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            background: activeTab === 'deposits' ? '#EF4444' : 'rgba(255, 255, 255, 0.06)',
-                            color: activeTab === 'deposits' ? '#FFF' : 'var(--text-secondary, #AAA)',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            border: activeTab === 'deposits' ? 'none' : '1px solid var(--border)',
+                            background: activeTab === 'deposits' ? '#EF4444' : 'var(--bg-main)',
+                            color: activeTab === 'deposits' ? '#FFF' : 'var(--text-secondary)',
                             fontSize: '12px',
                             fontWeight: '700',
                             cursor: 'pointer'
@@ -300,11 +300,11 @@ export default function UpcomingRemindersCard({
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setActiveTab('events'); }}
                         style={{
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            background: activeTab === 'events' ? '#F59E0B' : 'rgba(255, 255, 255, 0.06)',
-                            color: activeTab === 'events' ? '#000' : 'var(--text-secondary, #AAA)',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            border: activeTab === 'events' ? 'none' : '1px solid var(--border)',
+                            background: activeTab === 'events' ? '#F59E0B' : 'var(--bg-main)',
+                            color: activeTab === 'events' ? '#000' : 'var(--text-secondary)',
                             fontSize: '12px',
                             fontWeight: '700',
                             cursor: 'pointer'
@@ -321,9 +321,9 @@ export default function UpcomingRemindersCard({
                     display: 'grid',
                     gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))',
                     gap: '12px',
-                    marginTop: (depositReminders.length > 0 && eventReminders.length > 0) ? '10px' : '14px',
-                    borderTop: (depositReminders.length > 0 && eventReminders.length > 0) ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
-                    paddingTop: (depositReminders.length > 0 && eventReminders.length > 0) ? 0 : '14px'
+                    marginTop: (depositReminders.length > 0 && eventReminders.length > 0) ? '12px' : '16px',
+                    borderTop: (depositReminders.length > 0 && eventReminders.length > 0) ? 'none' : '1px solid var(--border)',
+                    paddingTop: (depositReminders.length > 0 && eventReminders.length > 0) ? 0 : '16px'
                 }}>
                     {displayedList.map((item) => {
                         const clientName = item.customer_name || item.customerName || 'Cliente';
@@ -336,24 +336,25 @@ export default function UpcomingRemindersCard({
                             <div
                                 key={item.id}
                                 style={{
-                                    background: 'var(--bg-main, #141414)',
-                                    border: isDepositType ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid var(--border, #2A2A2A)',
+                                    background: 'var(--bg-main)',
+                                    border: isDepositType ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid var(--border)',
                                     borderRadius: '12px',
-                                    padding: '12px 14px',
+                                    padding: '14px 16px',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     justifyContent: 'space-between',
-                                    gap: '10px'
+                                    gap: '12px',
+                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
                                 }}
                             >
                                 <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                                         {isDepositType ? (
                                             <span style={{
                                                 background: 'rgba(239, 68, 68, 0.15)',
                                                 color: '#EF4444',
                                                 border: '1px solid rgba(239, 68, 68, 0.35)',
-                                                fontSize: '10.5px',
+                                                fontSize: '11px',
                                                 fontWeight: '800',
                                                 padding: '2px 8px',
                                                 borderRadius: '6px'
@@ -365,7 +366,7 @@ export default function UpcomingRemindersCard({
                                                 background: `${item.urgencyColor}20`,
                                                 color: item.urgencyColor,
                                                 border: `1px solid ${item.urgencyColor}50`,
-                                                fontSize: '10.5px',
+                                                fontSize: '11px',
                                                 fontWeight: '800',
                                                 padding: '2px 8px',
                                                 borderRadius: '6px'
@@ -374,19 +375,19 @@ export default function UpcomingRemindersCard({
                                             </span>
                                         )}
 
-                                        <span style={{ fontSize: '11px', color: 'var(--text-secondary, #888)', fontWeight: '600' }}>
+                                        <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>
                                             {isDepositType ? `Fecha: ${formattedDate}` : (item.time && item.time !== '00:00' && item.time !== '00:00:00' ? `🕒 ${item.time} hs` : '📅 Jornada')}
                                         </span>
                                     </div>
 
-                                    <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary, #FFF)' }}>
+                                    <div style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--text-primary)' }}>
                                         👤 {clientName}
                                     </div>
 
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', fontSize: '12px', marginTop: '6px', color: 'var(--text-secondary, #A0A0A0)' }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', fontSize: '12.5px', marginTop: '6px', color: 'var(--text-secondary)' }}>
                                         {isDepositType ? (
                                             <span style={{ color: '#EF4444', fontWeight: '700' }}>
-                                                💳 Seña Requerida: ${item.depositReq.toLocaleString('es-AR')} (Total: ${item.totalPrice.toLocaleString('es-AR')})
+                                                💳 Seña Requerida: ${item.depositReq.toLocaleString('es-AR')} <span style={{ opacity: 0.8, color: 'var(--text-secondary)', fontWeight: '500' }}>(Total: ${item.totalPrice.toLocaleString('es-AR')})</span>
                                             </span>
                                         ) : (
                                             <>
@@ -420,14 +421,15 @@ export default function UpcomingRemindersCard({
                                             justifyContent: 'center',
                                             gap: '6px',
                                             background: isDepositType ? '#EF4444' : '#25D366',
-                                            color: isDepositType ? '#FFF' : '#000',
+                                            color: '#FFFFFF',
                                             border: 'none',
                                             borderRadius: '8px',
-                                            padding: '8px 12px',
-                                            fontSize: '12.5px',
+                                            padding: '9px 12px',
+                                            fontSize: '13px',
                                             fontWeight: '800',
                                             cursor: 'pointer',
-                                            transition: 'opacity 0.15s'
+                                            transition: 'opacity 0.15s',
+                                            boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)'
                                         }}
                                         title={isDepositType ? "Reclamar seña por WhatsApp" : "Enviar recordatorio de evento"}
                                     >
@@ -439,12 +441,12 @@ export default function UpcomingRemindersCard({
                                         disabled={isProcessing}
                                         onClick={() => markReminderAsSent(item, true)}
                                         style={{
-                                            background: 'rgba(255, 255, 255, 0.08)',
-                                            border: '1px solid var(--border, #333)',
-                                            color: 'var(--text-secondary, #AAA)',
+                                            background: 'var(--bg-card)',
+                                            border: '1px solid var(--border)',
+                                            color: 'var(--text-primary)',
                                             borderRadius: '8px',
-                                            padding: '8px 10px',
-                                            fontSize: '12px',
+                                            padding: '9px 12px',
+                                            fontSize: '12.5px',
                                             fontWeight: '700',
                                             cursor: 'pointer'
                                         }}

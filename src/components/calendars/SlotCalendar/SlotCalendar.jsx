@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import CalendarHeader from '../shared/CalendarHeader';
 import DayView from './DayView';
 import WeekView from './WeekView';
@@ -22,7 +22,30 @@ export default function SlotCalendar({
     isMobile = false
 }) {
     const config = getSlotConfig(type);
-    const resources = getResourcesByType(business, type);
+    const [fetchedSpecialists, setFetchedSpecialists] = useState(business?.specialists || []);
+
+    useEffect(() => {
+        if (business?.specialists && business.specialists.length > 0) {
+            setFetchedSpecialists(business.specialists);
+        } else if (business?.id && type === 'service') {
+            import('../../../services/supabaseService').then(mod => {
+                mod.default.getSpecialists(business.id).then(specs => {
+                    if (specs && specs.length > 0) {
+                        setFetchedSpecialists(specs);
+                    }
+                }).catch(() => {});
+            });
+        }
+    }, [business?.id, business?.specialists, type]);
+
+    const effectiveBusiness = useMemo(() => {
+        if (type === 'service' && fetchedSpecialists.length > 0) {
+            return { ...business, specialists: fetchedSpecialists };
+        }
+        return business;
+    }, [business, fetchedSpecialists, type]);
+
+    const resources = getResourcesByType(effectiveBusiness, type);
 
     const [viewMode, setViewMode] = useState(config.defaultView);
     const [currentDate, setCurrentDate] = useState(new Date());

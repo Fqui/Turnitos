@@ -342,23 +342,6 @@ const NewBookingModal = ({
         const today = new Date();
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-        if (dateKey < todayStr) {
-            return { status: 'past', label: 'Pasada', selectable: false };
-        }
-
-        // Check business blocked dates
-        const blockedDates = currentBusiness?.blocked_dates || currentBusiness?.metadata?.blocked_dates || [];
-        if (blockedDates.includes(dateKey)) {
-            return { status: 'blocked', label: 'Bloqueado', selectable: false };
-        }
-
-        const blockedRanges = currentBusiness?.blocked_ranges || currentBusiness?.metadata?.blocked_ranges || [];
-        for (const range of blockedRanges) {
-            if (range.start && range.end && dateKey >= range.start && dateKey <= range.end) {
-                return { status: 'blocked', label: 'Bloqueado', selectable: false };
-            }
-        }
-
         // Check bookings
         const targetResourceId = newBookingData.courtId || newBookingData.serviceId;
         const dayBookings = (bookings || []).filter(b => {
@@ -380,11 +363,48 @@ const NewBookingModal = ({
         });
 
         if (dayBookings.length > 0) {
-            const isBlockedSlot = dayBookings.some(b => b.status === 'blocked' || b.customer_name?.toUpperCase().includes('BLOQUEADO'));
+            const isBlockedSlot = dayBookings.some(b => 
+                b.status === 'blocked' || 
+                b.is_blocked || 
+                b.isBlocked ||
+                String(b.customer_name || '').toUpperCase().includes('BLOQUEADO') ||
+                String(b.customerName || '').toUpperCase().includes('BLOQUEADO')
+            );
             if (isBlockedSlot) {
                 return { status: 'blocked', label: 'Bloqueado', selectable: false };
             }
             return { status: 'occupied', label: 'Reservado', selectable: false, booking: dayBookings[0] };
+        }
+
+        // Check business blocked dates (array of strings or objects)
+        const blockedDates = [
+            ...(currentBusiness?.blocked_dates || []),
+            ...(currentBusiness?.metadata?.blocked_dates || [])
+        ];
+        
+        const isBusinessBlocked = blockedDates.some(b => {
+            const bDateStr = typeof b === 'string' ? b : (b?.date || '');
+            let normalized = bDateStr;
+            if (typeof bDateStr === 'string' && bDateStr.includes('/')) {
+                const [d, m, y] = bDateStr.split('/');
+                normalized = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            }
+            return normalized === dateKey;
+        });
+
+        if (isBusinessBlocked) {
+            return { status: 'blocked', label: 'Bloqueado', selectable: false };
+        }
+
+        const blockedRanges = currentBusiness?.blocked_ranges || currentBusiness?.metadata?.blocked_ranges || [];
+        for (const range of blockedRanges) {
+            if (range.start && range.end && dateKey >= range.start && dateKey <= range.end) {
+                return { status: 'blocked', label: 'Bloqueado', selectable: false };
+            }
+        }
+
+        if (dateKey < todayStr) {
+            return { status: 'past', label: 'Fecha Pasada (Histórica)', selectable: true };
         }
 
         return { status: 'available', label: 'Disponible', selectable: true };
@@ -500,9 +520,11 @@ const NewBookingModal = ({
                                     width: '100%',
                                     padding: '10px 12px',
                                     borderRadius: '10px',
-                                    border: (newBookingData.date && selectedDateAvailability.status !== 'available')
-                                        ? '1px solid #EF4444'
-                                        : (showDatePicker ? '1px solid var(--primary-paddle)' : '1px solid var(--border)'),
+                                    border: (newBookingData.date && selectedDateAvailability.status === 'blocked')
+                                        ? '1px dashed #9CA3AF'
+                                        : (newBookingData.date && selectedDateAvailability.status === 'occupied')
+                                            ? '1px solid #EF4444'
+                                            : (showDatePicker ? '1px solid var(--primary-paddle)' : '1px solid var(--border)'),
                                     background: 'var(--bg-main)',
                                     color: 'var(--text-primary)',
                                     fontSize: '13px',
@@ -527,10 +549,22 @@ const NewBookingModal = ({
                                         padding: '2px 7px',
                                         borderRadius: '6px',
                                         flexShrink: 0,
-                                        background: selectedDateAvailability.status === 'available' ? 'rgba(0, 230, 118, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                        color: selectedDateAvailability.status === 'available' ? 'var(--primary-paddle)' : '#EF4444'
+                                        background: selectedDateAvailability.status === 'available'
+                                            ? 'rgba(0, 230, 118, 0.15)'
+                                            : selectedDateAvailability.status === 'past'
+                                                ? 'rgba(59, 130, 246, 0.15)'
+                                                : selectedDateAvailability.status === 'blocked'
+                                                    ? 'rgba(156, 163, 175, 0.2)'
+                                                    : 'rgba(239, 68, 68, 0.15)',
+                                        color: selectedDateAvailability.status === 'available'
+                                            ? 'var(--primary-paddle)'
+                                            : selectedDateAvailability.status === 'past'
+                                                ? '#3B82F6'
+                                                : selectedDateAvailability.status === 'blocked'
+                                                    ? '#9CA3AF'
+                                                    : '#EF4444'
                                     }}>
-                                        {selectedDateAvailability.status === 'available' ? '✓ Disponible' : selectedDateAvailability.label}
+                                        {selectedDateAvailability.status === 'available' ? '✓ Disponible' : selectedDateAvailability.status === 'past' ? '📜 Histórica' : selectedDateAvailability.label}
                                     </span>
                                 )}
                             </button>
@@ -616,25 +650,35 @@ const NewBookingModal = ({
                                             let cursor = 'default';
 
                                             if (!cell.isCurrentMonth) {
-                                                textColor = 'rgba(255, 255, 255, 0.12)';
-                                            } else if (isSelected) {
-                                                bg = 'var(--primary-paddle, #00E676)';
-                                                textColor = '#000000';
-                                                border = '1px solid var(--primary-paddle)';
-                                                cursor = 'pointer';
+                                                textColor = 'rgba(156, 163, 175, 0.25)';
                                             } else if (availability.status === 'occupied') {
-                                                bg = 'rgba(239, 68, 68, 0.15)';
+                                                bg = isSelected ? 'rgba(239, 68, 68, 0.35)' : 'rgba(239, 68, 68, 0.15)';
                                                 textColor = '#EF4444';
-                                                border = '1px solid rgba(239, 68, 68, 0.3)';
+                                                border = isSelected ? '2px solid #EF4444' : '1px solid rgba(239, 68, 68, 0.35)';
                                                 cursor = 'not-allowed';
                                             } else if (availability.status === 'blocked') {
-                                                bg = 'rgba(255, 255, 255, 0.05)';
+                                                bg = isSelected ? 'rgba(156, 163, 175, 0.25)' : 'rgba(156, 163, 175, 0.12)';
                                                 textColor = '#9CA3AF';
-                                                border = '1px dashed rgba(255, 255, 255, 0.15)';
+                                                border = isSelected ? '2px dashed #9CA3AF' : '1.5px dashed #9CA3AF';
                                                 cursor = 'not-allowed';
                                             } else if (availability.status === 'past') {
-                                                textColor = 'rgba(255, 255, 255, 0.18)';
-                                                cursor = 'not-allowed';
+                                                if (isSelected) {
+                                                    bg = 'var(--primary-paddle, #84CC16)';
+                                                    textColor = '#000000';
+                                                    border = '1px solid var(--primary-paddle, #84CC16)';
+                                                    cursor = 'pointer';
+                                                } else {
+                                                    bg = 'var(--bg-main)';
+                                                    textColor = 'var(--text-secondary)';
+                                                    border = '1px solid var(--border)';
+                                                    cursor = 'pointer';
+                                                }
+                                            } else if (isSelected) {
+                                                // Only available selected date gets primary green background
+                                                bg = 'var(--primary-paddle, #84CC16)';
+                                                textColor = '#000000';
+                                                border = '1px solid var(--primary-paddle, #84CC16)';
+                                                cursor = 'pointer';
                                             } else {
                                                 // available
                                                 bg = 'var(--bg-main)';
@@ -702,19 +746,39 @@ const NewBookingModal = ({
                                 </div>
                             )}
 
+                            {/* Historical Notice */}
+                            {newBookingData.date && selectedDateAvailability.status === 'past' && (
+                                <div style={{
+                                    marginTop: '6px',
+                                    padding: '8px 10px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(59, 130, 246, 0.12)',
+                                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '11px',
+                                    fontWeight: '600',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}>
+                                    <span>📜</span>
+                                    <span><strong>Fecha histórica:</strong> Se guardará como finalizada/pagada y sumará a tus reportes y balance.</span>
+                                </div>
+                            )}
+
                             {/* Warning if selected date is occupied/blocked */}
-                            {newBookingData.date && selectedDateAvailability.status !== 'available' && (
+                            {newBookingData.date && selectedDateAvailability.status !== 'available' && selectedDateAvailability.status !== 'past' && (
                                 <div style={{
                                     marginTop: '6px',
                                     padding: '6px 10px',
                                     borderRadius: '8px',
-                                    background: 'rgba(239, 68, 68, 0.12)',
-                                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                                    color: '#EF4444',
+                                    background: selectedDateAvailability.status === 'blocked' ? 'rgba(156, 163, 175, 0.15)' : 'rgba(239, 68, 68, 0.12)',
+                                    border: selectedDateAvailability.status === 'blocked' ? '1px dashed #9CA3AF' : '1px solid rgba(239, 68, 68, 0.3)',
+                                    color: selectedDateAvailability.status === 'blocked' ? '#9CA3AF' : '#EF4444',
                                     fontSize: '11px',
                                     fontWeight: '600'
                                 }}>
-                                    ⚠️ Esta fecha {selectedDateAvailability.label.toLowerCase()} (no disponible).
+                                    ⚠️ Esta fecha está {selectedDateAvailability.label.toLowerCase()} (no disponible).
                                 </div>
                             )}
                         </div>
@@ -1210,7 +1274,15 @@ const NewBookingModal = ({
                         <textarea
                             value={newBookingData.notes || ''}
                             onChange={(e) => setNewBookingData({ ...newBookingData, notes: e.target.value })}
-                            placeholder="Ej. Dejan seña en mano, necesitan pecheras lavadas, etc."
+                            placeholder={
+                                isRental 
+                                    ? "Ej. Dejan seña en mano, ingresan antes para decorar, etc." 
+                                    : isPadel 
+                                        ? "Ej. Dejan seña en mano, alquilan paletas, etc."
+                                        : isFutbol
+                                            ? "Ej. Dejan seña en mano, necesitan pecheras, etc."
+                                            : "Ej. Dejan seña en mano, pedidos especiales, etc."
+                            }
                             rows="2"
                             style={{
                                 width: '100%',

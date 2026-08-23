@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
 import SubscriptionManager from './SubscriptionManager';
+import LinkBioButtonsSettings from './venue/LinkBioButtonsSettings';
+import CouponsSettings from './venue/CouponsSettings';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -483,16 +485,19 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     };
 
     const tabs = [
-        { id: 'general', label: 'General', icon: '🏢' },
-        { id: 'design', label: 'Diseño', icon: '🎨' },
+        { id: 'general', label: 'General y Ubicación', icon: '📍' },
+        { id: 'appearance', label: 'Apariencia y Colores', icon: '🎨' },
         { id: 'subscription', label: isSport ? 'Plan y Canchas' : (isServiceBusiness ? 'Plan y Especialistas' : 'Suscripción'), icon: '💳' },
         ...(isServiceBusiness ? [{ id: 'services', label: 'Servicios', icon: '💼' }] : []),
         ...(isRentalBusiness ? [{ id: 'rental', label: 'Alquiler', icon: '🔑' }] : []),
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
         { id: 'policies_and_payments', label: 'Políticas y Pagos', icon: '📜' },
         { id: 'special_days', label: 'Días Especiales', icon: '📅' },
-        { id: 'gallery', label: 'Galería', icon: '📸' },
-        { id: 'store', label: 'Tienda', icon: '🛒' }
+        { id: 'gallery', label: 'Historias y Galería', icon: '📸' },
+        { id: 'store', label: 'Tienda', icon: '🛒' },
+        { id: 'linkbio', label: 'Botones del LinkBio', icon: '🔗' },
+        { id: 'coupons', label: 'Cupones y Promos', icon: '🏷️' },
+        { id: 'amenities', label: 'Comodidades', icon: '🛋️' }
     ];
 
     const daysTranslation = {
@@ -1394,7 +1399,6 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 );
 
             case 'general':
-                const validAmenities = Array.isArray(formData.amenities) ? formData.amenities : [];
                 // Default center: Buenos Aires Obelisco
                 const mapCenter = [formData.latitude || -34.6037, formData.longitude || -58.3816];
 
@@ -1410,65 +1414,22 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             />
                         </div>
 
-                        {/* Logo and Banner Upload Section */}
-                        <div style={{ display: 'grid', gap: '24px', padding: '20px', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                            <h4 style={{ fontSize: '15px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>Imágenes del Perfil</h4>
-
-                            {/* Logo Upload */}
-                            <div>
-                                <label style={labelStyle}>Logo</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '10px' }}>
-                                    <div style={{
-                                        width: '80px', height: '80px', borderRadius: '16px', overflow: 'hidden',
-                                        background: 'var(--bg-card)', border: '1px solid var(--border)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
-                                    }}>
-                                        {formData.logo ? (
-                                            <img src={formData.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : (
-                                            <span style={{ fontSize: '24px' }}>🏢</span>
-                                        )}
-                                        {uploadingLogo && (
-                                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <div className="spinner" style={{ width: '20px', height: '20px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <input type="file" id="logo-upload" style={{ display: 'none' }} accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} />
-                                        <label htmlFor="logo-upload" style={{ ...buttonSecondaryStyle, display: 'inline-block', cursor: uploadingLogo ? 'not-allowed' : 'pointer', opacity: uploadingLogo ? 0.7 : 1 }}>
-                                            {uploadingLogo ? 'Subiendo...' : 'Cambiar Logo'}
-                                        </label>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>Recomendado: 512x512px. JPG o PNG.</p>
-                                    </div>
-                                </div>
+                        <div>
+                            <label style={labelStyle}>Enlace Personalizado (Slug / URL)</label>
+                            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '12px', padding: '0 14px' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>turnitos.com.ar/</span>
+                                <input
+                                    type="text"
+                                    style={{ ...inputStyle, border: 'none', background: 'transparent', padding: '12px 6px', fontWeight: '700', color: 'var(--primary-paddle)' }}
+                                    value={formData.slug ?? ''}
+                                    placeholder="mi-negocio"
+                                    onChange={(e) => {
+                                        const clean = e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '');
+                                        handleInputChange('slug', clean);
+                                    }}
+                                />
                             </div>
-
-                            {/* Banner Upload */}
-                            <div>
-                                <label style={labelStyle}>Banner</label>
-                                <div style={{ marginTop: '10px' }}>
-                                    <div style={{
-                                        width: '100%', height: '140px', borderRadius: '16px', overflow: 'hidden',
-                                        background: 'var(--bg-card)', border: '1px solid var(--border)', marginBottom: '12px', position: 'relative'
-                                    }}>
-                                        {formData.banner_image ? (
-                                            <img src={formData.banner_image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : (
-                                            <div style={{ width: '100%', height: '100%', background: 'linear-gradient(45deg, #eee, #f5f5f5)' }} />
-                                        )}
-                                        {uploadingBanner && (
-                                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <div className="spinner" style={{ width: '30px', height: '30px', border: '3px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <input type="file" id="banner-upload" style={{ display: 'none' }} accept="image/*" onChange={handleBannerUpload} disabled={uploadingBanner} />
-                                    <label htmlFor="banner-upload" style={{ ...buttonSecondaryStyle, display: 'inline-block', cursor: uploadingBanner ? 'not-allowed' : 'pointer', opacity: uploadingBanner ? 0.7 : 1 }}>
-                                        {uploadingBanner ? 'Subiendo...' : 'Cambiar Banner'}
-                                    </label>
-                                </div>
-                            </div>
+                            <p style={hintStyle}>Tus clientes accederán directamente con este link a tu perfil y turnero.</p>
                         </div>
 
                         <div>
@@ -1482,11 +1443,15 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         </div>
 
                         {/* Location Section */}
-                        <div style={{ marginTop: '10px' }}>
-                            <label style={labelStyle}>Ubicación</label>
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
-                                <input type="text" style={inputStyle} value={formData.location ?? ''} onChange={(e) => handleInputChange('location', e.target.value)} placeholder="Dirección text..." />
-                            </div>
+                        <div>
+                            <label style={labelStyle}>Dirección y Ciudad</label>
+                            <input
+                                type="text"
+                                style={inputStyle}
+                                value={formData.location ?? ''}
+                                onChange={(e) => handleInputChange('location', e.target.value)}
+                                placeholder="Ej: Av. San Martín 1234, La Rioja"
+                            />
 
                             <div style={{ marginTop: '16px' }}>
                                 <label style={{ ...labelStyle, fontSize: '13px', color: 'var(--text-secondary)' }}>Ubicación en el Mapa (Click para marcar)</label>
@@ -1509,27 +1474,217 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                     </MapContainer>
                                 </div>
                                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                    Haz click en el mapa para marcar la ubicación exacta.
+                                    Haz click en el mapa para marcar la ubicación exacta de tu negocio.
                                 </p>
                             </div>
                         </div>
 
-                        {/* Amenities Section */}
+                        <div style={{ marginTop: '10px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+                            <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>Contacto y Redes Sociales</h4>
+                            <div style={{ display: 'grid', gap: '16px' }}>
+                                <div> <label style={labelStyle}>WhatsApp de Contacto</label> <input type="text" style={inputStyle} placeholder="+54911..." value={formData.whatsapp ?? ''} onChange={(e) => handleInputChange('whatsapp', e.target.value)} /> </div>
+                                <div> <label style={labelStyle}>Teléfono Alternativo</label> <input type="text" style={inputStyle} placeholder="3804..." value={formData.phone ?? ''} onChange={(e) => handleInputChange('phone', e.target.value)} /> </div>
+                                <div> <label style={labelStyle}>Instagram</label> <input type="text" style={inputStyle} placeholder="@usuario" value={formData.instagram ?? ''} onChange={(e) => handleInputChange('instagram', e.target.value)} /> </div>
+                                <div> <label style={labelStyle}>TikTok</label> <input type="text" style={inputStyle} placeholder="@usuario" value={formData.tiktok ?? ''} onChange={(e) => handleInputChange('tiktok', e.target.value)} /> </div>
+                                <div> <label style={labelStyle}>Facebook</label> <input type="text" style={inputStyle} placeholder="@usuario o URL" value={formData.facebook ?? ''} onChange={(e) => handleInputChange('facebook', e.target.value)} /> </div>
+                                <div> <label style={labelStyle}>Sitio Web</label> <input type="text" style={inputStyle} placeholder="https://..." value={formData.website ?? ''} onChange={(e) => handleInputChange('website', e.target.value)} /> </div>
+                            </div>
+                        </div>
+
+                        {/* Consolidated Save Button */}
                         <div style={{ marginTop: '10px' }}>
-                            <label style={labelStyle}>Comodidades / Amenities</label>
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', marginTop: '8px' }}>
+                            <button
+                                onClick={() => handleSave({
+                                    name: formData.name,
+                                    slug: formData.slug,
+                                    description: formData.description,
+                                    location: formData.location,
+                                    latitude: formData.latitude,
+                                    longitude: formData.longitude,
+                                    whatsapp: formData.whatsapp,
+                                    phone: formData.phone,
+                                    instagram: formData.instagram,
+                                    tiktok: formData.tiktok,
+                                    facebook: formData.facebook,
+                                    website: formData.website
+                                })}
+                                style={saveButtonStyle}
+                                disabled={saving}
+                            >
+                                {saving ? 'Guardando...' : 'Guardar Información General'}
+                            </button>
+                        </div>
+                    </div>
+                );
+
+            case 'appearance':
+            case 'design':
+                const currentBrandColor = formData.brand_color || formData.primary_color || '#10B981';
+                const suggestedColors = ['#10B981', '#00E676', '#3B82F6', '#6366F1', '#EC4899', '#8B5CF6', '#F59E0B', '#EF4444'];
+
+                return (
+                    <div style={{ display: 'grid', gap: '24px' }}>
+                        {/* Logo Upload */}
+                        <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
+                            <h4 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 16px 0', color: 'var(--text-primary)' }}>Logo del Negocio</h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                <div style={{
+                                    width: '90px',
+                                    height: '90px',
+                                    borderRadius: '20px',
+                                    overflow: 'hidden',
+                                    background: 'var(--bg-card)',
+                                    border: '1px solid var(--border)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    position: 'relative'
+                                }}>
+                                    {formData.logo ? (
+                                        <img src={formData.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <span style={{ fontSize: '32px' }}>🏢</span>
+                                    )}
+                                    {uploadingLogo && (
+                                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <div className="spinner" style={{ width: '24px', height: '24px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <input
+                                        type="file"
+                                        id="logo-upload-appearance"
+                                        style={{ display: 'none' }}
+                                        accept="image/*"
+                                        onChange={handleLogoUpload}
+                                        disabled={uploadingLogo}
+                                    />
+                                    <label htmlFor="logo-upload-appearance" style={{ ...buttonSecondaryStyle, display: 'inline-block', cursor: uploadingLogo ? 'not-allowed' : 'pointer' }}>
+                                        {uploadingLogo ? 'Subiendo...' : '📷 Cambiar Logo'}
+                                    </label>
+                                    <p style={hintStyle}>Recomendado: Imagen cuadrada (512x512px). Formatos JPG, PNG o WEBP.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Banner Upload */}
+                        <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
+                            <h4 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 16px 0', color: 'var(--text-primary)' }}>Banner de Portada</h4>
+                            <div style={{
+                                width: '100%',
+                                height: '160px',
+                                borderRadius: '16px',
+                                overflow: 'hidden',
+                                background: 'var(--bg-card)',
+                                border: '1px solid var(--border)',
+                                marginBottom: '16px',
+                                position: 'relative'
+                            }}>
+                                {formData.banner_image ? (
+                                    <img src={formData.banner_image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                        Sin banner configurado
+                                    </div>
+                                )}
+                                {uploadingBanner && (
+                                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div className="spinner" style={{ width: '32px', height: '32px', border: '3px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                    </div>
+                                )}
+                            </div>
+                            <input
+                                type="file"
+                                id="banner-upload-appearance"
+                                style={{ display: 'none' }}
+                                accept="image/*"
+                                onChange={handleBannerUpload}
+                                disabled={uploadingBanner}
+                            />
+                            <label htmlFor="banner-upload-appearance" style={{ ...buttonSecondaryStyle, display: 'inline-block', cursor: uploadingBanner ? 'not-allowed' : 'pointer' }}>
+                                {uploadingBanner ? 'Subiendo...' : '🖼️ Cambiar Imagen de Portada'}
+                            </label>
+                            <p style={hintStyle}>Recomendado: Formato panorámico (1200x400px o 16:9). Peso máx. 5MB.</p>
+                        </div>
+
+                        {/* Brand Color Theme */}
+                        <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
+                            <h4 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Color de Marca</h4>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 16px 0' }}>
+                                Este color se aplicará a los botones, detalles y encabezados de tu turnero público.
+                            </p>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                                {suggestedColors.map(color => (
+                                    <button
+                                        key={color}
+                                        type="button"
+                                        onClick={() => handleInputChange('brand_color', color)}
+                                        style={{
+                                            width: '36px',
+                                            height: '36px',
+                                            borderRadius: '50%',
+                                            background: color,
+                                            border: currentBrandColor === color ? '3px solid #fff' : '2px solid transparent',
+                                            boxShadow: currentBrandColor === color ? '0 0 0 2px ' + color : 'none',
+                                            cursor: 'pointer',
+                                            transition: 'transform 0.15s'
+                                        }}
+                                        title={color}
+                                    />
+                                ))}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px' }}>
+                                    <input
+                                        type="color"
+                                        value={currentBrandColor}
+                                        onChange={(e) => handleInputChange('brand_color', e.target.value)}
+                                        style={{ width: '40px', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }}
+                                    />
+                                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{currentBrandColor}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => handleSave({
+                                logo: formData.logo,
+                                logo_url: formData.logo || formData.logo_url,
+                                banner_image: formData.banner_image,
+                                banner_url: formData.banner_image || formData.banner_url,
+                                brand_color: formData.brand_color || formData.primary_color
+                            })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Apariencia y Colores'}
+                        </button>
+                    </div>
+                );
+
+            case 'amenities':
+                const currentAmenities = Array.isArray(formData.amenities) ? formData.amenities : [];
+                return (
+                    <div style={{ display: 'grid', gap: '20px' }}>
+                        <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
+                            <h4 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Comodidades e Instalaciones</h4>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 16px 0' }}>
+                                Agrega las comodidades que ofrece tu negocio (ej: Wifi, Estacionamiento, Aire Acondicionado, Cafetería, etc.).
+                            </p>
+
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                                 <input
                                     type="text"
                                     style={inputStyle}
-                                    placeholder="Ej: Wifi, Estacionamiento, Vestuarios..."
+                                    placeholder="Ej: Wifi gratis, Vestuarios, Aire Acondicionado..."
                                     value={newAmenity}
                                     onChange={(e) => setNewAmenity(e.target.value)}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             e.preventDefault();
                                             if (newAmenity.trim()) {
-                                                const updatedAmenities = [...validAmenities, newAmenity.trim()];
-                                                handleInputChange('amenities', updatedAmenities);
+                                                const updated = [...currentAmenities, newAmenity.trim()];
+                                                handleInputChange('amenities', updated);
                                                 setNewAmenity('');
                                             }
                                         }
@@ -1538,73 +1693,83 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                 <button
                                     onClick={() => {
                                         if (newAmenity.trim()) {
-                                            const updatedAmenities = [...validAmenities, newAmenity.trim()];
-                                            handleInputChange('amenities', updatedAmenities);
+                                            const updated = [...currentAmenities, newAmenity.trim()];
+                                            handleInputChange('amenities', updated);
                                             setNewAmenity('');
                                         }
                                     }}
-                                    style={{ ...buttonSecondaryStyle, padding: '0 20px' }}
+                                    style={{ ...buttonSecondaryStyle, padding: '0 24px', whiteSpace: 'nowrap' }}
                                 >
-                                    Agregar
+                                    + Agregar
                                 </button>
                             </div>
+
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                {validAmenities.map((amenity, idx) => (
-                                    <span key={idx} style={{
-                                        padding: '6px 12px', borderRadius: '20px', background: 'var(--bg-card)',
-                                        border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px'
-                                    }}>
-                                        {amenity}
-                                        <button
-                                            onClick={() => {
-                                                const updatedAmenities = validAmenities.filter((_, i) => i !== idx);
-                                                handleInputChange('amenities', updatedAmenities);
-                                            }}
-                                            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-secondary)' }}
-                                        >
-                                            ×
-                                        </button>
-                                    </span>
-                                ))}
+                                {currentAmenities.length === 0 ? (
+                                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>No hay comodidades agregadas todavía.</p>
+                                ) : (
+                                    currentAmenities.map((amenity, idx) => (
+                                        <span key={idx} style={{
+                                            padding: '8px 14px',
+                                            borderRadius: '20px',
+                                            background: 'var(--bg-card)',
+                                            border: '1px solid var(--border)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            color: 'var(--text-primary)'
+                                        }}>
+                                            <span>✨ {amenity}</span>
+                                            <button
+                                                onClick={() => {
+                                                    const updated = currentAmenities.filter((_, i) => i !== idx);
+                                                    handleInputChange('amenities', updated);
+                                                }}
+                                                style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '0 2px', color: '#EF4444', fontWeight: '800', fontSize: '14px' }}
+                                                title="Eliminar comodidad"
+                                            >
+                                                ✕
+                                            </button>
+                                        </span>
+                                    ))
+                                )}
                             </div>
                         </div>
 
-                        {/* Consolidated Save Button */}
-                        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-                            <button
-                                onClick={() => handleSave({
-                                    name: formData.name,
-                                    description: formData.description,
-                                    location: formData.location,
-                                    latitude: formData.latitude,
-                                    longitude: formData.longitude,
-                                    logo: formData.logo,
-                                    banner_image: formData.banner_image,
-                                    amenities: formData.amenities
-                                })}
-                                style={saveButtonStyle}
-                                disabled={saving}
-                            >
-                                {saving ? 'Guardando...' : 'Guardar Información General'}
-                            </button>
-                        </div>
-
-                        <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
-                            <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>Redes Sociales</h4>
-                            <div style={{ display: 'grid', gap: '16px' }}>
-                                <div> <label style={labelStyle}>Instagram</label> <input type="text" style={inputStyle} placeholder="@usuario" value={formData.instagram ?? ''} onChange={(e) => handleInputChange('instagram', e.target.value)} /> </div>
-                                <div> <label style={labelStyle}>TikTok</label> <input type="text" style={inputStyle} placeholder="@usuario" value={formData.tiktok ?? ''} onChange={(e) => handleInputChange('tiktok', e.target.value)} /> </div>
-                                <div> <label style={labelStyle}>Facebook</label> <input type="text" style={inputStyle} placeholder="@usuario o URL" value={formData.facebook ?? ''} onChange={(e) => handleInputChange('facebook', e.target.value)} /> </div>
-                                <div> <label style={labelStyle}>WhatsApp</label> <input type="text" style={inputStyle} placeholder="+54911..." value={formData.whatsapp ?? ''} onChange={(e) => handleInputChange('whatsapp', e.target.value)} /> </div>
-                                <div> <label style={labelStyle}>Sitio Web</label> <input type="text" style={inputStyle} placeholder="https://..." value={formData.website ?? ''} onChange={(e) => handleInputChange('website', e.target.value)} /> </div>
-                            </div>
-                            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                                <button onClick={() => handleSave({ instagram: formData.instagram, tiktok: formData.tiktok, facebook: formData.facebook, whatsapp: formData.whatsapp, website: formData.website })} style={{ ...saveButtonStyle, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-primary)' }} disabled={saving}>
-                                    {saving ? 'Guardando...' : 'Guardar Redes Sociales'}
-                                </button>
-                            </div>
-                        </div>
+                        <button
+                            onClick={() => handleSave({ amenities: formData.amenities })}
+                            style={saveButtonStyle}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Comodidades'}
+                        </button>
                     </div>
+                );
+
+            case 'linkbio':
+                return (
+                    <LinkBioButtonsSettings
+                        business={business}
+                        formData={formData}
+                        onUpdate={onUpdate}
+                        serviceAdapter={serviceAdapter}
+                        showToast={showToast}
+                        showConfirm={showConfirm}
+                    />
+                );
+
+            case 'coupons':
+                return (
+                    <CouponsSettings
+                        business={business}
+                        formData={formData}
+                        onUpdate={onUpdate}
+                        serviceAdapter={serviceAdapter}
+                        showToast={showToast}
+                        showConfirm={showConfirm}
+                    />
                 );
 
             case 'subscription':
@@ -1620,89 +1785,6 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         serviceAdapter={serviceAdapter}
                         showToast={showToast}
                     />
-                );
-
-            case 'images':
-                return (
-                    <div style={{ display: 'grid', gap: '32px' }}>
-                        <div>
-                            <label style={labelStyle}>Logo del Negocio</label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '10px' }}>
-                                <div style={{
-                                    width: '80px',
-                                    height: '80px',
-                                    borderRadius: '16px',
-                                    overflow: 'hidden',
-                                    background: 'var(--bg-main)',
-                                    border: '1px solid var(--border)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}>
-                                    {formData.logo ? (
-                                        <img src={formData.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <span style={{ fontSize: '24px' }}>🏢</span>
-                                    )}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <input
-                                        type="file"
-                                        id="logo-upload"
-                                        style={{ display: 'none' }}
-                                        accept="image/*"
-                                        onChange={handleLogoUpload}
-                                    />
-                                    <label htmlFor="logo-upload" style={buttonSecondaryStyle}>
-                                        {uploadingLogo ? 'Subiendo...' : 'Cambiar Logo'}
-                                    </label>
-                                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>Recomendado: 512x512px. JPG o PNG.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Imagen de Banner</label>
-                            <div style={{ marginTop: '10px' }}>
-                                <div style={{
-                                    width: '100%',
-                                    height: '140px',
-                                    borderRadius: '16px',
-                                    overflow: 'hidden',
-                                    background: 'var(--bg-main)',
-                                    border: '1px solid var(--border)',
-                                    marginBottom: '16px'
-                                }}>
-                                    {formData.banner_image ? (
-                                        <img src={formData.banner_image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <div style={{ width: '100%', height: '100%', background: 'linear-gradient(45deg, #eee, #f5f5f5)' }} />
-                                    )}
-                                </div>
-                                <input
-                                    type="file"
-                                    id="banner-upload"
-                                    style={{ display: 'none' }}
-                                    accept="image/*"
-                                    onChange={handleBannerUpload}
-                                />
-                                <label htmlFor="banner-upload" style={buttonSecondaryStyle}>
-                                    {uploadingBanner ? 'Subiendo...' : 'Cambiar Banner'}
-                                </label>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => handleSave({
-                                logo: formData.logo,
-                                logo_url: formData.logo || formData.logo_url,
-                                banner_image: formData.banner_image,
-                                banner_url: formData.banner_image || formData.banner_url
-                            })}
-                            style={saveButtonStyle}
-                            disabled={saving}
-                        >
-                            {saving ? 'Guardando...' : 'Guardar Imágenes'}
-                        </button>
-                    </div>
                 );
             case 'schedule':
                 return (
@@ -1948,7 +2030,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     </div >
                 );
 
-            case 'linkbio':
+            case 'legacy_linkbio':
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
                         <div>
@@ -3865,7 +3947,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     </div>
                 );
 
-            case 'design':
+            case 'legacy_design':
                 return (
                     <div style={{ display: 'grid', gap: '24px' }}>
                         <div>

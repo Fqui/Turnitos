@@ -98,6 +98,15 @@ export default function WeekView({
         return COURT_COLORS[index % COURT_COLORS.length];
     };
 
+    useEffect(() => {
+        if (resources && resources.length > 0) {
+            const exists = resources.some(r => String(r.id) === String(selectedResourceId));
+            if (!exists) {
+                setSelectedResourceId(resources[0].id);
+            }
+        }
+    }, [resources]);
+
     return (
         <div style={{ width: '100%' }}>
             {resources && resources.length > 1 && (
@@ -113,11 +122,12 @@ export default function WeekView({
                     flexWrap: 'wrap'
                 }}>
                     <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        🏟️ Vista Semanal:
+                        {type === 'service' ? '👤 Especialista:' : '🏟️ Cancha:'}
                     </span>
                     {resources.map((r, idx) => {
                         const colorInfo = getResourceColor(idx);
                         const isSelected = String(selectedResourceId) === String(r.id);
+                        const resourceIcon = type === 'service' ? '👤' : (type === 'padel' ? '🎾' : '⚽');
                         return (
                             <button
                                 key={r.id}
@@ -131,10 +141,17 @@ export default function WeekView({
                                     fontWeight: '700',
                                     fontSize: '12px',
                                     cursor: 'pointer',
-                                    transition: 'all 0.15s ease'
+                                    transition: 'all 0.15s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
                                 }}
                             >
-                                ⚽ {r.name}
+                                <span>{resourceIcon}</span>
+                                <span>{r.name}</span>
+                                {r.active === false && (
+                                    <span style={{ fontSize: '10px', opacity: 0.8 }}>(Inactivo)</span>
+                                )}
                             </button>
                         );
                     })}

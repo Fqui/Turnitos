@@ -17,14 +17,14 @@ export const NotificationProvider = ({ children }) => {
 
     // Toast notifications
     const showToast = useCallback((message, type = 'info', duration = 4000) => {
-        const id = Date.now();
+        const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const toast = { id, message, type, duration };
 
         setToasts(prev => [...prev, toast]);
 
         if (duration > 0) {
             setTimeout(() => {
-                setToasts(prev => prev.filter(t => t.id !== id));
+                setToasts(prev => prev.filter(t => String(t.id) !== String(id)));
             }, duration);
         }
 
@@ -32,7 +32,7 @@ export const NotificationProvider = ({ children }) => {
     }, []);
 
     const removeToast = useCallback((id) => {
-        setToasts(prev => prev.filter(t => t.id !== id));
+        setToasts(prev => prev.filter(t => String(t.id) !== String(id)));
     }, []);
 
     // Confirm dialog

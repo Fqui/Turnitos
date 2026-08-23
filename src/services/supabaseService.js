@@ -90,6 +90,10 @@ class SupabaseService {
         };
         business.duration_discounts = parseDiscounts(business.duration_discounts) || parseDiscounts(business.metadata?.duration_discounts) || {};
 
+        const directCoupons = Array.isArray(business.coupons) ? business.coupons : [];
+        const metaCoupons = Array.isArray(business.metadata?.coupons) ? business.metadata.coupons : [];
+        business.coupons = directCoupons.length > 0 ? directCoupons : metaCoupons;
+
         if (!business.whatsapp_templates && business.metadata?.whatsapp_templates) {
             business.whatsapp_templates = business.metadata.whatsapp_templates;
         }
@@ -154,16 +158,29 @@ class SupabaseService {
                 specialists (*)
             `);
 
-        if (error) throw error;
+        let allSpecialists = [];
+        try {
+            const { data: specData } = await supabase
+                .from('specialists')
+                .select('*')
+                .order('created_at', { ascending: true });
+            if (specData) allSpecialists = specData;
+        } catch (e) {
+            console.warn('Specialists fetch notice:', e);
+        }
 
-        // Transform data to flatten subcategories array
+        // Transform data to flatten subcategories array and ensure specialists are present
         const businesses = data.map(b => {
             // Get subcategories from M:N relationship
             const subcategories = b.business_subcategories?.map(bs => bs.subcategories) || [];
+            const bSpecialists = (b.specialists && b.specialists.length > 0)
+                ? b.specialists
+                : allSpecialists.filter(s => s.business_id === b.id);
 
             return {
                 ...b,
-                subcategories
+                subcategories,
+                specialists: bSpecialists
             };
         });
 
@@ -229,6 +246,22 @@ class SupabaseService {
         data.specialists = specialists || [];
 
         return this._processBusinessData(data);
+    }
+
+    async getSpecialists(businessId) {
+        if (!businessId) return [];
+        try {
+            const { data, error } = await supabase
+                .from('specialists')
+                .select('*')
+                .eq('business_id', businessId)
+                .order('created_at', { ascending: true });
+            if (error) throw error;
+            return data || [];
+        } catch (e) {
+            console.warn('Error fetching specialists:', e);
+            return [];
+        }
     }
 
     async getBusinessBySlug(slug) {
@@ -734,7 +767,7 @@ class SupabaseService {
                     try { await supabase.from('resources').delete().in('id', idsToRemove); } catch (e) {}
                 }
             }
-        } else {
+        } else if (businessType === 'sport' || businessType === 'courts') {
             const { data: existingCourts } = await supabase
                 .from('courts')
                 .select('*')
@@ -784,22 +817,92 @@ class SupabaseService {
             }
         }
 
-        // Sync subscription spaces_included to match requestedCount exactly
+        // Determine plan details & monthly pricing dynamically
+        let calculatedPrice = 18000;
+        let planId = 'services_individual';
+        let planName = 'Servicios - Individual';
+
+        if (businessType === 'service') {
+            if (requestedCount === 1) {
+                calculatedPrice = 18000;
+                planId = 'services_individual';
+                planName = 'Servicios - Individual';
+            } else {
+                const extra = Math.max(0, requestedCount - 3);
+                calculatedPrice = 36000 + (extra * 10000);
+                planId = 'services_team';
+                planName = 'Servicios - Equipo';
+            }
+        } else if (businessType === 'sport' || businessType === 'courts') {
+            if (requestedCount <= 3) {
+                calculatedPrice = requestedCount * 20000;
+                planId = 'courts_1_3';
+                planName = 'Canchas (1 a 3)';
+            } else if (requestedCount <= 5) {
+                calculatedPrice = requestedCount * 17000;
+                planId = 'courts_4_5';
+                planName = 'Canchas (4 a 5)';
+            } else {
+                calculatedPrice = requestedCount * 15000;
+                planId = 'courts_6_plus';
+                planName = 'Canchas (Más de 5)';
+            }
+        } else if (businessType === 'venue' || businessType === 'alquiler') {
+            calculatedPrice = 15000;
+            planId = 'rental';
+            planName = 'Plan Espacios';
+        }
+
+        // Sync subscription table
         try {
             const { data: sub } = await supabase
                 .from('subscriptions')
                 .select('*')
                 .eq('business_id', businessId)
-                .single();
+                .maybeSingle();
 
             if (sub) {
                 await supabase
                     .from('subscriptions')
-                    .update({ spaces_included: requestedCount, updated_at: new Date().toISOString() })
+                    .update({ 
+                        spaces_included: requestedCount,
+                        monthly_price: calculatedPrice,
+                        plan_id: planId,
+                        plan_name: planName,
+                        updated_at: new Date().toISOString() 
+                    })
                     .eq('business_id', businessId);
+            } else {
+                await supabase
+                    .from('subscriptions')
+                    .insert({
+                        business_id: businessId,
+                        plan_id: planId,
+                        plan_name: planName,
+                        spaces_included: requestedCount,
+                        monthly_price: calculatedPrice,
+                        status: 'active',
+                        current_period_start: new Date().toISOString(),
+                        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                    });
             }
         } catch (e) {
-            // Subscription update notice
+            console.warn('Subscription sync notice:', e);
+        }
+
+        // Sync businesses table capacity and subscription plan reference
+        try {
+            await supabase
+                .from('businesses')
+                .update({
+                    subscription_plan_id: planId,
+                    capacity_limit: requestedCount,
+                    resources_count: requestedCount,
+                    capacity: requestedCount
+                })
+                .eq('id', businessId);
+        } catch (e) {
+            console.warn('Business capacity sync notice:', e);
         }
     }
 
@@ -3568,6 +3671,7 @@ class SupabaseService {
 
         const updateData = {
             name: businessData.name,
+            ...(businessData.slug ? { slug: businessData.slug } : {}),
             category_id: categoryId,
             location: businessData.location,
             latitude: businessData.latitude,
@@ -3590,14 +3694,22 @@ class SupabaseService {
 
         if (error) throw error;
 
-        // Sync business_subcategories junction table
+        // Sync business_subcategories junction table (multiple subcategories support)
         try {
             await supabase.from('business_subcategories').delete().eq('business_id', businessId);
-            if (subcategoryId) {
-                await supabase.from('business_subcategories').insert({
+            const subcategoriesList = Array.isArray(businessData.subcategories) && businessData.subcategories.length > 0
+                ? businessData.subcategories
+                : (subcategoryId ? [subcategoryId] : []);
+
+            if (subcategoriesList.length > 0) {
+                const subRows = subcategoriesList.map(sId => ({
                     business_id: businessId,
-                    subcategory_id: subcategoryId
-                });
+                    subcategory_id: typeof sId === 'object' ? sId.id : sId
+                })).filter(row => Boolean(row.subcategory_id));
+
+                if (subRows.length > 0) {
+                    await supabase.from('business_subcategories').insert(subRows);
+                }
             }
         } catch (e) {
             console.warn('Could not sync business_subcategories junction table:', e);

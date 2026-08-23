@@ -56,21 +56,48 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
     const resourceKey = isSport ? 'courts' : 'specialists';
     const resourceIcon = isSport ? '🏟️' : '👤';
 
-    // Build resources list
-    const planName = subscription?.plan_name || business?.subscription_plan_id || 'Plan Personalizado';
-    const spacesIncluded = subscription?.spaces_included || business?.capacity_limit || 1;
-    const monthlyPrice = subscription?.monthly_price || 0;
+    // Build resources list & dynamic plan calculation
+    const rawList = isSport ? (formData?.courts || business?.courts || []) : (formData?.specialists || business?.specialists || []);
+    const countFromData = rawList.length;
+    const spacesIncluded = Math.max(subscription?.spaces_included || business?.capacity_limit || countFromData || 1, 1);
+
+    // Calculate accurate plan name and monthly price
+    let calculatedMonthlyPrice = subscription?.monthly_price || 0;
+    let computedPlanName = subscription?.plan_name || 'Plan Personalizado';
+
+    if (!isSport) {
+        // Services
+        const specCount = Math.max(spacesIncluded, countFromData, 1);
+        if (specCount === 1) {
+            calculatedMonthlyPrice = 18000;
+            computedPlanName = 'Servicios - Individual';
+        } else {
+            const extra = Math.max(0, specCount - 3);
+            calculatedMonthlyPrice = 36000 + (extra * 10000);
+            computedPlanName = 'Servicios - Equipo';
+        }
+    } else {
+        // Sport / Canchas
+        const courtCount = Math.max(spacesIncluded, countFromData, 1);
+        let unit = 20000;
+        if (courtCount >= 4 && courtCount <= 5) unit = 17000;
+        else if (courtCount >= 6) unit = 15000;
+        calculatedMonthlyPrice = courtCount * unit;
+        computedPlanName = `Canchas (${courtCount} ${courtCount === 1 ? 'Cancha' : 'Canchas'})`;
+    }
+
+    const monthlyPrice = calculatedMonthlyPrice;
+    const planName = computedPlanName;
 
     const expectedCount = Math.max(
         spacesIncluded,
+        countFromData,
         formData?.capacity_limit || 0,
         formData?.capacity || 0,
-        formData?.courts?.length || 0,
-        formData?.specialists?.length || 0,
         1
     );
 
-    let rawResources = isSport ? (formData?.courts || []) : (formData?.specialists || []);
+    let rawResources = isSport ? (formData?.courts || business?.courts || []) : (formData?.specialists || business?.specialists || []);
     if (rawResources.length < expectedCount) {
         rawResources = Array.from({ length: expectedCount }, (_, i) => {
             return rawResources[i] || {
@@ -159,6 +186,10 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
         <div className="subscription-manager">
             {/* Plan details row */}
             <div className="plan-details-row">
+                <div className="plan-detail-chip">
+                    <span className="chip-label">Plan Activo</span>
+                    <span className="chip-value" style={{ fontSize: '15px', fontWeight: '800', color: 'var(--primary-paddle)' }}>{planName}</span>
+                </div>
                 <div className="plan-detail-chip">
                     <span className="chip-label">Precio</span>
                     <span className="chip-value price">{formatPrice(monthlyPrice)}<span className="chip-period">/mes</span></span>

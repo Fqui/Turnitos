@@ -3,6 +3,7 @@ import serviceAdapter from '../../services/serviceAdapter';
 import { useNotification } from '../../contexts/NotificationContext';
 import AmenityIcon, { IconPickerModal, EmojiPickerModal, parseAmenity } from '../common/AmenityIcon';
 import LinkBioButtonsSettings from './LinkBioButtonsSettings';
+import CouponsSettings from './CouponsSettings';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -596,6 +597,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                     { id: 'general', label: 'General y Ubicación', icon: 'MapPin' },
                     { id: 'appearance', label: 'Apariencia y Colores', icon: 'Palette' },
                     { id: 'linkbio', label: 'Botones del LinkBio', icon: 'Link' },
+                    { id: 'coupons', label: 'Cupones y Promos', icon: 'Tag' },
                     { id: 'gallery', label: 'Galería de Fotos', icon: 'Image' },
                     { id: 'pricing', label: 'Precios y Capacidad', icon: 'DollarSign' },
                     { id: 'services', label: 'Servicios Adicionales', icon: 'Sparkles' },
@@ -2494,6 +2496,16 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                             handleMetadataChange('custom_links', newLinks);
                         }}
                         primaryColor={formData.primary_color || business?.primary_color}
+                    />
+                )}
+
+                {activeTab === 'coupons' && (
+                    <CouponsSettings
+                        coupons={formData.coupons || formData.metadata?.coupons || business?.coupons || business?.metadata?.coupons || []}
+                        onChange={(newCoupons) => {
+                            handleInputChange('coupons', newCoupons);
+                            handleMetadataChange('coupons', newCoupons);
+                        }}
                     />
                 )}
 

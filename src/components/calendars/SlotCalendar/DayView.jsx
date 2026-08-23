@@ -210,11 +210,20 @@ export default function DayView({
                     <span style={{
                         fontSize: '15px',
                         fontWeight: '800',
-                        color: 'var(--text-primary)',
+                        color: resource.active === false ? 'var(--text-muted)' : 'var(--text-primary)',
                         lineHeight: '1.2',
-                        letterSpacing: '-0.02em'
+                        letterSpacing: '-0.02em',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
                     }}>
                         {resource.name}
+                        {resource.active === false && (
+                            <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', padding: '1px 6px', borderRadius: '4px', fontWeight: '800' }}>
+                                Inactivo
+                            </span>
+                        )}
                     </span>
                 </div>
             ))}
