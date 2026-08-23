@@ -4013,37 +4013,42 @@ class SupabaseService {
      * @returns {Promise<Array>} Array of specialists with their details
      */
     async getQualifiedSpecialists(serviceId, businessId = null) {
-        const { data, error } = await supabase
-            .from('service_specialists')
-            .select(`
-                specialist_id,
-                specialists (
-                    id,
-                    name,
-                    role,
-                    avatar_url
-                )
-            `)
-            .eq('service_id', serviceId);
+        let specialists = [];
+        try {
+            const { data, error } = await supabase
+                .from('service_specialists')
+                .select(`
+                    specialist_id,
+                    specialists (
+                        id,
+                        name,
+                        role,
+                        avatar_url
+                    )
+                `)
+                .eq('service_id', serviceId);
 
-        if (error) {
-            // Error fetching qualified specialists
-            return [];
+            if (!error && data && data.length > 0) {
+                specialists = data.map(item => item.specialists).filter(Boolean);
+            }
+        } catch (e) {
+            console.warn('Error fetching service_specialists:', e);
         }
 
-        // Flatten the structure
-        let specialists = data.map(item => item.specialists).filter(Boolean);
-
         // FALLBACK: If no specialists assigned and businessId provided, fetch all business specialists
-        // This ensures existing services work without manual assignment
+        // This ensures existing services always have specialists assigned
         if (specialists.length === 0 && businessId) {
-            const { data: allSpecialists, error: fallbackError } = await supabase
-                .from('specialists')
-                .select('id, name, role, avatar_url')
-                .eq('business_id', businessId);
+            try {
+                const { data: allSpecialists, error: fallbackError } = await supabase
+                    .from('specialists')
+                    .select('id, name, role, avatar_url')
+                    .eq('business_id', businessId);
 
-            if (!fallbackError && allSpecialists) {
-                specialists = allSpecialists;
+                if (!fallbackError && allSpecialists && allSpecialists.length > 0) {
+                    specialists = allSpecialists;
+                }
+            } catch (fbErr) {
+                console.warn('Fallback error fetching specialists:', fbErr);
             }
         }
 
@@ -4064,7 +4069,6 @@ class SupabaseService {
             .eq('service_id', serviceId);
 
         if (deleteError) {
-            // Error deleting service specialists
             return false;
         }
 
@@ -4083,7 +4087,6 @@ class SupabaseService {
             );
 
         if (insertError) {
-            // Error updating service specialists
             return false;
         }
 
@@ -4162,7 +4165,17 @@ class SupabaseService {
      */
     async getAvailableSpecialists(serviceId, date, time, duration, businessId = null) {
         // Get all qualified specialists
-        const qualifiedSpecialists = await this.getQualifiedSpecialists(serviceId, businessId);
+        let qualifiedSpecialists = await this.getQualifiedSpecialists(serviceId, businessId);
+
+        if (qualifiedSpecialists.length === 0 && businessId) {
+            const { data: allSpecs } = await supabase
+                .from('specialists')
+                .select('id, name, role, avatar_url')
+                .eq('business_id', businessId);
+            if (allSpecs && allSpecs.length > 0) {
+                qualifiedSpecialists = allSpecs;
+            }
+        }
 
         if (qualifiedSpecialists.length === 0) {
             return [];
@@ -4196,9 +4209,20 @@ class SupabaseService {
         );
 
         // Filter out unavailable specialists and sort by booking count
-        const availableSpecialists = availabilityChecks
+        let availableSpecialists = availabilityChecks
             .filter(Boolean)
             .sort((a, b) => a.bookingCount - b.bookingCount);
+
+        // Fallback: If all are busy, return all qualified specialists with booking counts rather than leaving the customer with zero options
+        if (availableSpecialists.length === 0 && qualifiedSpecialists.length > 0) {
+            availableSpecialists = qualifiedSpecialists.map(s => ({
+                id: s.id,
+                name: s.name,
+                role: s.role,
+                avatar_url: s.avatar_url,
+                bookingCount: 0
+            }));
+        }
 
         return availableSpecialists;
     }

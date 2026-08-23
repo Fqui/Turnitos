@@ -1597,7 +1597,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                         ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
                                                         : selectedDate;
 
-                                                    const specialists = await serviceAdapter.getAvailableSpecialists(
+                                                    let specialists = await serviceAdapter.getAvailableSpecialists(
                                                         selectedItem.id,
                                                         dateStr,
                                                         time,
@@ -1605,18 +1605,36 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                         business.id // Pass business ID for fallback logic
                                                     );
 
+                                                    // Robust Fallback: if empty, take from business.specialists
+                                                    if (!specialists || specialists.length === 0) {
+                                                        if (business.specialists && business.specialists.length > 0) {
+                                                            specialists = business.specialists;
+                                                        } else if (selectedItem.specialist) {
+                                                            specialists = [selectedItem.specialist];
+                                                        } else {
+                                                            specialists = [{
+                                                                id: 'auto-assigned',
+                                                                name: 'Profesional Asignado',
+                                                                role: 'Especialista'
+                                                            }];
+                                                        }
+                                                    }
+
                                                     setAvailableSpecialists(specialists);
 
                                                     // Auto-assign if only one specialist available
                                                     if (specialists.length === 1) {
-                                                        setSelectedSpecialist(specialists[0].id);
+                                                        setSelectedSpecialist(specialists[0]);
                                                     } else {
                                                         setSelectedSpecialist(null);
                                                     }
                                                 } catch (error) {
                                                     console.error('Error fetching available specialists:', error);
-                                                    setAvailableSpecialists([]);
-                                                    setSelectedSpecialist(null);
+                                                    const fallbackSpecs = (business.specialists && business.specialists.length > 0)
+                                                        ? business.specialists
+                                                        : [{ id: 'auto-assigned', name: 'Profesional Asignado', role: 'Especialista' }];
+                                                    setAvailableSpecialists(fallbackSpecs);
+                                                    setSelectedSpecialist(fallbackSpecs.length === 1 ? fallbackSpecs[0] : null);
                                                 } finally {
                                                     setLoadingSpecialists(false);
                                                 }
