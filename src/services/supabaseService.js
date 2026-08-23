@@ -223,26 +223,27 @@ class SupabaseService {
             .select('*')
             .eq('business_id', id);
 
-        // Map specialist_id and full specialist data to services
+        // Map all assigned specialists to services
         if (data.services && Array.isArray(data.services)) {
             data.services = data.services.map(service => {
-                // Extract specialist from the nested service_specialists join table
-                const serviceSpecialistRelation = service.service_specialists?.[0];
-                const nestedSpecialist = serviceSpecialistRelation?.specialists;
-                const specialistId = nestedSpecialist?.id || serviceSpecialistRelation?.specialist_id || '';
+                const assignedSpecialists = (service.service_specialists || [])
+                    .map(ss => ss.specialists || (specialists ? specialists.find(s => s.id === ss.specialist_id) : null))
+                    .filter(Boolean);
 
-                // Find the full specialist object from our specialists list
-                let specialist = specialists ? specialists.find(s => s.id === specialistId) : null;
+                const assignedSpecialistIds = (service.service_specialists || [])
+                    .map(ss => ss.specialist_id || ss.specialists?.id)
+                    .filter(Boolean);
 
-                // Fallback: If no specialist explicitly linked via join table, fallback to first specialist
-                if (!specialist && specialists && specialists.length > 0) {
-                    specialist = specialists[0];
-                }
+                const finalSpecialists = assignedSpecialists.length > 0
+                    ? assignedSpecialists
+                    : (specialists || []);
 
                 return {
                     ...service,
-                    specialist_id: specialist?.id || specialistId,
-                    specialist: specialist || null // Add full specialist object
+                    specialist_id: assignedSpecialistIds[0] || (specialists?.[0]?.id || ''),
+                    specialist: assignedSpecialists[0] || (specialists?.[0] || null),
+                    specialists: finalSpecialists,
+                    specialist_ids: assignedSpecialistIds.length > 0 ? assignedSpecialistIds : (specialists ? specialists.map(s => s.id) : [])
                 };
             });
         }
@@ -292,6 +293,7 @@ class SupabaseService {
                 services (
                     *,
                     service_specialists (
+                        specialist_id,
                         specialists (*)
                     )
                 ),
@@ -311,20 +313,24 @@ class SupabaseService {
 
         if (data.services && Array.isArray(data.services)) {
             data.services = data.services.map(service => {
-                const serviceSpecialistRelation = service.service_specialists?.[0];
-                const nestedSpecialist = serviceSpecialistRelation?.specialists;
-                const specialistId = nestedSpecialist?.id || serviceSpecialistRelation?.specialist_id || '';
-                let specialist = specialists ? specialists.find(s => s.id === specialistId) : null;
+                const assignedSpecialists = (service.service_specialists || [])
+                    .map(ss => ss.specialists || (specialists ? specialists.find(s => s.id === ss.specialist_id) : null))
+                    .filter(Boolean);
 
-                // Fallback: If no specialist explicitly linked via join table, fallback to the first specialist of the business
-                if (!specialist && specialists && specialists.length > 0) {
-                    specialist = specialists[0];
-                }
+                const assignedSpecialistIds = (service.service_specialists || [])
+                    .map(ss => ss.specialist_id || ss.specialists?.id)
+                    .filter(Boolean);
+
+                const finalSpecialists = assignedSpecialists.length > 0
+                    ? assignedSpecialists
+                    : (specialists || []);
 
                 return {
                     ...service,
-                    specialist_id: specialist?.id || specialistId,
-                    specialist: specialist || null
+                    specialist_id: assignedSpecialistIds[0] || (specialists?.[0]?.id || ''),
+                    specialist: assignedSpecialists[0] || (specialists?.[0] || null),
+                    specialists: finalSpecialists,
+                    specialist_ids: assignedSpecialistIds.length > 0 ? assignedSpecialistIds : (specialists ? specialists.map(s => s.id) : [])
                 };
             });
         }
