@@ -27,6 +27,23 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
         return [];
     };
 
+    const resolveBusinessType = (catName = '', fallbackType = null) => {
+        if (fallbackType && ['service', 'sport', 'alquiler'].includes(fallbackType)) {
+            return fallbackType;
+        }
+        const lower = (catName || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (lower.includes('deport') || lower.includes('cancha') || lower.includes('padel') || lower.includes('futbol') || lower.includes('tenis') || lower.includes('gym')) {
+            return 'sport';
+        }
+        if (lower.includes('alquiler') || lower.includes('quincho') || lower.includes('salon') || lower.includes('finca') || lower.includes('espacio') || lower.includes('inmueble')) {
+            return 'alquiler';
+        }
+        return 'service';
+    };
+
+    const initialCat = (categories || []).find(c => String(c.id) === String(business?.category_id || business?.categories?.id));
+    const initialType = business?.type || resolveBusinessType(initialCat?.name, 'service');
+
     const [formData, setFormData] = useState({
         name: business?.name || '',
         slug: business?.slug || '',
@@ -37,7 +54,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
         whatsapp: business?.whatsapp || '',
         instagram: business?.instagram || '',
         facebook: business?.facebook || '',
-        type: business?.type || 'venue',
+        type: initialType,
         seller_id: business?.seller_id || '',
         subscription_plan_id: business?.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb',
         resources_count: business?.courts?.length || business?.specialists?.length || 2
@@ -47,6 +64,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
     useEffect(() => {
         if (business) {
+            const bCat = (categories || []).find(c => String(c.id) === String(business.category_id || business.categories?.id));
             setFormData({
                 name: business.name || '',
                 slug: business.slug || '',
@@ -57,7 +75,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 whatsapp: business.whatsapp || '',
                 instagram: business.instagram || '',
                 facebook: business.facebook || '',
-                type: business.type || 'venue',
+                type: business.type || resolveBusinessType(bCat?.name, 'service'),
                 seller_id: business.seller_id || '',
                 subscription_plan_id: business.subscription_plan_id || '54ff12b0-8b5e-48da-b411-92a4a31ea9fb',
                 resources_count: business.courts?.length || business.specialists?.length || 2
@@ -237,16 +255,8 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
         setLoading(true);
 
         try {
-            // Derive type from category (canonical source is category_id).
-            const TYPE_BY_CATEGORY_NAME = {
-                'Deportes': 'sport',
-                'Belleza': 'service',
-                'Salud': 'service',
-                'Mascotas': 'service',
-                'Alquileres': 'alquiler', // Fixed: was 'venue', DB and portal use 'alquiler'
-            };
-            const cat = categories.find(c => c.id === formData.category_id);
-            const derivedType = cat ? (TYPE_BY_CATEGORY_NAME[cat.name] || null) : null;
+            const cat = categories.find(c => String(c.id) === String(formData.category_id) || c.name === formData.category_id);
+            const derivedType = resolveBusinessType(cat?.name, formData.type);
 
             // Auto-generate slug from name if missing
             let slug = formatSlug(formData.slug || formData.name);

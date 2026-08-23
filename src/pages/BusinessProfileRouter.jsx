@@ -112,15 +112,38 @@ export default function BusinessProfileRouter({ overrideSlug }) {
         return <Navigate to="/" replace />;
     }
 
-    const catName = (business.categories?.name || business.category || '').toLowerCase();
-    const isVenueBusiness = business.type === 'venue' ||
-        business.type === 'alquiler' ||
+    const catName = (business.categories?.name || business.category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    const isServiceCategory = business.type === 'service' ||
+        catName.includes('belleza') || 
+        catName.includes('estetica') || 
+        catName.includes('spa') || 
+        catName.includes('salud') || 
+        catName.includes('mascota') ||
+        catName.includes('peluqueria') ||
+        catName.includes('barber') ||
+        (Array.isArray(business.services) && business.services.length > 0) ||
+        (Array.isArray(business.specialists) && business.specialists.length > 0);
+
+    const isSportCategory = business.type === 'sport' ||
+        catName.includes('deport') ||
+        catName.includes('cancha') ||
+        catName.includes('padel') ||
+        catName.includes('futbol') ||
+        catName.includes('tenis') ||
+        (Array.isArray(business.courts) && business.courts.length > 0);
+
+    const isExplicitVenue = business.type === 'alquiler' ||
         catName.includes('alquiler') ||
         catName.includes('quincho') ||
-        (business.slug || '').toLowerCase().includes('quincho') ||
-        (business.slug || '').toLowerCase().includes('roma');
+        catName.includes('salon') ||
+        catName.includes('finca') ||
+        (business.slug || '').toLowerCase().includes('quincho');
 
     // Route to appropriate profile based on business type
+    // ONLY route to VenueProfile if it's NOT a service or sport business
+    const isVenueBusiness = !isServiceCategory && !isSportCategory && (isExplicitVenue || business.type === 'venue');
+
     if (isVenueBusiness) {
         return <VenueProfile business={business} />;
     }

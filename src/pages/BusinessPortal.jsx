@@ -1917,13 +1917,13 @@ export default function BusinessPortal() {
                                 </div>
                             </div>
                         ) : viewMode === 'settings' ? (
-                            (currentBusiness && (
-                                currentBusiness.type === 'venue' ||
-                                currentBusiness.type === 'alquiler' ||
-                                (currentBusiness.categories?.name || '').toLowerCase().includes('alquiler') ||
-                                (currentBusiness.categories?.name || '').toLowerCase().includes('quincho') ||
-                                (currentBusiness.category || '').toLowerCase().includes('quincho')
-                            )) ? (
+                            (currentBusiness && (() => {
+                                const catName = (currentBusiness.categories?.name || currentBusiness.category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                const isService = currentBusiness.type === 'service' || catName.includes('belleza') || catName.includes('estetica') || catName.includes('spa') || catName.includes('salud') || catName.includes('mascota') || ((currentBusiness.specialists?.length || 0) > 0);
+                                const isSport = currentBusiness.type === 'sport' || catName.includes('deport') || catName.includes('cancha') || ((currentBusiness.courts?.length || 0) > 0);
+                                if (isService || isSport) return false;
+                                return currentBusiness.type === 'venue' || currentBusiness.type === 'alquiler' || catName.includes('alquiler') || catName.includes('quincho');
+                            })()) ? (
                                 <VenueSettings
                                     business={currentBusiness}
                                     isMobile={isMobile}
