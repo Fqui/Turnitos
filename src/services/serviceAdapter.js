@@ -217,8 +217,9 @@ class ServiceAdapter {
     }
 
     async getAvailableSpecialists(serviceId, date, time, duration, businessId = null) {
-        if (this.isDemoMode) return [];
-        // Support the new method if it exists on the service, otherwise use old (unlikely if we just updated it)
+        if (this.isDemoMode) {
+            return this.getQualifiedSpecialists(serviceId, businessId);
+        }
         if (this.service.getAvailableSpecialists) {
             return this.service.getAvailableSpecialists(serviceId, date, time, duration, businessId);
         }

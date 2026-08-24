@@ -1598,9 +1598,12 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                         : selectedDate;
 
                                                     // Get the specific specialists assigned to this service
+                                                    const allBusinessSpecs = business.specialists || [];
                                                     const assignedToService = (selectedItem.specialists && selectedItem.specialists.length > 0)
                                                         ? selectedItem.specialists
-                                                        : (selectedItem.specialist ? [selectedItem.specialist] : []);
+                                                        : (selectedItem.specialist_ids && selectedItem.specialist_ids.length > 0)
+                                                            ? allBusinessSpecs.filter(s => selectedItem.specialist_ids.includes(s.id))
+                                                            : (selectedItem.specialist ? [selectedItem.specialist] : allBusinessSpecs);
 
                                                     const assignedIds = (selectedItem.specialist_ids && selectedItem.specialist_ids.length > 0)
                                                         ? selectedItem.specialist_ids
@@ -1615,13 +1618,20 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                     );
 
                                                     // Filter by only specialists assigned to THIS service
-                                                    if (assignedIds.length > 0) {
+                                                    if (assignedIds.length > 0 && specialists.length > 0) {
                                                         const filtered = specialists.filter(s => assignedIds.includes(s.id));
-                                                        specialists = filtered.length > 0 ? filtered : assignedToService;
-                                                    } else if (!specialists || specialists.length === 0) {
-                                                        specialists = (business.specialists && business.specialists.length > 0)
-                                                            ? business.specialists
-                                                            : [{ id: 'auto-assigned', name: 'Profesional Asignado', role: 'Especialista' }];
+                                                        if (filtered.length > 0) {
+                                                            specialists = filtered;
+                                                        } else {
+                                                            specialists = assignedToService;
+                                                        }
+                                                    }
+
+                                                    // Fallback if availability check returned empty
+                                                    if (!specialists || specialists.length === 0) {
+                                                        specialists = assignedToService.length > 0
+                                                            ? assignedToService
+                                                            : (allBusinessSpecs.length > 0 ? allBusinessSpecs : [{ id: 'auto-assigned', name: 'Profesional Asignado', role: 'Especialista' }]);
                                                     }
 
                                                     setAvailableSpecialists(specialists);

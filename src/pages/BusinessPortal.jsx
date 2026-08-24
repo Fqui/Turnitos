@@ -1186,8 +1186,9 @@ export default function BusinessPortal() {
     })();
 
     const currentBusiness = businesses.find(b => String(b.id) === String(selectedBusinessId))
-        || (storedBizObj && String(storedBizObj.id) === String(selectedBusinessId) ? storedBizObj : storedBizObj)
-        || businesses[0]
+        || (storedBizObj && String(storedBizObj.id) === String(selectedBusinessId) ? storedBizObj : null)
+        || (businesses.length > 0 ? businesses[0] : null)
+        || storedBizObj
         || null;
 
     const isRentalBusiness = currentBusiness?.type === 'venue' ||

@@ -362,20 +362,26 @@ class SupabaseService {
         if (authUser) {
             const { data } = await supabase
                 .from('businesses')
-                .select('*')
+                .select('id')
                 .or(`auth_id.eq.${authUser.id},email.eq.${email}`)
                 .maybeSingle();
-            business = data;
+
+            if (data?.id) {
+                business = await this.getBusinessById(data.id);
+            }
         }
 
         if (!business) {
             // Check directly by email in businesses table
             const { data } = await supabase
                 .from('businesses')
-                .select('*')
+                .select('id')
                 .eq('email', email)
                 .maybeSingle();
-            business = data;
+
+            if (data?.id) {
+                business = await this.getBusinessById(data.id);
+            }
 
             // If business exists, attempt sign up / link auth_id
             if (business && !authUser) {
@@ -399,7 +405,7 @@ class SupabaseService {
         }
 
         return {
-            ...this._processBusinessData(business),
+            ...business,
             requirePasswordChange: !business.password_changed,
             subscriptionStatus: business.subscription_status,
             trialEndDate: business.trial_end_date
@@ -990,21 +996,27 @@ class SupabaseService {
                 .filter(s => s.id && s.id.length === 36) // Filter valid UUIDs
                 .map(s => s.id);
 
-            // B. Identify IDs to delete (present in DB but not in incoming data)
-            const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
+            // B. Identify IDs to delete safely
+            if (currentIds.length > 0 && incomingIds.length > 0) {
+                const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
 
-            if (idsToDelete.length > 0) {
-                const { error: deleteError } = await supabase
-                    .from('services')
-                    .delete()
-                    .in('id', idsToDelete);
+                if (idsToDelete.length > 0) {
+                    await supabase.from('service_specialists').delete().in('service_id', idsToDelete);
+                    const { error: deleteError } = await supabase
+                        .from('services')
+                        .delete()
+                        .in('id', idsToDelete);
 
-                if (deleteError) { /* Error deleting removed services */ }
+                    if (deleteError) { /* Error deleting removed services */ }
+                }
             }
 
             // C. Split into Updates (Upsert) and Inserts (New)
             businessData.services.forEach((s, index) => {
                 const isNew = !s.id || s.id.length !== 36; // Check if ID is missing or not a UUID (temp ID)
+                const specIds = Array.isArray(s.specialist_ids)
+                    ? s.specialist_ids
+                    : (s.specialist_id ? [s.specialist_id] : []);
 
                 const serviceData = {
                     business_id: businessId,
@@ -1019,16 +1031,14 @@ class SupabaseService {
                 if (isNew) {
                     // New service: No ID, will be inserted
                     servicesToInsert.push(serviceData);
-                    // Track specialist for this new service (by index in servicesToInsert)
-                    newServiceSpecialists.push(s.specialist_id);
+                    // Track specialists for this new service (by index in servicesToInsert)
+                    newServiceSpecialists.push(specIds);
                 } else {
                     // Existing service: Keep ID, will be upserted
                     serviceData.id = s.id;
                     servicesToUpdate.push(serviceData);
-                    // Track specialist for this existing service
-                    if (s.specialist_id) {
-                        serviceSpecialistMap.set(s.id, s.specialist_id);
-                    }
+                    // Track specialists for this existing service
+                    serviceSpecialistMap.set(s.id, specIds);
                 }
             });
 
@@ -1057,10 +1067,9 @@ class SupabaseService {
 
                     // Add the newly inserted services to the map for association creation
                     insertedServices.forEach((insertedService, index) => {
-                        const specialistId = newServiceSpecialists[index];
-                        if (specialistId) {
-
-                            serviceSpecialistMap.set(insertedService.id, specialistId);
+                        const specIds = newServiceSpecialists[index];
+                        if (specIds && specIds.length > 0) {
+                            serviceSpecialistMap.set(insertedService.id, specIds);
                         }
                     });
                 }
@@ -1221,10 +1230,15 @@ class SupabaseService {
                     // Create new associations using the map
                     const serviceSpecialistAssociations = [];
 
-                    serviceSpecialistMap.forEach((specialistId, serviceId) => {
-                        serviceSpecialistAssociations.push({
-                            service_id: serviceId,
-                            specialist_id: specialistId
+                    serviceSpecialistMap.forEach((specIds, serviceId) => {
+                        const ids = Array.isArray(specIds) ? specIds : (specIds ? [specIds] : []);
+                        ids.forEach(specialistId => {
+                            if (specialistId) {
+                                serviceSpecialistAssociations.push({
+                                    service_id: serviceId,
+                                    specialist_id: specialistId
+                                });
+                            }
                         });
                     });
 
@@ -1417,68 +1431,69 @@ class SupabaseService {
 
         // 3. Handle Services update
         if (updates.services) {
-            // A. Get current services to identify deletions
+            // A. Ensure all incoming services have valid 36-char UUIDs
+            updates.services = updates.services.map(s => {
+                const isValidUUID = s.id && typeof s.id === 'string' && s.id.length === 36;
+                const serviceId = isValidUUID
+                    ? s.id
+                    : (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+                        ? crypto.randomUUID()
+                        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                            const r = Math.random() * 16 | 0;
+                            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+                        });
+                return { ...s, id: serviceId };
+            });
+
+            // B. Get current services to identify deletions safely
             const { data: currentServices } = await supabase
                 .from('services')
                 .select('id')
                 .eq('business_id', businessId);
 
             const currentIds = currentServices ? currentServices.map(s => s.id) : [];
-            const incomingIds = updates.services
-                .filter(s => s.id && s.id.length >= 32)
-                .map(s => s.id);
+            const incomingIds = updates.services.map(s => s.id);
 
-            // B. Delete removed services (only those explicitly removed)
-            const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
-            if (idsToDelete.length > 0) {
-                // First delete referencing service_specialists to be safe (though cascade likely handles it)
-                await supabase.from('service_specialists').delete().in('service_id', idsToDelete);
-
-                // Then delete the services
-                const { error: deleteError } = await supabase
-                    .from('services')
-                    .delete()
-                    .in('id', idsToDelete);
-
-                if (deleteError) {
-                    // If delete fails (e.g. due to bookings), we should probably warn or handle it,
-                    // but for now we proceed to upsert the others.
+            // C. Delete removed services (only if current services exist)
+            if (currentIds.length > 0) {
+                const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
+                if (idsToDelete.length > 0) {
+                    await supabase.from('service_specialists').delete().in('service_id', idsToDelete);
+                    await supabase.from('services').delete().in('id', idsToDelete);
                 }
             }
 
+            // D. Upsert services
             if (updates.services.length > 0) {
-                const servicesToUpsert = updates.services.map(s => {
-                    const isValidUUID = s.id && s.id.toString().length === 36;
-                    let serviceId = isValidUUID ? s.id : null;
-
-                    if (!serviceId) {
-                        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-                            serviceId = crypto.randomUUID();
-                        } else {
-                            serviceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                                return v.toString(16);
-                            });
-                        }
-                    }
-
-                    return {
-                        id: serviceId,
-                        business_id: businessId,
-                        name: s.name,
-                        price: s.price,
-                        duration: s.duration,
-                        description: s.description,
-                        category: s.category,
-                        image_url: s.image_url || null
-                    };
-                });
+                const servicesToUpsert = updates.services.map(s => ({
+                    id: s.id,
+                    business_id: businessId,
+                    name: s.name,
+                    price: Number(s.price) || 0,
+                    duration: Number(s.duration) || 60,
+                    description: s.description || '',
+                    category: s.category || '',
+                    image_url: s.image_url || s.image || null
+                }));
 
                 const { error: servicesError } = await supabase
                     .from('services')
-                    .upsert(servicesToUpsert); // Use UPSERT instead of INSERT
+                    .upsert(servicesToUpsert);
 
-                if (servicesError) { /* Error updating services in patch */ }
+                if (servicesError) {
+                    console.warn('Services upsert error:', servicesError.message);
+                }
+
+                // E. Update service-specialist associations using exact service ID
+                for (const s of updates.services) {
+                    const specIds = Array.isArray(s.specialist_ids)
+                        ? s.specialist_ids
+                        : (s.specialist_id ? [s.specialist_id] : null);
+
+                    if (s.id && specIds !== null) {
+                        await this.updateServiceSpecialists(s.id, specIds);
+                    }
+                }
             }
         }
 
@@ -1492,43 +1507,25 @@ class SupabaseService {
             if (categoriesError) { /* Error updating service_categories */ }
         }
 
-        // 5. Handle Specialists update
+        // 5. Handle Specialists update via RPC (bypasses RLS — app uses custom seller auth, not Supabase Auth)
         if (updates.specialists) {
-            // A. Get current specialists to identify deletions
-            const { data: currentSpecialists } = await supabase
-                .from('specialists')
-                .select('id')
-                .eq('business_id', businessId);
-
-            const currentIds = currentSpecialists ? currentSpecialists.map(sp => sp.id) : [];
-            const incomingIds = updates.specialists
-                .filter(sp => sp.id && sp.id.length >= 32)
-                .map(sp => sp.id);
-
-            // B. Identify IDs to delete
-            const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
-            if (idsToDelete.length > 0) {
-                await supabase.from('service_specialists').delete().in('specialist_id', idsToDelete);
-                await supabase.from('specialists').delete().in('id', idsToDelete);
-            }
-
-            // C. Upsert (Update or Insert)
-            const specialistsToUpsert = updates.specialists.map(sp => ({
-                id: sp.id,
-                business_id: businessId,
-                name: sp.name,
-                role: sp.role,
-                avatar_url: sp.avatar_url
+            const specialistsPayload = updates.specialists.map(sp => ({
+                id: sp.id || '',
+                name: sp.name || '',
+                role: sp.role || 'General',
+                avatar_url: sp.avatar_url || null
             }));
 
-            if (specialistsToUpsert.length > 0) {
-                const { error: upsertError } = await supabase
-                    .from('specialists')
-                    .upsert(specialistsToUpsert);
+            const { data: rpcResult, error: rpcError } = await supabase.rpc('upsert_specialists', {
+                p_business_id: businessId,
+                p_specialists: specialistsPayload
+            });
 
-                if (upsertError) { /* Error upserting specialists in patch */ }
+            if (rpcError) {
+                console.warn('upsert_specialists RPC error:', rpcError.message);
             }
         }
+
 
         // Return null data to avoid heavy read timeouts (e.g. if logo is base64)
         return null;
@@ -1775,6 +1772,53 @@ class SupabaseService {
             businessType: targetBusinessType
         });
 
+        // Validate FK references against database to prevent foreign key constraint errors
+        let targetServiceId = bookingData.serviceId || bookingData.service_id || null;
+        let targetCourtId = bookingData.courtId || bookingData.court_id || null;
+        let targetSpecialistId = bookingData.specialistId || bookingData.specialist_id || null;
+
+        if (targetServiceId) {
+            const isValidUUID = typeof targetServiceId === 'string' && targetServiceId.length === 36;
+            if (isValidUUID) {
+                const { data: sMatch } = await supabase
+                    .from('services')
+                    .select('id')
+                    .eq('id', targetServiceId)
+                    .maybeSingle();
+                if (!sMatch) targetServiceId = null;
+            } else {
+                targetServiceId = null;
+            }
+        }
+
+        if (targetCourtId) {
+            const isValidUUID = typeof targetCourtId === 'string' && targetCourtId.length === 36;
+            if (isValidUUID) {
+                const { data: cMatch } = await supabase
+                    .from('courts')
+                    .select('id')
+                    .eq('id', targetCourtId)
+                    .maybeSingle();
+                if (!cMatch) targetCourtId = null;
+            } else {
+                targetCourtId = null;
+            }
+        }
+
+        if (targetSpecialistId) {
+            const isValidUUID = typeof targetSpecialistId === 'string' && targetSpecialistId.length === 36;
+            if (isValidUUID) {
+                const { data: spMatch } = await supabase
+                    .from('specialists')
+                    .select('id')
+                    .eq('id', targetSpecialistId)
+                    .maybeSingle();
+                if (!spMatch) targetSpecialistId = null;
+            } else {
+                targetSpecialistId = null;
+            }
+        }
+
         const safeMetadata = {
             ...(bookingData.metadata || {}),
             notes: bookingData.notes || bookingData.metadata?.notes || null,
@@ -1782,16 +1826,19 @@ class SupabaseService {
             duration_hours: bookingData.durationHours || bookingData.metadata?.duration_hours || (bookingData.duration ? Math.round(bookingData.duration / 60) : null),
             booking_source: bookingSource,
             commission_amount: commissionAmount,
-            plan_at_booking: businessPlanId || 'standard'
+            plan_at_booking: businessPlanId || 'standard',
+            service_id_raw: bookingData.serviceId || bookingData.service_id || null,
+            court_id_raw: bookingData.courtId || bookingData.court_id || null,
+            specialist_id_raw: bookingData.specialistId || bookingData.specialist_id || null
         };
 
         const { data, error } = await supabase
             .from('bookings')
             .insert([{
                 business_id: targetBusinessId,
-                service_id: bookingData.serviceId || bookingData.service_id || null,
-                court_id: bookingData.courtId || bookingData.court_id || null,
-                specialist_id: bookingData.specialistId || bookingData.specialist_id || null,
+                service_id: targetServiceId,
+                court_id: targetCourtId,
+                specialist_id: targetSpecialistId,
                 resource_id: finalResourceId || null,
                 date: formatDateLocal(bookingData.date),
                 time: bookingData.time || '00:00',

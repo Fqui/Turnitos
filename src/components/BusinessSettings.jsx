@@ -110,10 +110,33 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     useEffect(() => {
         if (business) {
             setFormData(prev => {
-                if (prev.id === business.id) return prev;
+                const prevServicesCount = prev.services?.length || 0;
+                const newServicesCount = business.services?.length || 0;
+                const prevSpecsCount = prev.specialists?.length || 0;
+                const newSpecsCount = business.specialists?.length || 0;
+
+                // Check if any specialist avatar_url changed (photo upload)
+                const prevSpecsJson = JSON.stringify((prev.specialists || []).map(s => ({ id: s.id, avatar_url: s.avatar_url, name: s.name })));
+                const newSpecsJson = JSON.stringify((business.specialists || []).map(s => ({ id: s.id, avatar_url: s.avatar_url, name: s.name })));
+                const specialistsChanged = prevSpecsJson !== newSpecsJson;
+
+                // Avoid resetting active edits if data has not meaningfully updated
+                if (
+                    prev.id === business.id &&
+                    newServicesCount <= prevServicesCount &&
+                    newSpecsCount <= prevSpecsCount &&
+                    prev.name === business.name &&
+                    prev.services && prev.services.length > 0 &&
+                    !specialistsChanged
+                ) {
+                    return prev;
+                }
+
                 const meta = business?.metadata || {};
                 return {
                     ...business,
+                    services: (business.services && business.services.length > 0) ? business.services : (prev.services || []),
+                    specialists: (business.specialists && business.specialists.length > 0) ? business.specialists : (prev.specialists || []),
                     store_enabled: business.store_enabled !== undefined ? business.store_enabled : (business.slug === 'cancha-apolo'),
                     gallery_highlights: business?.gallery_highlights || [],
                     metadata: {
@@ -125,7 +148,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 };
             });
         }
-    }, [business?.id]); // Only re-run if business ID changes
+    }, [business]); // Only re-run if business ID changes
 
     // Load subscription
     useEffect(() => {
@@ -384,6 +407,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             business?.specialists?.length || 0,
                             formData?.courts?.length || 0,
                             formData?.specialists?.length || 0,
+                            resourceCount, // always allow saving the same number we're trying to save
                             2
                         );
 
@@ -459,8 +483,26 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 }
             }
 
-            // Manually construct the updated object for local state sync
-            const updated = { ...(business || {}), ...dataToSave };
+            // Re-fetch fresh detailed business data from DB so local and parent state have authoritative UUIDs & specialists
+            let freshBiz = null;
+            if (targetId) {
+                try {
+                    freshBiz = await serviceAdapter.getBusinessById(targetId);
+                } catch (e) {
+                    console.warn('Error fetching fresh business after save:', e);
+                }
+            }
+
+            // Merge avatar_url from dataToSave into freshBiz specialists in case DB response is slightly stale
+            if (freshBiz && dataToSave.specialists && freshBiz.specialists) {
+                freshBiz.specialists = freshBiz.specialists.map(sp => {
+                    const saved = dataToSave.specialists.find(s => s.id === sp.id);
+                    return saved && saved.avatar_url ? { ...sp, avatar_url: saved.avatar_url } : sp;
+                });
+            }
+
+            const updated = freshBiz || { ...(business || {}), ...dataToSave };
+            setFormData(prev => ({ ...prev, ...updated }));
 
             if (onUpdate && typeof onUpdate === 'function') {
                 onUpdate(updated);
@@ -1188,11 +1230,16 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     1
                 );
 
-                let rawResources = isSportRes ? (formData.courts || []) : (formData.specialists || []);
+                let rawResources = isSportRes
+                    ? (formData.courts?.length > 0 ? formData.courts : (business?.courts || []))
+                    : (formData.specialists?.length > 0 ? formData.specialists : (business?.specialists || []));
+
                 if (rawResources.length < expectedCount) {
                     rawResources = Array.from({ length: expectedCount }, (_, i) => {
                         return rawResources[i] || {
-                            id: `temp-${resourceKey}-${i + 1}`,
+                            id: (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+                                ? crypto.randomUUID()
+                                : `temp-${resourceKey}-${i + 1}`,
                             name: `${resourceLabel} ${i + 1}`,
                             active: true
                         };
@@ -3296,7 +3343,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         duration: Number(newService.duration) || 60,
                         category: newService.category || '',
                         description: (newService.description || '').trim(),
-                        image_url: newService.image_url || null
+                        image_url: newService.image_url || null,
+                        specialist_ids: selectedSpecs
                     };
 
                     const updatedServices = [...services, serviceToAdd];
@@ -4065,7 +4113,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                                                                 duration: Number(editingService.duration),
                                                                 category: editingService.category,
                                                                 description: editingService.description,
-                                                                image_url: editingService.image_url
+                                                                image_url: editingService.image_url,
+                                                                specialist_ids: editingService.specialist_ids || []
                                                             };
                                                         }
                                                         return s;
@@ -4091,10 +4140,18 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                         {/* Save Button for Services tab */}
                         <div style={{ marginTop: '10px' }}>
                             <button
-                                onClick={() => handleSave({
-                                    services: formData.services,
-                                    service_categories: formData.service_categories
-                                })}
+                                onClick={() => {
+                                    const servicesToSave = (formData.services || []).map(s => ({
+                                        ...s,
+                                        specialist_ids: serviceSpecialists[s.id] !== undefined
+                                            ? serviceSpecialists[s.id]
+                                            : (s.specialist_ids || [])
+                                    }));
+                                    handleSave({
+                                        services: servicesToSave,
+                                        service_categories: formData.service_categories
+                                    });
+                                }}
                                 style={{ ...saveButtonStyle, width: '100%', padding: '16px', fontSize: '15px' }}
                                 disabled={saving}
                             >
