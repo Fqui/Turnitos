@@ -19,7 +19,14 @@ export default function Home() {
     const [selectedSubCategory, setSelectedSubCategory] = useState('all');
     const [businesses, setBusinesses] = useState([]);
     const [promotions, setPromotions] = useState([]);
-    const [categoriesData, setCategoriesData] = useState([]); // Dynamic categories
+    const [categoriesData, setCategoriesData] = useState(() => {
+        try {
+            const cached = localStorage.getItem('turnitos_categories_cache');
+            return cached ? JSON.parse(cached) : [];
+        } catch {
+            return [];
+        }
+    }); // Dynamic categories with instant cache support
     const [loading, setLoading] = useState(true);
     const [isNearMeActive, setIsNearMeActive] = useState(false); // ✅ New state for Near Me
     const [visibleCount, setVisibleCount] = useState(20);
@@ -123,7 +130,12 @@ export default function Home() {
                 ]);
                 if (businessesData && businessesData.length > 0) setBusinesses(businessesData);
                 if (promotionsData && promotionsData.length > 0) setPromotions(promotionsData);
-                if (categoriesResult && categoriesResult.length > 0) setCategoriesData(categoriesResult);
+                if (categoriesResult && categoriesResult.length > 0) {
+                    setCategoriesData(categoriesResult);
+                    try {
+                        localStorage.setItem('turnitos_categories_cache', JSON.stringify(categoriesResult));
+                    } catch (e) {}
+                }
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
@@ -388,6 +400,14 @@ export default function Home() {
         setShowSuggestions(false);
     };
 
+    // Handle Search Submit / View all results
+    const handleSearchSubmit = () => {
+        setShowSuggestions(false);
+        if (resultsRef.current) {
+            resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
     // Structured Data for Home (WebSite + Organization Schema)
     const homeSchema = useMemo(() => ({
         '@context': 'https://schema.org',
@@ -523,6 +543,10 @@ export default function Home() {
                                 {suggestions.items.map((item, index) => (
                                     <div
                                         key={item.id || index}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleSelectSuggestion(item.business);
+                                        }}
                                         onClick={() => handleSelectSuggestion(item.business)}
                                         style={{
                                             padding: '10px 16px',
@@ -581,8 +605,11 @@ export default function Home() {
                                 {/* Footer if there are more matches than shown */}
                                 {suggestions.totalCount > suggestions.items.length && (
                                     <div
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleSearchSubmit();
+                                        }}
                                         onClick={() => {
-                                            setShowSuggestions(false);
                                             handleSearchSubmit();
                                         }}
                                         style={{
@@ -642,36 +669,93 @@ export default function Home() {
                             <span style={{ fontSize: '14px', fontWeight: '600', fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em' }}>Todos</span>
                         </motion.button>
 
-                        {/* Use DB categories if available, otherwise fallback to static mock */}
-                        {(categoriesData && categoriesData.length > 0 ? categoriesData : DEFAULT_CATEGORIES).map(cat => (
-                            <motion.button
-                                key={cat.id || cat.slug} // Handle both DB (id) and Mock (id/slug) structures
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleCategoryClick(cat.slug || cat.id)} // Prefer slug for filtering consistency
-                                style={{
-                                    padding: '20px 10px',
-                                    borderRadius: '24px',
-                                    backgroundColor: (selectedCategory === cat.slug || selectedCategory === cat.id) ? 'var(--text-primary)' : 'var(--bg-card)',
-                                    color: (selectedCategory === cat.slug || selectedCategory === cat.id) ? 'var(--bg-card)' : 'var(--text-secondary)',
-                                    border: '1px solid var(--border)',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '12px',
-                                    boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
-                                    transition: 'all 0.3s',
-                                    height: '120px',
-                                    flex: '1 1 130px',
-                                    maxWidth: '160px'
-                                }}
-                            >
-                                <span style={{ fontSize: '32px' }}>{cat.icon}</span>
-                                <span style={{ fontSize: '14px', fontWeight: '600', fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em' }}>{cat.name}</span>
-                            </motion.button>
-                        ))}
+                        {/* Render categories: cached/fresh categories or skeletons during initial cold load */}
+                        {categoriesData && categoriesData.length > 0 ? (
+                            categoriesData.map(cat => (
+                                <motion.button
+                                    key={cat.id || cat.slug}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleCategoryClick(cat.slug || cat.id)}
+                                    style={{
+                                        padding: '20px 10px',
+                                        borderRadius: '24px',
+                                        backgroundColor: (selectedCategory === cat.slug || selectedCategory === cat.id) ? 'var(--text-primary)' : 'var(--bg-card)',
+                                        color: (selectedCategory === cat.slug || selectedCategory === cat.id) ? 'var(--bg-card)' : 'var(--text-secondary)',
+                                        border: '1px solid var(--border)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '12px',
+                                        boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+                                        transition: 'all 0.3s',
+                                        height: '120px',
+                                        flex: '1 1 130px',
+                                        maxWidth: '160px'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '32px' }}>{cat.icon}</span>
+                                    <span style={{ fontSize: '14px', fontWeight: '600', fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em' }}>{cat.name}</span>
+                                </motion.button>
+                            ))
+                        ) : loading ? (
+                            [1, 2, 3, 4, 5, 6].map(i => (
+                                <div
+                                    key={i}
+                                    style={{
+                                        padding: '20px 10px',
+                                        borderRadius: '24px',
+                                        backgroundColor: 'var(--bg-card)',
+                                        border: '1px solid var(--border)',
+                                        height: '120px',
+                                        flex: '1 1 130px',
+                                        maxWidth: '160px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '12px',
+                                        opacity: 0.6,
+                                        animation: 'pulse 1.5s infinite ease-in-out'
+                                    }}
+                                >
+                                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--border)' }} />
+                                    <div style={{ width: '60px', height: '12px', borderRadius: '6px', background: 'var(--border)' }} />
+                                </div>
+                            ))
+                        ) : (
+                            DEFAULT_CATEGORIES.map(cat => (
+                                <motion.button
+                                    key={cat.id || cat.slug}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleCategoryClick(cat.slug || cat.id)}
+                                    style={{
+                                        padding: '20px 10px',
+                                        borderRadius: '24px',
+                                        backgroundColor: (selectedCategory === cat.slug || selectedCategory === cat.id) ? 'var(--text-primary)' : 'var(--bg-card)',
+                                        color: (selectedCategory === cat.slug || selectedCategory === cat.id) ? 'var(--bg-card)' : 'var(--text-secondary)',
+                                        border: '1px solid var(--border)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '12px',
+                                        boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+                                        transition: 'all 0.3s',
+                                        height: '120px',
+                                        flex: '1 1 130px',
+                                        maxWidth: '160px'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '32px' }}>{cat.icon}</span>
+                                    <span style={{ fontSize: '14px', fontWeight: '600', fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em' }}>{cat.name}</span>
+                                </motion.button>
+                            ))
+                        )}
                     </div>
                 </section>
 
