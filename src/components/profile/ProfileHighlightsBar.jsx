@@ -1,0 +1,84 @@
+import React from 'react';
+
+export default function ProfileHighlightsBar({
+    permanentHighlights,
+    onSelectHighlight
+}) {
+    if (!permanentHighlights || permanentHighlights.length === 0) {
+        return (
+            <div style={{
+                width: '100%',
+                height: '1px',
+                backgroundColor: 'var(--border)',
+                marginTop: '20px'
+            }} />
+        );
+    }
+
+    return (
+        <div className="instagram-stories-bar" id="galeria">
+            <div className="highlights-container">
+                {permanentHighlights.map((highlight, index) => (
+                    <div
+                        key={highlight.id || index}
+                        className="highlight-item"
+                        onClick={() => onSelectHighlight(index)}
+                        style={{
+                            flexShrink: 0,
+                            scrollSnapAlign: 'start',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}
+                    >
+                        <div style={{
+                            width: '84px',
+                            height: '84px',
+                            borderRadius: '50%',
+                            padding: '2px',
+                            background: 'var(--border)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <div style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                padding: '2px',
+                                background: 'var(--bg-card)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyCenter: 'center'
+                            }}>
+                                <img
+                                    src={highlight.cover_image || highlight.images[0]}
+                                    alt={highlight.title}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        borderRadius: '50%'
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        <span style={{
+                            fontSize: '12px',
+                            color: 'var(--text-secondary)',
+                            maxWidth: '84px',
+                            textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            {highlight.title}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
