@@ -344,8 +344,12 @@ class SupabaseService {
         return this.createBusiness(businessData);
     }
 
+    async syncBusinessResources(businessId, businessType, requestedCount, price = null) {
+        return resourceService.syncBusinessResources(businessId, businessType, requestedCount, price);
+    }
+
     async updateBusinessAsSuperAdmin(businessId, businessData) {
-        return sellerService.updateBusinessAsSuperAdmin(businessId, businessData, (id, t, c, p) => this.syncBusinessResources(id, t, c, p));
+        return sellerService.updateBusinessAsSuperAdmin(businessId, businessData, (id, t, c, p) => resourceService.syncBusinessResources(id, t, c, p));
     }
 
     async updateCurrentPassword(newPassword, userEmail = null, businessId = null) {

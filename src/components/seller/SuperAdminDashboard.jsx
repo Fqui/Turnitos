@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import supabaseService from '../../services/supabaseService';
+import { useNotification } from '../../contexts/NotificationContext';
 import BusinessFormModal from './BusinessFormModal';
 import SellerDetailModal from './SellerDetailModal';
 import BookingsTab from './BookingsTab';
@@ -8,6 +9,7 @@ import ReviewsTab from './ReviewsTab';
 
 const SuperAdminDashboard = () => {
     const navigate = useNavigate();
+    const { showToast, showConfirm } = useNotification();
     const [loading, setLoading] = useState(true);
     const [analytics, setAnalytics] = useState(null);
     const [sellers, setSellers] = useState([]);
@@ -146,57 +148,87 @@ const SuperAdminDashboard = () => {
     const handleToggleSellerStatus = async (sellerId, currentStatus) => {
         try {
             await supabaseService.updateSellerStatus(sellerId, !currentStatus);
+            showToast(`Vendedor ${!currentStatus ? 'activado' : 'desactivado'} correctamente`, 'info');
             loadData();
         } catch (err) {
             console.error('Error updating seller status:', err);
+            showToast(`Error al cambiar estado del vendedor: ${err.message}`, 'error');
         }
     };
 
     const handleDeleteBusiness = async (businessId) => {
-        if (!confirm('¿Estás seguro de eliminar este negocio? Esta acción no se puede deshacer.')) return;
+        const confirmed = await showConfirm(
+            '¿Eliminar Negocio?',
+            '¿Estás seguro de que deseas eliminar este negocio y todos sus recursos vinculados? Esta acción es irreversible.',
+            'Eliminar Negocio',
+            'Cancelar'
+        );
+        if (!confirmed) return;
 
         try {
             await supabaseService.deleteBusinessAsSuperAdmin(businessId);
+            showToast('🗑️ Negocio eliminado correctamente', 'success');
             loadData();
         } catch (err) {
             console.error('Error deleting business:', err);
-            alert(err.message);
+            showToast(`Error al eliminar negocio: ${err.message}`, 'error', 6000);
         }
     };
 
     const handleDeleteCategory = async (categoryId) => {
-        if (!confirm('¿Estás seguro de eliminar esta categoría?')) return;
+        const confirmed = await showConfirm(
+            '¿Eliminar Categoría?',
+            '¿Estás seguro de que deseas eliminar esta categoría?',
+            'Eliminar',
+            'Cancelar'
+        );
+        if (!confirmed) return;
 
         try {
             await supabaseService.deleteCategory(categoryId);
+            showToast('Categoría eliminada', 'info');
             loadData();
         } catch (err) {
-            alert(err.message);
+            showToast(`Error: ${err.message}`, 'error');
         }
     };
 
     const handleDeleteSubcategory = async (subcategoryId) => {
-        if (!confirm('¿Estás seguro de eliminar esta subcategoría?')) return;
+        const confirmed = await showConfirm(
+            '¿Eliminar Subcategoría?',
+            '¿Estás seguro de que deseas eliminar esta subcategoría?',
+            'Eliminar',
+            'Cancelar'
+        );
+        if (!confirmed) return;
 
         try {
             await supabaseService.deleteSubcategory(subcategoryId);
+            showToast('Subcategoría eliminada', 'info');
             loadData();
         } catch (err) {
-            alert(err.message);
+            showToast(`Error: ${err.message}`, 'error');
         }
     };
 
     const [resetCredentialsModal, setResetCredentialsModal] = useState(null);
 
     const handleResetBusinessPassword = async (business) => {
-        if (!confirm(`¿Restablecer la contraseña para "${business.name}"? Se generará una nueva clave provisoria.`)) return;
+        const confirmed = await showConfirm(
+            '¿Restablecer Contraseña?',
+            `¿Generar una nueva contraseña provisoria para "${business.name}"?`,
+            'Restablecer',
+            'Cancelar'
+        );
+        if (!confirmed) return;
 
         try {
             const creds = await supabaseService.resetBusinessPasswordAsSuperAdmin(business.id, business.name);
             setResetCredentialsModal(creds);
+            showToast('🔑 Contraseña restablecida con éxito', 'success');
         } catch (err) {
             console.error('Error resetting password:', err);
-            alert('Error al restablecer la contraseña: ' + err.message);
+            showToast(`Error al restablecer contraseña: ${err.message}`, 'error');
         }
     };
 

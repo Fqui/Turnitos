@@ -37,41 +37,14 @@ export default function GeneralTab({
     return (
         <div style={{ display: 'grid', gap: '20px' }}>
             <div>
-                <label style={labelStyle}>Nombre del Negocio</label>
-                <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.name ?? ''}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                />
-            </div>
-
-            <div>
-                <label style={labelStyle}>Enlace Personalizado (Slug / URL)</label>
-                <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '12px', padding: '0 14px' }}>
-                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>turnitos.com.ar/</span>
-                    <input
-                        type="text"
-                        style={{ ...inputStyle, border: 'none', background: 'transparent', padding: '12px 6px', fontWeight: '700', color: 'var(--primary-paddle)' }}
-                        value={formData.slug ?? ''}
-                        placeholder="mi-negocio"
-                        onChange={(e) => {
-                            const clean = e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '');
-                            handleInputChange('slug', clean);
-                        }}
-                    />
-                </div>
-                <p style={hintStyle}>Tus clientes accederán directamente con este link a tu perfil y turnero.</p>
-            </div>
-
-            <div>
                 <label style={labelStyle}>Descripción / Bio</label>
                 <textarea
                     style={{ ...inputStyle, height: '100px', resize: 'none' }}
                     value={formData.description ?? ''}
                     onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Breve descripción que verán tus clientes..."
+                    placeholder="Breve descripción de tu negocio que verán tus clientes..."
                 />
+                <p style={hintStyle}>Esta descripción se mostrará en tu perfil de turnos, en tu página de LinkBio (debajo de tu logo) y al compartir tu enlace por WhatsApp.</p>
             </div>
 
             {/* Location Section */}
@@ -128,7 +101,6 @@ export default function GeneralTab({
                 <button
                     onClick={() => handleSave({
                         name: formData.name,
-                        slug: formData.slug,
                         description: formData.description,
                         location: formData.location,
                         latitude: formData.latitude,

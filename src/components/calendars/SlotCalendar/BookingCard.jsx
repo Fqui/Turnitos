@@ -17,9 +17,7 @@ export default function BookingCard({
 
     // Calcular tiempo de fin
     const [startH, startM] = booking.time.split(':').map(Number);
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = startMinutes + (booking.duration || 60);
-    const endH = Math.floor(endMinutes / 60);
+    const endH = Math.floor(endMinutes / 60) % 24;
     const endM = endMinutes % 60;
     const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 

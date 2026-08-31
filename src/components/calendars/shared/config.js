@@ -192,15 +192,21 @@ export function getResourcesByType(business, type) {
         }));
     }
 
+    const sortNaturally = (list) => {
+        return [...list].sort((a, b) => 
+            (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+        );
+    };
+
     if (type === 'futbol') {
         const futbolCourts = courts.filter(c => !c.sport || c.sport === 'General' || c.sport === 'futbol' || c.sport === 'football');
-        return futbolCourts.length > 0 ? futbolCourts : courts;
+        return sortNaturally(futbolCourts.length > 0 ? futbolCourts : courts);
     }
 
     if (type === 'padel') {
         const padelCourts = courts.filter(c => !c.sport || c.sport === 'General' || c.sport === 'padel' || c.sport === 'paddle');
-        return padelCourts.length > 0 ? padelCourts : courts;
+        return sortNaturally(padelCourts.length > 0 ? padelCourts : courts);
     }
 
-    return courts;
+    return sortNaturally(courts);
 }

@@ -26,7 +26,8 @@ export function timeToMinutes(timeStr) {
  * @returns {string} Tiempo en formato HH:MM
  */
 export function minutesToTime(minutes) {
-    const h = Math.floor(minutes / 60);
+    const totalHours = Math.floor(minutes / 60);
+    const h = totalHours % 24;
     const m = minutes % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }

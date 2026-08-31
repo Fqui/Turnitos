@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import supabaseService from "../services/supabaseService";
 import "./SubscriptionManager.css";
 
@@ -99,26 +99,43 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
         setEditingIndex(index);
         setEditValue(resources[index].name || "");
         setEditRoleValue(resources[index].role || "");
-        setEditPriceValue(resources[index].price !== undefined ? resources[index].price : (formData?.price_per_hour || business?.price_per_hour || ""));
+        const curPrice = resources[index].price !== undefined && resources[index].price !== null && !isNaN(Number(resources[index].price))
+            ? Number(resources[index].price)
+            : (formData?.price_per_hour || business?.price_per_hour || "");
+        setEditPriceValue(curPrice);
     };
 
     const confirmEdit = async () => {
         if (editingIndex === null) return;
-        const parsedPrice = editPriceValue !== "" ? Number(editPriceValue) : undefined;
+        const parsedPrice = editPriceValue !== "" && !isNaN(Number(editPriceValue)) ? Number(editPriceValue) : 0;
         const newName = editValue.trim() || `${resourceLabel} ${editingIndex + 1}`;
         const newRole = editRoleValue.trim();
-        if (isSport) {
-            applyOverride(editingIndex, { name: newName, price: parsedPrice !== undefined && !isNaN(parsedPrice) ? parsedPrice : (resources[editingIndex].price || formData?.price_per_hour || 0) });
-        } else {
-            applyOverride(editingIndex, { name: newName, role: newRole });
-        }
+        
+        const finalPrice = isSport ? parsedPrice : undefined;
+
+        applyOverride(editingIndex, { 
+            name: newName, 
+            ...(isSport ? { price: finalPrice } : { role: newRole }) 
+        });
+
         const newResources = resources.map((r, i) => {
             if (i !== editingIndex) return r;
-            return { ...r, name: newName, ...(isSport ? { price: parsedPrice !== undefined && !isNaN(parsedPrice) ? parsedPrice : (r.price || formData?.price_per_hour || 0) } : { role: newRole }) };
+            return { 
+                ...r, 
+                name: newName, 
+                ...(isSport ? { price: finalPrice } : { role: newRole }) 
+            };
         });
+
+        setEditingIndex(null);
+        setEditValue("");
+        setEditRoleValue("");
+        setEditPriceValue("");
+
         if (onResourcesChange) onResourcesChange(resourceKey, newResources);
-        if (onSave) await onSave({ [resourceKey]: newResources });
-        setEditingIndex(null); setEditValue(""); setEditRoleValue(""); setEditPriceValue("");
+        if (onSave) {
+            await onSave({ [resourceKey]: newResources });
+        }
     };
 
     const cancelEdit = () => { setEditingIndex(null); setEditValue(""); setEditRoleValue(""); setEditPriceValue(""); };
@@ -154,29 +171,6 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
 
     return (
         <div className="subscription-manager">
-            <div className="plan-details-row">
-                <div className="plan-detail-chip">
-                    <span className="chip-label">Plan Activo</span>
-                    <span className="chip-value" style={{ fontSize: "15px", fontWeight: "800", color: "var(--primary-paddle)" }}>{computedPlanName}</span>
-                </div>
-                <div className="plan-detail-chip">
-                    <span className="chip-label">Precio</span>
-                    <span className="chip-value price">{formatPrice(calculatedMonthlyPrice)}<span className="chip-period">/mes</span></span>
-                </div>
-                <div className="plan-detail-chip">
-                    <span className="chip-label">{resourceLabelPlural} Incluidas</span>
-                    <span className="chip-value">{spacesIncluded}</span>
-                </div>
-                <div className="plan-detail-chip">
-                    <span className="chip-label">
-                        {subscription?.status === "trial" || (subscription?.trial_end_date && new Date(subscription.trial_end_date) > new Date()) ? "Fin de Prueba" : "Proxima Factura"}
-                    </span>
-                    <span className="chip-value">
-                        {new Date(subscription?.trial_end_date || subscription?.next_billing_date || Date.now()).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })}
-                    </span>
-                </div>
-            </div>
-
             <div className="resources-section">
                 <div className="resources-header">
                     <div>
@@ -200,7 +194,6 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                                         <label htmlFor={`photo-upload-${index}`} className="photo-upload-btn" title="Cambiar foto">📷</label>
                                     </div>
                                 )}
-                                {isSport && <div className="resource-icon-sport">🏟️</div>}
                                 <div className="resource-info">
                                     {isEditing ? (
                                         <div className="edit-fields">
@@ -236,8 +229,12 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                 </div>
             </div>
 
-            <button className="btn-save-resources" onClick={() => onSave && onSave({ [resourceKey]: resources })} disabled={saving}>
-                {saving ? "Guardando..." : "Guardar"}
+            <button
+                className="btn-save-resources"
+                onClick={() => onSave && onSave({ [resourceKey]: resources })}
+                disabled={saving}
+            >
+                {saving ? "Guardando..." : `Guardar ${resourceLabelPlural}`}
             </button>
         </div>
     );

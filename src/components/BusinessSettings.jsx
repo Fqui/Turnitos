@@ -19,6 +19,13 @@ import StoreTab from './business/settings/StoreTab';
 
 export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const { showToast, showConfirm, showAlert } = useNotification();
+    
+    // Check business type for initial tab selection
+    const initCategory = (business?.categories?.name || business?.category || '').toLowerCase();
+    const initSubcat = (business?.subcategories?.[0]?.name || business?.subcategories?.[0]?.slug || '').toLowerCase();
+    const initType = (business?.type || '').toLowerCase();
+    const initIsSport = initType === 'sport' || initCategory.includes('deporte') || initSubcat.includes('futbol') || initSubcat.includes('padel') || ((business?.courts?.length || 0) > 0);
+
     const [activeTab, setActiveTab] = useState('general');
 
     // Scroll to top of settings page whenever changing active settings tab
@@ -237,11 +244,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
             const targetId = business?.id || formData?.id || formData?.business_id;
             if (targetId) {
-                try {
-                    await serviceAdapter.patchBusiness(targetId, dataToSave);
-                } catch (patchErr) {
-                    console.warn('patchBusiness failed, continuing local update:', patchErr);
-                }
+                await serviceAdapter.patchBusiness(targetId, dataToSave);
             }
 
             // Save service-specialist assignments for services that have IDs
@@ -317,7 +320,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const tabs = [
         { id: 'general', label: 'General y Ubicación', icon: '📍' },
         { id: 'appearance', label: 'Apariencia y Colores', icon: '🎨' },
-        { id: 'subscription', label: isSport ? 'Plan y Canchas' : (isServiceBusiness ? 'Plan y Especialistas' : 'Suscripción'), icon: '💳' },
+        { id: 'subscription', label: isSport ? 'Canchas' : (isServiceBusiness ? 'Especialistas' : 'Suscripción'), icon: isSport ? '🎾' : (isServiceBusiness ? '👥' : '💳') },
         ...(isServiceBusiness ? [{ id: 'services', label: 'Servicios', icon: '💼' }] : []),
         ...(isRentalBusiness ? [{ id: 'rental', label: 'Alquiler', icon: '🔑' }] : []),
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
@@ -336,6 +339,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 return (
                     <GeneralTab
                         formData={formData}
+                        setFormData={setFormData}
                         handleInputChange={handleInputChange}
                         handleSave={handleSave}
                         saving={saving}
@@ -351,6 +355,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 return (
                     <AppearanceTab
                         formData={formData}
+                        setFormData={setFormData}
                         handleInputChange={handleInputChange}
                         handleSave={handleSave}
                         saving={saving}
@@ -368,11 +373,17 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
             case 'subscription':
                 return (
                     <SubscriptionManager
-                        business={formData}
-                        subscription={subscription}
-                        onUpdate={(updatedData) => {
-                            setFormData(prev => ({ ...prev, ...updatedData }));
-                            if (onUpdate) onUpdate({ ...business, ...updatedData });
+                        businessId={formData?.id || business?.id}
+                        businessType={formData?.type || business?.type}
+                        business={business}
+                        formData={formData}
+                        onSave={handleSave}
+                        saving={saving}
+                        serviceAdapter={serviceAdapter}
+                        showToast={showToast}
+                        onResourcesChange={(key, list) => {
+                            setFormData(prev => ({ ...prev, [key]: list }));
+                            handleInputChange(key, list);
                         }}
                     />
                 );

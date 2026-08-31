@@ -106,8 +106,16 @@ export function processBusinessData(data) {
     if (business.banner_image && !business.banner_url) {
         business.banner_url = business.banner_image;
     }
-    if (!business.image) {
-        business.image = business.banner_url || business.logo_url || null;
+    if (Array.isArray(business.courts) && business.courts.length > 0) {
+        business.courts = [...business.courts].sort((a, b) => 
+            (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+        );
+    }
+
+    if (Array.isArray(business.resources) && business.resources.length > 0) {
+        business.resources = [...business.resources].sort((a, b) => 
+            (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+        );
     }
 
     return business;
@@ -580,7 +588,7 @@ export async function createBusiness(businessData) {
         businessData.courts = [];
         businessData.specialists = [];
     } else {
-        const requestedCount = parseInt(businessData.resources_count || businessData.initial_resources_count || planSpaces || 2);
+        const requestedCount = parseInt(businessData.resources_count !== undefined && businessData.resources_count !== null ? businessData.resources_count : (businessData.initial_resources_count || 1));
         if (requestedCount > 0 && (!businessData.courts || businessData.courts.length === 0) && (!businessData.specialists || businessData.specialists.length === 0)) {
             const isService = businessData.type === 'service';
             if (isService) {
@@ -689,7 +697,9 @@ export async function createBusiness(businessData) {
         }
     }
 
-    const countToSync = businessData.resources_count || businessData.capacity || 2;
+    const countToSync = businessData.resources_count !== undefined && businessData.resources_count !== null
+        ? Number(businessData.resources_count)
+        : (businessData.capacity ? Number(businessData.capacity) : requestedCount);
     await syncBusinessResources(business.id, businessData.type || 'sport', countToSync);
 
     return business;
@@ -714,11 +724,11 @@ export async function updateBusiness(businessId, businessData) {
             amenities: businessData.amenities || [],
             hours: businessData.hours,
             sport_types: businessData.sportTypes || [],
-            button_color: businessData.buttonColor || businessData.button_color,
+            button_color: businessData.brand_color || businessData.primary_color || businessData.button_color || businessData.buttonColor || '#00E676',
             instagram: businessData.instagram,
             facebook: businessData.facebook,
             whatsapp: businessData.whatsapp,
-            primary_color: businessData.primaryColor || businessData.button_color,
+            primary_color: businessData.brand_color || businessData.primary_color || businessData.button_color || businessData.primaryColor || '#00E676',
             service_categories: businessData.service_categories || [],
             time_ranges: businessData.time_ranges || [],
             price_per_hour: businessData.price_per_hour,
@@ -1060,34 +1070,90 @@ export async function patchBusiness(businessId, updates) {
     }
 
     if (updates.courts) {
-        await supabase.from('courts').delete().eq('business_id', businessId);
+        let defaultSport = 'padel';
+        try {
+            const { data: bData } = await supabase.from('businesses').select('sport_types, category, type').eq('id', businessId).single();
+            if (bData?.sport_types?.[0]) defaultSport = bData.sport_types[0];
+            else if (bData?.category && bData.category.toLowerCase().includes('futbol')) defaultSport = 'futbol';
+        } catch (e) { }
+
+        const { data: currentCourts } = await supabase
+            .from('courts')
+            .select('id')
+            .eq('business_id', businessId);
+
+        const currentIds = currentCourts ? currentCourts.map(c => c.id) : [];
+        const incomingIds = updates.courts
+            .map(c => c.id)
+            .filter(id => id && String(id).length === 36 && !String(id).startsWith('temp-'));
+
+        const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
+        if (idsToDelete.length > 0) {
+            try {
+                await supabase.from('courts').delete().in('id', idsToDelete);
+                await supabase.from('resources').delete().in('id', idsToDelete);
+            } catch (e) {
+                console.warn('Error deleting removed courts:', e);
+            }
+        }
 
         if (updates.courts.length > 0) {
-            const courtsToInsert = updates.courts.map(c => {
-                const isValidUUID = c.id && c.id.toString().length === 36;
+            const courtsToUpsert = updates.courts.map((c, idx) => {
+                const isValidUUID = c.id && String(c.id).length === 36 && !String(c.id).startsWith('temp-');
                 let courtId = isValidUUID ? c.id : null;
 
                 if (!courtId) {
                     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
                         courtId = crypto.randomUUID();
                     } else {
-                        courtId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        courtId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (char) {
+                            var r = Math.random() * 16 | 0, v = char == 'x' ? r : (r & 0x3 | 0x8);
                             return v.toString(16);
                         });
                     }
                 }
 
+                const priceNum = c.price !== undefined && c.price !== null && !isNaN(Number(c.price)) ? Number(c.price) : 0;
+
                 return {
                     id: courtId,
                     business_id: businessId,
-                    name: c.name,
-                    sport: c.sport,
-                    price: c.price
+                    name: c.name || `Cancha ${idx + 1}`,
+                    sport: c.sport || defaultSport,
+                    price: priceNum
                 };
             });
 
-            await supabase.from('courts').insert(courtsToInsert);
+            const { error: upsertErr } = await supabase.from('courts').upsert(courtsToUpsert, { onConflict: 'id' });
+            if (upsertErr) {
+                console.error('Error upserting courts:', upsertErr);
+                throw upsertErr;
+            }
+
+            const firstPrice = courtsToUpsert.find(c => c.price > 0)?.price;
+            if (firstPrice !== undefined) {
+                try {
+                    await supabase.from('businesses').update({ price_per_hour: firstPrice }).eq('id', businessId);
+                } catch (pErr) {
+                    console.warn('Could not update price_per_hour on businesses:', pErr);
+                }
+            }
+
+            try {
+                const resourcesToUpsert = courtsToUpsert.map((c, idx) => ({
+                    id: c.id,
+                    business_id: businessId,
+                    name: c.name,
+                    type: 'court',
+                    sport: c.sport || defaultSport,
+                    base_price: c.price,
+                    consumes_space: true,
+                    active: updates.courts[idx]?.active !== false
+                }));
+                await supabase.from('resources').upsert(resourcesToUpsert, { onConflict: 'id' });
+            } catch (resErr) {
+                console.warn('Error syncing courts to resources:', resErr);
+            }
         }
     }
 

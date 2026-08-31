@@ -366,11 +366,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 root.style.setProperty('--text-secondary', '#475569');
                 root.style.setProperty('--border', '#E2E8F0');
             } else {
-                root.style.setProperty('--bg-main', '#0B0F17');
-                root.style.setProperty('--bg-card', '#151D2A');
-                root.style.setProperty('--text-primary', '#F8FAFC');
-                root.style.setProperty('--text-secondary', '#94A3B8');
-                root.style.setProperty('--border', '#1E293B');
+                root.style.setProperty('--bg-main', '#121212');
+                root.style.setProperty('--bg-card', '#1C1C1C');
+                root.style.setProperty('--text-primary', '#EDEDED');
+                root.style.setProperty('--text-secondary', '#A0A0A0');
+                root.style.setProperty('--border', '#2E2E2E');
             }
         }
         return () => {

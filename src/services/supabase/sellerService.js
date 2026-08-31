@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { syncBusinessResources } from './resourceService';
 
 /**
  * Seller Login
@@ -581,6 +582,9 @@ export async function getAllBusinesses() {
         .from('businesses')
         .select(`
             *,
+            courts (*),
+            specialists (*),
+            subscriptions (*),
             sellers (
                 id,
                 first_name,
@@ -746,6 +750,8 @@ export async function updateBusinessAsSuperAdmin(businessId, businessData, syncR
         ? businessData.subcategory_id
         : null;
 
+    const requestedCount = parseInt(businessData.resources_count || 0);
+
     const updateData = {
         name: businessData.name,
         ...(businessData.slug ? { slug: businessData.slug } : {}),
@@ -758,6 +764,7 @@ export async function updateBusinessAsSuperAdmin(businessId, businessData, syncR
         instagram: businessData.instagram,
         facebook: businessData.facebook,
         type: businessData.type,
+        ...(businessData.subscription_status ? { subscription_status: businessData.subscription_status } : {}),
         subscription_plan_id: planId,
         seller_id: sellerId
     };
@@ -791,13 +798,9 @@ export async function updateBusinessAsSuperAdmin(businessId, businessData, syncR
         console.warn('Could not sync business_subcategories junction table:', e);
     }
 
-    const requestedCount = parseInt(businessData.resources_count || 0);
-    if (requestedCount > 0 && syncResourcesFn) {
-        try {
-            await syncResourcesFn(businessId, businessData.type, requestedCount, businessData.price_per_hour);
-        } catch (e) {
-            console.warn('Could not sync business resources:', e);
-        }
+    if (requestedCount > 0) {
+        const syncFn = syncResourcesFn || syncBusinessResources;
+        await syncFn(businessId, businessData.type, requestedCount, businessData.price_per_hour);
     }
 
     return data;
