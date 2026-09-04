@@ -291,19 +291,26 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
             }
 
             const updated = freshBiz || { ...(business || {}), ...dataToSave };
-            setFormData(prev => ({ ...prev, ...updated }));
+            setFormData(prev => {
+                const merged = { ...prev, ...updated };
+                // Si la actualización no era de servicios, no pisar con array vacío si teníamos datos en memoria
+                if (!('services' in dataToSave) && (!merged.services || merged.services.length === 0) && prev.services && prev.services.length > 0) {
+                    merged.services = prev.services;
+                }
+                // Si la actualización no era de categorías de servicios, preservar
+                if (!('service_categories' in dataToSave) && (!merged.service_categories || merged.service_categories.length === 0) && prev.service_categories && prev.service_categories.length > 0) {
+                    merged.service_categories = prev.service_categories;
+                }
+                return merged;
+            });
 
             if (onUpdate && typeof onUpdate === 'function') {
                 onUpdate(updated);
             }
-            showToast('Configuración guardada correctamente', 'success');
+            showToast('Configuración guardada correctamente en la nube', 'success');
         } catch (error) {
             console.error('Error saving settings:', error);
-            const updated = { ...(business || {}), ...(specificUpdates || formData) };
-            if (onUpdate && typeof onUpdate === 'function') {
-                onUpdate(updated);
-            }
-            showToast('Configuración guardada localmente', 'success');
+            showToast(`Error al guardar: ${error.message || 'Verifica la conexión con la base de datos'}`, 'error');
         } finally {
             setSaving(false);
         }

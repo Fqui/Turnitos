@@ -30,7 +30,8 @@ export default function ProtectedSuperAdminRoute({ children }) {
 
         try {
             // Check default/master email and PIN/Password
-            const result = await supabaseService.loginSuperAdmin('fernandoquintero1994@gmail.com', pin);
+            const masterEmail = import.meta.env.VITE_SUPERADMIN_EMAIL || 'fernandoquintero1994@gmail.com';
+            const result = await supabaseService.loginSuperAdmin(masterEmail, pin);
             if (result) {
                 localStorage.setItem('superAdmin', JSON.stringify(result));
                 window.location.reload(); // Refresh to mount dashboard

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../services/supabaseClient';
 import supabaseService from '../services/supabaseService';
 import serviceAdapter from '../services/serviceAdapter';
 import analyticsService from '../services/analyticsService';
@@ -23,129 +22,69 @@ import PortalAnalyticsView from '../components/business/portal/PortalAnalyticsVi
 import PortalListView from '../components/business/portal/PortalListView';
 import PortalNewBookingAlert from '../components/business/portal/PortalNewBookingAlert';
 import { useNotification } from '../contexts/NotificationContext';
-
-const playNotificationChime = () => {
-    try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
-        const now = ctx.currentTime;
-
-        // Tone 1 (E5)
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(659.25, now);
-        gain1.gain.setValueAtTime(0.3, now);
-        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        osc1.connect(gain1);
-        gain1.connect(ctx.destination);
-        osc1.start(now);
-        osc1.stop(now + 0.3);
-
-        // Tone 2 (A5)
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(880, now + 0.12);
-        gain2.gain.setValueAtTime(0.35, now + 0.12);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.start(now + 0.12);
-        osc2.stop(now + 0.5);
-    } catch (e) {
-        // Audio might be muted or awaiting interaction
-    }
-};
+import { useAuthStore, useBookingsStore, usePortalUIStore } from '../stores';
 
 export default function BusinessPortal() {
     const { showToast } = useNotification();
-    const [businesses, setBusinesses] = useState([]);
-    const [selectedBusinessId, setSelectedBusinessId] = useState('');
-    const [loginEmail, setLoginEmail] = useState('');
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [bookings, setBookings] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
-    const [requirePasswordChange, setRequirePasswordChange] = useState(false);
-    const [currentBusinessId, setCurrentBusinessId] = useState(null);
-    const [showBlockModal, setShowBlockModal] = useState(false);
-    const [pendingBlockData, setPendingBlockData] = useState(null);
-    const [newBookingAlert, setNewBookingAlert] = useState(null);
+
+    // Zustand Stores
+    const {
+        businesses,
+        setBusinesses,
+        selectedBusinessId,
+        setSelectedBusinessId,
+        loginEmail,
+        isLoggedIn,
+        setIsLoggedIn,
+        loading: authLoading,
+        setLoading: setAuthLoading,
+        rememberMe,
+        requirePasswordChange,
+        setRequirePasswordChange,
+        currentBusinessId,
+        checkAutoLogin,
+        login: authLogin
+    } = useAuthStore();
+
+    const {
+        bookings,
+        setBookings,
+        loading: bookingsLoading,
+        setLoading: setBookingsLoading,
+        fetchBookings: fetchBookingsStore,
+        reschedulingBooking,
+        setReschedulingBooking,
+        newBookingAlert,
+        setNewBookingAlert,
+        subscribeToRealtime,
+        unsubscribeRealtime
+    } = useBookingsStore();
+
+    const {
+        viewMode,
+        setViewMode,
+        showBlockModal,
+        openBlockModal,
+        closeBlockModal,
+        pendingBlockData
+    } = usePortalUIStore();
+
+    const loading = authLoading || bookingsLoading;
+    const setLoading = (val) => {
+        setAuthLoading(val);
+        setBookingsLoading(val);
+    };
+
+    const setShowBlockModal = (show) => {
+        if (!show) closeBlockModal();
+        else openBlockModal();
+    };
+
+    const setPendingBlockData = (data) => openBlockModal(data);
 
     useEffect(() => {
-        const checkAutoLogin = async () => {
-            const mustChangePassword = localStorage.getItem('turnitos_must_change_password') === 'true';
-
-            // New format (from the unified /admin/login)
-            const storedBusiness = localStorage.getItem('business');
-            if (storedBusiness) {
-                try {
-                    const biz = JSON.parse(storedBusiness);
-                    if (biz && biz.id) {
-                        const [businessesData, detailedBiz] = await Promise.all([
-                            serviceAdapter.getBusinesses(),
-                            serviceAdapter.getBusinessById(biz.id).catch(() => null)
-                        ]);
-                        const fullBiz = detailedBiz || businessesData.find(b => String(b.id) === String(biz.id)) || biz;
-                        const finalBusinesses = businessesData.map(b => String(b.id) === String(fullBiz.id) ? fullBiz : b);
-                        if (!finalBusinesses.some(b => String(b.id) === String(fullBiz.id))) {
-                            finalBusinesses.push(fullBiz);
-                        }
-
-                        if (mustChangePassword || fullBiz.password_changed === false) {
-                            setRequirePasswordChange(true);
-                            setCurrentBusinessId(fullBiz.id);
-                            setSelectedBusinessId(fullBiz.id);
-                            setBusinesses(finalBusinesses);
-                            setLoginEmail(fullBiz.email);
-                            return;
-                        }
-                        setSelectedBusinessId(fullBiz.id);
-                        setBusinesses(finalBusinesses);
-                        setIsLoggedIn(true);
-                        setLoginEmail(fullBiz.email);
-                        return;
-                    }
-                } catch (err) {
-                    // Auto-login failed silently
-                }
-            }
-
-            // Legacy format (old business login at /portal)
-            const storedEmail = localStorage.getItem('turnitos_business_email');
-            if (storedEmail) {
-                setLoginEmail(storedEmail);
-                setRememberMe(true);
-                try {
-                    const businessesData = await serviceAdapter.getBusinesses();
-                    const biz = businessesData.find(b => b.email === storedEmail);
-                    if (biz) {
-                        const detailedBiz = await serviceAdapter.getBusinessById(biz.id).catch(() => null);
-                        const fullBiz = detailedBiz || biz;
-                        const finalBusinesses = businessesData.map(b => String(b.id) === String(fullBiz.id) ? fullBiz : b);
-
-                        if (mustChangePassword || fullBiz.password_changed === false) {
-                            setRequirePasswordChange(true);
-                            setCurrentBusinessId(fullBiz.id);
-                            setSelectedBusinessId(fullBiz.id);
-                            setBusinesses(finalBusinesses);
-                            return;
-                        }
-                        setSelectedBusinessId(fullBiz.id);
-                        setBusinesses(finalBusinesses);
-                        setIsLoggedIn(true);
-                    }
-                } catch (err) {
-                    // Auto-login failed silently
-                }
-            }
-        };
         checkAutoLogin();
-    }, []);
-
-    const [viewMode, setViewMode] = useState('calendar'); // 'calendar', 'list', 'analytics', 'settings', 'customers', 'subscription'
+    }, [checkAutoLogin]);
 
     // Scroll to top of page whenever switching view modes
     useEffect(() => {
@@ -190,7 +129,6 @@ export default function BusinessPortal() {
         price: 0
     });
 
-    const [reschedulingBooking, setReschedulingBooking] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     const [listFilters, setListFilters] = useState({
@@ -260,65 +198,18 @@ export default function BusinessPortal() {
     };
 
     const handleLogin = async (email, inputPassword, remember) => {
-        if (!email || !inputPassword) {
-            alert('Por favor complete todos los campos');
-            return;
-        }
-
-        setLoginEmail(email);
-        setRememberMe(remember);
-        setLoading(true);
         try {
-            const business = await serviceAdapter.login(email, inputPassword);
-            if (business) {
-                if (business.requirePasswordChange) {
-                    setRequirePasswordChange(true);
-                    setCurrentBusinessId(business.id);
-                    setLoading(false);
-                    return;
-                }
-
-                const fullBusiness = await serviceAdapter.getBusinessById(business.id) || business;
-                setBusinesses(prev => {
-                    const exists = prev.some(b => String(b.id) === String(fullBusiness.id));
-                    return exists
-                        ? prev.map(b => String(b.id) === String(fullBusiness.id) ? fullBusiness : b)
-                        : [...prev, fullBusiness];
-                });
-                setSelectedBusinessId(business.id);
-                setIsLoggedIn(true);
-
-                if (remember) {
-                    localStorage.setItem('turnitos_business_email', email);
-                } else {
-                    localStorage.removeItem('turnitos_business_email');
-                }
-
-                try {
-                    await pushService.requestPermissionAndGetToken(business.id);
-                } catch (pushError) {
-                    console.warn('No se pudieron activar las notificaciones push:', pushError);
-                }
-            }
+            await authLogin(email, inputPassword, remember);
         } catch (error) {
             console.error('Login error:', error);
             alert('Error de inicio de sesión: ' + error.message);
-        } finally {
-            setLoading(false);
         }
     };
 
     const fetchBookings = async (isSilent = false) => {
+        await fetchBookingsStore(selectedBusinessId, isSilent);
         if (!isSilent) {
-            setLoading(true);
-        }
-        try {
-            const response = await serviceAdapter.getBookings(selectedBusinessId);
-            if (response.bookings) {
-                setBookings(response.bookings);
-            }
-
-            if (!isSilent) {
+            try {
                 const businessData = await serviceAdapter.getBusinessById(selectedBusinessId);
                 if (businessData) {
                     setBusinesses(prev => {
@@ -328,15 +219,8 @@ export default function BusinessPortal() {
                             : [...prev, businessData];
                     });
                 }
-            }
-        } catch (error) {
-            console.error('Error fetching bookings:', error);
-            if (!isSilent) {
-                showToast('Error al actualizar reservas', 'error');
-            }
-        } finally {
-            if (!isSilent) {
-                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching business detail:', error);
             }
         }
     };
@@ -344,81 +228,10 @@ export default function BusinessPortal() {
     useEffect(() => {
         if (isLoggedIn && selectedBusinessId) {
             fetchBookings(bookings.length > 0);
-
-            const handleNewBookingAlert = (bookingData, customTitle) => {
-                if (!bookingData) return;
-                const isBlocked = bookingData?.status === 'blocked' ||
-                    bookingData?.is_blocked ||
-                    bookingData?.isBlocked ||
-                    String(bookingData?.status || '').toLowerCase() === 'blocked' ||
-                    String(bookingData?.customer_name || '').toUpperCase().includes('BLOQUEADO') ||
-                    String(bookingData?.customerName || '').toUpperCase().includes('BLOQUEADO') ||
-                    String(bookingData?.notes || '').toUpperCase().includes('BLOQUEADO') ||
-                    String(bookingData?.customer_email || '') === '-' ||
-                    String(bookingData?.customer_phone || '') === '-';
-
-                if (!isBlocked) {
-                    const customerName = bookingData.customer_name || bookingData.customerName || 'Un cliente';
-                    setNewBookingAlert(bookingData);
-                    playNotificationChime();
-                    showToast(customTitle || `🔔 ¡Nueva reserva web de ${customerName}!`, 'success', 8000);
-
-                    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                        try {
-                            new Notification('🔔 ¡Nueva Reserva Web Recibida!', {
-                                body: `${customerName} solicitó una reserva para el ${bookingData.date || 'día indicado'}`,
-                                icon: '/logo-turnitos.png'
-                            });
-                        } catch (e) { }
-                    }
-                }
-            };
-
-            const subscription = serviceAdapter.subscribeToBookings(selectedBusinessId, (payload) => {
-                fetchBookings(true);
-                if (payload.eventType === 'INSERT' && payload.new) {
-                    handleNewBookingAlert(payload.new);
-                }
-            });
-
-            const notifChannel = supabase.channel(`business-notif-${selectedBusinessId}`)
-                .on('broadcast', { event: 'new_booking' }, (payload) => {
-                    const info = payload?.payload?.bookingInfo;
-                    handleNewBookingAlert(info, payload?.payload?.title);
-                    fetchBookings(true);
-                })
-                .subscribe();
-
-            let localBroadcast = null;
-            try {
-                if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-                    localBroadcast = new BroadcastChannel(`turnitos-live-${selectedBusinessId}`);
-                    localBroadcast.onmessage = (event) => {
-                        if (event?.data?.type === 'new_booking') {
-                            handleNewBookingAlert(event.data.bookingInfo, event.data.title);
-                            fetchBookings(true);
-                        }
-                    };
-                }
-            } catch (bcErr) {
-                console.warn('BroadcastChannel error:', bcErr);
-            }
-
-            const pollingInterval = setInterval(() => {
-                fetchBookings(true);
-            }, 30000);
+            subscribeToRealtime(selectedBusinessId, showToast);
 
             return () => {
-                if (subscription && typeof subscription.unsubscribe === 'function') {
-                    subscription.unsubscribe();
-                }
-                if (notifChannel) {
-                    try { supabase.removeChannel(notifChannel); } catch (e) { }
-                }
-                if (localBroadcast) {
-                    try { localBroadcast.close(); } catch (e) { }
-                }
-                clearInterval(pollingInterval);
+                unsubscribeRealtime();
             };
         }
     }, [isLoggedIn, selectedBusinessId]);

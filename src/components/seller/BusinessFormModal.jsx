@@ -71,6 +71,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
         whatsapp: business?.whatsapp || '',
         instagram: business?.instagram || '',
         facebook: business?.facebook || '',
+        tiktok: business?.tiktok || '',
         type: business ? (business.type || resolveBusinessType(initialCat?.name, 'sport')) : resolveBusinessType(initialCat?.name || categories[0]?.name, 'sport'),
         subscription_status: business?.subscription_status || 'trial',
         seller_id: business?.seller_id || '',
@@ -93,6 +94,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 whatsapp: business.whatsapp || '',
                 instagram: business.instagram || '',
                 facebook: business.facebook || '',
+                tiktok: business.tiktok || '',
                 type: business.type || resolveBusinessType(bCat?.name, 'sport'),
                 subscription_status: business.subscription_status || 'trial',
                 seller_id: business.seller_id || '',
@@ -1128,7 +1130,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
                                     WhatsApp
@@ -1159,6 +1161,28 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     type="text"
                                     value={formData.instagram}
                                     onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                                    placeholder="@usuario"
+                                    style={{
+                                        width: '100%',
+                                        padding: '11px 12px',
+                                        background: 'rgba(0, 0, 0, 0.35)',
+                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        borderRadius: '10px',
+                                        color: 'white',
+                                        fontSize: '13px',
+                                        outline: 'none'
+                                    }}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
+                                    TikTok
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.tiktok}
+                                    onChange={(e) => setFormData({ ...formData, tiktok: e.target.value })}
                                     placeholder="@usuario"
                                     style={{
                                         width: '100%',

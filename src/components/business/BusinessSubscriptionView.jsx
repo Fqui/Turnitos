@@ -6,6 +6,9 @@ import { getPlanDetails, isFreePlan } from '../../utils/subscriptionUtils';
 export default function BusinessSubscriptionView({ business, isMobile }) {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [subscription, setSubscription] = useState(
+        business?.subscription || (Array.isArray(business?.subscriptions) ? business.subscriptions[0] : null) || null
+    );
 
     const isFree = isFreePlan(business?.subscription_plan_id || business?.subscription_plan_name);
     
@@ -31,7 +34,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
 
     // Detección de canchas y cálculo dinámico de abono
     const isSport = !isRental && (bType === 'sport' || bType === 'courts' || (business?.courts && business.courts.length > 0));
-    const courtsCount = Math.max(1, business?.courts?.length || business?.capacity || 1);
+    const courtsCount = Math.max(1, subscription?.spaces_included || business?.courts?.length || business?.capacity || 1);
 
     // Escala de precios por cancha
     let unitPrice = 20000;
@@ -44,7 +47,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
     const totalCourtsPrice = courtsCount * unitPrice;
 
     // Servicios / Profesionales
-    const specialistsCount = Math.max(1, business?.specialists?.length || 1);
+    const specialistsCount = Math.max(1, subscription?.spaces_included || business?.specialists?.length || 1);
     let totalServicesPrice = 18000;
     if (specialistsCount > 1) {
         const extra = Math.max(0, specialistsCount - 3);
@@ -54,7 +57,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
     // Quinchos / Salones
     const totalRentalPrice = 15000;
 
-    const monthlyPrice = isFree ? 0 : (isRental ? totalRentalPrice : (isSport ? totalCourtsPrice : totalServicesPrice));
+    const monthlyPrice = isFree ? 0 : (subscription?.monthly_price ? Number(subscription.monthly_price) : (isRental ? totalRentalPrice : (isSport ? totalCourtsPrice : totalServicesPrice)));
 
     // Fechas de ciclo y vencimiento
     const now = new Date();
@@ -69,13 +72,24 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
     // Próximo mes de vencimiento
     const nextMonthIndex = (currentMonthIndex + 1) % 12;
     const nextMonthYear = currentMonthIndex === 11 ? currentYear + 1 : currentYear;
-    const nextDueDate = `10 de ${monthNames[nextMonthIndex]} de ${nextMonthYear}`;
+    let nextDueDate = `10 de ${monthNames[nextMonthIndex]} de ${nextMonthYear}`;
+    if (subscription?.next_billing_date) {
+        try {
+            const nd = new Date(subscription.next_billing_date);
+            if (!isNaN(nd.getTime())) {
+                nextDueDate = `${String(nd.getDate()).padStart(2, '0')} de ${monthNames[nd.getMonth()]} de ${nd.getFullYear()}`;
+            }
+        } catch (e) {
+            // fallback
+        }
+    }
 
     // Fecha de inicio de facturación
     let startDateFormatted = `01 de ${monthNames[currentMonthIndex]} de ${currentYear}`;
-    if (business?.created_at) {
+    const rawStartDate = subscription?.billing_start || business?.created_at;
+    if (rawStartDate) {
         try {
-            const cd = new Date(business.created_at);
+            const cd = new Date(rawStartDate);
             if (!isNaN(cd.getTime())) {
                 startDateFormatted = `${String(cd.getDate()).padStart(2, '0')}/${String(cd.getMonth() + 1).padStart(2, '0')}/${cd.getFullYear()}`;
             }
@@ -89,8 +103,12 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
             if (!business?.id) return;
             setLoading(true);
             try {
-                const data = await supabaseService.getMonthlyBookingsStats(business.id);
-                setStats(data);
+                const [statsData, subData] = await Promise.all([
+                    supabaseService.getMonthlyBookingsStats(business.id),
+                    supabaseService.getSubscription(business.id)
+                ]);
+                setStats(statsData);
+                if (subData) setSubscription(subData);
             } catch (err) {
                 console.error('Error loading subscription stats:', err);
             } finally {
@@ -183,10 +201,12 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                             : isRental
                                 ? 'Alquileres (Quinchos y Salones)'
                                 : isSport 
-                                    ? `Canchas (${courtsCount} ${courtsCount === 1 ? 'Cancha' : 'Canchas'})`
-                                    : specialistsCount === 1
-                                        ? 'Servicios - Individual (1 Agenda)'
-                                        : `Servicios - Equipos (${specialistsCount} Agendas)`
+                                    ? (subscription?.plan_name || `Canchas (${courtsCount} ${courtsCount === 1 ? 'Cancha' : 'Canchas'})`)
+                                    : (subscription?.plan_name
+                                        ? `${subscription.plan_name} (${specialistsCount} ${specialistsCount === 1 ? 'Agenda' : 'Agendas'})`
+                                        : (specialistsCount === 1
+                                            ? 'Servicios - Individual (1 Agenda)'
+                                            : `Servicios - Equipos (${specialistsCount} Agendas)`))
                         }
                     </h3>
 
@@ -212,10 +232,10 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                         ) : (
                             <span>
                                 <strong style={{ color: 'var(--text-primary)' }}>
-                                    ${totalServicesPrice.toLocaleString('es-AR')} / mes.
+                                    ${monthlyPrice.toLocaleString('es-AR')} / mes.
                                 </strong>
                                 <br />
-                                Turnos ilimitados, $0 comisión directa, $500 por reserva desde TurnitosLR.
+                                {specialistsCount} {specialistsCount === 1 ? 'agenda profesional' : 'agendas profesionales'}. Turnos ilimitados, $0 comisión directa, $500 por reserva desde TurnitosLR.
                             </span>
                         )}
                     </p>

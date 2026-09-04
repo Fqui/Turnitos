@@ -74,6 +74,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
     // Refs for auto-scrolling
     const calendarRef = useRef(null);
     const timeRef = useRef(null);
+    const specialistRef = useRef(null);
     const confirmRef = useRef(null);
 
     // Helper to parse business hours
@@ -191,7 +192,22 @@ export default function BusinessProfile({ business: initialBusiness }) {
         window.scrollTo(0, 0);
     }, [location.hash, loading]);
 
-    // Fetch business data if not provided in state
+    // Auto-scroll when slot/specialist is selected
+    useEffect(() => {
+        if (!loadingSpecialists && selectedTime && business?.type === 'service') {
+            if (availableSpecialists.length > 1) {
+                const timer = setTimeout(() => {
+                    specialistRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 180);
+                return () => clearTimeout(timer);
+            } else if (availableSpecialists.length === 1 || availableSpecialists.length === 0) {
+                const timer = setTimeout(() => {
+                    confirmRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 180);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [loadingSpecialists, selectedTime, availableSpecialists.length, business?.type]);
     useEffect(() => {
         if (!business) {
             const fetchBusiness = async () => {
@@ -958,13 +974,15 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
                                 {/* Specialist Selector for services */}
                                 {business.type === 'service' && selectedTime && !loadingSpecialists && (availableSpecialists.length === 0 || availableSpecialists.length > 1) && (
-                                    <ProfileSpecialistSelector
-                                        availableSpecialists={availableSpecialists}
-                                        selectedSpecialist={selectedSpecialist}
-                                        setSelectedSpecialist={setSelectedSpecialist}
-                                        loadingSpecialists={loadingSpecialists}
-                                        isMobile={isMobile}
-                                    />
+                                    <div ref={specialistRef} style={{ scrollMarginTop: '80px' }}>
+                                        <ProfileSpecialistSelector
+                                            availableSpecialists={availableSpecialists}
+                                            selectedSpecialist={selectedSpecialist}
+                                            setSelectedSpecialist={setSelectedSpecialist}
+                                            loadingSpecialists={loadingSpecialists}
+                                            isMobile={isMobile}
+                                        />
+                                    </div>
                                 )}
                             </div>
                         </section>
@@ -988,7 +1006,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     )}
 
                     {/* Sticky Mobile Confirmation Button */}
-                    {selectedTime && (business.type !== 'sport' || selectedTime.courtId !== null) && !business.courts?.some(c => c.sport === 'padel') && (
+                    {selectedTime && !loadingSpecialists && (business.type !== 'sport' || selectedTime.courtId !== null) && !business.courts?.some(c => c.sport === 'padel') && (
                         <div ref={confirmRef} style={{
                             textAlign: 'center',
                             marginTop: '40px',

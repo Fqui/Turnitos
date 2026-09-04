@@ -763,6 +763,7 @@ export async function updateBusinessAsSuperAdmin(businessId, businessData, syncR
         whatsapp: businessData.whatsapp,
         instagram: businessData.instagram,
         facebook: businessData.facebook,
+        tiktok: businessData.tiktok || null,
         type: businessData.type,
         ...(businessData.subscription_status ? { subscription_status: businessData.subscription_status } : {}),
         subscription_plan_id: planId,

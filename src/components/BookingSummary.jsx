@@ -127,6 +127,10 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
         }
     }
 
+    const hasDeposit = depositSettings.enabled !== false && depositAmount > 0;
+    const amountToTransfer = hasDeposit ? depositAmount : finalPrice;
+    const isPartial = hasDeposit && depositAmount < finalPrice;
+
     // Bank details
     const bankDetails = {
         banco: bankDetailsFromSettings.bank_name || business.bank_name || '',
@@ -285,7 +289,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                             {currentStep === 1 ? 'Sumá a tu reserva' : (currentStep === 2 ? 'Tus Datos' : 'Datos de Pago')}
                         </h2>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
-                            {currentStep === 1 ? '¿Querés agregar algún adicional?' : (currentStep === 2 ? 'Completa tus datos para continuar' : 'Transferí la seña para confirmar')}
+                            {currentStep === 1 ? '¿Querés agregar algún adicional?' : (currentStep === 2 ? 'Completa tus datos para continuar' : (isPartial ? 'Transferí la seña para confirmar' : 'Realizá la transferencia para confirmar'))}
                         </p>
                     </div>
                 </div>
@@ -734,14 +738,47 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                 transition={{ duration: 0.3 }}
                                 style={{ padding: '16px 20px 20px 20px' }}
                             >
-                                {/* Payment Instructions */}
-                                <div style={{ marginBottom: '12px', textAlign: 'center' }}>
-                                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                                        Transferí la seña
-                                    </h3>
-                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-                                        Realizá la transferencia por <strong>${depositAmount.toLocaleString('es-AR')}</strong> a los siguientes datos
-                                    </p>
+                                {/* Payment Amount Card */}
+                                <div style={{
+                                    backgroundColor: 'var(--bg-card)',
+                                    borderRadius: '16px',
+                                    border: `1.5px solid ${sportColor}40`,
+                                    padding: '16px 20px',
+                                    textAlign: 'center',
+                                    marginBottom: '16px',
+                                    boxShadow: `0 4px 20px ${sportColor}15`
+                                }}>
+                                    <div style={{
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        color: sportColor,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.8px',
+                                        marginBottom: '4px'
+                                    }}>
+                                        {isPartial ? 'Monto de la Seña a Transferir' : 'Monto a Transferir'}
+                                    </div>
+                                    <div style={{
+                                        fontSize: '32px',
+                                        fontWeight: '900',
+                                        color: 'var(--text-primary)',
+                                        letterSpacing: '-0.5px',
+                                        margin: '4px 0',
+                                        lineHeight: 1.1
+                                    }}>
+                                        ${amountToTransfer.toLocaleString('es-AR')}
+                                    </div>
+                                    {isPartial ? (
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                                            Total del servicio: <strong>${finalPrice.toLocaleString('es-AR')}</strong>
+                                            <span style={{ margin: '0 6px', opacity: 0.4 }}>•</span>
+                                            Resta abonar en el local: <strong>${Math.max(0, finalPrice - amountToTransfer).toLocaleString('es-AR')}</strong>
+                                        </div>
+                                    ) : (
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                            Realizá la transferencia por este valor a los siguientes datos
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Bank Details */}
@@ -866,18 +903,6 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                         </div>
                                     )}
 
-                                    {/* Important Note */}
-                                    <div style={{
-                                        padding: '8px 12px',
-                                        borderRadius: '10px',
-                                        backgroundColor: `${sportColor}10`,
-                                        border: `1px solid ${sportColor}30`,
-                                        marginBottom: '12px'
-                                    }}>
-                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
-                                            <strong style={{ color: sportColor }}>Importante:</strong> Copiá el Alias o CBU, realizá la transferencia y luego presioná "Confirmar Reserva" para enviar el comprobante por WhatsApp.
-                                        </p>
-                                    </div>
                                 </div>
 
                                 {/* Action Buttons */}

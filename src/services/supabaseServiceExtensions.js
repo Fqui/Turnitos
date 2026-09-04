@@ -1,16 +1,18 @@
 // Additional methods for new database schema (resources, subscriptions)
+import { supabase } from './supabaseClient';
 
-// ============================================================================
-// RESOURCES MANAGEMENT
-// ============================================================================
+export class SupabaseServiceExtensions {
+    // ============================================================================
+    // RESOURCES MANAGEMENT
+    // ============================================================================
 
-/**
- * Get all resources for a business
- * @param {string} businessId - Business ID
- * @param {string} type - Optional filter by type (court, service, venue, additional)
- * @returns {Promise<Array>} List of resources
- */
-async getResources(businessId, type = null) {
+    /**
+     * Get all resources for a business
+     * @param {string} businessId - Business ID
+     * @param {string} type - Optional filter by type (court, service, venue, additional)
+     * @returns {Promise<Array>} List of resources
+     */
+    async getResources(businessId, type = null) {
     let query = supabase
         .from('resources')
         .select('*')
@@ -265,6 +267,8 @@ async getBookingsV2(businessId, startDate = null, endDate = null) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
+    }
 }
 
-export { supabaseService };
+export const supabaseServiceExtensions = new SupabaseServiceExtensions();
+export default supabaseServiceExtensions;

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import process from 'node:process'
 
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -37,7 +38,8 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'motion': ['framer-motion'],
-          'maps': ['leaflet', 'react-leaflet']
+          'maps': ['leaflet', 'react-leaflet'],
+          'charts': ['recharts']
         }
       }
     }

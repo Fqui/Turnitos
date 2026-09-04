@@ -119,16 +119,31 @@ export default function ServicesTab({
                         placeholder="Nombre de la nueva categoría (ej: Tratamientos Faciales)..."
                         value={newCategory}
                         onChange={(e) => setNewCategory(e.target.value)}
-                        onKeyDown={(e) => {
+                        onKeyDown={async (e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
-                                if (newCategory.trim()) {
-                                    if (serviceCategories.includes(newCategory.trim())) {
-                                        showToast('Esta categoría ya existe', 'warning');
-                                        return;
+                                const trimmed = newCategory.trim();
+                                if (!trimmed) return;
+                                if (serviceCategories.includes(trimmed)) {
+                                    showToast('Esta categoría ya existe', 'warning');
+                                    return;
+                                }
+                                const updated = [...serviceCategories, trimmed];
+                                handleInputChange('service_categories', updated);
+                                setNewCategory('');
+                                if (!newService.category) {
+                                    setNewService(prev => ({ ...prev, category: trimmed }));
+                                }
+                                const targetId = business?.id || formData?.id || formData?.business_id;
+                                if (targetId) {
+                                    try {
+                                        await serviceAdapter.patchBusiness(targetId, { service_categories: updated });
+                                        showToast('Categoría guardada en la base de datos', 'success');
+                                    } catch (err) {
+                                        console.error('Error guardando categoría:', err);
+                                        showToast('Categoría guardada localmente (error al sincronizar)', 'warning');
                                     }
-                                    handleInputChange('service_categories', [...serviceCategories, newCategory.trim()]);
-                                    setNewCategory('');
+                                } else {
                                     showToast('Categoría agregada', 'success');
                                 }
                             }
@@ -136,18 +151,34 @@ export default function ServicesTab({
                     />
                     <button
                         type="button"
-                        onClick={() => {
-                            if (!newCategory.trim()) {
+                        onClick={async () => {
+                            const trimmed = newCategory.trim();
+                            if (!trimmed) {
                                 showToast('Escribe el nombre de la categoría', 'warning');
                                 return;
                             }
-                            if (serviceCategories.includes(newCategory.trim())) {
+                            if (serviceCategories.includes(trimmed)) {
                                 showToast('Esta categoría ya existe', 'warning');
                                 return;
                             }
-                            handleInputChange('service_categories', [...serviceCategories, newCategory.trim()]);
+                            const updated = [...serviceCategories, trimmed];
+                            handleInputChange('service_categories', updated);
                             setNewCategory('');
-                            showToast('Categoría agregada', 'success');
+                            if (!newService.category) {
+                                setNewService(prev => ({ ...prev, category: trimmed }));
+                            }
+                            const targetId = business?.id || formData?.id || formData?.business_id;
+                            if (targetId) {
+                                try {
+                                    await serviceAdapter.patchBusiness(targetId, { service_categories: updated });
+                                    showToast('Categoría guardada en la base de datos', 'success');
+                                } catch (err) {
+                                    console.error('Error guardando categoría:', err);
+                                    showToast('Categoría guardada localmente (error al sincronizar)', 'warning');
+                                }
+                            } else {
+                                showToast('Categoría agregada', 'success');
+                            }
                         }}
                         style={{ ...buttonSecondaryStyle, padding: '0 20px', whiteSpace: 'nowrap' }}
                     >
@@ -191,7 +222,18 @@ export default function ServicesTab({
                                         if (confirmed) {
                                             const updated = serviceCategories.filter((_, i) => i !== idx);
                                             handleInputChange('service_categories', updated);
-                                            showToast('Categoría eliminada', 'success');
+                                            const targetId = business?.id || formData?.id || formData?.business_id;
+                                            if (targetId) {
+                                                try {
+                                                    await serviceAdapter.patchBusiness(targetId, { service_categories: updated });
+                                                    showToast('Categoría eliminada y actualizada en la base de datos', 'success');
+                                                } catch (err) {
+                                                    console.error('Error eliminando categoría:', err);
+                                                    showToast('Categoría eliminada localmente (error al sincronizar)', 'warning');
+                                                }
+                                            } else {
+                                                showToast('Categoría eliminada', 'success');
+                                            }
                                         }
                                     }}
                                     style={{
@@ -736,6 +778,75 @@ export default function ServicesTab({
                                 />
                             </div>
 
+                            {/* Photo / Image in Edit Modal */}
+                            <div>
+                                <label style={labelStyle}>Foto / Imagen del Servicio (Opcional)</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: 'var(--bg-main)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                    {editingService.image_url ? (
+                                        <img
+                                            src={editingService.image_url}
+                                            alt="Preview"
+                                            style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '10px', border: '1px solid var(--border)' }}
+                                        />
+                                    ) : (
+                                        <div style={{
+                                            width: '56px',
+                                            height: '56px',
+                                            borderRadius: '10px',
+                                            background: 'var(--border)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '24px',
+                                            color: 'var(--text-secondary)'
+                                        }}>
+                                            🖼️
+                                        </div>
+                                    )}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                            <input
+                                                type="file"
+                                                id="edit-service-file-input"
+                                                style={{ display: 'none' }}
+                                                accept="image/*"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files[0];
+                                                    if (!file) return;
+                                                    try {
+                                                        showToast('Subiendo imagen...', 'info');
+                                                        const url = await serviceAdapter.uploadImage(file);
+                                                        setEditingService(prev => ({ ...prev, image_url: url }));
+                                                        showToast('Imagen cargada correctamente', 'success');
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        showToast('Error al subir la imagen', 'error');
+                                                    }
+                                                }}
+                                            />
+                                            <label
+                                                htmlFor="edit-service-file-input"
+                                                style={{ ...buttonSecondaryStyle, padding: '6px 14px', fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                            >
+                                                📷 {editingService.image_url ? 'Cambiar Foto' : 'Subir Foto'}
+                                            </label>
+                                            {editingService.image_url && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditingService(prev => ({ ...prev, image_url: null }))}
+                                                    style={{ border: 'none', background: 'transparent', color: '#ef4444', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: '6px' }}
+                                                >
+                                                    🗑️ Quitar Foto
+                                                </button>
+                                            )}
+                                        </div>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                            {editingService.image_url ? 'Esta imagen se mostrará en tu catálogo público' : 'Sube una foto representativa (PNG, JPG o WebP)'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Specialists in Modal */}
                             <div style={{ background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)', padding: '14px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -807,7 +918,7 @@ export default function ServicesTab({
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => {
+                                    onClick={async () => {
                                         const updatedServices = services.map(s => {
                                             if (s.id === editingService.id) {
                                                 return {
@@ -828,8 +939,23 @@ export default function ServicesTab({
                                             ...prev,
                                             [editingService.id]: editingService.specialist_ids || []
                                         }));
+
+                                        const targetId = business?.id || formData?.id || formData?.business_id;
+                                        if (targetId) {
+                                            try {
+                                                await serviceAdapter.patchBusiness(targetId, {
+                                                    services: updatedServices,
+                                                    service_categories: formData.service_categories
+                                                });
+                                                showToast('Servicio actualizado y guardado en la nube', 'success');
+                                            } catch (err) {
+                                                console.error('Error guardando servicio editado:', err);
+                                                showToast('Servicio actualizado localmente', 'warning');
+                                            }
+                                        } else {
+                                            showToast('Servicio actualizado', 'success');
+                                        }
                                         setEditingService(null);
-                                        showToast('Servicio actualizado', 'success');
                                     }}
                                     style={saveButtonStyle}
                                 >

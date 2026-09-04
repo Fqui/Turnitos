@@ -1,5 +1,23 @@
 import React, { useState } from 'react';
-import * as LucideIcons from 'lucide-react';
+import {
+    Flame, Utensils, ChefHat, Wine, Beer, GlassWater, Coffee, Refrigerator, Microwave, Pizza, Cake, Apple,
+    Waves, Sun, Bath, ShowerHead, Sparkles, Umbrella, LifeBuoy,
+    Speaker, Volume2, Music, PartyPopper, Mic2, Radio, Disc, Tv, Projector,
+    Gamepad2, Trophy, Dices, Activity, Bike, Dumbbell,
+    Trees, TreePine, Flower2, Tent, House, Warehouse, Building2,
+    Snowflake, Wind, Wifi, Lightbulb, Lamp, Armchair, Bed, Car, ShieldCheck, Lock, Key, Plug, Zap, Accessibility,
+    Baby, Smile, Dog, Heart, Users, Target, Search
+} from 'lucide-react';
+
+const LucideIcons = {
+    Flame, Utensils, ChefHat, Wine, Beer, GlassWater, Coffee, Refrigerator, Microwave, Pizza, Cake, Apple,
+    Waves, Sun, Bath, ShowerHead, Sparkles, Umbrella, LifeBuoy,
+    Speaker, Volume2, Music, PartyPopper, Mic2, Radio, Disc, Tv, Projector,
+    Gamepad2, Trophy, Dices, Activity, Bike, Dumbbell,
+    Trees, TreePine, Flower2, Tent, House, Warehouse, Building2,
+    Snowflake, Wind, Wifi, Lightbulb, Lamp, Armchair, Bed, Car, ShieldCheck, Lock, Key, Plug, Zap, Accessibility,
+    Baby, Smile, Dog, Heart, Users, Target, Search
+};
 
 // Comprehensive Icon Categories for Venues / Quinchos / Events / Rentals
 export const AMENITY_ICON_CATEGORIES = [

@@ -80,17 +80,7 @@ class MockService {
     }
 
     async updateBusiness(businessId, businessData) {
-        await this.delay(500);
-        const index = this.businesses.findIndex(b => b.id === businessId);
-        if (index === -1) throw new Error('Business not found');
-
-        this.businesses[index] = {
-            ...this.businesses[index],
-            ...businessData,
-            updated_at: new Date().toISOString()
-        };
-        console.info('📝 Demo Mode: Business updated (will reset on page refresh):', this.businesses[index]);
-        return this.businesses[index];
+        return this.patchBusiness(businessId, businessData);
     }
 
     // --- Bookings ---
@@ -305,12 +295,6 @@ class MockService {
         return path; // Return the path as-is
     }
 
-    async uploadImage(file) {
-        // In demo mode, we can't upload images
-        console.warn('⚠️ Demo Mode: Image upload not available');
-        throw new Error('Image upload not available in demo mode');
-    }
-
     // --- Customers (CRM) ---
 
     async getCustomers(businessId) {
@@ -359,10 +343,6 @@ class MockService {
             }
         } catch (e) { }
         return biz || { id, ...updates };
-    }
-
-    async updateBusiness(id, data = {}) {
-        return this.patchBusiness(id, data);
     }
 
     // --- Utility ---

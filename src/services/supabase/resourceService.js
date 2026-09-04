@@ -151,6 +151,7 @@ export async function syncBusinessResources(businessId, businessType, requestedC
 
     const subPayload = {
         spaces_included: requestedCount,
+        spaces_used: 0, // Reset to 0 during sync so spaces_used <= spaces_included constraint is never violated
         monthly_price: calculatedPrice,
         plan_name: planName,
         status: 'active',
@@ -322,5 +323,15 @@ export async function syncBusinessResources(businessId, businessType, requestedC
         } catch (e) {
             console.warn('Cleanup rental resources notice:', e);
         }
+    }
+
+    // Final sync of spaces_used in subscriptions
+    try {
+        await supabase
+            .from('subscriptions')
+            .update({ spaces_used: requestedCount, updated_at: new Date().toISOString() })
+            .eq('business_id', businessId);
+    } catch (finalErr) {
+        console.warn('Final spaces_used sync notice:', finalErr);
     }
 }

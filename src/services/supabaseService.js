@@ -1,4 +1,3 @@
-import { supabase } from './supabaseClient';
 import * as businessService from './supabase/businessService';
 import * as bookingService from './supabase/bookingService';
 import * as resourceService from './supabase/resourceService';
@@ -344,10 +343,6 @@ class SupabaseService {
         return this.createBusiness(businessData);
     }
 
-    async syncBusinessResources(businessId, businessType, requestedCount, price = null) {
-        return resourceService.syncBusinessResources(businessId, businessType, requestedCount, price);
-    }
-
     async updateBusinessAsSuperAdmin(businessId, businessData) {
         return sellerService.updateBusinessAsSuperAdmin(businessId, businessData, (id, t, c, p) => resourceService.syncBusinessResources(id, t, c, p));
     }
@@ -366,6 +361,18 @@ class SupabaseService {
 
     async getBookingsAnalytics() {
         return sellerService.getBookingsAnalytics();
+    }
+
+    async getAllBookingsForSuperAdmin() {
+        return this.getBookingsAnalytics();
+    }
+
+    async getSuperAdminAnalytics() {
+        return this.getGlobalAnalytics();
+    }
+
+    async getMonthlyCommissionTrends(months = 6) {
+        return this.getCommissionTrends(months);
     }
 
     async getSellerDetails(sellerId) {

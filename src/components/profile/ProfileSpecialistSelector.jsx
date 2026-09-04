@@ -39,8 +39,16 @@ export default function ProfileSpecialistSelector({
                     ⚠️ No hay especialistas disponibles para este horario
                 </div>
             ) : (
-                <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr' }}>
-                    {/* "Cualquier especialista" Option */}
+                <div style={{
+                    display: 'grid',
+                    gap: '10px',
+                    gridTemplateColumns: isMobile
+                        ? '1fr'
+                        : availableSpecialists.length <= 3
+                            ? `repeat(${availableSpecialists.length + 1}, minmax(0, 1fr))`
+                            : 'repeat(auto-fill, minmax(210px, 1fr))'
+                }}>
+                    {/* "Sin preferencia" Option */}
                     <div
                         onClick={() => setSelectedSpecialist(null)}
                         style={{
@@ -50,22 +58,22 @@ export default function ProfileSpecialistSelector({
                             padding: '12px',
                             borderRadius: '12px',
                             border: !selectedSpecialist ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
-                            background: !selectedSpecialist ? 'rgba(132, 204, 22, 0.05)' : 'var(--bg-main)',
+                            background: !selectedSpecialist ? 'color-mix(in srgb, var(--primary-paddle, #7c3aed) 8%, var(--bg-card))' : 'var(--bg-main)',
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
-                            boxShadow: !selectedSpecialist ? '0 4px 12px rgba(132, 204, 22, 0.15)' : 'none',
-                            gridColumn: isMobile ? 'span 1' : 'span 2'
+                            boxShadow: !selectedSpecialist ? '0 4px 12px color-mix(in srgb, var(--primary-paddle, #7c3aed) 15%, transparent)' : 'none'
                         }}
                     >
                         <div style={{
                             width: '40px',
                             height: '40px',
                             borderRadius: '50%',
-                            background: 'var(--border)',
+                            background: !selectedSpecialist ? 'color-mix(in srgb, var(--primary-paddle, #7c3aed) 15%, var(--border))' : 'var(--border)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '18px'
+                            fontSize: '18px',
+                            flexShrink: 0
                         }}>
                             👥
                         </div>
@@ -73,12 +81,21 @@ export default function ProfileSpecialistSelector({
                             <div style={{
                                 fontWeight: '700',
                                 fontSize: '14px',
-                                color: !selectedSpecialist ? 'var(--primary-paddle)' : 'var(--text-primary)'
+                                color: !selectedSpecialist ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
                             }}>
-                                Cualquier especialista
+                                Sin preferencia
                             </div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                Asignación automática
+                            <div style={{
+                                fontSize: '11px',
+                                color: 'var(--text-secondary)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
+                                Asignación rápida
                             </div>
                         </div>
                         <div style={{
@@ -90,7 +107,8 @@ export default function ProfileSpecialistSelector({
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            flexShrink: 0
                         }}>
                             {!selectedSpecialist && (
                                 <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -115,10 +133,10 @@ export default function ProfileSpecialistSelector({
                                     padding: '12px',
                                     borderRadius: '12px',
                                     border: isSelected ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
-                                    background: isSelected ? 'rgba(132, 204, 22, 0.05)' : 'var(--bg-main)',
+                                    background: isSelected ? 'color-mix(in srgb, var(--primary-paddle, #7c3aed) 8%, var(--bg-card))' : 'var(--bg-main)',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
-                                    boxShadow: isSelected ? '0 4px 12px rgba(132, 204, 22, 0.15)' : 'none'
+                                    boxShadow: isSelected ? '0 4px 12px color-mix(in srgb, var(--primary-paddle, #7c3aed) 15%, transparent)' : 'none'
                                 }}
                             >
                                 <img
@@ -129,7 +147,8 @@ export default function ProfileSpecialistSelector({
                                         height: '40px',
                                         borderRadius: '50%',
                                         objectFit: 'cover',
-                                        border: '2px solid var(--bg-card)'
+                                        border: '2px solid var(--bg-card)',
+                                        flexShrink: 0
                                     }}
                                 />
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -162,7 +181,8 @@ export default function ProfileSpecialistSelector({
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    transition: 'all 0.2s'
+                                    transition: 'all 0.2s',
+                                    flexShrink: 0
                                 }}>
                                     {isSelected && (
                                         <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">

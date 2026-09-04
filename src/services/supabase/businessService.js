@@ -85,6 +85,13 @@ export function processBusinessData(data) {
         business.whatsapp_templates = business.metadata.whatsapp_templates;
     }
 
+    if (!business.website && business.metadata?.website) {
+        business.website = business.metadata.website;
+    }
+    if (business.tiktok === undefined || business.tiktok === null) {
+        business.tiktok = business.metadata?.tiktok || '';
+    }
+
     if (!business.special_days && business.hours) {
         try {
             const hoursObj = typeof business.hours === 'string' ? JSON.parse(business.hours) : business.hours;
@@ -235,6 +242,20 @@ export async function getBusinessById(id) {
     }
 
     data.specialists = specialists || [];
+
+    try {
+        const { data: subData } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('business_id', id)
+            .maybeSingle();
+        if (subData) {
+            data.subscription = subData;
+            data.subscriptions = [subData];
+        }
+    } catch (subErr) {
+        console.warn('Subscriptions fetch notice:', subErr);
+    }
 
     return processBusinessData(data);
 }
@@ -479,6 +500,8 @@ export async function createBusiness(businessData) {
         instagram: businessData.instagram,
         facebook: businessData.facebook,
         whatsapp: businessData.whatsapp,
+        tiktok: businessData.tiktok || null,
+        phone: businessData.phone || null,
         primary_color: businessData.primaryColor || businessData.button_color || '#3b82f6',
         price_per_hour: businessData.price_per_hour,
         pricing_model: businessData.pricing_model || 'hourly',
@@ -583,12 +606,13 @@ export async function createBusiness(businessData) {
         } catch (e) { }
     }
 
+    const requestedCount = parseInt(businessData.resources_count !== undefined && businessData.resources_count !== null ? businessData.resources_count : (businessData.initial_resources_count || (businessData.capacity ? businessData.capacity : 1))) || 1;
+
     const isRental = businessData.type === 'venue' || businessData.type === 'alquiler';
     if (isRental) {
         businessData.courts = [];
         businessData.specialists = [];
     } else {
-        const requestedCount = parseInt(businessData.resources_count !== undefined && businessData.resources_count !== null ? businessData.resources_count : (businessData.initial_resources_count || 1));
         if (requestedCount > 0 && (!businessData.courts || businessData.courts.length === 0) && (!businessData.specialists || businessData.specialists.length === 0)) {
             const isService = businessData.type === 'service';
             if (isService) {
@@ -728,6 +752,8 @@ export async function updateBusiness(businessId, businessData) {
             instagram: businessData.instagram,
             facebook: businessData.facebook,
             whatsapp: businessData.whatsapp,
+            tiktok: businessData.tiktok || null,
+            phone: businessData.phone || null,
             primary_color: businessData.brand_color || businessData.primary_color || businessData.button_color || businessData.primaryColor || '#00E676',
             service_categories: businessData.service_categories || [],
             time_ranges: businessData.time_ranges || [],
@@ -950,6 +976,7 @@ export async function patchBusiness(businessId, updates) {
         'email', 'seller_id', 'logo_url', 'banner_url',
         'location', 'latitude', 'longitude', 'rating', 'theme', 'amenities',
         'hours', 'button_color', 'instagram', 'facebook', 'whatsapp', 'phone',
+        'tiktok', 'gallery_highlights', 'bank_name', 'account_holder', 'cbu', 'bank_alias',
         'primary_color', 'price_per_hour', 'price_per_day', 'pricing_model',
         'rental_duration_options', 'additional_services', 'included_amenities',
         'gallery_images', 'max_capacity', 'capacity', 'capacity_limit', 'sport_types',
@@ -963,6 +990,9 @@ export async function patchBusiness(businessId, updates) {
 
     if (updates.metadata && typeof updates.metadata === 'object') {
         metadataUpdates = { ...updates.metadata };
+    }
+    if (updates.website !== undefined) {
+        metadataUpdates.website = updates.website;
     }
     if (updates.blocked_dates !== undefined) {
         metadataUpdates.blocked_dates = updates.blocked_dates;

@@ -16,10 +16,19 @@ export default function BookingCard({
     const slotSpan = calculateSlotSpan(booking.duration || 60, slotSize);
 
     // Calcular tiempo de fin
-    const [startH, startM] = booking.time.split(':').map(Number);
-    const endH = Math.floor(endMinutes / 60) % 24;
-    const endM = endMinutes % 60;
-    const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    let endTime = '';
+    try {
+        if (booking?.time) {
+            const [startH = 0, startM = 0] = booking.time.split(':').map(Number);
+            const duration = Number(booking.duration) || 60;
+            const endMinutes = (startH * 60) + startM + duration;
+            const endH = Math.floor(endMinutes / 60) % 24;
+            const endM = endMinutes % 60;
+            endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+        }
+    } catch (e) {
+        console.warn('Error calculating endTime in BookingCard:', e);
+    }
 
     const isCompact = slotSpan <= 1;
 
