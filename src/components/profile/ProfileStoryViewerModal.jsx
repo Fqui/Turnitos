@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ProfileStoryViewerModal({
+    business,
     selectedHighlight,
     setSelectedHighlight,
     selectedPhotoIndex,
@@ -12,11 +13,13 @@ export default function ProfileStoryViewerModal({
 }) {
     if (selectedHighlight === null || selectedPhotoIndex === null) return null;
 
-    const viewerHighlights = storyViewerList || activeStories;
+    const viewerHighlights = storyViewerList || activeStories || [];
     const highlight = viewerHighlights[selectedHighlight];
     if (!highlight) return null;
 
-    const images = highlight.images || [];
+    const images = (highlight.images && highlight.images.length > 0)
+        ? highlight.images
+        : (highlight.cover_image ? [highlight.cover_image] : []);
     const totalImages = images.length;
 
     const handleClose = () => {
@@ -97,17 +100,40 @@ export default function ProfileStoryViewerModal({
                     ×
                 </button>
 
-                {/* Highlight title */}
+                {/* Header with avatar and title */}
                 <div style={{
                     position: 'absolute',
-                    top: '50px',
+                    top: '46px',
                     left: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
                     color: 'white',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
                     zIndex: 2002
                 }}>
-                    {highlight.title}
+                    {(business?.logo || business?.image) && (
+                        <img
+                            src={business.logo || business.image}
+                            alt={business.name}
+                            style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: '1.5px solid rgba(255,255,255,0.85)'
+                            }}
+                        />
+                    )}
+                    <div>
+                        <div style={{ fontSize: '15px', fontWeight: '700', textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>
+                            {business?.name || highlight.title}
+                        </div>
+                        {business?.name && highlight.title && highlight.title !== 'Historia' && (
+                            <div style={{ fontSize: '12px', opacity: 0.85, textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>
+                                {highlight.title}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Navigation areas (left/right tap zones) */}

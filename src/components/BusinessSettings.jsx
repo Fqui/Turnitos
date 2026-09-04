@@ -327,7 +327,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const tabs = [
         { id: 'general', label: 'General y Ubicación', icon: '📍' },
         { id: 'appearance', label: 'Apariencia y Colores', icon: '🎨' },
-        { id: 'subscription', label: isSport ? 'Canchas' : (isServiceBusiness ? 'Especialistas' : 'Suscripción'), icon: isSport ? '🎾' : (isServiceBusiness ? '👥' : '💳') },
+        { id: 'subscription', label: 'Suscripción', icon: '💳' },
         ...(isServiceBusiness ? [{ id: 'services', label: 'Servicios', icon: '💼' }] : []),
         ...(isRentalBusiness ? [{ id: 'rental', label: 'Alquiler', icon: '🔑' }] : []),
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
@@ -335,7 +335,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
         { id: 'special_days', label: 'Días Especiales', icon: '📅' },
         { id: 'gallery', label: 'Historias y Galería', icon: '📸' },
         { id: 'store', label: 'Tienda', icon: '🛒' },
-        { id: 'linkbio', label: 'Botones del LinkBio', icon: '🔗' },
+        { id: 'linkbio', label: 'Link in Bio', icon: '🔗' },
         { id: 'coupons', label: 'Cupones y Promos', icon: '🏷️' },
         { id: 'amenities', label: 'Comodidades', icon: '🛋️' }
     ];
@@ -513,22 +513,93 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
 
             case 'linkbio':
                 return (
-                    <LinkBioButtonsSettings
-                        business={formData}
-                        onUpdate={(updatedData) => {
-                            setFormData(prev => ({ ...prev, ...updatedData }));
-                            if (onUpdate) onUpdate({ ...business, ...updatedData });
-                        }}
-                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* Frase / Descripción del Link in Bio */}
+                        <div style={{
+                            background: 'var(--bg-card)',
+                            padding: '24px',
+                            borderRadius: '16px',
+                            border: '1px solid var(--border)',
+                            boxShadow: '0 4px 14px rgba(0,0,0,0.03)'
+                        }}>
+                            <h3 style={{
+                                fontSize: '17px',
+                                fontWeight: '700',
+                                marginBottom: '6px',
+                                color: 'var(--text-primary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}>
+                                <span>📝</span> Frase / Descripción del Link in Bio
+                            </h3>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.4 }}>
+                                Este texto se muestra justo debajo del logo y nombre de tu negocio en tu página de enlaces (Link in Bio). Reemplaza el texto por defecto.
+                            </p>
+                            <textarea
+                                value={formData.bio_description ?? formData.description ?? ''}
+                                onChange={(e) => {
+                                    handleInputChange('description', e.target.value);
+                                    handleInputChange('bio_description', e.target.value);
+                                }}
+                                placeholder="¡Reserva tu turno online de forma rápida y sencilla!"
+                                rows={3}
+                                style={{ ...inputStyle, width: '100%', resize: 'vertical' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                                <button
+                                    onClick={async () => {
+                                        const descVal = formData.bio_description ?? formData.description ?? '';
+                                        await handleSave({
+                                            description: descVal,
+                                            bio_description: descVal,
+                                            metadata: {
+                                                ...(formData.metadata || {}),
+                                                bio_description: descVal
+                                            }
+                                        });
+                                    }}
+                                    disabled={saving}
+                                    style={saveButtonStyle}
+                                >
+                                    {saving ? 'Guardando...' : 'Guardar Descripción'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Botones Personalizados del Link in Bio */}
+                        <LinkBioButtonsSettings
+                            customLinks={formData.custom_links || formData.metadata?.custom_links || business?.custom_links || business?.metadata?.custom_links || []}
+                            onChange={async (newLinks) => {
+                                handleInputChange('custom_links', newLinks);
+                                handleMetadataChange('custom_links', newLinks);
+                                await handleSave({
+                                    custom_links: newLinks,
+                                    metadata: {
+                                        ...(formData.metadata || {}),
+                                        custom_links: newLinks
+                                    }
+                                });
+                            }}
+                            primaryColor={formData.primary_color || business?.primary_color}
+                        />
+                    </div>
                 );
 
             case 'coupons':
                 return (
                     <CouponsSettings
-                        business={formData}
-                        onUpdate={(updatedData) => {
-                            setFormData(prev => ({ ...prev, ...updatedData }));
-                            if (onUpdate) onUpdate({ ...business, ...updatedData });
+                        coupons={formData.coupons || formData.metadata?.coupons || business?.coupons || business?.metadata?.coupons || []}
+                        onChange={async (newCoupons) => {
+                            handleInputChange('coupons', newCoupons);
+                            handleMetadataChange('coupons', newCoupons);
+                            await handleSave({
+                                coupons: newCoupons,
+                                metadata: {
+                                    ...(formData.metadata || {}),
+                                    coupons: newCoupons
+                                }
+                            });
                         }}
                     />
                 );

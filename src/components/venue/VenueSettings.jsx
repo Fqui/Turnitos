@@ -617,14 +617,67 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 )}
 
                 {activeTab === 'linkbio' && (
-                    <LinkBioButtonsSettings
-                        customLinks={formData.custom_links || []}
-                        onChange={(newLinks) => {
-                            handleInputChange('custom_links', newLinks);
-                            handleMetadataChange('custom_links', newLinks);
-                        }}
-                        primaryColor={formData.primary_color || business?.primary_color}
-                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* Frase / Descripción del Link in Bio */}
+                        <div style={cardStyle}>
+                            <h3 style={{
+                                fontSize: '17px',
+                                fontWeight: '700',
+                                marginBottom: '6px',
+                                color: 'var(--text-primary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}>
+                                <span>📝</span> Frase / Descripción del Link in Bio
+                            </h3>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.4 }}>
+                                Este texto se muestra justo debajo del logo y nombre de tu negocio en tu página de enlaces (Link in Bio). Reemplaza el texto por defecto.
+                            </p>
+                            <textarea
+                                value={formData.bio_description ?? formData.description ?? ''}
+                                onChange={(e) => {
+                                    handleInputChange('description', e.target.value);
+                                    handleInputChange('bio_description', e.target.value);
+                                }}
+                                placeholder="¡Reserva tu turno online de forma rápida y sencilla!"
+                                rows={3}
+                                style={{ ...inputStyle, width: '100%', resize: 'vertical' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                                <button
+                                    onClick={async () => {
+                                        const descVal = formData.bio_description ?? formData.description ?? '';
+                                        handleInputChange('description', descVal);
+                                        handleInputChange('bio_description', descVal);
+                                        handleMetadataChange('bio_description', descVal);
+                                        await handleSave();
+                                    }}
+                                    disabled={saving}
+                                    style={{
+                                        background: 'var(--primary-paddle, #84CC16)',
+                                        color: '#000',
+                                        border: 'none',
+                                        padding: '10px 20px',
+                                        borderRadius: '10px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {saving ? 'Guardando...' : 'Guardar Descripción'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <LinkBioButtonsSettings
+                            customLinks={formData.custom_links || []}
+                            onChange={(newLinks) => {
+                                handleInputChange('custom_links', newLinks);
+                                handleMetadataChange('custom_links', newLinks);
+                            }}
+                            primaryColor={formData.primary_color || business?.primary_color}
+                        />
+                    </div>
                 )}
 
                 {activeTab === 'coupons' && (

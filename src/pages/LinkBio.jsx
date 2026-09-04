@@ -9,6 +9,7 @@ import serviceAdapter from '../services/serviceAdapter';
 import SEOHead from '../components/SEOHead';
 import { findBusinessBySlug } from '../utils/utils';
 import { isFreePlan } from '../utils/subscriptionUtils';
+import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerModal';
 
 // Fix for default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -26,6 +27,7 @@ const LinkBio = ({ overrideSlug = null }) => {
     const [loading, setLoading] = useState(true);
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
     const [selectedHighlight, setSelectedHighlight] = useState(null);
+    const [storyViewerList, setStoryViewerList] = useState(null);
 
     const getBookingPath = (hash = '') => {
         if (overrideSlug) {
@@ -152,12 +154,22 @@ const LinkBio = ({ overrideSlug = null }) => {
             : []);
 
     // Filter active 24h stories
-    const now = Date.now();
+    const nowDate = new Date();
     const twentyFourHours = 24 * 60 * 60 * 1000;
-    const activeStories = (highlights || []).filter(h => {
-        if (!h.is_story) return false;
-        const createdAt = h.created_at ? new Date(h.created_at).getTime() : 0;
-        return (now - createdAt) < twentyFourHours;
+
+    const activeStories = (highlights || []).filter(item => {
+        if (!item.is_story) return false;
+        const hasMedia = (item.images && item.images.length > 0) || !!item.cover_image;
+        if (!hasMedia) return false;
+
+        if (item.expires_at) {
+            return new Date(item.expires_at) > nowDate;
+        }
+        if (item.created_at) {
+            const createdAt = new Date(item.created_at).getTime();
+            return (nowDate.getTime() - createdAt) < twentyFourHours;
+        }
+        return true;
     });
 
     // Parse custom buttons created by the business
@@ -224,8 +236,8 @@ const LinkBio = ({ overrideSlug = null }) => {
     const isCompact = totalLinksCount >= 4;
 
     const bannerHeight = isCompact ? (isDesktop ? '155px' : '175px') : (isDesktop ? '180px' : '210px');
-    const logoSize = isCompact ? (isDesktop ? '78px' : '82px') : (isDesktop ? '88px' : '94px');
-    const logoOverlap = isCompact ? (isDesktop ? '-38px' : '-42px') : (isDesktop ? '-44px' : '-48px');
+    const logoSize = isCompact ? (isDesktop ? '110px' : '116px') : (isDesktop ? '120px' : '128px');
+    const logoOverlap = isCompact ? (isDesktop ? '-55px' : '-58px') : (isDesktop ? '-60px' : '-64px');
     const nameFontSize = isCompact ? (isDesktop ? '19px' : '22px') : (isDesktop ? '21px' : '24px');
     const descFontSize = isCompact ? '13.5px' : '14.5px';
     const descMargin = isCompact ? '14px' : '18px';
@@ -260,7 +272,7 @@ const LinkBio = ({ overrideSlug = null }) => {
             </div>
 
             {/* Main Unified Content Body */}
-            <div className="linkbio-body-wrapper">
+            <div className="linkbio-body-wrapper" style={{ marginTop: logoOverlap }}>
                 {/* Profile Section */}
                 <motion.div
                     className="linkbio-profile-card"
@@ -279,6 +291,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                 <div
                     onClick={() => {
                         if (activeStories && activeStories.length > 0) {
+                            setStoryViewerList(activeStories);
                             setSelectedPhotoIndex(0);
                             setSelectedHighlight(0);
                         }
@@ -288,18 +301,21 @@ const LinkBio = ({ overrideSlug = null }) => {
                         width: logoSize,
                         height: logoSize,
                         borderRadius: '50%',
-                        margin: '0 auto 6px',
-                        padding: '3px',
+                        margin: '0 auto 8px',
+                        padding: activeStories.length > 0 ? '4px' : '3px',
                         background: activeStories.length > 0
                             ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
                             : 'var(--border)',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.22)',
+                        boxShadow: activeStories.length > 0
+                            ? '0 8px 28px rgba(220, 39, 67, 0.42)'
+                            : '0 8px 24px rgba(0,0,0,0.22)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        cursor: activeStories.length > 0 ? 'pointer' : 'default'
+                        cursor: activeStories.length > 0 ? 'pointer' : 'default',
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
                     }}
-                    title={activeStories.length > 0 ? "Ver Historias (24hs)" : business.name}
+                    title={activeStories.length > 0 ? "Ver Historia (24hs)" : business.name}
                 >
                     <div style={{
                         width: '100%',
@@ -322,7 +338,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                     {business.name}
                 </h1>
                 <p className="linkbio-desc" style={{ fontSize: descFontSize, color: 'var(--text-secondary)', marginBottom: descMargin, lineHeight: 1.35, maxWidth: '380px', margin: `0 auto ${descMargin}` }}>
-                    {business.description || '¡Reserva tu turno online de forma rápida y sencilla!'}
+                    {business.bio_description || business.description || business.metadata?.bio_description || '¡Reserva tu turno online de forma rápida y sencilla!'}
                 </p>
 
                 {/* Social Media Row */}
@@ -407,187 +423,17 @@ const LinkBio = ({ overrideSlug = null }) => {
                 </div>
                 </motion.div>
 
-            {/* Highlights Immersive Viewer (Instagram-style) */}
-            <AnimatePresence>
-                {selectedHighlight !== null && selectedPhotoIndex !== null && business && (
-                    (() => {
-                        const highlight = highlights[selectedHighlight];
-                        if (!highlight) return null;
-
-                        const images = highlight.images || [];
-                        const totalImages = images.length;
-
-                        return (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                style={{
-                                    position: 'fixed',
-                                    inset: 0,
-                                    backgroundColor: 'rgba(0,0,0,0.95)',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    zIndex: 2000
-                                }}
-                                onClick={() => {
-                                    setSelectedPhotoIndex(null);
-                                    setSelectedHighlight(null);
-                                }}
-                            >
-                                {/* Instagram-style progress bars */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '20px',
-                                    left: '20px',
-                                    right: '20px',
-                                    display: 'flex',
-                                    gap: '4px',
-                                    zIndex: 2002
-                                }}>
-                                    {images.map((_, index) => (
-                                        <div
-                                            key={index}
-                                            style={{
-                                                flex: 1,
-                                                height: '3px',
-                                                borderRadius: '2px',
-                                                background: index <= selectedPhotoIndex
-                                                    ? 'white'
-                                                    : 'rgba(255,255,255,0.3)',
-                                                transition: 'background 0.3s'
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-
-                                {/* Close Button */}
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedPhotoIndex(null);
-                                        setSelectedHighlight(null);
-                                    }}
-                                    style={{
-                                        position: 'absolute',
-                                        top: '50px',
-                                        right: '20px',
-                                        background: 'rgba(255,255,255,0.2)',
-                                        border: 'none',
-                                        borderRadius: '50%',
-                                        width: '40px',
-                                        height: '40px',
-                                        cursor: 'pointer',
-                                        fontSize: '24px',
-                                        color: 'white',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        backdropFilter: 'blur(10px)',
-                                        zIndex: 2002
-                                    }}
-                                >
-                                    ×
-                                </button>
-
-                                {/* Highlight title */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '50px',
-                                    left: '20px',
-                                    color: 'white',
-                                    fontSize: '16px',
-                                    fontWeight: 'bold',
-                                    zIndex: 2002
-                                }}>
-                                    {highlight.title}
-                                </div>
-
-                                {/* Navigation areas (left/right tap zones) */}
-                                <div
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedPhotoIndex((prev) =>
-                                            prev > 0 ? prev - 1 : totalImages - 1
-                                        );
-                                    }}
-                                    style={{
-                                        position: 'absolute',
-                                        left: 0,
-                                        top: 0,
-                                        bottom: 0,
-                                        width: '30%',
-                                        cursor: 'pointer',
-                                        zIndex: 2001
-                                    }}
-                                />
-                                <div
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        const nextIndex = selectedPhotoIndex + 1;
-                                        if (nextIndex >= totalImages) {
-                                            // Move to next highlight or close
-                                            if (selectedHighlight < highlights.length - 1) {
-                                                setSelectedHighlight(selectedHighlight + 1);
-                                                setSelectedPhotoIndex(0);
-                                            } else {
-                                                setSelectedPhotoIndex(null);
-                                                setSelectedHighlight(null);
-                                            }
-                                        } else {
-                                            setSelectedPhotoIndex(nextIndex);
-                                        }
-                                    }}
-                                    style={{
-                                        position: 'absolute',
-                                        right: 0,
-                                        top: 0,
-                                        bottom: 0,
-                                        width: '70%',
-                                        cursor: 'pointer',
-                                        zIndex: 2001
-                                    }}
-                                />
-
-                                {/* Current image */}
-                                <motion.img
-                                    key={`${selectedHighlight}-${selectedPhotoIndex}`}
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ duration: 0.2 }}
-                                    src={images[selectedPhotoIndex]}
-                                    alt={`${highlight.title} - ${selectedPhotoIndex + 1}`}
-                                    style={{
-                                        maxWidth: '90%',
-                                        maxHeight: '80vh',
-                                        borderRadius: '8px',
-                                        objectFit: 'contain',
-                                        pointerEvents: 'none'
-                                    }}
-                                />
-
-                                {/* Image counter */}
-                                <div style={{
-                                    position: 'absolute',
-                                    bottom: '30px',
-                                    color: 'white',
-                                    fontSize: '14px',
-                                    background: 'rgba(0,0,0,0.5)',
-                                    padding: '6px 16px',
-                                    borderRadius: '20px',
-                                    backdropFilter: 'blur(10px)',
-                                    zIndex: 2002
-                                }}>
-                                    {selectedPhotoIndex + 1} / {totalImages}
-                                </div>
-                            </motion.div>
-                        );
-                    })()
-                )}
-            </AnimatePresence>
+            {/* 24h Stories Immersive Viewer */}
+            <ProfileStoryViewerModal
+                business={business}
+                selectedHighlight={selectedHighlight}
+                setSelectedHighlight={setSelectedHighlight}
+                selectedPhotoIndex={selectedPhotoIndex}
+                setSelectedPhotoIndex={setSelectedPhotoIndex}
+                storyViewerList={storyViewerList}
+                setStoryViewerList={setStoryViewerList}
+                activeStories={activeStories}
+            />
 
             {/* Main Links Section */}
             <div className="linkbio-links-section" style={{ width: '100%', maxWidth: isDesktop ? '420px' : '480px', display: 'flex', flexDirection: 'column', gap: linkGap, marginBottom: '6px', padding: '0 16px', flexShrink: 0 }}>
