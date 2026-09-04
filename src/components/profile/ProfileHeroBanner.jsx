@@ -35,7 +35,7 @@ export default function ProfileHeroBanner({
             }}>
                 <motion.img
                     layoutId={`business-image-${business.id}`}
-                    src={selectedItem?.image_url || business.banner_image || business.image}
+                    src={business.banner_image || business.image || selectedItem?.image_url}
                     alt={business.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     transition={{ duration: 0.5, ease: "circOut" }}
