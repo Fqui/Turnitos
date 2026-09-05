@@ -4,6 +4,20 @@ import serviceAdapter from '../services/serviceAdapter';
 import BusinessProfile from './BusinessProfile';
 import VenueProfile from './VenueProfile';
 
+const cleanBusinessMeta = (m) => {
+    if (!m) return {};
+    if (typeof m === 'string') {
+        try { return JSON.parse(m); } catch (e) { return {}; }
+    }
+    if (typeof m === 'object' && m['0'] !== undefined) {
+        try {
+            const s = Object.keys(m).sort((a, b) => Number(a) - Number(b)).map(k => m[k]).join('');
+            return JSON.parse(s);
+        } catch (e) { return {}; }
+    }
+    return m;
+};
+
 export default function BusinessProfileRouter({ overrideSlug }) {
     const { businessSlug: routeSlug } = useParams();
     const businessSlug = overrideSlug || routeSlug;
@@ -16,10 +30,13 @@ export default function BusinessProfileRouter({ overrideSlug }) {
             if (raw) {
                 const storedBiz = JSON.parse(raw);
                 if (navBiz && (String(navBiz.id) === String(storedBiz.id) || navBiz.slug === storedBiz.slug)) {
-                    return { ...navBiz, ...storedBiz };
+                    const merged = { ...navBiz, ...storedBiz };
+                    merged.metadata = cleanBusinessMeta(merged.metadata);
+                    return merged;
                 }
                 const cleanSub = businessSlug?.replace(/[-_]/g, '');
                 if (storedBiz.slug === businessSlug || storedBiz.id === businessSlug || (cleanSub && storedBiz.slug === cleanSub)) {
+                    storedBiz.metadata = cleanBusinessMeta(storedBiz.metadata);
                     return storedBiz;
                 }
             }
@@ -54,17 +71,23 @@ export default function BusinessProfileRouter({ overrideSlug }) {
                         || (!data && (storedBiz.slug === businessSlug || storedBiz.id === businessSlug || (cleanSub && storedBiz.slug === cleanSub)));
 
                     if (isMatch) {
-                        // CRITICAL: NEVER allow shallow storedBiz in localStorage to overwrite fresh relational data (services with specialists, specialists, courts)
+                        const storedMeta = cleanBusinessMeta(storedBiz?.metadata);
+                        const dataMeta = cleanBusinessMeta(data?.metadata);
+                        const resolvedProducts = (dataMeta?.store_products && dataMeta.store_products.length > 0)
+                            ? dataMeta.store_products
+                            : (storedMeta?.store_products || []);
+
                         finalBiz = {
                             ...(storedBiz || {}),
                             ...(data || {}),
                             // Explicitly keep relational lists from backend if available
-                            services: (data?.services && data.services.length > 0) ? data.services : (storedBiz.services || []),
-                            specialists: (data?.specialists && data.specialists.length > 0) ? data.specialists : (storedBiz.specialists || []),
-                            courts: (data?.courts && data.courts.length > 0) ? data.courts : (storedBiz.courts || []),
+                            services: (data?.services && data.services.length > 0) ? data.services : (storedBiz?.services || []),
+                            specialists: (data?.specialists && data.specialists.length > 0) ? data.specialists : (storedBiz?.specialists || []),
+                            store_enabled: (data?.store_enabled !== undefined) ? data.store_enabled : (storedBiz?.store_enabled !== undefined ? storedBiz.store_enabled : true),
                             metadata: {
-                                ...(data?.metadata || {}),
-                                ...(storedBiz?.metadata || {})
+                                ...storedMeta,
+                                ...dataMeta,
+                                store_products: resolvedProducts
                             }
                         };
                         if (storedBiz.metadata?.venue_gallery) {
@@ -74,10 +97,22 @@ export default function BusinessProfileRouter({ overrideSlug }) {
                             finalBiz.gallery_images = storedBiz.gallery_images;
                         }
                     }
+                } else if (data) {
+                    const dataMeta = cleanBusinessMeta(data?.metadata);
+                    finalBiz = {
+                        ...data,
+                        metadata: {
+                            ...dataMeta,
+                            store_products: dataMeta?.store_products || []
+                        }
+                    };
                 }
 
                 if (finalBiz && isMounted) {
                     setBusiness(finalBiz);
+                    try {
+                        localStorage.setItem('business', JSON.stringify(finalBiz));
+                    } catch (e) { }
                 }
             } catch (error) {
                 console.error('Error fetching business:', error);

@@ -20,11 +20,10 @@ import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import SEOHead from '../components/SEOHead';
 
 import ProfileHeroBanner from '../components/profile/ProfileHeroBanner';
-import ProfileHighlightsBar from '../components/profile/ProfileHighlightsBar';
+import ProfileHighlightsAndStore from '../components/profile/ProfileHighlightsAndStore';
 import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerModal';
 import ProfileVenuePricingSection from '../components/profile/ProfileVenuePricingSection';
 import ProfileVenueBookingSection from '../components/profile/ProfileVenueBookingSection';
-import ProfileStoreSection from '../components/profile/ProfileStoreSection';
 import ProfileSpecialistSelector from '../components/profile/ProfileSpecialistSelector';
 import ProfileInfoSection from '../components/profile/ProfileInfoSection';
 
@@ -44,6 +43,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
     const [loading, setLoading] = useState(!business);
     const isMobile = window.innerWidth <= 768;
+
+    useEffect(() => {
+        if (initialBusiness) {
+            setBusiness(initialBusiness);
+            setLoading(false);
+        }
+    }, [initialBusiness]);
 
     const [selectedItem, setSelectedItem] = useState(null); // Sport (string) or Service (object)
     const [selectedDate, setSelectedDate] = useState(null);
@@ -619,8 +625,10 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 />
 
                 <div className="container" style={{ maxWidth: containerWidth, margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 2 }}>
-                    {/* Instagram-Style Highlights Bar */}
-                    <ProfileHighlightsBar
+                    {/* Instagram-Style Highlights Bar & Store Promo Card */}
+                    <ProfileHighlightsAndStore
+                        business={business}
+                        primaryColor={primaryColor}
                         permanentHighlights={permanentHighlights}
                         onSelectHighlight={(index) => {
                             setStoryViewerList(permanentHighlights);
@@ -712,11 +720,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         </section>
                     )}
 
-                    {/* Store Showcase */}
-                    <ProfileStoreSection
-                        business={business}
-                        primaryColor={primaryColor}
-                    />
 
                     {/* Select Date Section */}
                     {(selectedItem || business.type === 'venue') && (

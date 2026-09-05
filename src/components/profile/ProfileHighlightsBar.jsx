@@ -2,9 +2,11 @@ import React from 'react';
 
 export default function ProfileHighlightsBar({
     permanentHighlights,
-    onSelectHighlight
+    onSelectHighlight,
+    noBorder = false
 }) {
     if (!permanentHighlights || permanentHighlights.length === 0) {
+        if (noBorder) return null;
         return (
             <div style={{
                 width: '100%',
@@ -16,7 +18,11 @@ export default function ProfileHighlightsBar({
     }
 
     return (
-        <div className="instagram-stories-bar" id="galeria">
+        <div
+            className="instagram-stories-bar"
+            id="galeria"
+            style={noBorder ? { marginTop: 0, paddingTop: 0, borderTop: 'none' } : {}}
+        >
             <div className="highlights-container">
                 {permanentHighlights.map((highlight, index) => (
                     <div

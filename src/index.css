@@ -745,6 +745,115 @@ textarea {
   width: 100%;
 }
 
+/* ═══════════════════════════════════════════
+   HIGHLIGHTS & STORE PROMO LAYOUT
+   ═══════════════════════════════════════════ */
+.profile-highlights-and-store {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+
+.profile-highlights-and-store .instagram-stories-bar {
+  border-top: none !important;
+  margin-top: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.profile-highlights-and-store .highlights-container {
+  justify-content: center !important;
+  padding: 4px 2px 8px !important;
+  gap: 20px !important;
+  scroll-behavior: smooth;
+}
+
+.profile-highlights-wrapper {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.profile-store-wrapper {
+  width: 100%;
+}
+
+@media (min-width: 700px) {
+  .profile-highlights-and-store {
+    flex-direction: row;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .profile-highlights-wrapper {
+    flex: 0 0 50%;
+    max-width: 50%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .profile-store-wrapper {
+    flex: 0 0 calc(50% - 24px);
+    width: calc(50% - 24px);
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+.profile-store-promo-card:hover {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-2px);
+}
+
+.profile-store-banner-full:hover {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.22) !important;
+  transform: translateY(-2px);
+}
+
+.store-products-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 699px) {
+  .profile-store-promo-card {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    border-radius: 0 !important;
+  }
+
+  .profile-store-wrapper {
+    margin-bottom: 20px;
+  }
+
+  .profile-highlights-and-store .highlights-container {
+    justify-content: flex-start !important;
+    padding-left: 0 !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .profile-store-banner-full {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 20px 16px !important;
+    gap: 16px !important;
+  }
+
+  .profile-store-banner-full > div:nth-of-type(2) {
+    width: 100% !important;
+  }
+}
+
+
 .highlights-container {
   display: flex;
   gap: 16px;
@@ -864,6 +973,12 @@ textarea {
     padding: 20px 36px 16px !important;
     border-top: 1px solid var(--border) !important;
     background: transparent !important;
+  }
+
+  .profile-highlights-and-store .instagram-stories-bar {
+    margin-top: 0 !important;
+    padding: 0 !important;
+    border-top: none !important;
   }
 
   .highlights-container {
