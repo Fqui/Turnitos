@@ -59,16 +59,30 @@ export default function ProfileHighlightsBar({
                                 alignItems: 'center',
                                 justifyCenter: 'center'
                             }}>
-                                <img
-                                    src={highlight.cover_image || highlight.images[0]}
-                                    alt={highlight.title}
-                                    style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                        borderRadius: '50%'
-                                    }}
-                                />
+                                {/\.(mp4|webm|mov|ogg|m4v)(\?|$)/i.test(highlight.cover_image || highlight.images[0]) ? (
+                                    <video
+                                        src={highlight.cover_image || highlight.images[0]}
+                                        muted
+                                        playsInline
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                            borderRadius: '50%'
+                                        }}
+                                    />
+                                ) : (
+                                    <img
+                                        src={highlight.cover_image || highlight.images[0]}
+                                        alt={highlight.title}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                            borderRadius: '50%'
+                                        }}
+                                    />
+                                )}
                             </div>
                         </div>
                         <span style={{

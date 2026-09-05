@@ -406,18 +406,9 @@ export default function ProfileStorePromoCard({
 
     // ─────────────────────────────────────────────────────────────
     // SIDE-BY-SIDE / STACKED CARD MODE (When business has highlights)
-    // Horizontal carousel showing multiple product mini-cards
+    // 2/3 Bento 3D Showcase Product Card + 1/3 Bento CTA Card (Iconly Style)
     // ─────────────────────────────────────────────────────────────
-    const scrollRef = useRef(null);
-
-    const scrollCarousel = (direction) => {
-        if (!scrollRef.current) return;
-        const scrollAmount = 160;
-        scrollRef.current.scrollBy({
-            left: direction === 'next' ? scrollAmount : -scrollAmount,
-            behavior: 'smooth'
-        });
-    };
+    const hasMultiple = products.length > 1;
 
     return (
         <div
@@ -425,165 +416,266 @@ export default function ProfileStorePromoCard({
             style={{
                 position: 'relative',
                 width: '100%',
-                padding: '10px',
-                borderRadius: '18px',
-                background: 'linear-gradient(145deg, var(--bg-card) 0%, rgba(255,255,255,0.03) 100%)',
-                border: '1px solid var(--border)',
-                boxShadow: '0 6px 20px rgba(0,0,0,0.08)',
-                backdropFilter: 'blur(12px)',
-                overflow: 'hidden'
+                padding: '6px',
+                borderRadius: '24px',
+                background: 'transparent',
+                border: 'none',
+                boxShadow: 'none',
+                overflow: 'visible'
             }}
         >
-
-            {/* Horizontal Product Carousel */}
-            <div style={{ position: 'relative', zIndex: 1 }}>
-                <div
-                    ref={scrollRef}
-                    style={{
-                        display: 'flex',
-                        gap: '8px',
-                        overflowX: 'auto',
-                        scrollSnapType: 'x mandatory',
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none'
-                    }}
-                    className="store-products-carousel"
-                >
-                    {products.length > 0 ? (
-                        <>
-                            {products.map((product, idx) => {
-                                const img = product?.image || product?.images?.[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=300&q=80';
-                                return (
-                                    <div
-                                        key={product?.id || idx}
-                                        onClick={goToStore}
-                                        style={{
-                                            flex: '0 0 120px',
-                                            scrollSnapAlign: 'start',
-                                            background: 'var(--bg-main)',
-                                            borderRadius: '12px',
-                                            border: '1px solid var(--border)',
-                                            padding: '8px',
-                                            cursor: 'pointer',
-                                            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '6px'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(-2px)';
-                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                            e.currentTarget.style.boxShadow = 'none';
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: '100%',
-                                            height: '80px',
-                                            borderRadius: '8px',
-                                            overflow: 'hidden',
-                                            background: '#ffffff',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}>
-                                            <img
-                                                src={img}
-                                                alt={product.name}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            />
-                                        </div>
-                                        <div style={{ minWidth: 0 }}>
-                                            <h4 style={{
-                                                fontSize: '11px',
-                                                fontWeight: '700',
-                                                color: 'var(--text-primary)',
-                                                margin: '0 0 2px 0',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap'
-                                            }}>
-                                                {product.name}
-                                            </h4>
-                                            <span style={{
-                                                fontSize: '12px',
-                                                fontWeight: '800',
-                                                color: primaryColor
-                                            }}>
-                                                {formatPrice(product.price)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-
-                            {/* CTA Card - Ir a la Tienda */}
-                            <div
-                                onClick={goToStore}
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: products.length > 0 ? '1.9fr 1fr' : '1fr',
+                    gap: '12px',
+                    alignItems: 'stretch',
+                    width: '100%'
+                }}
+            >
+                {/* ═══ 2/3 COLUMN: ICONLY-STYLE BENTO PRODUCT CARD ═══ */}
+                {products.length > 0 && (
+                    <div
+                        onMouseEnter={() => setIsHovered(true)}
+                        onMouseLeave={() => setIsHovered(false)}
+                        onClick={goToStore}
+                        style={{
+                            position: 'relative',
+                            background: '#ffffff',
+                            borderRadius: '22px',
+                            border: '1px solid rgba(0,0,0,0.06)',
+                            padding: '18px 20px',
+                            cursor: 'pointer',
+                            overflow: 'hidden',
+                            minHeight: '128px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+                            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                            setIsHovered(true);
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                            setIsHovered(false);
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.06)';
+                        }}
+                    >
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={currentProduct?.id || currentIndex}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.22 }}
                                 style={{
-                                    flex: '0 0 120px',
-                                    scrollSnapAlign: 'start',
-                                    background: primaryColor,
-                                    borderRadius: '12px',
-                                    padding: '12px',
-                                    cursor: 'pointer',
                                     display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '8px',
-                                    transition: 'transform 0.2s ease, filter 0.2s ease'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.filter = 'brightness(1.1)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.filter = 'brightness(1)';
+                                    justifyContent: 'space-between',
+                                    height: '100%',
+                                    width: '100%',
+                                    position: 'relative'
                                 }}
                             >
-                                <ShoppingBag size={22} color="#ffffff" />
-                                <span style={{
-                                    fontSize: '12px',
-                                    fontWeight: '800',
-                                    color: '#ffffff',
-                                    textAlign: 'center',
-                                    lineHeight: 1.2
+                                {/* Left: Clean Typography */}
+                                <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'center',
+                                    zIndex: 2,
+                                    maxWidth: '62%',
+                                    minWidth: 0
                                 }}>
-                                    Ir a la Tienda
-                                </span>
-                                <ArrowRight size={16} color="#ffffff" />
+                                    <h3
+                                        style={{
+                                            fontSize: '17px',
+                                            fontWeight: '800',
+                                            color: '#111827',
+                                            margin: 0,
+                                            lineHeight: 1.2,
+                                            letterSpacing: '-0.3px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical'
+                                        }}
+                                        title={currentProduct?.name}
+                                    >
+                                        {currentProduct?.name || 'Producto'}
+                                    </h3>
+                                    <div
+                                        style={{
+                                            fontSize: '15px',
+                                            fontWeight: '700',
+                                            color: '#6b7280',
+                                            marginTop: '6px',
+                                            letterSpacing: '-0.2px'
+                                        }}
+                                    >
+                                        {formatPrice(currentProduct?.price)}
+                                    </div>
+                                </div>
+
+                                {/* Right: Product Showcase Image (Emerging from bottom-right) */}
+                                <div style={{
+                                    position: 'absolute',
+                                    right: '-4px',
+                                    bottom: '-4px',
+                                    top: '-4px',
+                                    width: '45%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'flex-end',
+                                    pointerEvents: 'none',
+                                    zIndex: 1
+                                }}>
+                                    <img
+                                        src={productImage}
+                                        alt={currentProduct?.name || 'Producto'}
+                                        style={{
+                                            maxHeight: '115px',
+                                            maxWidth: '115px',
+                                            width: 'auto',
+                                            height: 'auto',
+                                            objectFit: 'contain',
+                                            filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.12))'
+                                        }}
+                                    />
+                                </div>
+                            </motion.div>
+                        </AnimatePresence>
+
+                        {/* Subtle Carousel Progress (Top Right) */}
+                        {hasMultiple && (
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    top: '14px',
+                                    right: '18px',
+                                    display: 'flex',
+                                    gap: '4px',
+                                    alignItems: 'center',
+                                    zIndex: 3
+                                }}
+                            >
+                                {products.map((_, idx) => (
+                                    <div
+                                        key={idx}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCurrentIndex(idx);
+                                        }}
+                                        style={{
+                                            width: idx === currentIndex ? '14px' : '4px',
+                                            height: '4px',
+                                            borderRadius: '2px',
+                                            background: idx === currentIndex ? '#111827' : 'rgba(0,0,0,0.18)',
+                                            transition: 'all 0.25s ease',
+                                            cursor: 'pointer'
+                                        }}
+                                    />
+                                ))}
                             </div>
-                        </>
-                    ) : (
-                        <div
-                            onClick={goToStore}
-                            style={{
-                                flex: '0 0 100%',
-                                background: primaryColor,
-                                borderRadius: '12px',
-                                padding: '16px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '10px'
-                            }}
-                        >
-                            <ShoppingBag size={20} color="#ffffff" />
-                            <span style={{
-                                fontSize: '13px',
-                                fontWeight: '700',
-                                color: '#ffffff'
-                            }}>
-                                Ir a la Tienda
-                            </span>
-                            <ArrowRight size={14} color="#ffffff" />
+                        )}
+                    </div>
+                )}
+
+                {/* ═══ 1/3 COLUMN: SOLID CARD "TIENDA" (CENTERED WITH ARROW RIGHT) ═══ */}
+                <div
+                    onClick={goToStore}
+                    style={{
+                        position: 'relative',
+                        background: `linear-gradient(145deg, ${primaryColor} 0%, ${primaryColor}ea 100%)`,
+                        borderRadius: '22px',
+                        padding: '18px 14px',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        minHeight: '128px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        gap: '8px',
+                        boxShadow: `0 8px 26px ${primaryColor}40`,
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.filter = 'brightness(1.06)';
+                        e.currentTarget.style.boxShadow = `0 12px 34px ${primaryColor}55`;
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.filter = 'brightness(1)';
+                        e.currentTarget.style.boxShadow = `0 8px 26px ${primaryColor}40`;
+                    }}
+                >
+                    {/* Background Ambient Glow */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '-30px',
+                            right: '-30px',
+                            width: '90px',
+                            height: '90px',
+                            borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.22)',
+                            filter: 'blur(20px)',
+                            pointerEvents: 'none'
+                        }}
+                    />
+
+                    {/* Centered: "Tienda" + Arrow Right below */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        zIndex: 2
+                    }}>
+                        <h3 style={{
+                            fontSize: '19px',
+                            fontWeight: '800',
+                            color: '#ffffff',
+                            margin: 0,
+                            lineHeight: 1.15,
+                            letterSpacing: '-0.4px'
+                        }}>
+                            Tienda
+                        </h3>
+                        <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.22)',
+                            backdropFilter: 'blur(4px)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#ffffff',
+                            transition: 'transform 0.2s ease'
+                        }}>
+                            <ArrowRight size={18} strokeWidth={2.4} />
                         </div>
-                    )}
+                    </div>
+
+                    {/* Subtle watermark icon in corner */}
+                    <div style={{
+                        position: 'absolute',
+                        right: '-10px',
+                        bottom: '-14px',
+                        opacity: 0.14,
+                        pointerEvents: 'none',
+                        zIndex: 1
+                    }}>
+                        <ShoppingBag size={76} color="#ffffff" />
+                    </div>
                 </div>
             </div>
         </div>

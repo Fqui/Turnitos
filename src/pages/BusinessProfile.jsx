@@ -1167,6 +1167,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
             {/* Instagram-Style Story Viewer Modal */}
             <ProfileStoryViewerModal
+                business={business}
                 selectedHighlight={selectedHighlight}
                 setSelectedHighlight={setSelectedHighlight}
                 selectedPhotoIndex={selectedPhotoIndex}

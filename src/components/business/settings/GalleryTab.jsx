@@ -126,7 +126,7 @@ export default function GalleryTab({
 
         const currentImages = highlight.images || [];
         if (currentImages.length + files.length > 20) {
-            showAlert('Límite de imágenes', 'Solo puedes tener hasta 20 imágenes por destacada');
+            showAlert('Límite de archivos', 'Solo puedes tener hasta 20 fotos/videos por destacada');
             return;
         }
 
@@ -135,8 +135,10 @@ export default function GalleryTab({
             const newUrls = [];
 
             for (const file of files) {
-                if (file.size > 5 * 1024 * 1024) {
-                    showToast(`La imagen ${file.name} es muy pesada (máx 5MB)`, 'error');
+                const isVideo = file.type.startsWith('video/');
+                const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    showToast(`${file.name} es muy pesado (máx ${isVideo ? '50' : '5'}MB)`, 'error');
                     continue;
                 }
                 const url = await serviceAdapter.uploadImage(file);
@@ -151,7 +153,7 @@ export default function GalleryTab({
             };
 
             setEditingHighlight(updatedHighlight);
-            showToast(`${newUrls.length} imagen(es) subida(s)`, 'success');
+            showToast(`${newUrls.length} archivo(s) subido(s)`, 'success');
         } catch (error) {
             console.error('Error uploading highlight images:', error);
             showToast('Error al subir imágenes', 'error');
@@ -384,11 +386,20 @@ export default function GalleryTab({
                                         flexShrink: 0
                                     }}>
                                         <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--bg-main)', padding: '2px' }}>
-                                            <img
-                                                src={story.cover_image || story.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
-                                                alt={story.title}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                                            />
+                                            {/\.(mp4|webm|mov|ogg|m4v)(\?|$)/i.test(story.cover_image || story.images?.[0]) ? (
+                                                <video
+                                                    src={story.cover_image || story.images?.[0]}
+                                                    muted
+                                                    playsInline
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={story.cover_image || story.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
+                                                    alt={story.title}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                                />
+                                            )}
                                         </div>
                                     </div>
 
@@ -464,11 +475,20 @@ export default function GalleryTab({
                                     padding: '2px',
                                     flexShrink: 0
                                 }}>
-                                    <img
-                                        src={highlight.cover_image || highlight.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
-                                        alt={highlight.title}
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                                    />
+                                    {/\.(mp4|webm|mov|ogg|m4v)(\?|$)/i.test(highlight.cover_image || highlight.images?.[0]) ? (
+                                        <video
+                                            src={highlight.cover_image || highlight.images?.[0]}
+                                            muted
+                                            playsInline
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                        />
+                                    ) : (
+                                        <img
+                                            src={highlight.cover_image || highlight.images?.[0] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
+                                            alt={highlight.title}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                                        />
+                                    )}
                                 </div>
 
                                 <div style={{ flex: 1 }}>
@@ -598,7 +618,7 @@ export default function GalleryTab({
                         {/* Images */}
                         <div style={{ marginBottom: '20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                <label style={labelStyle}>Fotos ({editingHighlight.images.length}/20)</label>
+                                <label style={labelStyle}>Fotos y Videos ({editingHighlight.images.length}/20)</label>
                                 <label style={{
                                     ...saveButtonStyle,
                                     width: 'auto',
@@ -611,7 +631,7 @@ export default function GalleryTab({
                                     <input
                                         type="file"
                                         multiple
-                                        accept="image/*"
+                                        accept="image/*,video/*"
                                         onChange={(e) => uploadHighlightImages(e, editingHighlight)}
                                         style={{ display: 'none' }}
                                         disabled={uploadingHighlightImages}
@@ -629,7 +649,7 @@ export default function GalleryTab({
                                     background: 'var(--bg-main)'
                                 }}>
                                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                        Sube fotos para esta destacada
+                                        Sube fotos o videos para esta destacada
                                     </p>
                                 </div>
                             ) : (
@@ -649,12 +669,24 @@ export default function GalleryTab({
                                                 border: editingHighlight.cover_image === url ? '3px solid var(--primary-paddle)' : '1px solid var(--border)'
                                             }}
                                         >
-                                            <img
-                                                src={url}
-                                                alt={`Foto ${idx + 1}`}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                                                onClick={() => setCoverImage(editingHighlight, url)}
-                                            />
+                                            {/\.(mp4|webm|mov|ogg|m4v)(\?|$)/i.test(url) ? (
+                                                <video
+                                                    src={url}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                    onClick={() => setCoverImage(editingHighlight, url)}
+                                                    muted
+                                                    playsInline
+                                                    onMouseEnter={(e) => e.target.play()}
+                                                    onMouseLeave={(e) => { e.target.pause(); e.target.currentTime = 0; }}
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={url}
+                                                    alt={`Foto ${idx + 1}`}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                    onClick={() => setCoverImage(editingHighlight, url)}
+                                                />
+                                            )}
                                             <button
                                                 type="button"
                                                 onClick={() => removeHighlightImage(editingHighlight, url)}
@@ -698,7 +730,7 @@ export default function GalleryTab({
                             )}
                             {editingHighlight.images.length > 0 && (
                                 <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-                                    💡 Click en una foto para establecerla como portada
+                                    💡 Click en una foto/video para establecerla como portada. Los videos se previsualzan al pasar el mouse.
                                 </p>
                             )}
                         </div>
