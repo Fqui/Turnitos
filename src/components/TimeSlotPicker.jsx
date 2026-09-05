@@ -8,6 +8,7 @@ const TimeSlotPicker = ({
     sportColor,
     type,
     resources: providedResources,
+    specialists, // 🆕 Specialists qualified for the service
     openingTime,
     closingTime,
     interval = 30,
@@ -15,7 +16,7 @@ const TimeSlotPicker = ({
     timeRanges,
     selectedDate,
     maxCapacity,
-    businessCapacity, // ✅ NEW: Total capacity of the business (number of spaces)
+    businessCapacity, // ✅ Total capacity of the business (fallback)
     serviceDuration // 🆕 Duration of the service for validation
 }) => {
     // Use selectedTime.time directly from props
@@ -358,11 +359,16 @@ const TimeSlotPicker = ({
 
             const durationToCheck = serviceDuration || interval || 30;
             const stepInterval = interval || 30;
-            const totalCap = Math.max(1, businessCapacity || providedResources?.length || 1);
 
             const slotDate = selectedDate instanceof Date
                 ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
                 : (typeof selectedDate === 'string' ? selectedDate.split('T')[0] : '');
+
+            const activeSpecialists = Array.isArray(specialists) && specialists.length > 0 ? specialists : [];
+            const hasSpecialists = activeSpecialists.length > 0;
+            const totalCap = hasSpecialists
+                ? activeSpecialists.length
+                : Math.max(1, businessCapacity || providedResources?.length || 1);
 
             // For each operating range (e.g. 08:00-13:00, 16:00-20:00)
             activeRanges.forEach(range => {
@@ -374,37 +380,56 @@ const TimeSlotPicker = ({
                     if (isPastTime(min)) continue;
 
                     const timeStr = minutesToTime(min);
+                    const slotStart = min;
+                    const slotEnd = min + durationToCheck;
 
-                    // Check booking conflicts
-                    let isAvailable = true;
-                    let maxUsed = 0;
+                    // Active bookings on this date that overlap with [slotStart, slotEnd)
+                    const overlappingBookings = (existingBookings || []).filter(b => {
+                        if (b.status === 'cancelled') return false;
+                        const bDate = typeof b.date === 'string' ? b.date.split('T')[0] : '';
+                        if (bDate && slotDate && bDate !== slotDate) return false;
 
-                    for (let checkMin = min; checkMin < min + durationToCheck; checkMin += stepInterval) {
-                        const activeBookings = (existingBookings || []).filter(b => {
-                            if (b.status === 'cancelled') return false;
-                            const bDate = typeof b.date === 'string' ? b.date.split('T')[0] : '';
-                            if (bDate && slotDate && bDate !== slotDate) return false;
+                        const bStart = timeToMinutes(b.time);
+                        const bDur = b.duration || 60;
+                        const bEnd = bStart + bDur;
 
-                            const bStart = timeToMinutes(b.time);
-                            const bDur = b.duration || 60;
-                            const bEnd = bStart + bDur;
+                        return slotStart < bEnd && slotEnd > bStart;
+                    });
 
-                            return bStart <= checkMin && checkMin < bEnd;
-                        }).length;
+                    let isAvailable = false;
+                    let availableCount = 0;
 
-                        if (activeBookings >= totalCap) {
-                            isAvailable = false;
-                            break;
-                        }
-                        maxUsed = Math.max(maxUsed, activeBookings);
+                    if (hasSpecialists) {
+                        const busySpecialistIds = new Set();
+                        let unassignedCount = 0;
+
+                        overlappingBookings.forEach(b => {
+                            const specId = b.specialist_id || b.metadata?.specialist_id || b.metadata?.specialist_id_raw;
+                            if (specId) {
+                                busySpecialistIds.add(String(specId));
+                            } else {
+                                unassignedCount++;
+                            }
+                        });
+
+                        const freeSpecialists = activeSpecialists.filter(
+                            spec => !busySpecialistIds.has(String(spec.id))
+                        );
+
+                        availableCount = Math.max(0, freeSpecialists.length - unassignedCount);
+                        isAvailable = availableCount > 0;
+                    } else {
+                        availableCount = Math.max(0, totalCap - overlappingBookings.length);
+                        isAvailable = overlappingBookings.length < totalCap;
                     }
 
                     if (isAvailable) {
                         slots.push({
                             time: timeStr,
                             status: 'available',
-                            slotsUsed: maxUsed,
-                            totalCapacity: totalCap
+                            slotsUsed: totalCap - availableCount,
+                            totalCapacity: totalCap,
+                            availableCount
                         });
                     }
                 }

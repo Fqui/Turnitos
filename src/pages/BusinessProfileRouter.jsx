@@ -18,7 +18,8 @@ export default function BusinessProfileRouter({ overrideSlug }) {
                 if (navBiz && (String(navBiz.id) === String(storedBiz.id) || navBiz.slug === storedBiz.slug)) {
                     return { ...navBiz, ...storedBiz };
                 }
-                if (storedBiz.slug === businessSlug || storedBiz.id === businessSlug) {
+                const cleanSub = businessSlug?.replace(/[-_]/g, '');
+                if (storedBiz.slug === businessSlug || storedBiz.id === businessSlug || (cleanSub && storedBiz.slug === cleanSub)) {
                     return storedBiz;
                 }
             }
@@ -47,16 +48,29 @@ export default function BusinessProfileRouter({ overrideSlug }) {
 
                 let finalBiz = data;
                 if (storedBiz) {
+                    const cleanSub = businessSlug?.replace(/[-_]/g, '');
                     // ONLY merge if storedBiz actually matches this business!
                     const isMatch = (data && (String(data.id) === String(storedBiz.id) || data.slug === storedBiz.slug))
-                        || (!data && (storedBiz.slug === businessSlug || storedBiz.id === businessSlug));
+                        || (!data && (storedBiz.slug === businessSlug || storedBiz.id === businessSlug || (cleanSub && storedBiz.slug === cleanSub)));
 
                     if (isMatch) {
-                        finalBiz = { ...(data || {}), ...storedBiz };
+                        // CRITICAL: NEVER allow shallow storedBiz in localStorage to overwrite fresh relational data (services with specialists, specialists, courts)
+                        finalBiz = {
+                            ...(storedBiz || {}),
+                            ...(data || {}),
+                            // Explicitly keep relational lists from backend if available
+                            services: (data?.services && data.services.length > 0) ? data.services : (storedBiz.services || []),
+                            specialists: (data?.specialists && data.specialists.length > 0) ? data.specialists : (storedBiz.specialists || []),
+                            courts: (data?.courts && data.courts.length > 0) ? data.courts : (storedBiz.courts || []),
+                            metadata: {
+                                ...(data?.metadata || {}),
+                                ...(storedBiz?.metadata || {})
+                            }
+                        };
                         if (storedBiz.metadata?.venue_gallery) {
-                            finalBiz.metadata = { ...(finalBiz.metadata || {}), venue_gallery: storedBiz.metadata.venue_gallery };
+                            finalBiz.metadata.venue_gallery = storedBiz.metadata.venue_gallery;
                         }
-                        if (storedBiz.gallery_images) {
+                        if (storedBiz.gallery_images && (!data?.gallery_images || data.gallery_images.length === 0)) {
                             finalBiz.gallery_images = storedBiz.gallery_images;
                         }
                     }

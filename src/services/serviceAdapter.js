@@ -49,15 +49,7 @@ class ServiceAdapter {
     }
 
     async getBusinessBySlug(slug) {
-        // MockService has this method, SupabaseService doesn't
-        if (this.isDemoMode) {
-            return this.service.getBusinessBySlug(slug);
-        } else {
-            // For Supabase, we need to get all businesses and filter by slug
-            const businesses = await this.service.getBusinesses();
-            const { generateSlug } = await import('../utils/utils');
-            return businesses.find(b => b.slug === slug || generateSlug(b.name) === slug);
-        }
+        return this.service.getBusinessBySlug(slug);
     }
 
     async createBusiness(businessData) {

@@ -19,6 +19,32 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+const formatSocialUrl = (type, handle) => {
+    if (!handle) return '';
+    const clean = String(handle).trim();
+    if (!clean) return '';
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+        return clean;
+    }
+    const username = clean.replace(/^@+/, '').replace(/^\/+/, '');
+    switch (type) {
+        case 'instagram':
+            return `https://instagram.com/${username}`;
+        case 'facebook':
+            return `https://facebook.com/${username}`;
+        case 'tiktok':
+            return `https://tiktok.com/@${username}`;
+        default:
+            return clean;
+    }
+};
+
+const formatWhatsAppUrl = (phone) => {
+    if (!phone) return '';
+    const clean = String(phone).replace(/\D/g, '');
+    return `https://wa.me/${clean}`;
+};
+
 const LinkBio = ({ overrideSlug = null }) => {
     const { businessSlug: routeSlug } = useParams();
     const businessSlug = overrideSlug || routeSlug;
@@ -347,7 +373,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                     {business.instagram && (
                         <a
                             className="linkbio-social-btn"
-                            href={business.instagram}
+                            href={formatSocialUrl('instagram', business.instagram)}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -373,7 +399,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                     {business.facebook && (
                         <a
                             className="linkbio-social-btn"
-                            href={business.facebook}
+                            href={formatSocialUrl('facebook', business.facebook)}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -399,7 +425,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                     {business.tiktok && (
                         <a
                             className="linkbio-social-btn"
-                            href={business.tiktok}
+                            href={formatSocialUrl('tiktok', business.tiktok)}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -506,7 +532,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.2 }}
-                        onClick={() => window.open(`https://wa.me/${business.whatsapp}`, '_blank')}
+                        onClick={() => window.open(formatWhatsAppUrl(business.whatsapp), '_blank')}
                         style={{
                             width: '100%',
                             padding: linkBtnPadding,

@@ -622,7 +622,7 @@ export async function getSpecialistBookings(specialistId, date) {
         .select('*')
         .eq('specialist_id', specialistId)
         .eq('date', date)
-        .in('status', ['pending', 'confirmed', 'deposit_paid']);
+        .neq('status', 'cancelled');
 
     if (error) {
         console.error('Error fetching specialist bookings:', error);
@@ -636,22 +636,19 @@ export async function isSpecialistAvailable(specialistId, date, time, duration) 
     const bookings = await getSpecialistBookings(specialistId, date);
 
     const timeToMinutes = (timeStr) => {
+        if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return 0;
         const [hours, minutes] = timeStr.split(':').map(Number);
-        return hours * 60 + minutes;
+        return (isNaN(hours) ? 0 : hours) * 60 + (isNaN(minutes) ? 0 : minutes);
     };
 
     const requestStart = timeToMinutes(time);
-    const requestEnd = requestStart + duration;
+    const requestEnd = requestStart + (duration || 60);
 
     for (const booking of bookings) {
         const bookingStart = timeToMinutes(booking.time);
         const bookingEnd = bookingStart + (booking.duration || 60);
 
-        if (
-            (requestStart >= bookingStart && requestStart < bookingEnd) ||
-            (requestEnd > bookingStart && requestEnd <= bookingEnd) ||
-            (requestStart <= bookingStart && requestEnd >= bookingEnd)
-        ) {
+        if (requestStart < bookingEnd && requestEnd > bookingStart) {
             return false;
         }
     }
@@ -701,19 +698,9 @@ export async function getAvailableSpecialists(serviceId, date, time, duration, b
         })
     );
 
-    let availableSpecialists = availabilityChecks
+    const availableSpecialists = availabilityChecks
         .filter(Boolean)
         .sort((a, b) => a.bookingCount - b.bookingCount);
-
-    if (availableSpecialists.length === 0 && qualifiedSpecialists.length > 0) {
-        availableSpecialists = qualifiedSpecialists.map(s => ({
-            id: s.id,
-            name: s.name,
-            role: s.role,
-            avatar_url: s.avatar_url,
-            bookingCount: 0
-        }));
-    }
 
     return availableSpecialists;
 }

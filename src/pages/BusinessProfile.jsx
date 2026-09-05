@@ -695,6 +695,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     setSelectedItem(service);
                                     setSelectedDate(null);
                                     setSelectedTime(null);
+                                    setSelectedSpecialist(null);
+                                    setAvailableSpecialists([]);
 
                                     setTimeout(() => {
                                         if (calendarRef.current) {
@@ -739,6 +741,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                         onDateSelect={(date) => {
                                             setSelectedDate(date);
                                             setSelectedTime(null);
+                                            setSelectedSpecialist(null);
+                                            setAvailableSpecialists([]);
                                         }}
                                         sportColor={primaryColor}
                                     />
@@ -748,6 +752,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                         onDateSelect={(date) => {
                                             setSelectedDate(date);
                                             setSelectedTime(null);
+                                            setSelectedSpecialist(null);
+                                            setAvailableSpecialists([]);
                                         }}
                                         sportColor={primaryColor}
                                     />
@@ -830,30 +836,64 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                         );
                                     }
 
+                                    const allBusinessSpecs = business.specialists || [];
+                                    const qualifiedSpecialists = (() => {
+                                        if (Array.isArray(selectedItem?.specialists) && selectedItem.specialists.length > 0) {
+                                            return selectedItem.specialists;
+                                        }
+                                        if (Array.isArray(selectedItem?.specialist_ids) && selectedItem.specialist_ids.length > 0) {
+                                            const filtered = allBusinessSpecs.filter(s => selectedItem.specialist_ids.includes(s.id));
+                                            if (filtered.length > 0) return filtered;
+                                        }
+                                        if (selectedItem?.specialist_id) {
+                                            const filtered = allBusinessSpecs.filter(s => s.id === selectedItem.specialist_id);
+                                            if (filtered.length > 0) return filtered;
+                                        }
+                                        if (Array.isArray(business.services) && selectedItem?.id) {
+                                            const match = business.services.find(s => s.id === selectedItem.id);
+                                            if (match) {
+                                                if (Array.isArray(match.specialists) && match.specialists.length > 0) {
+                                                    return match.specialists;
+                                                }
+                                                if (Array.isArray(match.specialist_ids) && match.specialist_ids.length > 0) {
+                                                    const filtered = allBusinessSpecs.filter(s => match.specialist_ids.includes(s.id));
+                                                    if (filtered.length > 0) return filtered;
+                                                }
+                                                if (match.specialist_id) {
+                                                    const filtered = allBusinessSpecs.filter(s => s.id === match.specialist_id);
+                                                    if (filtered.length > 0) return filtered;
+                                                }
+                                            }
+                                        }
+                                        return allBusinessSpecs;
+                                    })();
+
                                     const resources = business.type === 'sport'
                                         ? (business.courts || [])
-                                        : (selectedItem?.specialist
-                                            ? [{
-                                                id: selectedItem.specialist.id,
-                                                name: selectedItem.specialist.name,
-                                                features: [selectedItem.specialist.role || 'Especialista'],
-                                                price: selectedItem.price || 0,
+                                        : (qualifiedSpecialists.length > 0
+                                            ? qualifiedSpecialists.map(s => ({
+                                                id: s.id,
+                                                name: s.name,
+                                                features: [s.role || 'Especialista'],
+                                                price: selectedItem?.price || 0,
                                                 sport: null,
-                                                capacity: selectedItem.specialist.capacity || 1
-                                            }]
+                                                capacity: s.capacity || 1
+                                            }))
                                             : [{
                                                 id: selectedItem?.id || 'no-specialist',
                                                 name: 'Sin profesional asignado',
                                                 features: ['Servicio'],
                                                 price: selectedItem?.price || 0,
                                                 sport: null,
-                                                capacity: selectedItem?.capacity || 2
+                                                capacity: 1
                                             }]);
 
                                     const businessCapacity = business.capacity ||
-                                        (resources && resources.length > 0
-                                            ? resources.reduce((sum, r) => sum + (r.capacity || 1), 0)
-                                            : 1);
+                                        (qualifiedSpecialists.length > 0
+                                            ? qualifiedSpecialists.length
+                                            : (resources && resources.length > 0
+                                                ? resources.reduce((sum, r) => sum + (r.capacity || 1), 0)
+                                                : 1));
 
                                     const hasPadel = business.type === 'sport' && resources.some(r => r.sport === 'padel');
 
@@ -912,42 +952,65 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                             ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
                                                             : selectedDate;
 
-                                                        const allBusinessSpecs = business.specialists || [];
-                                                        const assignedToService = (selectedItem.specialists && selectedItem.specialists.length > 0)
-                                                            ? selectedItem.specialists
-                                                            : (selectedItem.specialist_ids && selectedItem.specialist_ids.length > 0)
-                                                                ? allBusinessSpecs.filter(s => selectedItem.specialist_ids.includes(s.id))
-                                                                : (selectedItem.specialist ? [selectedItem.specialist] : allBusinessSpecs);
+                                                        const serviceSpecs = qualifiedSpecialists;
 
-                                                        const assignedIds = (selectedItem.specialist_ids && selectedItem.specialist_ids.length > 0)
-                                                            ? selectedItem.specialist_ids
-                                                            : assignedToService.map(s => s.id);
+                                                        // Compute available specialists from current existingBookings in memory
+                                                        const timeToMin = (t) => {
+                                                            if (!t || typeof t !== 'string' || !t.includes(':')) return 0;
+                                                            const [h, m] = t.split(':').map(Number);
+                                                            return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+                                                        };
+                                                        const reqStart = timeToMin(time);
+                                                        const reqEnd = reqStart + serviceDuration;
 
-                                                        let specialists = await serviceAdapter.getAvailableSpecialists(
-                                                            selectedItem.id,
-                                                            dateStr,
-                                                            time,
-                                                            serviceDuration,
-                                                            business.id
+                                                        const overlappingBookings = (existingBookings || []).filter(b => {
+                                                            if (b.status === 'cancelled') return false;
+                                                            const bDate = typeof b.date === 'string' ? b.date.split('T')[0] : '';
+                                                            if (bDate && dateStr && bDate !== dateStr) return false;
+                                                            const bStart = timeToMin(b.time);
+                                                            const bEnd = bStart + (b.duration || 60);
+                                                            return reqStart < bEnd && reqEnd > bStart;
+                                                        });
+
+                                                        const busySpecIds = new Set(
+                                                            overlappingBookings
+                                                                .map(b => b.specialist_id || b.metadata?.specialist_id || b.metadata?.specialist_id_raw)
+                                                                .filter(Boolean)
+                                                                .map(String)
                                                         );
 
-                                                        if (assignedIds.length > 0 && specialists.length > 0) {
-                                                            const filtered = specialists.filter(s => assignedIds.includes(s.id));
-                                                            specialists = filtered.length > 0 ? filtered : assignedToService;
+                                                        let freeSpecs = serviceSpecs.filter(spec => !busySpecIds.has(String(spec.id)));
+
+                                                        // Double check with backend if available
+                                                        try {
+                                                            const remoteAvailable = await serviceAdapter.getAvailableSpecialists(
+                                                                selectedItem.id,
+                                                                dateStr,
+                                                                time,
+                                                                serviceDuration,
+                                                                business.id
+                                                            );
+                                                            if (Array.isArray(remoteAvailable) && remoteAvailable.length > 0) {
+                                                                const remoteIds = new Set(remoteAvailable.map(s => String(s.id)));
+                                                                const matched = freeSpecs.filter(s => remoteIds.has(String(s.id)));
+                                                                if (matched.length > 0) {
+                                                                    freeSpecs = matched;
+                                                                }
+                                                            }
+                                                        } catch (remoteErr) {
+                                                            console.warn('Backend specialist check error, using local availability:', remoteErr);
                                                         }
 
-                                                        if (!specialists || specialists.length === 0) {
-                                                            specialists = assignedToService.length > 0
-                                                                ? assignedToService
-                                                                : (allBusinessSpecs.length > 0 ? allBusinessSpecs : [{ id: 'auto-assigned', name: 'Profesional Asignado', role: 'Especialista' }]);
+                                                        if (freeSpecs.length === 0 && serviceSpecs.length === 0) {
+                                                            freeSpecs = [{ id: 'auto-assigned', name: 'Profesional Asignado', role: 'Especialista' }];
                                                         }
 
-                                                        setAvailableSpecialists(specialists);
-                                                        setSelectedSpecialist(specialists.length === 1 ? specialists[0] : null);
+                                                        setAvailableSpecialists(freeSpecs);
+                                                        setSelectedSpecialist(freeSpecs.length === 1 ? freeSpecs[0] : null);
                                                     } catch (error) {
                                                         console.error('Error fetching available specialists:', error);
-                                                        const fallbackSpecs = (selectedItem.specialists && selectedItem.specialists.length > 0)
-                                                            ? selectedItem.specialists
+                                                        const fallbackSpecs = qualifiedSpecialists.length > 0
+                                                            ? qualifiedSpecialists
                                                             : (business.specialists || [{ id: 'auto-assigned', name: 'Profesional Asignado', role: 'Especialista' }]);
                                                         setAvailableSpecialists(fallbackSpecs);
                                                         setSelectedSpecialist(fallbackSpecs.length === 1 ? fallbackSpecs[0] : null);
@@ -959,6 +1022,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                             sportColor={primaryColor}
                                             type={business.type}
                                             resources={resources}
+                                            specialists={qualifiedSpecialists}
                                             openingTime={open}
                                             closingTime={close}
                                             interval={interval}

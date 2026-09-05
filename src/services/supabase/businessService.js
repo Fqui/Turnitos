@@ -148,7 +148,13 @@ export async function getBusinesses() {
                     category_id
                 )
             ),
-            services (*),
+            services (
+                *,
+                service_specialists (
+                    specialist_id,
+                    specialists (*)
+                )
+            ),
             courts (*),
             specialists (*)
         `);
@@ -172,10 +178,36 @@ export async function getBusinesses() {
             ? b.specialists
             : allSpecialists.filter(s => s.business_id === b.id);
 
+        let bServices = b.services || [];
+        if (Array.isArray(bServices)) {
+            bServices = bServices.map(service => {
+                const assignedSpecialists = (service.service_specialists || [])
+                    .map(ss => ss.specialists || (bSpecialists ? bSpecialists.find(s => s.id === ss.specialist_id) : null))
+                    .filter(Boolean);
+
+                const assignedSpecialistIds = (service.service_specialists || [])
+                    .map(ss => ss.specialist_id || ss.specialists?.id)
+                    .filter(Boolean);
+
+                const finalSpecialists = assignedSpecialists.length > 0
+                    ? assignedSpecialists
+                    : (bSpecialists || []);
+
+                return {
+                    ...service,
+                    specialist_id: assignedSpecialistIds[0] || (bSpecialists?.[0]?.id || ''),
+                    specialist: assignedSpecialists[0] || (bSpecialists?.[0] || null),
+                    specialists: finalSpecialists,
+                    specialist_ids: assignedSpecialistIds.length > 0 ? assignedSpecialistIds : (bSpecialists ? bSpecialists.map(s => s.id) : [])
+                };
+            });
+        }
+
         return {
             ...b,
             subcategories,
-            specialists: bSpecialists
+            specialists: bSpecialists,
+            services: bServices
         };
     });
 
@@ -277,7 +309,11 @@ export async function getSpecialists(businessId) {
 }
 
 export async function getBusinessBySlug(slug) {
-    const { data, error } = await supabase
+    if (!slug) return null;
+    const cleanSlug = String(slug).trim().toLowerCase();
+    const cleanNoHyphens = cleanSlug.replace(/[-_]/g, '');
+
+    let query = supabase
         .from('businesses')
         .select(`
             *,
@@ -305,11 +341,21 @@ export async function getBusinessBySlug(slug) {
             ),
             courts (*),
             specialists (*)
-        `)
-        .eq('slug', slug)
-        .single();
+        `);
+
+    if (cleanSlug === cleanNoHyphens) {
+        query = query.eq('slug', cleanSlug);
+    } else {
+        query = query.or(`slug.eq.${cleanSlug},slug.eq.${cleanNoHyphens}`);
+    }
+
+    const { data: results, error } = await query.limit(1);
 
     if (error) throw error;
+    const data = results?.[0] || null;
+    if (!data) {
+        throw new Error(`Business not found for slug: ${slug}`);
+    }
 
     const { data: specialists } = await supabase
         .from('specialists')
