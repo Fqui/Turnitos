@@ -200,20 +200,20 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
     // Auto-scroll when slot/specialist is selected
     useEffect(() => {
-        if (!loadingSpecialists && selectedTime && business?.type === 'service') {
+        if (selectedTime && business?.type === 'service') {
             if (availableSpecialists.length > 1) {
                 const timer = setTimeout(() => {
                     specialistRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 180);
+                }, 100);
                 return () => clearTimeout(timer);
             } else if (availableSpecialists.length === 1 || availableSpecialists.length === 0) {
                 const timer = setTimeout(() => {
                     confirmRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 180);
+                }, 100);
                 return () => clearTimeout(timer);
             }
         }
-    }, [loadingSpecialists, selectedTime, availableSpecialists.length, business?.type]);
+    }, [selectedTime, availableSpecialists.length, business?.type]);
     useEffect(() => {
         if (!business) {
             const fetchBusiness = async () => {
@@ -948,7 +948,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 }
 
                                                 if (business.type === 'service' && selectedItem?.id) {
-                                                    setLoadingSpecialists(true);
                                                     try {
                                                         const serviceDuration = selectedItem.duration || 60;
                                                         const dateStr = selectedDate instanceof Date
@@ -957,7 +956,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
                                                         const serviceSpecs = qualifiedSpecialists;
 
-                                                        // Compute available specialists from current existingBookings in memory
+                                                        // Compute available specialists from current existingBookings in memory (INSTANTÁNEO)
                                                         const timeToMin = (t) => {
                                                             if (!t || typeof t !== 'string' || !t.includes(':')) return 0;
                                                             const [h, m] = t.split(':').map(Number);
@@ -984,41 +983,39 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
                                                         let freeSpecs = serviceSpecs.filter(spec => !busySpecIds.has(String(spec.id)));
 
-                                                        // Double check with backend if available
-                                                        try {
-                                                            const remoteAvailable = await serviceAdapter.getAvailableSpecialists(
-                                                                selectedItem.id,
-                                                                dateStr,
-                                                                time,
-                                                                serviceDuration,
-                                                                business.id
-                                                            );
-                                                            if (Array.isArray(remoteAvailable) && remoteAvailable.length > 0) {
-                                                                const remoteIds = new Set(remoteAvailable.map(s => String(s.id)));
-                                                                const matched = freeSpecs.filter(s => remoteIds.has(String(s.id)));
-                                                                if (matched.length > 0) {
-                                                                    freeSpecs = matched;
-                                                                }
-                                                            }
-                                                        } catch (remoteErr) {
-                                                            console.warn('Backend specialist check error, using local availability:', remoteErr);
-                                                        }
-
                                                         if (freeSpecs.length === 0 && serviceSpecs.length === 0) {
                                                             freeSpecs = [{ id: 'auto-assigned', name: 'Profesional Asignado', role: 'Especialista' }];
                                                         }
 
+                                                        // ⚡ SIN DELAY: Mostrar especialistas inmediatamente en 0ms
                                                         setAvailableSpecialists(freeSpecs);
                                                         setSelectedSpecialist(freeSpecs.length === 1 ? freeSpecs[0] : null);
+                                                        setLoadingSpecialists(false);
+
+                                                        // Verificación complementaria en segundo plano (asíncrona, no bloqueante)
+                                                        serviceAdapter.getAvailableSpecialists(
+                                                            selectedItem.id,
+                                                            dateStr,
+                                                            time,
+                                                            serviceDuration,
+                                                            business.id
+                                                        ).then(remoteAvailable => {
+                                                            if (Array.isArray(remoteAvailable) && remoteAvailable.length > 0) {
+                                                                const remoteIds = new Set(remoteAvailable.map(s => String(s.id)));
+                                                                const matched = freeSpecs.filter(s => remoteIds.has(String(s.id)));
+                                                                if (matched.length > 0 && matched.length !== freeSpecs.length) {
+                                                                    setAvailableSpecialists(matched);
+                                                                    setSelectedSpecialist(prev => (prev && matched.some(s => s.id === prev.id)) ? prev : (matched.length === 1 ? matched[0] : null));
+                                                                }
+                                                            }
+                                                        }).catch(() => {});
                                                     } catch (error) {
-                                                        console.error('Error fetching available specialists:', error);
+                                                        console.error('Error calculating available specialists:', error);
                                                         const fallbackSpecs = qualifiedSpecialists.length > 0
                                                             ? qualifiedSpecialists
                                                             : (business.specialists || [{ id: 'auto-assigned', name: 'Profesional Asignado', role: 'Especialista' }]);
                                                         setAvailableSpecialists(fallbackSpecs);
                                                         setSelectedSpecialist(fallbackSpecs.length === 1 ? fallbackSpecs[0] : null);
-                                                    } finally {
-                                                        setLoadingSpecialists(false);
                                                     }
                                                 }
                                             }}
@@ -1040,7 +1037,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                 })()}
 
                                 {/* Specialist Selector for services */}
-                                {business.type === 'service' && selectedTime && !loadingSpecialists && (availableSpecialists.length === 0 || availableSpecialists.length > 1) && (
+                                {business.type === 'service' && selectedTime && (availableSpecialists.length === 0 || availableSpecialists.length > 1) && (
                                     <div ref={specialistRef} style={{ scrollMarginTop: '80px' }}>
                                         <ProfileSpecialistSelector
                                             availableSpecialists={availableSpecialists}
@@ -1073,7 +1070,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     )}
 
                     {/* Sticky Mobile Confirmation Button */}
-                    {selectedTime && !loadingSpecialists && (business.type !== 'sport' || selectedTime.courtId !== null) && !business.courts?.some(c => c.sport === 'padel') && (
+                    {selectedTime && (business.type !== 'sport' || selectedTime.courtId !== null) && !business.courts?.some(c => c.sport === 'padel') && (
                         <div ref={confirmRef} style={{
                             textAlign: 'center',
                             marginTop: '40px',

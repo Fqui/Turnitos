@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { formatDisplayDate, calculateEndTime } from '../utils/dateUtils';
+import { formatDisplayDate, formatFriendlyDate, calculateEndTime } from '../utils/dateUtils';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
 let globalCachedPaymentData = {
@@ -146,7 +146,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
 
         // Format the WhatsApp message
         const displayServiceName = courtName || serviceName;
-        const formattedDate = formatDisplayDate(date);
+        const formattedDate = formatFriendlyDate(date) || formatDisplayDate(date);
         const specialistText = specialistName ? ` con ${specialistName}` : '';
         
         // Add selected extras to WhatsApp message
@@ -321,8 +321,8 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                         <span style={{ fontSize: '13px', fontWeight: '800', color: sportColor }}>{courtName || serviceName}</span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-primary)', fontWeight: '700' }}>
-                                        <span>{formatDisplayDate(date)}</span>
-                                        <span>{time}</span>
+                                        <span>{formatFriendlyDate(date)}</span>
+                                        <span>{time} hs</span>
                                     </div>
                                 </div>
 
@@ -515,9 +515,46 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                             gap: '8px'
                                         }}>
                                             {/* Details slot header */}
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-primary)', fontWeight: '700', borderBottom: `1px dashed ${sportColor}30`, paddingBottom: '8px', marginBottom: '4px' }}>
-                                                <span>{formatDisplayDate(date)}</span>
-                                                <span>{time}</span>
+                                            <div style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '6px',
+                                                borderBottom: `1px dashed ${sportColor}30`,
+                                                paddingBottom: '10px',
+                                                marginBottom: '6px'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{
+                                                        fontSize: '15px',
+                                                        fontWeight: '800',
+                                                        color: 'var(--text-primary)',
+                                                        letterSpacing: '-0.2px',
+                                                        lineHeight: 1.2
+                                                    }}>
+                                                        {serviceName || courtName || 'Servicio'}
+                                                    </span>
+                                                    {specialistName && (
+                                                        <span style={{
+                                                            fontSize: '11px',
+                                                            fontWeight: '700',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '6px',
+                                                            backgroundColor: `${sportColor}18`,
+                                                            color: sportColor,
+                                                            whiteSpace: 'nowrap'
+                                                        }}>
+                                                            con {specialistName}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: '700' }}>
+                                                    <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        📅 {formatFriendlyDate(date)}
+                                                    </span>
+                                                    <span style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        ⏰ {time} hs
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             {/* Base Price & Extras Breakdown */}
@@ -666,8 +703,22 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                     </label>
                                     <input
                                         type="tel"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        maxLength={15}
                                         value={customerPhone}
-                                        onChange={(e) => setCustomerPhone(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (
+                                                ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(e.key) ||
+                                                e.ctrlKey || e.metaKey
+                                            ) {
+                                                return;
+                                            }
+                                            if (!/^[0-9]$/.test(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
                                         placeholder="Ej: 3804123456"
                                         style={{
                                             width: '100%',

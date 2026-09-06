@@ -88,3 +88,25 @@ export function calculateEndTime(startTime, durationMinutes) {
         hour12: false
     }).slice(0, 5);
 }
+
+const SPANISH_MONTHS = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+];
+
+/**
+ * Formats a date to friendly day and month format: "7 de septiembre"
+ * @param {string|Date} date - The date to format
+ * @returns {string} - Formatted friendly date (e.g. "7 de septiembre")
+ */
+export function formatFriendlyDate(date) {
+    if (!date) return '';
+    const d = typeof date === 'string' ? parseDate(date) : date;
+    if (!(d instanceof Date) || isNaN(d.getTime())) return String(date);
+
+    const day = d.getDate();
+    const month = SPANISH_MONTHS[d.getMonth()] || d.toLocaleDateString('es-ES', { month: 'long' });
+
+    return `${day} de ${month.toLowerCase()}`;
+}
+
