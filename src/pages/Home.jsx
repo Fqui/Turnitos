@@ -5,6 +5,7 @@ import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
 import SEOHead from '../components/SEOHead';
 import { generateSlug } from '../utils/utils';
+import { parseAmenity } from '../components/common/AmenityIcon';
 
 const DEFAULT_CATEGORIES = [
     { id: 'deportes', slug: 'deportes', name: 'Deportes', icon: '⚽' },
@@ -1009,18 +1010,22 @@ export default function Home() {
 
                                                         {business.amenities && business.amenities.length > 0 && (
                                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                                {business.amenities.slice(0, 2).map((amenity, idx) => (
-                                                                    <span key={idx} style={{
-                                                                        fontSize: '10px',
-                                                                        padding: '3px 6px',
-                                                                        borderRadius: '8px',
-                                                                        backgroundColor: 'var(--bg-main)',
-                                                                        color: 'var(--text-secondary)',
-                                                                        fontWeight: '600'
-                                                                    }}>
-                                                                        {amenity}
-                                                                    </span>
-                                                                ))}
+                                                                {business.amenities.slice(0, 2).map((rawAmenity, idx) => {
+                                                                    const parsed = parseAmenity(rawAmenity);
+                                                                    if (!parsed.name) return null;
+                                                                    return (
+                                                                        <span key={idx} style={{
+                                                                            fontSize: '10px',
+                                                                            padding: '3px 6px',
+                                                                            borderRadius: '8px',
+                                                                            backgroundColor: 'var(--bg-main)',
+                                                                            color: 'var(--text-secondary)',
+                                                                            fontWeight: '600'
+                                                                        }}>
+                                                                            {parsed.name}
+                                                                        </span>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         )}
                                                     </div>

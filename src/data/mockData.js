@@ -234,6 +234,62 @@ export const businesses = [
                 { url: '/quincho_roma_gallery_1.png', caption: 'Parque', category: 'Piscina' }
             ]
         }
+    },
+    {
+        id: 'el-terreno',
+        name: 'El Terreno',
+        slug: 'el-terreno',
+        category: 'alquiler',
+        type: 'venue',
+        primary_color: '#2D6A4F',
+        logo: '/el_terreno_logo.jpg',
+        image: '/el_terreno_logo.jpg',
+        banner_image: '/el_terreno_banner.jpg',
+        location: 'Ruta 5 Km 8, La Rioja',
+        rating: 5.0,
+        theme: 'light',
+        description: 'Exclusivo predio parquizado para eventos, cumpleaños, jornadas familiares y reuniones sociales. Cuenta con piscina, amplio quincho con asador criollo, áreas verdes y todas las comodidades para disfrutar de un día único.',
+        amenities: [
+            'Piscina',
+            'Solarium con Reposeras',
+            'Quincho Techado',
+            'Asador Criollo & Parrilla',
+            'Parque Parquizado',
+            'WiFi de Alta Velocidad',
+            'Mesas y Sillas',
+            'Freezer & Heladera',
+            'Iluminación Nocturna',
+            'Estacionamiento Privado'
+        ],
+        hours: 'Lunes a Domingo: 10:00 - 03:00',
+        price_per_hour: 22000,
+        capacity_limit: 120,
+        pricing_tiers: [
+            { min_guests: 1, max_guests: 40, min: 1, max: 40, price: 22000 },
+            { min_guests: 41, max_guests: 80, min: 41, max: 80, price: 28000 },
+            { min_guests: 81, max_guests: 120, min: 81, max: 120, price: 35000 }
+        ],
+        rental_duration_options: [4, 6, 8, 12, 24],
+        additional_services: [
+            { name: 'Limpieza Post-Evento', price: 15000, icon: '🧹', description: 'Limpieza integral del predio y quincho post-evento' },
+            { name: 'Sonido y Luces LED para Pista', price: 35000, icon: '🎧', description: 'Equipamiento de audio profesional con luces rítmicas' },
+            { name: 'Castillo Inflable con Tobogán', price: 25000, icon: '🏰', description: 'Juego inflable gigante para niños durante todo el evento' },
+            { name: 'Juegos de Living y Gazebos', price: 20000, icon: '🛋️', description: 'Sillones de exterior, mesas ratonas y gazebos para el parque' }
+        ],
+        gallery_images: [
+            { url: '/el_terreno_banner.jpg', caption: 'Vista panorámica al atardecer', category: 'General' },
+            { url: '/el_terreno_piscina.jpg', caption: 'Piscina & Solarium', category: 'Piscina' },
+            { url: '/el_terreno_quincho.jpg', caption: 'Quincho & Asador Criollo', category: 'Quincho' },
+            { url: '/el_terreno_noche.jpg', caption: 'Eventos Nocturnos Iluminados', category: 'Exterior' }
+        ],
+        metadata: {
+            venue_gallery: [
+                { url: '/el_terreno_banner.jpg', caption: 'Vista panorámica al atardecer', category: 'General' },
+                { url: '/el_terreno_piscina.jpg', caption: 'Piscina & Solarium', category: 'Piscina' },
+                { url: '/el_terreno_quincho.jpg', caption: 'Quincho & Asador Criollo', category: 'Quincho' },
+                { url: '/el_terreno_noche.jpg', caption: 'Eventos Nocturnos Iluminados', category: 'Exterior' }
+            ]
+        }
     }
 ];
 

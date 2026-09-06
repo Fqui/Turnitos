@@ -71,8 +71,8 @@ export default function BusinessPortal() {
 
     const loading = authLoading || bookingsLoading;
     const setLoading = (val) => {
-        setAuthLoading(val);
-        setBookingsLoading(val);
+        if (typeof setAuthLoading === 'function') setAuthLoading(val);
+        if (typeof setBookingsLoading === 'function') setBookingsLoading(val);
     };
 
     const setShowBlockModal = (show) => {
@@ -929,7 +929,6 @@ export default function BusinessPortal() {
                     businessId={targetBusinessId}
                     userEmail={targetEmail}
                     onSuccess={handlePasswordSuccess}
-                    onPasswordChanged={handlePasswordSuccess}
                 />
             </div>
         );

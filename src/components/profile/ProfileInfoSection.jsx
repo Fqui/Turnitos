@@ -1,5 +1,6 @@
 import React from 'react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { parseAmenity } from '../common/AmenityIcon';
 
 export default function ProfileInfoSection({
     business,
@@ -197,12 +198,16 @@ export default function ProfileInfoSection({
                                 gap: '12px',
                                 fontSize: '14px'
                             }}>
-                                {business.amenities.map((amenity, index) => (
-                                    <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
-                                        <span style={{ fontSize: '16px' }}>✓</span>
-                                        <span>{amenity}</span>
-                                    </div>
-                                ))}
+                                {business.amenities.map((rawAmenity, index) => {
+                                    const parsed = parseAmenity(rawAmenity);
+                                    if (!parsed.name) return null;
+                                    return (
+                                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
+                                            <span style={{ fontSize: '16px' }}>✓</span>
+                                            <span>{parsed.name}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ) : (
                             <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>No hay comodidades especificadas.</p>

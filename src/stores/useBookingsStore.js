@@ -46,6 +46,7 @@ export const useBookingsStore = create((set, get) => {
     return {
         bookings: [],
         loading: false,
+        setLoading: (loading) => set({ loading }),
         reschedulingBooking: null,
         newBookingAlert: null,
 

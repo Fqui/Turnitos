@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { parseAmenity } from '../../common/AmenityIcon';
 
 export default function AmenitiesTab({
     formData,
@@ -55,20 +56,22 @@ export default function AmenitiesTab({
                     {currentAmenities.length === 0 ? (
                         <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>No hay comodidades agregadas todavía.</p>
                     ) : (
-                        currentAmenities.map((amenity, idx) => (
-                            <span key={idx} style={{
-                                padding: '8px 14px',
-                                borderRadius: '20px',
-                                background: 'var(--bg-card)',
-                                border: '1px solid var(--border)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                color: 'var(--text-primary)'
-                            }}>
-                                <span>✨ {amenity}</span>
+                        currentAmenities.map((amenity, idx) => {
+                            const parsed = parseAmenity(amenity);
+                            return (
+                                <span key={idx} style={{
+                                    padding: '8px 14px',
+                                    borderRadius: '20px',
+                                    background: 'var(--bg-card)',
+                                    border: '1px solid var(--border)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    color: 'var(--text-primary)'
+                                }}>
+                                    <span>✨ {parsed.name}</span>
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -78,10 +81,11 @@ export default function AmenitiesTab({
                                     style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '0 2px', color: '#EF4444', fontWeight: '800', fontSize: '14px' }}
                                     title="Eliminar comodidad"
                                 >
-                                    ✕
+                                    ×
                                 </button>
                             </span>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>
