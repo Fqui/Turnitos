@@ -16,6 +16,7 @@ export default function VenueStoreTab({
     const [editingProduct, setEditingProduct] = useState(null);
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [uploadingProductImage, setUploadingProductImage] = useState(false);
+    const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -41,26 +42,143 @@ export default function VenueStoreTab({
                     </label>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                    {/* Multi-banner Advertising Manager */}
                     <div>
-                        <label style={labelStyle}>Título del Banner Promocional</label>
-                        <input
-                            type="text"
-                            style={inputStyle}
-                            value={formData.metadata?.store_banner_title || ''}
-                            placeholder="Ej: Todo lo que necesitás para tu partido"
-                            onChange={e => handleMetadataChange('store_banner_title', e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label style={labelStyle}>Subtítulo del Banner Promocional</label>
-                        <input
-                            type="text"
-                            style={inputStyle}
-                            value={formData.metadata?.store_banner_subtitle || ''}
-                            placeholder="Ej: Elegí tus productos y retiralos cuando vengas a jugar"
-                            onChange={e => handleMetadataChange('store_banner_subtitle', e.target.value)}
-                        />
+                        <label style={labelStyle}>
+                            Banners Publicitarios de la Tienda
+                        </label>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
+                            Podés cargar uno o varios banners publicitarios. Si cargás más de uno, la tienda mostrará un carrusel automático con transiciones suaves. Medida recomendada: <strong>1200 x 400 px</strong>.
+                        </p>
+
+                        {(() => {
+                            const banners = Array.isArray(formData.metadata?.store_banners) && formData.metadata.store_banners.length > 0
+                                ? formData.metadata.store_banners
+                                : (formData.metadata?.store_banner_image ? [formData.metadata.store_banner_image] : []);
+
+                            const handleRemoveBanner = (indexToRemove) => {
+                                const updated = banners.filter((_, idx) => idx !== indexToRemove);
+                                handleMetadataChange('store_banners', updated);
+                                handleMetadataChange('store_banner_image', updated[0] || '');
+                            };
+
+                            const handleAddBanner = (newUrl) => {
+                                const updated = [...banners, newUrl];
+                                handleMetadataChange('store_banners', updated);
+                                handleMetadataChange('store_banner_image', updated[0] || newUrl);
+                            };
+
+                            return (
+                                <div>
+                                    {banners.length > 0 && (
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                                            gap: '12px',
+                                            marginBottom: '14px'
+                                        }}>
+                                            {banners.map((url, idx) => (
+                                                <div key={idx} style={{
+                                                    position: 'relative',
+                                                    borderRadius: '12px',
+                                                    overflow: 'hidden',
+                                                    border: '1px solid var(--border)',
+                                                    aspectRatio: '1200 / 400',
+                                                    background: '#1e293b'
+                                                }}>
+                                                    <img
+                                                        src={url}
+                                                        alt={`Banner ${idx + 1}`}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    />
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        bottom: '6px',
+                                                        left: '8px',
+                                                        background: 'rgba(0,0,0,0.65)',
+                                                        color: '#fff',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '6px',
+                                                        fontSize: '11px',
+                                                        fontWeight: '700'
+                                                    }}>
+                                                        Banner #{idx + 1}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveBanner(idx)}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '6px',
+                                                            right: '6px',
+                                                            background: 'rgba(239, 68, 68, 0.85)',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            padding: '4px 8px',
+                                                            fontSize: '11px',
+                                                            fontWeight: '700',
+                                                            cursor: 'pointer',
+                                                            backdropFilter: 'blur(4px)'
+                                                        }}
+                                                        title="Eliminar este banner"
+                                                    >
+                                                        🗑️ Quitar
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <label style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            padding: '10px 18px',
+                                            borderRadius: '10px',
+                                            background: 'var(--bg-main)',
+                                            border: '1px dashed var(--border)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            cursor: uploadingBannerImage ? 'wait' : 'pointer',
+                                            transition: 'border-color 0.2s ease'
+                                        }}>
+                                            {uploadingBannerImage ? '⏳ Subiendo banner...' : '📷 + Agregar Banner Publicitario (1200x400)'}
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                disabled={uploadingBannerImage}
+                                                style={{ display: 'none' }}
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+                                                    try {
+                                                        setUploadingBannerImage(true);
+                                                        const url = await serviceAdapter.uploadImage(file);
+                                                        handleAddBanner(url);
+                                                        if (showToast) showToast('Banner agregado correctamente', 'success');
+                                                    } catch (err) {
+                                                        console.error('Error uploading banner image:', err);
+                                                        if (showToast) showToast('Error al subir banner', 'error');
+                                                    } finally {
+                                                        setUploadingBannerImage(false);
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+
+                                        {banners.length > 0 && (
+                                            <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '600' }}>
+                                                ✓ {banners.length} {banners.length === 1 ? 'banner activo' : 'banners activos (carrusel)'}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
             </div>

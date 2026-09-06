@@ -30,9 +30,18 @@ export function generateSlug(name) {
  */
 export function findBusinessBySlug(businesses, slug) {
     if (!businesses || !slug) return null;
+    const cleanInput = slug.toLowerCase().trim();
+    const strippedInput = cleanInput.replace(/[-_\s]/g, '');
 
     return businesses.find(business => {
-        return business.slug === slug || generateSlug(business.name) === slug;
+        if (!business) return false;
+        const bSlug = (business.slug || '').toLowerCase().trim();
+        const bNameSlug = generateSlug(business.name || '').toLowerCase().trim();
+
+        return bSlug === cleanInput ||
+               bNameSlug === cleanInput ||
+               (bSlug && bSlug.replace(/[-_\s]/g, '') === strippedInput) ||
+               (bNameSlug && bNameSlug.replace(/[-_\s]/g, '') === strippedInput);
     });
 }
 

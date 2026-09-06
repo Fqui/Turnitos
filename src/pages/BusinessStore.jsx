@@ -5,7 +5,6 @@ import {
     Search,
     ShoppingBag,
     SlidersHorizontal,
-    Heart,
     ChevronLeft,
     ChevronRight,
     Plus,
@@ -15,11 +14,36 @@ import {
     Sparkles,
     X,
     ArrowUpRight,
-    Check
+    Check,
+    MessageCircle,
+    Truck,
+    ShieldCheck,
+    Trash2
 } from 'lucide-react';
 import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import { isFreePlan } from '../utils/subscriptionUtils';
+
+const STORE_DIFFERENTIALS = [
+    {
+        id: 'whatsapp',
+        icon: MessageCircle,
+        title: 'Pedido Directo',
+        desc: 'Coordiná por WhatsApp'
+    },
+    {
+        id: 'shipping',
+        icon: Truck,
+        title: 'Retiro o Envío',
+        desc: 'En local o a domicilio'
+    },
+    {
+        id: 'payment',
+        icon: ShieldCheck,
+        title: 'Pago Flexible',
+        desc: 'Efectivo o transferencia'
+    }
+];
 
 export default function BusinessStore({ overrideSlug }) {
     const { businessSlug: routeSlug } = useParams();
@@ -34,7 +58,46 @@ export default function BusinessStore({ overrideSlug }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [toastMessage, setToastMessage] = useState(null);
-    const [favorites, setFavorites] = useState({});
+    const [showLeaveConfirmation, setShowLeaveConfirmation] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+
+    // Differential cards cycling transition
+    const [activeDiffIndex, setActiveDiffIndex] = useState(0);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setActiveDiffIndex((prev) => (prev + 1) % STORE_DIFFERENTIALS.length);
+        }, 3200);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Promotional advertising banner carousel state
+    const storeBanners = useMemo(() => {
+        if (Array.isArray(business?.metadata?.store_banners) && business.metadata.store_banners.length > 0) {
+            return business.metadata.store_banners.filter(Boolean);
+        }
+        if (business?.metadata?.store_banner_image) {
+            return [
+                business.metadata.store_banner_image,
+                '/spa_banner_1.jpg',
+                '/spa_banner_2.jpg'
+            ];
+        }
+        return [
+            '/spa_banner_1.jpg',
+            '/spa_banner_2.jpg'
+        ];
+    }, [business?.metadata?.store_banners, business?.metadata?.store_banner_image]);
+
+    const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+
+    useEffect(() => {
+        if (storeBanners.length <= 1) return;
+        const timer = setInterval(() => {
+            setActiveBannerIndex(prev => (prev + 1) % storeBanners.length);
+        }, 4500);
+        return () => clearInterval(timer);
+    }, [storeBanners.length]);
 
     // Product Detail View state (matching Screen 2 from reference)
     const [selectedProductModal, setSelectedProductModal] = useState(null);
@@ -135,6 +198,11 @@ export default function BusinessStore({ overrideSlug }) {
     };
 
     const updateQty = (cartId, change) => {
+        const item = cart.find(i => (i.cartId || i.id) === cartId);
+        if (item && item.qty === 1 && change === -1) {
+            setItemToDelete(item);
+            return;
+        }
         setCart(prev => prev.map(item => {
             if (item.cartId === cartId || item.id === cartId) {
                 const newQty = item.qty + change;
@@ -148,12 +216,13 @@ export default function BusinessStore({ overrideSlug }) {
         setCart(prev => prev.filter(item => (item.cartId || item.id) !== cartId));
     };
 
-    const toggleFavorite = (productId, e) => {
-        if (e) e.stopPropagation();
-        setFavorites(prev => ({
-            ...prev,
-            [productId]: !prev[productId]
-        }));
+    const handleConfirmDeleteItem = () => {
+        if (!itemToDelete) return;
+        const name = itemToDelete.name;
+        removeFromCart(itemToDelete.cartId || itemToDelete.id);
+        setItemToDelete(null);
+        setToastMessage(`"${name}" eliminado del carrito 🗑️`);
+        setTimeout(() => setToastMessage(null), 2000);
     };
 
     const getCartTotal = () => cart.reduce((acc, item) => acc + (Number(item.price || 0) * item.qty), 0);
@@ -164,6 +233,19 @@ export default function BusinessStore({ overrideSlug }) {
             setSelectedProductModal(null);
             return;
         }
+        if (isCartOpen) {
+            setIsCartOpen(false);
+            return;
+        }
+        if (cart.length > 0) {
+            setShowLeaveConfirmation(true);
+            return;
+        }
+        executeExit();
+    };
+
+    const executeExit = () => {
+        setShowLeaveConfirmation(false);
         if (window.history.state && window.history.state.idx > 0) {
             navigate(-1);
         } else if (overrideSlug) {
@@ -174,6 +256,17 @@ export default function BusinessStore({ overrideSlug }) {
             navigate('/');
         }
     };
+
+    // Alerta al intentar recargar o cerrar pestaña con carrito activo
+    useEffect(() => {
+        if (cart.length === 0) return;
+        const handleBeforeUnload = (e) => {
+            e.preventDefault();
+            e.returnValue = '';
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [cart.length]);
 
     const handleConfirmOrder = () => {
         if (!business?.whatsapp) {
@@ -211,19 +304,20 @@ export default function BusinessStore({ overrideSlug }) {
         setSelectedSize(prod.sizes?.[0] || null);
     };
 
-    // Category with representative thumbnail mapping
+    // Category with representative thumbnail mapping + product counts
     const dynamicCategories = useMemo(() => {
         const catMap = new Map();
         (products || []).forEach(p => {
             const cat = p.category || 'General';
             if (!catMap.has(cat)) {
-                catMap.set(cat, p.image || p.images?.[0] || null);
+                catMap.set(cat, { image: p.image || p.images?.[0] || null, count: 0 });
             }
+            catMap.get(cat).count += 1;
         });
 
-        const list = [{ name: 'Todos', image: null }];
-        catMap.forEach((img, name) => {
-            list.push({ name, image: img });
+        const list = [{ name: 'Todos', image: null, count: (products || []).length }];
+        catMap.forEach((data, name) => {
+            list.push({ name, image: data.image, count: data.count });
         });
         return list;
     }, [products]);
@@ -294,94 +388,191 @@ export default function BusinessStore({ overrideSlug }) {
     return (
         <div style={{
             minHeight: '100vh',
+            width: '100%',
+            maxWidth: '100vw',
             backgroundColor: 'var(--bg-main)',
             color: 'var(--text-primary)',
             paddingBottom: '100px',
-            position: 'relative'
+            position: 'relative',
+            boxSizing: 'border-box',
+            overflowX: 'hidden'
         }}>
             {/* Centered Mobile/Desktop Shell */}
-            <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px 20px' }}>
+            <div className="business-store-shell">
 
-                {/* ═══ 1. TOP HEADER (Screen 1 Reference) ═══ */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '18px'
-                }}>
-                    {/* Back / Menu button */}
-                    <button
-                        type="button"
-                        onClick={handleGoBack}
-                        style={{
-                            background: 'var(--bg-card)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '50%',
-                            width: '42px',
-                            height: '42px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            color: 'var(--text-primary)',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                            transition: 'transform 0.15s ease'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                        title="Volver"
-                    >
-                        <ArrowLeft size={18} />
-                    </button>
-
-                    {/* Store Title */}
-                    <div style={{ textAlign: 'center', minWidth: 0, padding: '0 10px' }}>
-                        <div style={{
-                            fontSize: '17px',
-                            fontWeight: '800',
-                            color: 'var(--text-primary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '5px'
-                        }}>
-                            <span>{business.name}</span>
-                            <CheckCircle2 size={16} color={primaryColor} />
+                {/* ═══ 1A. DESKTOP INTEGRATED HEADER (Visible > 768px) ═══ */}
+                <header className="store-header-desktop">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <button
+                            type="button"
+                            onClick={handleGoBack}
+                            style={{
+                                background: 'var(--bg-main)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '50%',
+                                width: '40px',
+                                height: '40px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: 'var(--text-primary)',
+                                transition: 'transform 0.15s ease'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                            title="Volver al perfil"
+                        >
+                            <ArrowLeft size={18} />
+                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {business.logo || business.image ? (
+                                <img
+                                    src={business.logo || business.image}
+                                    alt={business.name}
+                                    style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        borderRadius: '12px',
+                                        objectFit: 'cover',
+                                        border: '1px solid var(--border)'
+                                    }}
+                                />
+                            ) : (
+                                <div style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '12px',
+                                    backgroundColor: primaryColor,
+                                    color: '#fff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontWeight: '800',
+                                    fontSize: '16px'
+                                }}>
+                                    {business.name?.[0] || 'T'}
+                                </div>
+                            )}
+                            <div>
+                                <div style={{
+                                    fontSize: '20px',
+                                    fontWeight: '800',
+                                    color: 'var(--text-primary)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '7px',
+                                    letterSpacing: '-0.3px'
+                                }}>
+                                    <span>{business.name}</span>
+                                    <CheckCircle2 size={18} color={primaryColor} />
+                                </div>
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '700' }}>
+                                    Tienda Oficial
+                                </span>
+                            </div>
                         </div>
-                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                            Tienda Oficial
-                        </span>
                     </div>
 
-                    {/* Cart Button with floating counter */}
+                    {/* Desktop Cart Button */}
                     <button
                         type="button"
                         onClick={() => setIsCartOpen(true)}
                         style={{
-                            position: 'relative',
-                            background: 'var(--bg-card)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '50%',
-                            width: '42px',
-                            height: '42px',
-                            display: 'flex',
+                            display: 'inline-flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
+                            gap: '10px',
+                            background: getCartCount() > 0 ? primaryColor : 'var(--bg-main)',
+                            color: getCartCount() > 0 ? '#ffffff' : 'var(--text-primary)',
+                            border: getCartCount() > 0 ? 'none' : '1px solid var(--border)',
+                            borderRadius: '24px',
+                            padding: '10px 20px',
+                            fontSize: '13px',
+                            fontWeight: '700',
                             cursor: 'pointer',
-                            color: 'var(--text-primary)',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                            transition: 'transform 0.15s ease'
+                            transition: 'all 0.18s ease',
+                            boxShadow: getCartCount() > 0 ? `0 4px 14px ${primaryColor}40` : 'none'
                         }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                        title="Ver Carrito"
                     >
-                        <ShoppingBag size={18} />
-                        {getCartCount() > 0 && (
-                            <motion.span
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                style={{
+                        <ShoppingBag size={17} />
+                        <span>Carrito ({getCartCount()})</span>
+                    </button>
+                </header>
+
+                {/* ═══ 1B. MOBILE HEADER (< 768px) ═══ */}
+                <div className="store-header-mobile">
+                    {/* Top Row: Back, Title, Cart */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%'
+                    }}>
+                        <button
+                            type="button"
+                            onClick={handleGoBack}
+                            style={{
+                                background: 'var(--bg-card)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '50%',
+                                width: '42px',
+                                height: '42px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: 'var(--text-primary)',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                                flexShrink: 0
+                            }}
+                            title="Volver"
+                        >
+                            <ArrowLeft size={18} />
+                        </button>
+
+                        <div style={{ textAlign: 'center', minWidth: 0, padding: '0 8px', flex: 1 }}>
+                            <div style={{
+                                fontSize: '18px',
+                                fontWeight: '800',
+                                color: 'var(--text-primary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                letterSpacing: '-0.3px',
+                                lineHeight: 1.2
+                            }}>
+                                <span>{business.name}</span>
+                                <CheckCircle2 size={17} color={primaryColor} style={{ flexShrink: 0 }} />
+                            </div>
+                            <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '700' }}>
+                                Tienda Oficial
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsCartOpen(true)}
+                            style={{
+                                position: 'relative',
+                                background: 'var(--bg-card)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '50%',
+                                width: '42px',
+                                height: '42px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: 'var(--text-primary)',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                                flexShrink: 0
+                            }}
+                            title="Ver Carrito"
+                        >
+                            <ShoppingBag size={18} />
+                            {getCartCount() > 0 && (
+                                <span style={{
                                     position: 'absolute',
                                     top: '-3px',
                                     right: '-3px',
@@ -397,316 +588,237 @@ export default function BusinessStore({ overrideSlug }) {
                                     justifyContent: 'center',
                                     padding: '0 4px',
                                     boxShadow: `0 2px 6px ${primaryColor}60`
-                                }}
-                            >
-                                {getCartCount()}
-                            </motion.span>
-                        )}
-                    </button>
-                </div>
-
-                {/* ═══ 2. SEARCH & FILTER BAR ═══ */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    marginBottom: '20px'
-                }}>
-                    <div style={{
-                        flex: 1,
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        background: 'var(--bg-card)',
-                        borderRadius: '24px',
-                        border: '1px solid var(--border)',
-                        padding: '0 16px',
-                        height: '46px',
-                        boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
-                    }}>
-                        <Search size={18} color="var(--text-secondary)" style={{ flexShrink: 0, marginRight: '10px' }} />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="¿Qué estás buscando?"
-                            style={{
-                                width: '100%',
-                                border: 'none',
-                                background: 'transparent',
-                                color: 'var(--text-primary)',
-                                fontSize: '13px',
-                                outline: 'none',
-                                fontWeight: '500'
-                            }}
-                        />
-                        {searchQuery && (
-                            <button
-                                type="button"
-                                onClick={() => setSearchQuery('')}
-                                style={{
-                                    border: 'none',
-                                    background: 'none',
-                                    color: 'var(--text-secondary)',
-                                    cursor: 'pointer',
-                                    padding: '4px'
-                                }}
-                            >
-                                <X size={16} />
-                            </button>
-                        )}
+                                }}>
+                                    {getCartCount()}
+                                </span>
+                            )}
+                        </button>
                     </div>
-
-                    <button
-                        type="button"
-                        onClick={() => {
-                            // Cycle through categories or open filter
-                            setActiveCategory('Todos');
-                            setSearchQuery('');
-                        }}
-                        style={{
-                            width: '46px',
-                            height: '46px',
-                            borderRadius: '24px',
-                            background: 'var(--bg-card)',
-                            border: '1px solid var(--border)',
-                            color: 'var(--text-primary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                            boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
-                        }}
-                        title="Limpiar filtros"
-                    >
-                        <SlidersHorizontal size={18} />
-                    </button>
                 </div>
 
-                {/* ═══ 3. HERO PROMO BANNER (Screen 1 Reference: Bento 3D Card) ═══ */}
-                {featuredProduct && (
-                    <div
-                        onClick={() => handleOpenProductModal(featuredProduct)}
-                        style={{
-                            position: 'relative',
-                            background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}d9 55%, ${primaryColor}b3 100%)`,
-                            borderRadius: '24px',
-                            padding: '20px 22px',
-                            marginBottom: '26px',
-                            overflow: 'hidden',
-                            minHeight: '144px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            cursor: 'pointer',
-                            boxShadow: `0 10px 28px ${primaryColor}38`,
-                            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                    >
-                        {/* Ambient decorative blob */}
+                {/* ═══ 2. PROMOTIONAL ADVERTISING BANNER CAROUSEL ═══ */}
+                {business.metadata?.has_store_banner !== false && (
+                    <div className="store-unified-banner" style={{
+                        boxShadow: `0 12px 36px ${primaryColor}30`,
+                        border: '1px solid rgba(255,255,255,0.16)'
+                    }}>
+                        {/* Animated Advertising Banners with Smooth Crossfade Transition */}
+                        <AnimatePresence initial={false} mode="sync">
+                            <motion.div
+                                key={activeBannerIndex}
+                                initial={{ opacity: 0, scale: 1.02 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.75, ease: 'easeInOut' }}
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    background: storeBanners.length > 0
+                                        ? `url(${storeBanners[activeBannerIndex]}) center/cover no-repeat`
+                                        : `linear-gradient(135deg, ${primaryColor} 0%, #1e1b4b 100%)`,
+                                    zIndex: 1
+                                }}
+                            />
+                        </AnimatePresence>
+
+                        {/* Soft Vignette Overlay for Depth */}
                         <div style={{
                             position: 'absolute',
-                            top: '-40px',
-                            right: '-40px',
-                            width: '140px',
-                            height: '140px',
-                            borderRadius: '50%',
-                            background: 'rgba(255,255,255,0.2)',
-                            filter: 'blur(30px)',
-                            pointerEvents: 'none'
+                            inset: 0,
+                            background: 'linear-gradient(to right, rgba(0,0,0,0.15) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.3) 100%)',
+                            pointerEvents: 'none',
+                            zIndex: 2
                         }} />
 
-                        {/* Left Banner Text */}
-                        <div style={{
-                            zIndex: 2,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            maxWidth: '60%'
-                        }}>
-                            <div>
-                                <span style={{
-                                    display: 'inline-block',
-                                    fontSize: '10px',
-                                    fontWeight: '800',
-                                    color: '#ffffff',
-                                    background: 'rgba(0,0,0,0.22)',
-                                    padding: '3px 9px',
-                                    borderRadius: '12px',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.6px',
-                                    marginBottom: '8px'
-                                }}>
-                                    Oferta Especial
-                                </span>
-                                <h3 style={{
-                                    fontSize: '16px',
-                                    fontWeight: '800',
-                                    color: '#ffffff',
-                                    margin: 0,
-                                    lineHeight: 1.25,
-                                    letterSpacing: '-0.2px'
-                                }}>
-                                    {business.metadata?.store_banner_title || 'Comprá online y retirá en tu turno'}
-                                </h3>
+                        {/* Floating Right Differentials Card */}
+                        <div className="store-banner-differentials">
+                            <div className="store-diff-carousel-wrapper">
+                                <AnimatePresence mode="wait">
+                                    {(() => {
+                                        const currentDiff = STORE_DIFFERENTIALS[activeDiffIndex];
+                                        const DiffIcon = currentDiff.icon;
+                                        return (
+                                            <motion.div
+                                                key={currentDiff.id}
+                                                initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: -10, scale: 0.96 }}
+                                                transition={{ duration: 0.32, ease: 'easeOut' }}
+                                                className="store-diff-active-card"
+                                                onClick={() => setActiveDiffIndex((prev) => (prev + 1) % STORE_DIFFERENTIALS.length)}
+                                                title="Hacé clic para ver el siguiente beneficio"
+                                            >
+                                                <div className="store-diff-icon">
+                                                    <DiffIcon size={16} />
+                                                </div>
+                                                <div className="store-diff-info">
+                                                    <span className="store-diff-title">{currentDiff.title}</span>
+                                                    <span className="store-diff-desc">{currentDiff.desc}</span>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })()}
+                                </AnimatePresence>
                             </div>
 
-                            {/* Pill CTA button with up-right arrow */}
-                            <div style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                marginTop: '14px'
-                            }}>
-                                <div style={{
-                                    padding: '7px 14px',
-                                    borderRadius: '20px',
-                                    background: '#111827',
-                                    color: '#ffffff',
-                                    fontSize: '11px',
-                                    fontWeight: '800',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    letterSpacing: '0.4px',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                                }}>
-                                    Comprar Ahora
-                                    <div style={{
-                                        width: '16px',
-                                        height: '16px',
-                                        borderRadius: '50%',
-                                        background: '#ffffff',
-                                        color: '#111827',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '10px',
-                                        fontWeight: '900'
-                                    }}>
-                                        ↗
-                                    </div>
-                                </div>
+                            {/* Micro Dots Indicator for Differentials */}
+                            <div className="store-diff-dots">
+                                {STORE_DIFFERENTIALS.map((diff, idx) => (
+                                    <button
+                                        key={diff.id}
+                                        type="button"
+                                        className={`store-diff-dot ${idx === activeDiffIndex ? 'active' : ''}`}
+                                        onClick={() => setActiveDiffIndex(idx)}
+                                        aria-label={`Ver ${diff.title}`}
+                                    />
+                                ))}
                             </div>
                         </div>
 
-                        {/* Right: 3D Product showcase cutout */}
+                        {/* Carousel Pagination Dots (Center Bottom) */}
+                        {storeBanners.length > 1 && (
+                            <div className="store-banner-carousel-dots">
+                                {storeBanners.map((_, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        className={`store-banner-carousel-dot ${idx === activeBannerIndex ? 'active' : ''}`}
+                                        onClick={() => setActiveBannerIndex(idx)}
+                                        aria-label={`Ver banner publicitario ${idx + 1}`}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Navigation Arrows on Hover */}
+                        {storeBanners.length > 1 && (
+                            <>
+                                <button
+                                    type="button"
+                                    className="store-banner-arrow store-banner-arrow-left"
+                                    onClick={() => setActiveBannerIndex(prev => (prev - 1 + storeBanners.length) % storeBanners.length)}
+                                    aria-label="Banner anterior"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="store-banner-arrow store-banner-arrow-right"
+                                    onClick={() => setActiveBannerIndex(prev => (prev + 1) % storeBanners.length)}
+                                    aria-label="Banner siguiente"
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {/* ═══ 3. CATEGORIES SECTION (Shown only when more than 2 categories) ═══ */}
+                {dynamicCategories.length > 2 && (
+                    <div style={{ marginBottom: '22px', width: '100%', maxWidth: '100%', minWidth: 0 }}>
                         <div style={{
-                            position: 'absolute',
-                            right: '-10px',
-                            bottom: '-8px',
-                            top: '-8px',
-                            width: '45%',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            pointerEvents: 'none',
-                            zIndex: 1
+                            justifyContent: 'space-between',
+                            marginBottom: '10px'
                         }}>
-                            <img
-                                src={featuredProduct.image || featuredProduct.images?.[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=300&q=80'}
-                                alt={featuredProduct.name}
-                                style={{
-                                    maxWidth: '135px',
-                                    maxHeight: '135px',
-                                    width: 'auto',
-                                    height: 'auto',
-                                    objectFit: 'contain',
-                                    filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.25))'
-                                }}
-                            />
+                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                                Categorías
+                            </h3>
+                            {activeCategory !== 'Todos' && (
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveCategory('Todos')}
+                                    style={{
+                                        border: 'none',
+                                        background: 'none',
+                                        color: primaryColor,
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        padding: 0
+                                    }}
+                                >
+                                    Ver todas
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Horizontal Category Pills with thumbnails */}
+                        <div style={{
+                            display: 'flex',
+                            gap: '8px',
+                            overflowX: 'auto',
+                            paddingBottom: '4px',
+                            scrollbarWidth: 'none',
+                            msOverflowStyle: 'none',
+                            width: '100%',
+                            maxWidth: '100%',
+                            minWidth: 0,
+                            WebkitOverflowScrolling: 'touch'
+                        }}>
+                            {dynamicCategories.map(cat => {
+                                const isActive = activeCategory === cat.name;
+                                return (
+                                    <button
+                                        key={cat.name}
+                                        type="button"
+                                        onClick={() => setActiveCategory(cat.name)}
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            padding: '8px 16px',
+                                            borderRadius: '24px',
+                                            border: isActive ? `1.5px solid ${primaryColor}` : '1px solid var(--border)',
+                                            background: isActive ? `${primaryColor}18` : 'var(--bg-card)',
+                                            color: isActive ? primaryColor : 'var(--text-primary)',
+                                            fontSize: '12px',
+                                            fontWeight: isActive ? '800' : '600',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap',
+                                            flexShrink: 0,
+                                            transition: 'all 0.18s ease',
+                                            boxShadow: isActive ? `0 4px 14px ${primaryColor}20` : '0 2px 6px rgba(0,0,0,0.02)'
+                                        }}
+                                    >
+                                        {cat.image && (
+                                            <img
+                                                src={cat.image}
+                                                alt=""
+                                                style={{
+                                                    width: '20px',
+                                                    height: '20px',
+                                                    borderRadius: '50%',
+                                                    objectFit: 'cover',
+                                                    background: '#ffffff'
+                                                }}
+                                            />
+                                        )}
+                                        <span>{cat.name}</span>
+                                        <span style={{
+                                            fontSize: '10px',
+                                            padding: '2px 7px',
+                                            borderRadius: '10px',
+                                            background: isActive ? primaryColor : 'var(--border)',
+                                            color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                                            fontWeight: '800'
+                                        }}>
+                                            {cat.count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
 
-                {/* ═══ 4. CATEGORIES SECTION (With Micro-thumbnails) ═══ */}
-                <div style={{ marginBottom: '26px' }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '12px'
-                    }}>
-                        <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
-                            Categorías
-                        </h3>
-                        {activeCategory !== 'Todos' && (
-                            <button
-                                type="button"
-                                onClick={() => setActiveCategory('Todos')}
-                                style={{
-                                    border: 'none',
-                                    background: 'none',
-                                    color: primaryColor,
-                                    fontSize: '12px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    padding: 0
-                                }}
-                            >
-                                Ver todas
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Horizontal Category Pills with thumbnails */}
-                    <div style={{
-                        display: 'flex',
-                        gap: '10px',
-                        overflowX: 'auto',
-                        paddingBottom: '4px',
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none'
-                    }}>
-                        {dynamicCategories.map(cat => {
-                            const isActive = activeCategory === cat.name;
-                            return (
-                                <button
-                                    key={cat.name}
-                                    type="button"
-                                    onClick={() => setActiveCategory(cat.name)}
-                                    style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        padding: '7px 14px',
-                                        borderRadius: '24px',
-                                        border: isActive ? `1.5px solid ${primaryColor}` : '1px solid var(--border)',
-                                        background: isActive ? `${primaryColor}15` : 'var(--bg-card)',
-                                        color: isActive ? primaryColor : 'var(--text-primary)',
-                                        fontSize: '12px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer',
-                                        whiteSpace: 'nowrap',
-                                        flexShrink: 0,
-                                        transition: 'all 0.18s ease',
-                                        boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-                                    }}
-                                >
-                                    {cat.image && (
-                                        <img
-                                            src={cat.image}
-                                            alt=""
-                                            style={{
-                                                width: '22px',
-                                                height: '22px',
-                                                borderRadius: '50%',
-                                                objectFit: 'cover',
-                                                background: '#ffffff'
-                                            }}
-                                        />
-                                    )}
-                                    <span>{cat.name}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* ═══ 5. PRODUCTS GRID ("Novedades" / Catálogo) ═══ */}
-                <div style={{ marginBottom: '20px' }}>
+                {/* ═══ 4. PRODUCTS GRID ("Novedades" / Catálogo) ═══ */}
+                <div style={{ marginBottom: '20px', width: '100%', maxWidth: '100%' }}>
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -716,9 +828,6 @@ export default function BusinessStore({ overrideSlug }) {
                         <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
                             {activeCategory === 'Todos' ? 'Nuestros Productos' : activeCategory}
                         </h3>
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                            {filteredProducts.length} {filteredProducts.length === 1 ? 'artículo' : 'artículos'}
-                        </span>
                     </div>
 
                     {filteredProducts.length === 0 ? (
@@ -739,22 +848,18 @@ export default function BusinessStore({ overrideSlug }) {
                             </p>
                         </div>
                     ) : (
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
-                            gap: '14px'
-                        }}>
+                        <div className="store-products-grid">
                             {filteredProducts.map(prod => {
-                                const isFav = Boolean(favorites[prod.id]);
                                 const img = prod.image || prod.images?.[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=300&q=80';
 
                                 return (
                                     <motion.div
                                         key={prod.id}
                                         onClick={() => handleOpenProductModal(prod)}
+                                        className="store-product-card"
                                         style={{
                                             background: 'var(--bg-card)',
-                                            borderRadius: '20px',
+                                            borderRadius: '22px',
                                             padding: '12px',
                                             border: '1px solid var(--border)',
                                             cursor: 'pointer',
@@ -763,62 +868,48 @@ export default function BusinessStore({ overrideSlug }) {
                                             justifyContent: 'space-between',
                                             boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
                                             position: 'relative',
-                                            transition: 'transform 0.18s ease, box-shadow 0.18s ease'
-                                        }}
-                                        whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}
-                                    >
-                                        {/* Top Image Container */}
-                                        <div style={{
-                                            position: 'relative',
+                                            transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+                                            minWidth: 0,
                                             width: '100%',
-                                            height: '140px',
-                                            borderRadius: '16px',
-                                            background: '#ffffff',
-                                            overflow: 'hidden',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            padding: '8px',
-                                            marginBottom: '10px'
-                                        }}>
+                                            boxSizing: 'border-box'
+                                        }}
+                                        whileHover={{ y: -4, boxShadow: '0 12px 28px rgba(0,0,0,0.08)' }}
+                                    >
+                                        {/* Top Image Container with Studio Background */}
+                                        <div className="store-card-img-box">
                                             <img
                                                 src={img}
                                                 alt={prod.name}
+                                                className="store-card-img"
                                                 style={{
                                                     width: '100%',
                                                     height: '100%',
-                                                    objectFit: 'contain'
+                                                    objectFit: 'contain',
+                                                    transition: 'transform 0.3s ease'
                                                 }}
                                             />
 
-                                            {/* Heart / Favorite Button */}
-                                            <button
-                                                type="button"
-                                                onClick={(e) => toggleFavorite(prod.id, e)}
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: '8px',
-                                                    right: '8px',
-                                                    width: '30px',
-                                                    height: '30px',
-                                                    borderRadius: '50%',
-                                                    border: 'none',
-                                                    background: 'rgba(255,255,255,0.85)',
-                                                    backdropFilter: 'blur(4px)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    cursor: 'pointer',
-                                                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-                                                    transition: 'transform 0.15s ease'
-                                                }}
-                                            >
-                                                <Heart
-                                                    size={15}
-                                                    color={isFav ? '#ef4444' : '#64748b'}
-                                                    fill={isFav ? '#ef4444' : 'transparent'}
-                                                />
-                                            </button>
+                                            {/* Stock / Quality Tag */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '8px',
+                                                left: '8px',
+                                                background: 'rgba(255,255,255,0.92)',
+                                                backdropFilter: 'blur(8px)',
+                                                borderRadius: '12px',
+                                                padding: '2px 8px',
+                                                fontSize: '10px',
+                                                fontWeight: '700',
+                                                color: '#0f172a',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                                                border: '1px solid rgba(0,0,0,0.04)'
+                                            }}>
+                                                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
+                                                En stock
+                                            </div>
                                         </div>
 
                                         {/* Product Details */}
@@ -852,43 +943,54 @@ export default function BusinessStore({ overrideSlug }) {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                marginTop: '6px'
+                                                marginTop: '8px',
+                                                paddingTop: '6px',
+                                                borderTop: '1px solid var(--border)'
                                             }}>
-                                                <span style={{
-                                                    fontSize: '15px',
-                                                    fontWeight: '800',
-                                                    color: 'var(--text-primary)',
-                                                    letterSpacing: '-0.3px'
-                                                }}>
-                                                    ${Number(prod.price || 0).toLocaleString('es-AR')}
-                                                </span>
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ fontSize: '9px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>
+                                                        Precio
+                                                    </span>
+                                                    <span style={{
+                                                        fontSize: '15px',
+                                                        fontWeight: '800',
+                                                        color: 'var(--text-primary)',
+                                                        letterSpacing: '-0.3px',
+                                                        lineHeight: 1.1
+                                                    }}>
+                                                        ${Number(prod.price || 0).toLocaleString('es-AR')}
+                                                    </span>
+                                                </div>
 
-                                                {/* Quick add plus button */}
+                                                {/* Quick add button */}
                                                 <button
                                                     type="button"
+                                                    className="store-quick-add-btn"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         addToCart(prod, 1);
                                                     }}
                                                     style={{
-                                                        width: '28px',
-                                                        height: '28px',
-                                                        borderRadius: '50%',
+                                                        borderRadius: '20px',
                                                         border: 'none',
                                                         backgroundColor: primaryColor,
                                                         color: '#ffffff',
-                                                        display: 'flex',
+                                                        display: 'inline-flex',
                                                         alignItems: 'center',
-                                                        justifyContent: 'center',
+                                                        gap: '5px',
+                                                        padding: '7px 12px',
                                                         cursor: 'pointer',
-                                                        boxShadow: `0 2px 8px ${primaryColor}40`,
-                                                        transition: 'transform 0.15s ease'
+                                                        boxShadow: `0 3px 10px ${primaryColor}35`,
+                                                        transition: 'transform 0.15s ease',
+                                                        fontWeight: '700',
+                                                        fontSize: '12px'
                                                     }}
-                                                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                                                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
                                                     onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                                                     title="Agregar al carrito"
                                                 >
                                                     <Plus size={14} />
+                                                    <span className="store-add-label">Agregar</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -900,43 +1002,22 @@ export default function BusinessStore({ overrideSlug }) {
                 </div>
             </div>
 
-            {/* ═══ 6. PRODUCT DETAIL MODAL (Screen 2 Reference) ═══ */}
+            {/* ═══ 6. PRODUCT DETAIL MODAL (Luxury Boutique Redesign) ═══ */}
             <AnimatePresence>
                 {selectedProductModal && (
                     <motion.div
+                        className="store-detail-modal-backdrop"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            backgroundColor: 'rgba(0,0,0,0.7)',
-                            backdropFilter: 'blur(8px)',
-                            zIndex: 1100,
-                            display: 'flex',
-                            alignItems: 'flex-end',
-                            justifyContent: 'center'
-                        }}
                         onClick={() => setSelectedProductModal(null)}
                     >
                         <motion.div
+                            className="store-detail-modal-container"
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                            style={{
-                                width: '100%',
-                                maxWidth: '520px',
-                                maxHeight: '92vh',
-                                backgroundColor: 'var(--bg-card)',
-                                borderTopLeftRadius: '28px',
-                                borderTopRightRadius: '28px',
-                                overflowY: 'auto',
-                                position: 'relative',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                boxShadow: '0 -10px 40px rgba(0,0,0,0.3)'
-                            }}
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Modal Header */}
@@ -944,7 +1025,7 @@ export default function BusinessStore({ overrideSlug }) {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
-                                padding: '16px 20px',
+                                padding: '16px 22px',
                                 borderBottom: '1px solid var(--border)',
                                 position: 'sticky',
                                 top: 0,
@@ -955,8 +1036,8 @@ export default function BusinessStore({ overrideSlug }) {
                                     type="button"
                                     onClick={() => setSelectedProductModal(null)}
                                     style={{
-                                        width: '36px',
-                                        height: '36px',
+                                        width: '38px',
+                                        height: '38px',
                                         borderRadius: '50%',
                                         border: '1px solid var(--border)',
                                         background: 'var(--bg-main)',
@@ -964,12 +1045,31 @@ export default function BusinessStore({ overrideSlug }) {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        cursor: 'pointer'
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s ease'
                                     }}
+                                    title="Cerrar"
                                 >
-                                    <ChevronLeft size={20} />
+                                    <ArrowLeft size={18} />
                                 </button>
-                                <span style={{ fontSize: '15px', fontWeight: '800' }}>Detalles</span>
+                                <div style={{ textAlign: 'center' }}>
+                                    <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                        Detalles del Producto
+                                    </span>
+                                    <div style={{
+                                        fontSize: '11px',
+                                        color: 'var(--text-secondary)',
+                                        fontWeight: '600',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '4px',
+                                        marginTop: '1px'
+                                    }}>
+                                        <span>{business.name}</span>
+                                        <CheckCircle2 size={12} color={primaryColor} />
+                                    </div>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -977,8 +1077,8 @@ export default function BusinessStore({ overrideSlug }) {
                                         setIsCartOpen(true);
                                     }}
                                     style={{
-                                        width: '36px',
-                                        height: '36px',
+                                        width: '38px',
+                                        height: '38px',
                                         borderRadius: '50%',
                                         border: '1px solid var(--border)',
                                         background: 'var(--bg-main)',
@@ -989,6 +1089,7 @@ export default function BusinessStore({ overrideSlug }) {
                                         cursor: 'pointer',
                                         position: 'relative'
                                     }}
+                                    title="Ver carrito"
                                 >
                                     <ShoppingBag size={17} />
                                     {getCartCount() > 0 && (
@@ -1001,8 +1102,8 @@ export default function BusinessStore({ overrideSlug }) {
                                             fontSize: '9px',
                                             fontWeight: '800',
                                             borderRadius: '50%',
-                                            minWidth: '16px',
-                                            height: '16px',
+                                            minWidth: '17px',
+                                            height: '17px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center'
@@ -1014,346 +1115,354 @@ export default function BusinessStore({ overrideSlug }) {
                             </div>
 
                             {/* Modal Body */}
-                            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                                {/* Large Product Gallery */}
-                                {(() => {
-                                    const images = getProductImages(selectedProductModal);
-                                    const currentImg = images[activeImageIndex] || images[0];
+                            <div style={{ padding: '22px' }}>
+                                <div className="store-detail-modal-columns">
+                                    {/* Left Column: Studio Gallery */}
+                                    <div>
+                                        {(() => {
+                                            const images = getProductImages(selectedProductModal);
+                                            const currentImg = images[activeImageIndex] || images[0];
 
-                                    return (
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{
-                                                position: 'relative',
-                                                width: '100%',
-                                                height: '240px',
-                                                borderRadius: '20px',
-                                                background: '#ffffff',
-                                                border: '1px solid var(--border)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                overflow: 'hidden',
-                                                padding: '12px'
-                                            }}>
-                                                <motion.img
-                                                    key={activeImageIndex}
-                                                    initial={{ opacity: 0.4, scale: 0.96 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    transition={{ duration: 0.2 }}
-                                                    src={currentImg}
-                                                    alt={selectedProductModal.name}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                                />
-                                            </div>
+                                            return (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                    {/* Main Hero Photo Viewport */}
+                                                    <div style={{
+                                                        position: 'relative',
+                                                        width: '100%',
+                                                        height: '270px',
+                                                        borderRadius: '20px',
+                                                        background: 'radial-gradient(circle at 50% 50%, #ffffff 0%, #f8fafc 100%)',
+                                                        border: '1px solid var(--border)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        overflow: 'hidden',
+                                                        padding: '16px',
+                                                        boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.02)'
+                                                    }}>
+                                                        {/* Stock pill */}
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            top: '12px',
+                                                            left: '12px',
+                                                            background: 'rgba(255,255,255,0.95)',
+                                                            backdropFilter: 'blur(8px)',
+                                                            borderRadius: '12px',
+                                                            padding: '4px 10px',
+                                                            fontSize: '11px',
+                                                            fontWeight: '700',
+                                                            color: '#0f172a',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                                                            border: '1px solid rgba(0,0,0,0.04)',
+                                                            zIndex: 2
+                                                        }}>
+                                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                                                            En stock
+                                                        </div>
 
-                                            {/* Gallery Dots */}
-                                            {images.length > 1 && (
-                                                <div style={{ display: 'flex', gap: '6px' }}>
-                                                    {images.map((_, idx) => (
-                                                        <div
-                                                            key={idx}
-                                                            onClick={() => setActiveImageIndex(idx)}
+                                                        <motion.img
+                                                            key={activeImageIndex}
+                                                            initial={{ opacity: 0.5, scale: 0.96 }}
+                                                            animate={{ opacity: 1, scale: 1 }}
+                                                            transition={{ duration: 0.22 }}
+                                                            src={currentImg}
+                                                            alt={selectedProductModal.name}
                                                             style={{
-                                                                width: activeImageIndex === idx ? '16px' : '6px',
-                                                                height: '6px',
-                                                                borderRadius: '3px',
-                                                                backgroundColor: activeImageIndex === idx ? primaryColor : 'var(--border)',
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s ease'
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'contain',
+                                                                filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.06))'
                                                             }}
                                                         />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })()}
+                                                    </div>
 
-                                {/* Category & Title & Heart */}
-                                <div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    {/* Interactive Thumbnails (if multiple images) */}
+                                                    {images.length > 1 && (
+                                                        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '2px 0' }}>
+                                                            {images.map((thumbUrl, idx) => (
+                                                                <button
+                                                                    key={idx}
+                                                                    type="button"
+                                                                    onClick={() => setActiveImageIndex(idx)}
+                                                                    style={{
+                                                                        width: '56px',
+                                                                        height: '56px',
+                                                                        borderRadius: '12px',
+                                                                        border: activeImageIndex === idx ? `2px solid ${primaryColor}` : '1px solid var(--border)',
+                                                                        background: '#ffffff',
+                                                                        padding: '4px',
+                                                                        cursor: 'pointer',
+                                                                        boxShadow: activeImageIndex === idx ? `0 2px 8px ${primaryColor}40` : 'none',
+                                                                        transition: 'all 0.15s ease',
+                                                                        flexShrink: 0
+                                                                    }}
+                                                                >
+                                                                    <img
+                                                                        src={thumbUrl}
+                                                                        alt={`Vista ${idx + 1}`}
+                                                                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                                                    />
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+
+                                    {/* Right Column: Information & Selection */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        {/* Category & Title */}
                                         <div>
                                             <span style={{
+                                                display: 'inline-block',
                                                 fontSize: '11px',
-                                                fontWeight: '700',
-                                                color: 'var(--text-secondary)',
+                                                fontWeight: '800',
+                                                color: primaryColor,
                                                 textTransform: 'uppercase',
-                                                letterSpacing: '0.5px'
+                                                letterSpacing: '0.6px',
+                                                background: `${primaryColor}15`,
+                                                padding: '3px 10px',
+                                                borderRadius: '8px',
+                                                marginBottom: '6px'
                                             }}>
                                                 {selectedProductModal.category || 'General'}
                                             </span>
                                             <h2 style={{
-                                                fontSize: '19px',
+                                                fontSize: '21px',
                                                 fontWeight: '800',
                                                 color: 'var(--text-primary)',
-                                                margin: '4px 0 0 0',
-                                                lineHeight: 1.25
+                                                margin: 0,
+                                                lineHeight: 1.25,
+                                                letterSpacing: '-0.3px'
                                             }}>
                                                 {selectedProductModal.name}
                                             </h2>
                                         </div>
 
-                                        <button
-                                            type="button"
-                                            onClick={(e) => toggleFavorite(selectedProductModal.id, e)}
-                                            style={{
-                                                width: '36px',
-                                                height: '36px',
-                                                borderRadius: '50%',
-                                                border: '1px solid var(--border)',
-                                                background: 'var(--bg-main)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                cursor: 'pointer',
-                                                flexShrink: 0
-                                            }}
-                                        >
-                                            <Heart
-                                                size={18}
-                                                color={favorites[selectedProductModal.id] ? '#ef4444' : '#64748b'}
-                                                fill={favorites[selectedProductModal.id] ? '#ef4444' : 'transparent'}
-                                            />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Store / Brand Card (Screen 2 reference: Glow Nature Store) */}
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '12px 14px',
-                                    background: 'var(--bg-main)',
-                                    borderRadius: '16px',
-                                    border: '1px solid var(--border)'
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        {(business.logo || business.image) ? (
-                                            <img
-                                                src={business.logo || business.image}
-                                                alt={business.name}
-                                                style={{
-                                                    width: '36px',
-                                                    height: '36px',
-                                                    borderRadius: '50%',
-                                                    objectFit: 'cover'
-                                                }}
-                                            />
-                                        ) : (
-                                            <div style={{
-                                                width: '36px',
-                                                height: '36px',
-                                                borderRadius: '50%',
-                                                background: primaryColor,
-                                                color: '#fff',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontWeight: '800'
+                                        {/* Price Hero Section */}
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'baseline',
+                                            gap: '10px',
+                                            paddingBottom: '14px',
+                                            borderBottom: '1px solid var(--border)'
+                                        }}>
+                                            <span style={{
+                                                fontSize: '26px',
+                                                fontWeight: '900',
+                                                color: 'var(--text-primary)',
+                                                letterSpacing: '-0.5px'
                                             }}>
-                                                {business.name?.[0] || 'T'}
+                                                ${Number(selectedProductModal.price || 0).toLocaleString('es-AR')}
+                                            </span>
+                                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                                precio unitario
+                                            </span>
+                                        </div>
+
+                                        {/* Size / Variant Selector (if applicable) */}
+                                        {selectedProductModal.sizes && selectedProductModal.sizes.length > 0 && (
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                                    Seleccionar Variedad / Tamaño:
+                                                </label>
+                                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                    {selectedProductModal.sizes.map(size => (
+                                                        <button
+                                                            key={size}
+                                                            type="button"
+                                                            onClick={() => setSelectedSize(size)}
+                                                            style={{
+                                                                padding: '8px 16px',
+                                                                borderRadius: '12px',
+                                                                border: selectedSize === size ? `2px solid ${primaryColor}` : '1px solid var(--border)',
+                                                                background: selectedSize === size ? `${primaryColor}15` : 'var(--bg-main)',
+                                                                color: selectedSize === size ? primaryColor : 'var(--text-primary)',
+                                                                fontSize: '13px',
+                                                                fontWeight: '700',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.15s ease'
+                                                            }}
+                                                        >
+                                                            {size}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
-                                        <div>
-                                            <div style={{
-                                                fontSize: '13px',
-                                                fontWeight: '800',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px'
-                                            }}>
-                                                {business.name}
-                                                <CheckCircle2 size={13} color={primaryColor} />
-                                            </div>
-                                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                                Tienda Oficial
-                                            </span>
-                                        </div>
-                                    </div>
 
-                                    <button
-                                        type="button"
-                                        style={{
-                                            padding: '6px 12px',
-                                            borderRadius: '20px',
-                                            background: '#111827',
-                                            color: '#ffffff',
-                                            fontSize: '11px',
-                                            fontWeight: '700',
-                                            border: 'none',
+                                        {/* Quantity Stepper */}
+                                        <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '4px'
-                                        }}
-                                    >
-                                        <Check size={11} /> Siguiendo
-                                    </button>
-                                </div>
+                                            justifyContent: 'space-between',
+                                            padding: '10px 14px',
+                                            background: 'var(--bg-main)',
+                                            borderRadius: '14px',
+                                            border: '1px solid var(--border)'
+                                        }}>
+                                            <div>
+                                                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'block' }}>
+                                                    Cantidad
+                                                </span>
+                                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                                    Disponibilidad en stock
+                                                </span>
+                                            </div>
 
-                                {/* Select Size / Variants (if provided) & Quantity */}
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: '12px'
-                                }}>
-                                    {selectedProductModal.sizes && selectedProductModal.sizes.length > 0 ? (
-                                        <div style={{ flex: 1 }}>
-                                            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-                                                Tamaño / Variedad
-                                            </span>
-                                            <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                                                {selectedProductModal.sizes.map(size => (
-                                                    <button
-                                                        key={size}
-                                                        type="button"
-                                                        onClick={() => setSelectedSize(size)}
-                                                        style={{
-                                                            padding: '6px 12px',
-                                                            borderRadius: '10px',
-                                                            border: selectedSize === size ? `1.5px solid ${primaryColor}` : '1px solid var(--border)',
-                                                            background: selectedSize === size ? primaryColor : 'var(--bg-main)',
-                                                            color: selectedSize === size ? '#ffffff' : 'var(--text-primary)',
-                                                            fontSize: '12px',
-                                                            fontWeight: '700',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        {size}
-                                                    </button>
-                                                ))}
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '12px',
+                                                background: 'var(--bg-card)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '10px',
+                                                padding: '4px 8px'
+                                            }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setModalQty(q => Math.max(1, q - 1))}
+                                                    style={{
+                                                        border: 'none',
+                                                        background: 'none',
+                                                        cursor: 'pointer',
+                                                        color: 'var(--text-primary)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        borderRadius: '6px'
+                                                    }}
+                                                    aria-label="Restar una unidad"
+                                                >
+                                                    <Minus size={14} />
+                                                </button>
+                                                <span style={{ fontSize: '14px', fontWeight: '800', minWidth: '20px', textAlign: 'center' }}>
+                                                    {modalQty}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setModalQty(q => q + 1)}
+                                                    style={{
+                                                        border: 'none',
+                                                        background: 'none',
+                                                        cursor: 'pointer',
+                                                        color: 'var(--text-primary)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        borderRadius: '6px'
+                                                    }}
+                                                    aria-label="Sumar una unidad"
+                                                >
+                                                    <Plus size={14} />
+                                                </button>
                                             </div>
                                         </div>
-                                    ) : (
+
+                                        {/* Description */}
                                         <div>
-                                            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-                                                Cantidad
-                                            </span>
+                                            <h4 style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
+                                                Descripción
+                                            </h4>
+                                            <p style={{
+                                                fontSize: '13px',
+                                                color: 'var(--text-secondary)',
+                                                margin: 0,
+                                                lineHeight: 1.55,
+                                                whiteSpace: 'pre-line'
+                                            }}>
+                                                {selectedProductModal.desc || 'Producto disponible en nuestra tienda oficial para retirar en el local o coordinar envío a domicilio.'}
+                                            </p>
                                         </div>
-                                    )}
 
-                                    {/* Quantity Counter */}
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '10px',
-                                        background: 'var(--bg-main)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '12px',
-                                        padding: '4px 10px'
-                                    }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModalQty(q => Math.max(1, q - 1))}
-                                            style={{
-                                                border: 'none',
-                                                background: 'none',
-                                                cursor: 'pointer',
-                                                color: 'var(--text-primary)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                padding: '4px'
-                                            }}
-                                        >
-                                            <Minus size={14} />
-                                        </button>
-                                        <span style={{ fontSize: '14px', fontWeight: '800', minWidth: '18px', textAlign: 'center' }}>
-                                            {modalQty}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModalQty(q => q + 1)}
-                                            style={{
-                                                border: 'none',
-                                                background: 'none',
-                                                cursor: 'pointer',
-                                                color: 'var(--text-primary)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                padding: '4px'
-                                            }}
-                                        >
-                                            <Plus size={14} />
-                                        </button>
+                                        {/* Trust Perks Micro-list */}
+                                        <div style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '8px',
+                                            paddingTop: '6px'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                <Truck size={14} color={primaryColor} />
+                                                <span>Retiro en el local o entrega a domicilio</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                <MessageCircle size={14} color={primaryColor} />
+                                                <span>Pedido coordinado al instante por WhatsApp</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-
-                                {/* Description */}
-                                <div>
-                                    <h4 style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
-                                        Descripción
-                                    </h4>
-                                    <p style={{
-                                        fontSize: '13px',
-                                        color: 'var(--text-secondary)',
-                                        margin: 0,
-                                        lineHeight: 1.5
-                                    }}>
-                                        {selectedProductModal.desc || 'Producto exclusivo disponible para retirar en el local o coordinar entrega.'}
-                                    </p>
                                 </div>
                             </div>
 
-                            {/* Sticky Bottom Checkout Bar (Screen 2 reference) */}
-                            <div style={{
-                                position: 'sticky',
-                                bottom: 0,
-                                background: 'var(--bg-card)',
-                                borderTop: '1px solid var(--border)',
-                                padding: '16px 20px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '16px',
-                                boxShadow: '0 -4px 16px rgba(0,0,0,0.05)',
-                                zIndex: 10
-                            }}>
-                                <div>
-                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                                        Precio Total
+                            {/* Sticky Bottom Checkout Bar */}
+                            <div className="store-detail-modal-footer">
+                                {/* Precio Total Centrado exactamente bajo la foto del producto */}
+                                <div className="store-modal-footer-price">
+                                    <span style={{
+                                        fontSize: '11px',
+                                        color: 'var(--text-secondary)',
+                                        fontWeight: '700',
+                                        display: 'block',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.4px',
+                                        marginBottom: '2px'
+                                    }}>
+                                        Precio Total {modalQty > 1 ? `(${modalQty} un.)` : ''}
                                     </span>
                                     <div style={{
-                                        fontSize: '20px',
+                                        fontSize: '30px',
                                         fontWeight: '900',
                                         color: 'var(--text-primary)',
-                                        letterSpacing: '-0.3px'
+                                        letterSpacing: '-0.6px',
+                                        lineHeight: 1.1
                                     }}>
                                         ${(Number(selectedProductModal.price || 0) * modalQty).toLocaleString('es-AR')}
                                     </div>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        addToCart(selectedProductModal, modalQty, selectedSize);
-                                        setSelectedProductModal(null);
-                                    }}
-                                    style={{
-                                        flex: 1,
-                                        padding: '14px 20px',
-                                        borderRadius: '28px',
-                                        border: 'none',
-                                        backgroundColor: primaryColor,
-                                        color: '#ffffff',
-                                        fontSize: '14px',
-                                        fontWeight: '800',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '8px',
-                                        boxShadow: `0 6px 20px ${primaryColor}40`,
-                                        transition: 'transform 0.15s ease'
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
-                                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                                >
-                                    <ShoppingBag size={18} />
-                                    Agregar al Carrito
-                                </button>
+                                {/* Botón del carrito a la derecha */}
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            addToCart(selectedProductModal, modalQty, selectedSize);
+                                            setSelectedProductModal(null);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            maxWidth: '280px',
+                                            padding: '14px 22px',
+                                            borderRadius: '28px',
+                                            border: 'none',
+                                            backgroundColor: primaryColor,
+                                            color: '#ffffff',
+                                            fontSize: '14px',
+                                            fontWeight: '800',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            boxShadow: `0 6px 20px ${primaryColor}45`,
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                    >
+                                        <ShoppingBag size={18} />
+                                        <span>Agregar al Carrito</span>
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -1509,32 +1618,89 @@ export default function BusinessStore({ overrideSlug }) {
                                                     </div>
                                                 </div>
 
-                                                {/* Quantity Controls */}
-                                                <div style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px',
-                                                    background: 'var(--bg-card)',
-                                                    borderRadius: '10px',
-                                                    padding: '4px 8px',
-                                                    border: '1px solid var(--border)'
-                                                }}>
+                                                {/* Quantity Controls & Direct Delete */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        background: 'var(--bg-card)',
+                                                        borderRadius: '10px',
+                                                        padding: '4px 8px',
+                                                        border: '1px solid var(--border)'
+                                                    }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateQty(item.cartId || item.id, -1)}
+                                                            style={{
+                                                                border: 'none',
+                                                                background: 'none',
+                                                                cursor: 'pointer',
+                                                                fontWeight: '800',
+                                                                color: item.qty === 1 ? '#ef4444' : 'var(--text-primary)',
+                                                                fontSize: '13px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '18px',
+                                                                height: '18px'
+                                                            }}
+                                                            title={item.qty === 1 ? 'Eliminar del carrito' : 'Restar una unidad'}
+                                                        >
+                                                            {item.qty === 1 ? <Trash2 size={13} color="#ef4444" /> : '-'}
+                                                        </button>
+                                                        <span style={{ fontSize: '12px', fontWeight: '800', minWidth: '14px', textAlign: 'center' }}>
+                                                            {item.qty}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateQty(item.cartId || item.id, 1)}
+                                                            style={{
+                                                                border: 'none',
+                                                                background: 'none',
+                                                                cursor: 'pointer',
+                                                                fontWeight: '800',
+                                                                color: 'var(--text-primary)',
+                                                                fontSize: '13px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '18px',
+                                                                height: '18px'
+                                                            }}
+                                                            title="Sumar una unidad"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+
                                                     <button
                                                         type="button"
-                                                        onClick={() => updateQty(item.cartId || item.id, -1)}
-                                                        style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: '800', color: 'var(--text-primary)', fontSize: '13px' }}
+                                                        onClick={() => setItemToDelete(item)}
+                                                        style={{
+                                                            border: 'none',
+                                                            background: 'rgba(239, 68, 68, 0.08)',
+                                                            color: '#ef4444',
+                                                            borderRadius: '10px',
+                                                            width: '30px',
+                                                            height: '30px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        onMouseEnter={e => {
+                                                            e.currentTarget.style.background = '#ef4444';
+                                                            e.currentTarget.style.color = '#ffffff';
+                                                        }}
+                                                        onMouseLeave={e => {
+                                                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+                                                            e.currentTarget.style.color = '#ef4444';
+                                                        }}
+                                                        title="Eliminar producto"
                                                     >
-                                                        -
-                                                    </button>
-                                                    <span style={{ fontSize: '12px', fontWeight: '800', minWidth: '14px', textAlign: 'center' }}>
-                                                        {item.qty}
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => updateQty(item.cartId || item.id, 1)}
-                                                        style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: '800', color: 'var(--text-primary)', fontSize: '13px' }}
-                                                    >
-                                                        +
+                                                        <Trash2 size={14} />
                                                     </button>
                                                 </div>
                                             </div>
@@ -1593,7 +1759,336 @@ export default function BusinessStore({ overrideSlug }) {
                 )}
             </AnimatePresence>
 
-            {/* ═══ 8. FLOATING TOAST NOTIFICATION ═══ */}
+            {/* ═══ 8. FLOATING CART ACTION BAR (Animated Floating Pill) ═══ */}
+            <AnimatePresence>
+                {getCartCount() > 0 && !isCartOpen && !selectedProductModal && !showLeaveConfirmation && (
+                    <motion.div
+                        initial={{ y: 90, opacity: 0, scale: 0.94 }}
+                        animate={{ y: 0, opacity: 1, scale: 1 }}
+                        exit={{ y: 90, opacity: 0, scale: 0.94 }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 320 }}
+                        style={{
+                            position: 'fixed',
+                            bottom: '22px',
+                            left: 0,
+                            right: 0,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            zIndex: 990,
+                            pointerEvents: 'none',
+                            padding: '0 16px'
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setIsCartOpen(true)}
+                            style={{
+                                pointerEvents: 'auto',
+                                width: '100%',
+                                maxWidth: '440px',
+                                backgroundColor: primaryColor,
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '32px',
+                                padding: '12px 18px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                boxShadow: `0 12px 32px ${primaryColor}55`,
+                                cursor: 'pointer',
+                                transition: 'transform 0.15s ease'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{
+                                    position: 'relative',
+                                    background: 'rgba(255,255,255,0.22)',
+                                    borderRadius: '50%',
+                                    width: '38px',
+                                    height: '38px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <ShoppingBag size={20} color="#fff" />
+                                    <span style={{
+                                        position: 'absolute',
+                                        top: '-4px',
+                                        right: '-4px',
+                                        background: '#ffffff',
+                                        color: primaryColor,
+                                        fontSize: '11px',
+                                        fontWeight: '900',
+                                        borderRadius: '10px',
+                                        minWidth: '18px',
+                                        height: '18px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '0 4px',
+                                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                                    }}>
+                                        {getCartCount()}
+                                    </span>
+                                </div>
+                                <div style={{ textAlign: 'left' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: '800', display: 'block', lineHeight: 1.2, color: '#fff' }}>
+                                        Ver mi Carrito
+                                    </span>
+                                    <span style={{ fontSize: '11.5px', opacity: 0.9, fontWeight: '600', color: '#fff' }}>
+                                        {getCartCount()} {getCartCount() === 1 ? 'ítem agregado' : 'ítems agregados'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{
+                                    fontSize: '17px',
+                                    fontWeight: '900',
+                                    color: '#fff',
+                                    letterSpacing: '-0.3px'
+                                }}>
+                                    ${getCartTotal().toLocaleString('es-AR')}
+                                </span>
+                                <div style={{
+                                    background: 'rgba(255,255,255,0.24)',
+                                    borderRadius: '50%',
+                                    width: '28px',
+                                    height: '28px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <ArrowUpRight size={16} color="#fff" />
+                                </div>
+                            </div>
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ═══ 9. EXIT CONFIRMATION MODAL (Cart Abandonment Protection) ═══ */}
+            <AnimatePresence>
+                {showLeaveConfirmation && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.72)',
+                            backdropFilter: 'blur(8px)',
+                            zIndex: 1300,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '20px'
+                        }}
+                        onClick={() => setShowLeaveConfirmation(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                            style={{
+                                width: '100%',
+                                maxWidth: '420px',
+                                backgroundColor: 'var(--bg-card)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '26px',
+                                padding: '28px 24px',
+                                textAlign: 'center',
+                                boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Close button */}
+                            <button
+                                type="button"
+                                onClick={() => setShowLeaveConfirmation(false)}
+                                style={{
+                                    position: 'absolute',
+                                    top: '16px',
+                                    right: '16px',
+                                    border: 'none',
+                                    background: 'var(--bg-main)',
+                                    color: 'var(--text-secondary)',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <X size={16} />
+                            </button>
+
+                            {/* Badge Icon */}
+                            <div style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: '22px',
+                                background: `${primaryColor}18`,
+                                border: `2px solid ${primaryColor}40`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 16px auto',
+                                color: primaryColor
+                            }}>
+                                <ShoppingBag size={32} />
+                            </div>
+
+                            <h3 style={{
+                                fontSize: '20px',
+                                fontWeight: '800',
+                                color: 'var(--text-primary)',
+                                margin: '0 0 8px 0',
+                                letterSpacing: '-0.3px'
+                            }}>
+                                ¿Querés salir de la tienda?
+                            </h3>
+
+                            <p style={{
+                                fontSize: '13.5px',
+                                color: 'var(--text-secondary)',
+                                margin: '0 0 20px 0',
+                                lineHeight: '1.5'
+                            }}>
+                                Tenés <strong style={{ color: 'var(--text-primary)' }}>{getCartCount()} {getCartCount() === 1 ? 'producto' : 'productos'}</strong> guardados en tu carrito. Si salís ahora, tu pedido quedará pendiente.
+                            </p>
+
+                            {/* Mini Cart Summary */}
+                            <div style={{
+                                background: 'var(--bg-main)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '16px',
+                                padding: '12px 16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                marginBottom: '20px'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ display: 'flex' }}>
+                                        {cart.slice(0, 3).map((item, idx) => (
+                                            <div
+                                                key={idx}
+                                                style={{
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    borderRadius: '8px',
+                                                    background: '#ffffff',
+                                                    border: '2px solid var(--bg-card)',
+                                                    overflow: 'hidden',
+                                                    marginLeft: idx > 0 ? '-10px' : '0',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                                                }}
+                                            >
+                                                <img
+                                                    src={item.image || item.images?.[0] || '/spa_banner_1.jpg'}
+                                                    alt=""
+                                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                        {getCartCount() === 1 ? '1 producto' : `${getCartCount()} productos`}
+                                    </span>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', fontWeight: '700' }}>Total</span>
+                                    <span style={{ fontSize: '16px', fontWeight: '900', color: primaryColor }}>
+                                        ${getCartTotal().toLocaleString('es-AR')}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowLeaveConfirmation(false);
+                                        setIsCartOpen(true);
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px',
+                                        borderRadius: '16px',
+                                        border: 'none',
+                                        backgroundColor: primaryColor,
+                                        color: '#ffffff',
+                                        fontSize: '14px',
+                                        fontWeight: '800',
+                                        cursor: 'pointer',
+                                        boxShadow: `0 6px 20px ${primaryColor}40`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '8px'
+                                    }}
+                                >
+                                    <ShoppingBag size={18} />
+                                    <span>Ver mi Carrito ({getCartCount()})</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowLeaveConfirmation(false)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        borderRadius: '16px',
+                                        border: '1px solid var(--border)',
+                                        backgroundColor: 'var(--bg-main)',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '13px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Continuar en la Tienda
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={executeExit}
+                                    style={{
+                                        border: 'none',
+                                        background: 'transparent',
+                                        color: '#ef4444',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        padding: '8px',
+                                        marginTop: '4px',
+                                        opacity: 0.85
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                                    onMouseLeave={e => e.currentTarget.style.opacity = '0.85'}
+                                >
+                                    Salir de todas formas
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ═══ 10. FLOATING TOAST NOTIFICATION ═══ */}
             <AnimatePresence>
                 {toastMessage && (
                     <motion.div
@@ -1602,7 +2097,7 @@ export default function BusinessStore({ overrideSlug }) {
                         exit={{ opacity: 0, y: 20, scale: 0.9 }}
                         style={{
                             position: 'fixed',
-                            bottom: '24px',
+                            bottom: getCartCount() > 0 ? '84px' : '24px',
                             left: '50%',
                             x: '-50%',
                             backgroundColor: '#111827',
@@ -1619,6 +2114,120 @@ export default function BusinessStore({ overrideSlug }) {
                         }}
                     >
                         {toastMessage}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ═══ 11. ITEM DELETION CONFIRMATION MODAL ═══ */}
+            <AnimatePresence>
+                {itemToDelete && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.72)',
+                            backdropFilter: 'blur(8px)',
+                            zIndex: 1400,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '20px'
+                        }}
+                        onClick={() => setItemToDelete(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 15 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 15 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                            style={{
+                                width: '100%',
+                                maxWidth: '380px',
+                                backgroundColor: 'var(--bg-card)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '24px',
+                                padding: '24px',
+                                textAlign: 'center',
+                                boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
+                                position: 'relative'
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div style={{
+                                width: '56px',
+                                height: '56px',
+                                borderRadius: '18px',
+                                background: 'rgba(239, 68, 68, 0.12)',
+                                border: '2px solid rgba(239, 68, 68, 0.25)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 16px auto',
+                                color: '#ef4444'
+                            }}>
+                                <Trash2 size={26} />
+                            </div>
+
+                            <h3 style={{
+                                fontSize: '18px',
+                                fontWeight: '800',
+                                color: 'var(--text-primary)',
+                                margin: '0 0 8px 0',
+                                letterSpacing: '-0.3px'
+                            }}>
+                                ¿Eliminar producto?
+                            </h3>
+
+                            <p style={{
+                                fontSize: '13.5px',
+                                color: 'var(--text-secondary)',
+                                margin: '0 0 20px 0',
+                                lineHeight: '1.45'
+                            }}>
+                                ¿Estás seguro de que querés quitar <strong style={{ color: 'var(--text-primary)' }}>"{itemToDelete.name}"</strong> de tu carrito?
+                            </p>
+
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setItemToDelete(null)}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        borderRadius: '14px',
+                                        border: '1px solid var(--border)',
+                                        backgroundColor: 'var(--bg-main)',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '13px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmDeleteItem}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        borderRadius: '14px',
+                                        border: 'none',
+                                        backgroundColor: '#ef4444',
+                                        color: '#ffffff',
+                                        fontSize: '13px',
+                                        fontWeight: '800',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)'
+                                    }}
+                                >
+                                    Sí, eliminar
+                                </button>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

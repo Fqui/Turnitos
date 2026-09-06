@@ -86,13 +86,20 @@ export default function ProfileHighlightsBar({
                             </div>
                         </div>
                         <span style={{
-                            fontSize: '12px',
+                            fontSize: '11.5px',
+                            fontWeight: '500',
                             color: 'var(--text-secondary)',
+                            width: '84px',
                             maxWidth: '84px',
                             textAlign: 'center',
+                            lineHeight: '1.25',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
+                            wordBreak: 'break-word',
+                            minHeight: '2.5em'
                         }}>
                             {highlight.title}
                         </span>

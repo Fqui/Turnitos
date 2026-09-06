@@ -437,8 +437,6 @@ export default function ProfileStorePromoCard({
                 {/* ═══ 2/3 COLUMN: APPLE TECH BENTO PRODUCT CARD ═══ */}
                 {products.length > 0 && (
                     <div
-                        onMouseEnter={() => setIsHovered(true)}
-                        onMouseLeave={() => setIsHovered(false)}
                         onClick={goToStore}
                         style={{
                             position: 'relative',
