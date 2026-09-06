@@ -624,7 +624,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     }}
                 />
 
-                <div className="container" style={{ maxWidth: containerWidth, margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 2 }}>
+                <div className="container profile-main-container" style={{ maxWidth: containerWidth, margin: '0 auto', position: 'relative', zIndex: 2 }}>
                     {/* Instagram-Style Highlights Bar & Store Promo Card */}
                     <ProfileHighlightsAndStore
                         business={business}

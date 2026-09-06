@@ -406,7 +406,7 @@ export default function ProfileStorePromoCard({
 
     // ─────────────────────────────────────────────────────────────
     // SIDE-BY-SIDE / STACKED CARD MODE (When business has highlights)
-    // 2/3 Bento 3D Showcase Product Card + 1/3 Bento CTA Card (Iconly Style)
+    // 2/3 Bento 3D Showcase Product Card + 1/3 Bento CTA Card (Apple Tech Style)
     // ─────────────────────────────────────────────────────────────
     const hasMultiple = products.length > 1;
 
@@ -416,7 +416,7 @@ export default function ProfileStorePromoCard({
             style={{
                 position: 'relative',
                 width: '100%',
-                padding: '6px',
+                padding: 0,
                 borderRadius: '24px',
                 background: 'transparent',
                 border: 'none',
@@ -427,13 +427,14 @@ export default function ProfileStorePromoCard({
             <div
                 style={{
                     display: 'grid',
-                    gridTemplateColumns: products.length > 0 ? '1.9fr 1fr' : '1fr',
-                    gap: '12px',
+                    gridTemplateColumns: products.length > 0 ? 'minmax(0, 2.35fr) minmax(86px, 1fr)' : '1fr',
+                    gap: '10px',
                     alignItems: 'stretch',
-                    width: '100%'
+                    width: '100%',
+                    height: '124px'
                 }}
             >
-                {/* ═══ 2/3 COLUMN: ICONLY-STYLE BENTO PRODUCT CARD ═══ */}
+                {/* ═══ 2/3 COLUMN: APPLE TECH BENTO PRODUCT CARD ═══ */}
                 {products.length > 0 && (
                     <div
                         onMouseEnter={() => setIsHovered(true)}
@@ -441,36 +442,55 @@ export default function ProfileStorePromoCard({
                         onClick={goToStore}
                         style={{
                             position: 'relative',
-                            background: '#ffffff',
-                            borderRadius: '22px',
+                            background: `linear-gradient(135deg, #ffffff 45%, #ffffff 75%, ${primaryColor}12 100%)`,
+                            borderRadius: '20px',
                             border: '1px solid rgba(0,0,0,0.06)',
-                            padding: '18px 20px',
+                            padding: '13px 14px',
                             cursor: 'pointer',
                             overflow: 'hidden',
-                            minHeight: '128px',
+                            height: '124px',
+                            minHeight: '124px',
+                            maxHeight: '124px',
+                            boxSizing: 'border-box',
                             display: 'flex',
                             flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
-                            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                            justifyContent: 'center',
+                            boxShadow: `0 8px 24px rgba(0,0,0,0.04)`,
+                            transition: 'transform 0.22s ease, box-shadow 0.22s ease'
                         }}
                         onMouseEnter={(e) => {
                             setIsHovered(true);
                             e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.1)';
+                            e.currentTarget.style.boxShadow = `0 12px 32px ${primaryColor}22`;
                         }}
                         onMouseLeave={(e) => {
                             setIsHovered(false);
                             e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.06)';
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.04)';
                         }}
                     >
+                        {/* Ambient subtle corner glow matching business color */}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                bottom: '-30px',
+                                right: '-30px',
+                                width: '120px',
+                                height: '120px',
+                                borderRadius: '50%',
+                                background: `radial-gradient(circle, ${primaryColor}22 0%, rgba(255,255,255,0) 70%)`,
+                                filter: 'blur(16px)',
+                                pointerEvents: 'none',
+                                zIndex: 0
+                            }}
+                        />
+
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={currentProduct?.id || currentIndex}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.98 }}
                                 transition={{ duration: 0.22 }}
                                 style={{
                                     display: 'flex',
@@ -480,22 +500,48 @@ export default function ProfileStorePromoCard({
                                     position: 'relative'
                                 }}
                             >
-                                {/* Left: Clean Typography */}
+                                {/* Left: Clean Typography & Micro-Badge */}
                                 <div style={{
                                     display: 'flex',
                                     flexDirection: 'column',
                                     justifyContent: 'center',
                                     zIndex: 2,
-                                    maxWidth: '62%',
-                                    minWidth: 0
+                                    maxWidth: '65%',
+                                    minWidth: 0,
+                                    gap: '2px'
                                 }}>
+                                    {/* Category / Highlight Badge with Brand Dot */}
+                                    <div>
+                                        <span style={{
+                                            fontSize: '9.5px',
+                                            fontWeight: '800',
+                                            letterSpacing: '0.6px',
+                                            color: '#64748b',
+                                            textTransform: 'uppercase',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                        }}>
+                                            <span style={{
+                                                width: '5px',
+                                                height: '5px',
+                                                borderRadius: '50%',
+                                                background: primaryColor,
+                                                boxShadow: `0 0 6px ${primaryColor}80`
+                                            }} />
+                                            {currentProduct?.category || 'Destacado'}
+                                        </span>
+                                    </div>
+
+                                    {/* Product Title (Fixed 2.5em height: reserves exactly 2 lines so card never expands or shrinks) */}
                                     <h3
                                         style={{
-                                            fontSize: '17px',
+                                            fontSize: '15px',
                                             fontWeight: '800',
-                                            color: '#111827',
-                                            margin: 0,
-                                            lineHeight: 1.2,
+                                            color: '#0f172a',
+                                            margin: '1px 0 0 0',
+                                            lineHeight: '1.25',
+                                            height: '2.5em',
                                             letterSpacing: '-0.3px',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -507,55 +553,73 @@ export default function ProfileStorePromoCard({
                                     >
                                         {currentProduct?.name || 'Producto'}
                                     </h3>
-                                    <div
-                                        style={{
+
+                                    {/* Product Price Treatment */}
+                                    <div style={{ marginTop: '2px' }}>
+                                        <span style={{
                                             fontSize: '15px',
-                                            fontWeight: '700',
-                                            color: '#6b7280',
-                                            marginTop: '6px',
-                                            letterSpacing: '-0.2px'
-                                        }}
-                                    >
-                                        {formatPrice(currentProduct?.price)}
+                                            fontWeight: '800',
+                                            color: '#0f172a',
+                                            letterSpacing: '-0.3px'
+                                        }}>
+                                            {formatPrice(currentProduct?.price)}
+                                        </span>
                                     </div>
                                 </div>
 
-                                {/* Right: Product Showcase Image (Emerging from bottom-right) */}
+                                {/* Right: Product Showcase with 3D Pedestal Lighting */}
                                 <div style={{
                                     position: 'absolute',
                                     right: '-4px',
-                                    bottom: '-4px',
-                                    top: '-4px',
+                                    bottom: '-2px',
+                                    top: '-2px',
                                     width: '45%',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'flex-end',
+                                    justifyContent: 'center',
                                     pointerEvents: 'none',
                                     zIndex: 1
                                 }}>
+                                    {/* 3D Illuminated Pedestal Pod behind PNG */}
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            width: '84px',
+                                            height: '84px',
+                                            borderRadius: '50%',
+                                            background: `radial-gradient(circle, ${primaryColor}28 0%, ${primaryColor}10 45%, rgba(255,255,255,0) 72%)`,
+                                            filter: 'blur(8px)',
+                                            transform: 'translateY(6px)',
+                                            zIndex: 0
+                                        }}
+                                    />
+
+                                    {/* Floating PNG image with 3D ground drop-shadow */}
                                     <img
                                         src={productImage}
                                         alt={currentProduct?.name || 'Producto'}
                                         style={{
-                                            maxHeight: '115px',
-                                            maxWidth: '115px',
+                                            maxHeight: '94px',
+                                            maxWidth: '94px',
                                             width: 'auto',
                                             height: 'auto',
                                             objectFit: 'contain',
-                                            filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.12))'
+                                            zIndex: 1,
+                                            filter: 'drop-shadow(0 12px 16px rgba(0,0,0,0.15))',
+                                            transition: 'transform 0.25s ease'
                                         }}
                                     />
                                 </div>
                             </motion.div>
                         </AnimatePresence>
 
-                        {/* Subtle Carousel Progress (Top Right) */}
+                        {/* Modern Minimal Carousel Dots (Top Right) */}
                         {hasMultiple && (
                             <div
                                 style={{
                                     position: 'absolute',
-                                    top: '14px',
-                                    right: '18px',
+                                    top: '10px',
+                                    right: '12px',
                                     display: 'flex',
                                     gap: '4px',
                                     alignItems: 'center',
@@ -570,10 +634,12 @@ export default function ProfileStorePromoCard({
                                             setCurrentIndex(idx);
                                         }}
                                         style={{
-                                            width: idx === currentIndex ? '14px' : '4px',
+                                            width: idx === currentIndex ? '11px' : '4px',
                                             height: '4px',
                                             borderRadius: '2px',
-                                            background: idx === currentIndex ? '#111827' : 'rgba(0,0,0,0.18)',
+                                            background: idx === currentIndex
+                                                ? primaryColor
+                                                : 'rgba(0,0,0,0.15)',
                                             transition: 'all 0.25s ease',
                                             cursor: 'pointer'
                                         }}
@@ -590,42 +656,45 @@ export default function ProfileStorePromoCard({
                     style={{
                         position: 'relative',
                         background: `linear-gradient(145deg, ${primaryColor} 0%, ${primaryColor}ea 100%)`,
-                        borderRadius: '22px',
-                        padding: '18px 14px',
+                        borderRadius: '20px',
+                        padding: '14px 10px',
                         cursor: 'pointer',
                         overflow: 'hidden',
-                        minHeight: '128px',
+                        height: '124px',
+                        minHeight: '124px',
+                        maxHeight: '124px',
+                        boxSizing: 'border-box',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
                         textAlign: 'center',
-                        gap: '8px',
-                        boxShadow: `0 8px 26px ${primaryColor}40`,
+                        gap: '6px',
+                        boxShadow: `0 6px 22px ${primaryColor}35`,
                         transition: 'transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease'
                     }}
                     onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-2px)';
                         e.currentTarget.style.filter = 'brightness(1.06)';
-                        e.currentTarget.style.boxShadow = `0 12px 34px ${primaryColor}55`;
+                        e.currentTarget.style.boxShadow = `0 10px 28px ${primaryColor}45`;
                     }}
                     onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
                         e.currentTarget.style.filter = 'brightness(1)';
-                        e.currentTarget.style.boxShadow = `0 8px 26px ${primaryColor}40`;
+                        e.currentTarget.style.boxShadow = `0 6px 22px ${primaryColor}35`;
                     }}
                 >
                     {/* Background Ambient Glow */}
                     <div
                         style={{
                             position: 'absolute',
-                            top: '-30px',
-                            right: '-30px',
-                            width: '90px',
-                            height: '90px',
+                            top: '-25px',
+                            right: '-25px',
+                            width: '80px',
+                            height: '80px',
                             borderRadius: '50%',
                             background: 'rgba(255,255,255,0.22)',
-                            filter: 'blur(20px)',
+                            filter: 'blur(16px)',
                             pointerEvents: 'none'
                         }}
                     />
@@ -636,22 +705,22 @@ export default function ProfileStorePromoCard({
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '8px',
+                        gap: '6px',
                         zIndex: 2
                     }}>
                         <h3 style={{
-                            fontSize: '19px',
+                            fontSize: '17px',
                             fontWeight: '800',
                             color: '#ffffff',
                             margin: 0,
                             lineHeight: 1.15,
-                            letterSpacing: '-0.4px'
+                            letterSpacing: '-0.3px'
                         }}>
                             Tienda
                         </h3>
                         <div style={{
-                            width: '32px',
-                            height: '32px',
+                            width: '28px',
+                            height: '28px',
                             borderRadius: '50%',
                             background: 'rgba(255,255,255,0.22)',
                             backdropFilter: 'blur(4px)',
@@ -661,20 +730,20 @@ export default function ProfileStorePromoCard({
                             color: '#ffffff',
                             transition: 'transform 0.2s ease'
                         }}>
-                            <ArrowRight size={18} strokeWidth={2.4} />
+                            <ArrowRight size={16} strokeWidth={2.4} />
                         </div>
                     </div>
 
                     {/* Subtle watermark icon in corner */}
                     <div style={{
                         position: 'absolute',
-                        right: '-10px',
-                        bottom: '-14px',
+                        right: '-8px',
+                        bottom: '-10px',
                         opacity: 0.14,
                         pointerEvents: 'none',
                         zIndex: 1
                     }}>
-                        <ShoppingBag size={76} color="#ffffff" />
+                        <ShoppingBag size={64} color="#ffffff" />
                     </div>
                 </div>
             </div>

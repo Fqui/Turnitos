@@ -82,7 +82,7 @@ export default function ProfileHeroBanner({
                 boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
                 textAlign: 'center',
                 marginTop: '-40px',
-                marginBottom: '30px',
+                marginBottom: '16px',
                 border: '1px solid var(--border)'
             }}>
                 <div className="business-header-facebook-layout">
