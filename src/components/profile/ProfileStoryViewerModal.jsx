@@ -573,7 +573,7 @@ export default function ProfileStoryViewerModal({
                                     style={{
                                         width: '100%',
                                         height: '100%',
-                                        objectFit: 'cover',
+                                        objectFit: 'contain',
                                         pointerEvents: 'none'
                                     }}
                                 />
@@ -584,7 +584,7 @@ export default function ProfileStoryViewerModal({
                                     style={{
                                         width: '100%',
                                         height: '100%',
-                                        objectFit: 'cover',
+                                        objectFit: 'contain',
                                         pointerEvents: 'none'
                                     }}
                                     draggable={false}
