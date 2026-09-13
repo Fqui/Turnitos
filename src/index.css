@@ -1507,7 +1507,7 @@ textarea {
 }
 
 [data-theme="dark"] .store-card-img-box {
-  background: radial-gradient(circle at center, #1e293b 30%, #0f172a 100%) !important;
+  background: radial-gradient(circle at center, #262626 30%, #171717 100%) !important;
   border-color: rgba(255, 255, 255, 0.05) !important;
 }
 

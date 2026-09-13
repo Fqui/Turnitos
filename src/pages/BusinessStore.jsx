@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useLayoutEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -51,8 +51,23 @@ export default function BusinessStore({ overrideSlug }) {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [business, setBusiness] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [business, setBusiness] = useState(() => {
+        if (location.state?.business) return location.state.business;
+        try {
+            const cached = sessionStorage.getItem(`turnitos_biz_${businessSlug}`);
+            if (cached) return JSON.parse(cached);
+        } catch (e) {}
+        return null;
+    });
+
+    const [loading, setLoading] = useState(() => {
+        if (location.state?.business) return false;
+        try {
+            if (sessionStorage.getItem(`turnitos_biz_${businessSlug}`)) return false;
+        } catch (e) {}
+        return true;
+    });
+
     const [cart, setCart] = useState([]);
     const [activeCategory, setActiveCategory] = useState('Todos');
     const [searchQuery, setSearchQuery] = useState('');
@@ -105,7 +120,16 @@ export default function BusinessStore({ overrideSlug }) {
     const [modalQty, setModalQty] = useState(1);
     const [selectedSize, setSelectedSize] = useState(null);
 
-    const [products, setProducts] = useState([]);
+    const [products, setProducts] = useState(() => {
+        const initBiz = location.state?.business || (() => {
+            try {
+                const c = sessionStorage.getItem(`turnitos_biz_${businessSlug}`);
+                return c ? JSON.parse(c) : null;
+            } catch (e) { return null; }
+        })();
+        const p = initBiz?.metadata?.store_products;
+        return Array.isArray(p) ? p.filter(item => item.is_active !== false) : [];
+    });
 
     useEffect(() => {
         const fetchBusiness = async () => {
@@ -118,6 +142,11 @@ export default function BusinessStore({ overrideSlug }) {
                         return;
                     }
                     setBusiness(foundBusiness);
+                    try {
+                        sessionStorage.setItem(`turnitos_biz_${foundBusiness.slug || businessSlug}`, JSON.stringify(foundBusiness));
+                        sessionStorage.setItem(`turnitos_theme_${foundBusiness.slug || businessSlug}`, ((foundBusiness.theme || foundBusiness.metadata?.theme) === 'dark') ? 'dark' : 'light');
+                    } catch (e) {}
+
                     // 1. Check metadata store_products
                     const customProducts = foundBusiness.metadata?.store_products;
                     if (Array.isArray(customProducts) && customProducts.length > 0) {
@@ -141,44 +170,51 @@ export default function BusinessStore({ overrideSlug }) {
         fetchBusiness();
     }, [businessSlug]);
 
-    // Theme setup matching LinkBio / BusinessProfile exactly
-    useEffect(() => {
-        if (business) {
-            const root = document.documentElement;
-            const primaryColor = business.primary_color || business.button_color || business.buttonColor ||
-                (business.category === 'beauty' ? '#FF4081' :
-                    business.category === 'health' ? '#2979FF' : '#00E676');
+    // Theme setup matching LinkBio / BusinessProfile with useLayoutEffect for zero-latency dark transition
+    useLayoutEffect(() => {
+        const currentBiz = business || location.state?.business;
+        const root = document.documentElement;
 
-            root.style.setProperty('--primary-paddle', primaryColor);
+        const isDarkTheme = currentBiz
+            ? ((currentBiz.theme || currentBiz.metadata?.theme) === 'dark')
+            : (root.getAttribute('data-theme') === 'dark' || (typeof sessionStorage !== 'undefined' && (sessionStorage.getItem('turnitos_current_theme') === 'dark' || sessionStorage.getItem(`turnitos_theme_${businessSlug}`) === 'dark')));
 
-            const isDarkTheme = (business.theme || business.metadata?.theme) === 'dark';
-            root.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+        const primaryColor = currentBiz?.primary_color || currentBiz?.button_color || currentBiz?.buttonColor ||
+            (currentBiz?.category === 'beauty' ? '#FF4081' :
+                currentBiz?.category === 'health' ? '#2979FF' : '#00E676');
 
-            if (!isDarkTheme) {
-                root.style.setProperty('--bg-main', '#F8FAFC');
-                root.style.setProperty('--bg-card', '#FFFFFF');
-                root.style.setProperty('--text-primary', '#0F172A');
-                root.style.setProperty('--text-secondary', '#64748B');
-                root.style.setProperty('--border', '#E2E8F0');
-            } else {
-                root.style.setProperty('--bg-main', '#0B0F17');
-                root.style.setProperty('--bg-card', '#151C28');
-                root.style.setProperty('--text-primary', '#F8FAFC');
-                root.style.setProperty('--text-secondary', '#94A3B8');
-                root.style.setProperty('--border', '#222F3E');
-            }
+        root.style.setProperty('--primary-paddle', primaryColor);
+        root.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+
+        if (!isDarkTheme) {
+            root.style.setProperty('--bg-main', '#F8FAFC');
+            root.style.setProperty('--bg-card', '#FFFFFF');
+            root.style.setProperty('--text-primary', '#0F172A');
+            root.style.setProperty('--text-secondary', '#64748B');
+            root.style.setProperty('--border', '#E2E8F0');
+        } else {
+            root.style.setProperty('--bg-main', '#121212');
+            root.style.setProperty('--bg-card', '#1C1C1C');
+            root.style.setProperty('--text-primary', '#EDEDED');
+            root.style.setProperty('--text-secondary', '#A0A0A0');
+            root.style.setProperty('--border', '#2E2E2E');
         }
+
         return () => {
-            const root = document.documentElement;
-            root.removeAttribute('data-theme');
-            root.style.removeProperty('--primary-paddle');
-            root.style.removeProperty('--bg-main');
-            root.style.removeProperty('--bg-card');
-            root.style.removeProperty('--text-primary');
-            root.style.removeProperty('--text-secondary');
-            root.style.removeProperty('--border');
+            const nextPath = window.location.pathname;
+            const isStayingInBusiness = nextPath.endsWith('/turnos') || nextPath.endsWith('/bio') || (businessSlug && nextPath.includes(`/${businessSlug}`));
+
+            if (!isStayingInBusiness) {
+                root.removeAttribute('data-theme');
+                root.style.removeProperty('--primary-paddle');
+                root.style.removeProperty('--bg-main');
+                root.style.removeProperty('--bg-card');
+                root.style.removeProperty('--text-primary');
+                root.style.removeProperty('--text-secondary');
+                root.style.removeProperty('--border');
+            }
         };
-    }, [business]);
+    }, [business, businessSlug]);
 
     const addToCart = (product, quantity = 1, size = null) => {
         setCart(prev => {
@@ -344,9 +380,27 @@ export default function BusinessStore({ overrideSlug }) {
     const primaryColor = business?.primary_color || business?.button_color || business?.buttonColor || '#10B981';
 
     if (loading) {
+        const isDark = (business?.theme || business?.metadata?.theme) === 'dark' ||
+            (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark') ||
+            (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('turnitos_current_theme') === 'dark');
+
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-main)' }}>
-                <div style={{ width: '40px', height: '40px', border: '3px solid var(--border)', borderTopColor: primaryColor, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100vh',
+                backgroundColor: isDark ? '#121212' : 'var(--bg-main, #F8FAFC)',
+                color: isDark ? '#EDEDED' : 'var(--text-primary, #0F172A)'
+            }}>
+                <div style={{
+                    width: '40px',
+                    height: '40px',
+                    border: isDark ? '3px solid #2E2E2E' : '3px solid var(--border, #E2E8F0)',
+                    borderTopColor: primaryColor,
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                }} />
             </div>
         );
     }
@@ -355,7 +409,10 @@ export default function BusinessStore({ overrideSlug }) {
         return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
     }
 
-    if (!business.store_enabled) {
+    const hasStoreProducts = (Array.isArray(products) && products.length > 0) ||
+        (Array.isArray(business.metadata?.store_products) && business.metadata.store_products.length > 0);
+
+    if (!business.store_enabled && !hasStoreProducts) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', gap: '16px', padding: '20px', textAlign: 'center' }}>
                 <div style={{ fontSize: '54px' }}>🏪</div>

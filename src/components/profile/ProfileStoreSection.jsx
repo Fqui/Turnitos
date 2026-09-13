@@ -8,13 +8,11 @@ export default function ProfileStoreSection({
 }) {
     const navigate = useNavigate();
 
-    if (!business?.store_enabled) return null;
-
-    const storeProducts = (business.metadata?.store_products && business.metadata.store_products.length > 0)
+    const storeProducts = (business?.metadata?.store_products && business.metadata.store_products.length > 0)
         ? business.metadata.store_products.filter(p => p.is_active !== false)
         : [];
 
-    if (storeProducts.length === 0) return null;
+    if (!business?.store_enabled && storeProducts.length === 0) return null;
 
     return (
         <section style={{
@@ -35,7 +33,7 @@ export default function ProfileStoreSection({
                 <button
                     onClick={() => {
                         const subdomain = getSubdomain();
-                        navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
+                        navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`, { state: { business } });
                     }}
                     style={{
                         padding: '6px 14px',
@@ -65,7 +63,7 @@ export default function ProfileStoreSection({
                         key={prod.id || idx}
                         onClick={() => {
                             const subdomain = getSubdomain();
-                            navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`);
+                            navigate(subdomain ? '/tienda' : `/${business.slug}/tienda`, { state: { business } });
                         }}
                         style={{
                             flexShrink: 0,

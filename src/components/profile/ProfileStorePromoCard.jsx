@@ -91,7 +91,7 @@ export default function ProfileStorePromoCard({
     const goToStore = (e) => {
         if (e) e.stopPropagation();
         const subdomain = getSubdomain();
-        navigate(subdomain ? '/tienda' : `/${business?.slug || ''}/tienda`);
+        navigate(subdomain ? '/tienda' : `/${business?.slug || ''}/tienda`, { state: { business } });
     };
 
     const handlePrev = (e) => {

@@ -381,6 +381,14 @@ export default function BusinessProfile({ business: initialBusiness }) {
             const isDarkTheme = (business.theme || business.metadata?.theme) === 'dark';
             root.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
 
+            try {
+                sessionStorage.setItem('turnitos_current_theme', isDarkTheme ? 'dark' : 'light');
+                if (business.slug) {
+                    sessionStorage.setItem(`turnitos_biz_${business.slug}`, JSON.stringify(business));
+                    sessionStorage.setItem(`turnitos_theme_${business.slug}`, isDarkTheme ? 'dark' : 'light');
+                }
+            } catch (e) {}
+
             if (!isDarkTheme) {
                 root.style.setProperty('--bg-main', '#F8FAFC');
                 root.style.setProperty('--bg-card', '#FFFFFF');
@@ -399,13 +407,19 @@ export default function BusinessProfile({ business: initialBusiness }) {
             const root = document.documentElement;
             const body = document.body;
 
-            root.removeAttribute('data-theme');
-            root.style.removeProperty('--primary-paddle');
-            root.style.removeProperty('--bg-main');
-            root.style.removeProperty('--bg-card');
-            root.style.removeProperty('--text-primary');
-            root.style.removeProperty('--text-secondary');
-            root.style.removeProperty('--border');
+            // Preserve theme if navigating to subpages of this business (e.g. /tienda) to eliminate white flashes
+            const nextPath = window.location.pathname;
+            const isStayingInBusiness = nextPath.includes('/tienda') || nextPath.includes('/turnos') || nextPath.includes('/bio');
+
+            if (!isStayingInBusiness) {
+                root.removeAttribute('data-theme');
+                root.style.removeProperty('--primary-paddle');
+                root.style.removeProperty('--bg-main');
+                root.style.removeProperty('--bg-card');
+                root.style.removeProperty('--text-primary');
+                root.style.removeProperty('--text-secondary');
+                root.style.removeProperty('--border');
+            }
             body.style.removeProperty('background-image');
             body.style.removeProperty('background-size');
         };

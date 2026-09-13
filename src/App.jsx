@@ -57,34 +57,41 @@ const ProtectedSellerRoute = lazyWithRetry(() => import('./components/seller/Pro
 const ProtectedSuperAdminRoute = lazyWithRetry(() => import('./components/seller/ProtectedSuperAdminRoute'));
 
 // Loading fallback component
-const LoadingFallback = () => (
-  <div style={{
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flex: 1,
-    minHeight: '60vh',
-    backgroundColor: 'var(--bg-main)',
-    color: 'var(--text-primary)'
-  }}>
+const LoadingFallback = () => {
+  const isDark = typeof document !== 'undefined' && (
+    document.documentElement.getAttribute('data-theme') === 'dark' ||
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('turnitos_current_theme') === 'dark')
+  );
+
+  return (
     <div style={{
       display: 'flex',
-      flexDirection: 'column',
+      justifyContent: 'center',
       alignItems: 'center',
-      gap: '16px'
+      flex: 1,
+      minHeight: '60vh',
+      backgroundColor: isDark ? '#121212' : 'var(--bg-main, #F8FAFC)',
+      color: isDark ? '#EDEDED' : 'var(--text-primary, #0F172A)'
     }}>
       <div style={{
-        width: '50px',
-        height: '50px',
-        border: '4px solid var(--primary-paddle)',
-        borderTopColor: 'transparent',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite'
-      }} />
-      <p style={{ fontSize: '16px', fontWeight: '600' }}>Cargando...</p>
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '16px'
+      }}>
+        <div style={{
+          width: '50px',
+          height: '50px',
+          border: isDark ? '4px solid #2E2E2E' : '4px solid var(--border, #E2E8F0)',
+          borderTopColor: 'var(--primary-paddle, #00E676)',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <p style={{ fontSize: '16px', fontWeight: '600' }}>Cargando...</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -197,7 +204,8 @@ function AppContent() {
     <div className="app-container" style={{ 
       minHeight: '100dvh', 
       display: 'flex', 
-      flexDirection: 'column'
+      flexDirection: 'column',
+      backgroundColor: 'var(--bg-main)'
     }}>
       {!isAdmin && !isLinkBio && !isBusinessPortal && <Header showSearch={isHome} />}
 
