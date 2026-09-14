@@ -7,6 +7,7 @@ import OverviewTab from './tabs/OverviewTab';
 import BusinessesTab from './tabs/BusinessesTab';
 import SellersTab from './tabs/SellersTab';
 import CategoriesTab from './tabs/CategoriesTab';
+import PromotionsTab from './tabs/PromotionsTab';
 import GlobalSearchModal from './tabs/GlobalSearchModal';
 import ResetPasswordModal from './tabs/ResetPasswordModal';
 import BookingsTab from './BookingsTab';
@@ -417,6 +418,10 @@ export default function SuperAdminDashboard() {
                                 setActiveTab('businesses');
                             }}
                         />
+                    )}
+
+                    {activeTab === 'promotions' && (
+                        <PromotionsTab businesses={businesses} />
                     )}
 
                     {activeTab === 'businesses' && (

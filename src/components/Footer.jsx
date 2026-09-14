@@ -53,7 +53,7 @@ export default function Footer({ minimal = false }) {
                             <li><Link to="/" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Inicio</Link></li>
                             <li><Link to="/?category=deportes" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Deportes</Link></li>
                             <li><Link to="/?category=belleza" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Belleza</Link></li>
-                            <li><Link to="/?category=quinchos" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Quinchos</Link></li>
+                            <li><Link to="/?category=alquileres" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Alquileres</Link></li>
                             <li><Link to="/?category=salud" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Salud</Link></li>
                         </ul>
                     </div>

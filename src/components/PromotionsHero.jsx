@@ -120,58 +120,56 @@ export default function PromotionsHero({ promotions, businesses }) {
                         style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, cursor: 'grab' }}
                         whileDrag={{ cursor: 'grabbing' }}
                     >
-                        <Link
-                            to={`/${business?.slug || generateSlug(business?.name || '')}?promoId=${currentPromo.id}`}
-                            state={{ business, activePromo: currentPromo }}
-                            style={{
-                                textDecoration: 'none',
-                                display: 'block',
-                                height: '100%',
-                                pointerEvents: 'auto'
-                            }}
-                        >
-                            <div className="promo-card">
-                                {/* Image Section */}
-                                <div className="promo-image-container" style={{ overflow: 'hidden', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-                                    {currentPromo.image && !imgError ? (
-                                        <img
-                                            src={currentPromo.image}
-                                            alt={currentPromo.title}
-                                            onLoad={() => {
-                                                setLoadedImages(prev => {
-                                                    const next = new Set(prev);
-                                                    next.add(currentPromo.image);
-                                                    return next;
-                                                });
-                                            }}
-                                            onError={() => {
-                                                setFailedImages(prev => {
-                                                    const next = new Set(prev);
-                                                    next.add(currentPromo.image);
-                                                    return next;
-                                                });
-                                            }}
-                                            style={{
+                        {/* Si no hay negocio pero hay link (guardado en description o action_url), abrimos enlace externo o ruta */}
+                        {(() => {
+                            const isExternal = currentPromo.description?.startsWith('http://') || currentPromo.description?.startsWith('https://');
+                            const targetUrl = isExternal
+                                ? currentPromo.description
+                                : (currentPromo.description?.startsWith('/') ? currentPromo.description : `/${business?.slug || generateSlug(business?.name || '')}?promoId=${currentPromo.id}`);
+
+                            const content = (
+                                <div className="promo-card">
+                                    {/* Image Section */}
+                                    <div className="promo-image-container" style={{ overflow: 'hidden', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
+                                        {currentPromo.image && !imgError ? (
+                                            <img
+                                                src={currentPromo.image}
+                                                alt={currentPromo.title}
+                                                onLoad={() => {
+                                                    setLoadedImages(prev => {
+                                                        const next = new Set(prev);
+                                                        next.add(currentPromo.image);
+                                                        return next;
+                                                    });
+                                                }}
+                                                onError={() => {
+                                                    setFailedImages(prev => {
+                                                        const next = new Set(prev);
+                                                        next.add(currentPromo.image);
+                                                        return next;
+                                                    });
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                    objectPosition: 'center 40%'
+                                                }}
+                                            />
+                                        ) : (
+                                            <div style={{
                                                 width: '100%',
                                                 height: '100%',
-                                                objectFit: 'cover',
-                                                objectPosition: 'center 40%'
-                                            }}
-                                        />
-                                    ) : (
-                                        <div style={{
-                                            width: '100%',
-                                            height: '100%',
-                                            background: 'linear-gradient(135deg, #00E67620 0%, #2979FF20 100%)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '48px'
-                                        }}>
-                                            🏷️
-                                        </div>
-                                    )}
-                                </div>
+                                                background: 'linear-gradient(135deg, #00E67620 0%, #2979FF20 100%)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '48px'
+                                            }}>
+                                                🏷️
+                                            </div>
+                                        )}
+                                    </div>
 
                                     {/* Content Section */}
                                     <div className="promo-content">
@@ -201,15 +199,49 @@ export default function PromotionsHero({ promotions, businesses }) {
                                                 {currentPromo.title}
                                             </h2>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <span style={{ fontSize: '16px' }}>📍</span>
+                                                <span style={{ fontSize: '16px' }}>{business?.name ? '📍' : '⚡'}</span>
                                                 <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'var(--font-title)' }}>
-                                                    {business?.name || 'Ver Negocio'}
+                                                    {business?.name || (isExternal ? 'Conocé Más ➔' : 'Ver Más')}
                                                 </span>
                                             </div>
                                         </motion.div>
                                     </div>
                                 </div>
-                            </Link>
+                            );
+
+                            if (isExternal) {
+                                return (
+                                    <a
+                                        href={targetUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                            textDecoration: 'none',
+                                            display: 'block',
+                                            height: '100%',
+                                            pointerEvents: 'auto'
+                                        }}
+                                    >
+                                        {content}
+                                    </a>
+                                );
+                            }
+
+                            return (
+                                <Link
+                                    to={targetUrl}
+                                    state={{ business, activePromo: currentPromo }}
+                                    style={{
+                                        textDecoration: 'none',
+                                        display: 'block',
+                                        height: '100%',
+                                        pointerEvents: 'auto'
+                                    }}
+                                >
+                                    {content}
+                                </Link>
+                            );
+                        })()}
                     </motion.div>
                 </AnimatePresence>
 

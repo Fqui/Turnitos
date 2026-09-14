@@ -5,7 +5,6 @@ import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
 import SEOHead from '../components/SEOHead';
 import { generateSlug } from '../utils/utils';
-import { parseAmenity } from '../components/common/AmenityIcon';
 
 const DEFAULT_CATEGORIES = [
     { id: 'deportes', slug: 'deportes', name: 'Deportes', icon: '⚽' },
@@ -949,6 +948,9 @@ export default function Home() {
                                                     overflow: 'hidden',
                                                     boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                                                     transition: 'all 0.3s',
+                                                    height: '100%',
+                                                    display: 'flex',
+                                                    flexDirection: 'column'
                                                 }}
                                                 whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.1)' }}
                                             >
@@ -965,8 +967,8 @@ export default function Home() {
                                                     {/* Logo on the left */}
                                                     {business.logo && (
                                                         <div style={{
-                                                            width: '60px',
-                                                            height: '60px',
+                                                            width: '56px',
+                                                            height: '56px',
                                                             borderRadius: '12px',
                                                             overflow: 'hidden',
                                                             flexShrink: 0,
@@ -984,9 +986,9 @@ export default function Home() {
                                                     {/* Info on the right */}
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <h3 style={{
-                                                            fontSize: '18px',
+                                                            fontSize: '17px',
                                                             fontWeight: '800',
-                                                            marginBottom: '6px',
+                                                            marginBottom: '3px',
                                                             color: 'var(--text-primary)',
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
@@ -995,9 +997,9 @@ export default function Home() {
                                                             {business.name}
                                                         </h3>
                                                         <p style={{
-                                                            fontSize: '13px',
+                                                            fontSize: '12.5px',
                                                             color: 'var(--text-secondary)',
-                                                            marginBottom: '8px',
+                                                            marginBottom: '0',
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             gap: '4px',
@@ -1007,27 +1009,6 @@ export default function Home() {
                                                         }}>
                                                             <span>📍</span> {business.location}
                                                         </p>
-
-                                                        {business.amenities && business.amenities.length > 0 && (
-                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                                {business.amenities.slice(0, 2).map((rawAmenity, idx) => {
-                                                                    const parsed = parseAmenity(rawAmenity);
-                                                                    if (!parsed.name) return null;
-                                                                    return (
-                                                                        <span key={idx} style={{
-                                                                            fontSize: '10px',
-                                                                            padding: '3px 6px',
-                                                                            borderRadius: '8px',
-                                                                            backgroundColor: 'var(--bg-main)',
-                                                                            color: 'var(--text-secondary)',
-                                                                            fontWeight: '600'
-                                                                        }}>
-                                                                            {parsed.name}
-                                                                        </span>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        )}
                                                     </div>
                                                 </div>
                                             </motion.div>

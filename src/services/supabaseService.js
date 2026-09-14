@@ -225,6 +225,10 @@ class SupabaseService {
         return promotionService.createPromotion(promotionData);
     }
 
+    async updatePromotion(promotionId, promotionData) {
+        return promotionService.updatePromotion(promotionId, promotionData);
+    }
+
     async deletePromotion(promotionId) {
         return promotionService.deletePromotion(promotionId);
     }

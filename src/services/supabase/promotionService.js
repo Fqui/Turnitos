@@ -37,6 +37,17 @@ export async function createPromotion(promotionData) {
     return data[0];
 }
 
+export async function updatePromotion(promotionId, promotionData) {
+    const { data, error } = await supabase
+        .from('promotions')
+        .update(promotionData)
+        .eq('id', promotionId)
+        .select();
+
+    if (error) throw error;
+    return data[0];
+}
+
 export async function deletePromotion(promotionId) {
     const { error } = await supabase
         .from('promotions')

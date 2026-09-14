@@ -14,6 +14,7 @@ export default function SuperAdminSidebar({
 }) {
     const navItems = [
         { id: 'overview', label: 'Dashboard', icon: '📊', description: 'Métricas y evolución' },
+        { id: 'promotions', label: 'Publicidades Home', icon: '🔥', description: 'Banners y ofertas de la portada' },
         { id: 'businesses', label: 'Negocios', icon: '🏢', description: 'Gestión de clubes y salones', badge: alertCount > 0 ? alertCount : null, badgeColor: '#f59e0b' },
         { id: 'sellers', label: 'Vendedores', icon: '👥', description: 'Comerciales y comisiones' },
         { id: 'bookings', label: 'Reservas Globales', icon: '🎫', description: 'Turnos de la plataforma' },
