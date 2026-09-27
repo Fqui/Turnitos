@@ -222,10 +222,15 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
             const durationDiscounts = formData.duration_discounts || business?.duration_discounts || business?.metadata?.duration_discounts || {};
             const safePrice = Number(tiers[0]?.price || formData.price_per_hour || business?.price_per_hour || business?.price || 20000);
             const whatsappTemplates = formData.whatsapp_templates || formData.metadata?.whatsapp_templates || business?.whatsapp_templates || business?.metadata?.whatsapp_templates || {};
+            const safeDesc = (formData.description !== undefined && formData.description !== null && formData.description !== '')
+                ? formData.description
+                : (formData.bio_description || business?.description || business?.bio_description || '');
 
             const dataToSave = {
                 ...business,
                 ...formData,
+                description: safeDesc,
+                bio_description: safeDesc,
                 capacity_limit: safeCapacity,
                 max_capacity: safeCapacity,
                 price_per_hour: safePrice,
@@ -242,6 +247,8 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 metadata: {
                     ...(business?.metadata || {}),
                     ...(formData.metadata || {}),
+                    description: safeDesc,
+                    bio_description: safeDesc,
                     capacity_limit: safeCapacity,
                     pricing_tiers: tiers,
                     duration_discounts: durationDiscounts,
@@ -617,67 +624,14 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 )}
 
                 {activeTab === 'linkbio' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        {/* Frase / Descripción del Link in Bio */}
-                        <div style={cardStyle}>
-                            <h3 style={{
-                                fontSize: '17px',
-                                fontWeight: '700',
-                                marginBottom: '6px',
-                                color: 'var(--text-primary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                            }}>
-                                <span>📝</span> Frase / Descripción del Link in Bio
-                            </h3>
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.4 }}>
-                                Este texto se muestra justo debajo del logo y nombre de tu negocio en tu página de enlaces (Link in Bio). Reemplaza el texto por defecto.
-                            </p>
-                            <textarea
-                                value={formData.bio_description ?? formData.description ?? ''}
-                                onChange={(e) => {
-                                    handleInputChange('description', e.target.value);
-                                    handleInputChange('bio_description', e.target.value);
-                                }}
-                                placeholder="¡Reserva tu turno online de forma rápida y sencilla!"
-                                rows={3}
-                                style={{ ...inputStyle, width: '100%', resize: 'vertical' }}
-                            />
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-                                <button
-                                    onClick={async () => {
-                                        const descVal = formData.bio_description ?? formData.description ?? '';
-                                        handleInputChange('description', descVal);
-                                        handleInputChange('bio_description', descVal);
-                                        handleMetadataChange('bio_description', descVal);
-                                        await handleSave();
-                                    }}
-                                    disabled={saving}
-                                    style={{
-                                        background: 'var(--primary-paddle, #84CC16)',
-                                        color: '#000',
-                                        border: 'none',
-                                        padding: '10px 20px',
-                                        borderRadius: '10px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {saving ? 'Guardando...' : 'Guardar Descripción'}
-                                </button>
-                            </div>
-                        </div>
-
-                        <LinkBioButtonsSettings
-                            customLinks={formData.custom_links || []}
-                            onChange={(newLinks) => {
-                                handleInputChange('custom_links', newLinks);
-                                handleMetadataChange('custom_links', newLinks);
-                            }}
-                            primaryColor={formData.primary_color || business?.primary_color}
-                        />
-                    </div>
+                    <LinkBioButtonsSettings
+                        customLinks={formData.custom_links || []}
+                        onChange={(newLinks) => {
+                            handleInputChange('custom_links', newLinks);
+                            handleMetadataChange('custom_links', newLinks);
+                        }}
+                        primaryColor={formData.primary_color || business?.primary_color}
+                    />
                 )}
 
                 {activeTab === 'coupons' && (

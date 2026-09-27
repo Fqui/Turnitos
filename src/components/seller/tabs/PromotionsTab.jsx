@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import supabaseService from '../../../services/supabaseService';
 import { useNotification } from '../../../contexts/NotificationContext';
 import { supabase } from '../../../services/supabaseClient';
+import { parsePromotionTarget } from '../../../utils/promotionUtils';
 
 function PromoModal({ title, children, onClose }) {
     return (
@@ -74,8 +75,100 @@ export default function PromotionsTab({ businesses = [] }) {
         business_id: '',
         action_url: '',
         end_date: '',
-        description: ''
+        description: '',
+        target_type: 'general',
+        target_id: '',
+        target_name: '',
+        discount_type: 'percentage',
+        discount_value: '',
+        code: '',
+        cta_text: ''
     });
+
+    const [bizServices, setBizServices] = useState([]);
+    const [bizProducts, setBizProducts] = useState([]);
+    const [bizCategories, setBizCategories] = useState([]);
+    const [loadingBizDetails, setLoadingBizDetails] = useState(false);
+
+    // Cargar servicios, productos de tienda y categorías directamente desde la BD al cambiar de negocio
+    useEffect(() => {
+        if (!form.business_id) {
+            setBizServices([]);
+            setBizProducts([]);
+            setBizCategories([]);
+            return;
+        }
+
+        let isMounted = true;
+        const fetchBizData = async () => {
+            setLoadingBizDetails(true);
+            try {
+                // 1. Traer servicios reales de la BD
+                const { data: servData, error: sErr } = await supabase
+                    .from('services')
+                    .select('id, name, price, category, duration, is_active')
+                    .eq('business_id', form.business_id)
+                    .order('name');
+                if (sErr) console.warn('Error cargando servicios de la BD para promo:', sErr);
+                const loadedServices = servData || [];
+
+                // 2. Traer datos del negocio (metadata de store_products y relaciones de categorías)
+                const { data: bData, error: bErr } = await supabase
+                    .from('businesses')
+                    .select('id, name, type, category, categories(id, name), business_subcategories(subcategories(id, name)), metadata')
+                    .eq('id', form.business_id)
+                    .single();
+                if (bErr) console.warn('Error cargando metadata del negocio para promo:', bErr);
+
+                // Productos de la tienda
+                let loadedProducts = [];
+                if (Array.isArray(bData?.metadata?.store_products)) {
+                    loadedProducts = bData.metadata.store_products.filter(p => p.is_active !== false);
+                }
+
+                try {
+                    const { data: dbProds } = await supabase
+                        .from('store_products')
+                        .select('*')
+                        .eq('business_id', form.business_id);
+                    if (dbProds && dbProds.length > 0) {
+                        const existingIds = new Set(loadedProducts.map(p => String(p.id)));
+                        dbProds.forEach(dp => {
+                            if (!existingIds.has(String(dp.id))) {
+                                loadedProducts.push(dp);
+                            }
+                        });
+                    }
+                } catch (ignore) {}
+
+                // 3. Unificar categorías disponibles
+                const sCats = [...new Set(loadedServices.map(s => s.category?.trim()).filter(Boolean))];
+                const pCats = [...new Set(loadedProducts.map(p => p.category?.trim()).filter(Boolean))];
+                const subcats = bData?.business_subcategories?.map(bs => bs.subcategories?.name?.trim()).filter(Boolean) || [];
+                const mainCat = bData?.categories?.name?.trim() || bData?.category?.trim();
+
+                const cats = [
+                    ...sCats.map(c => ({ value: c, label: `${c} (Categoría de Servicios)`, group: 'Servicios' })),
+                    ...pCats.filter(c => !sCats.includes(c)).map(c => ({ value: c, label: `${c} (Categoría de Tienda)`, group: 'Tienda' })),
+                    ...(mainCat ? [{ value: mainCat, label: `${mainCat} (Rubro Principal)`, group: 'Rubro' }] : []),
+                    ...subcats.filter(c => c !== mainCat && !sCats.includes(c)).map(c => ({ value: c, label: `${c} (Subcategoría)`, group: 'Rubro' }))
+                ];
+
+                if (isMounted) {
+                    setBizServices(loadedServices);
+                    setBizProducts(loadedProducts);
+                    setBizCategories(cats);
+                }
+            } catch (err) {
+                console.error('Error al obtener datos del negocio para la promo:', err);
+            } finally {
+                if (isMounted) setLoadingBizDetails(false);
+            }
+        };
+
+        fetchBizData();
+        return () => { isMounted = false; };
+    }, [form.business_id]);
 
     const loadPromotions = async () => {
         setLoading(true);
@@ -103,23 +196,37 @@ export default function PromotionsTab({ businesses = [] }) {
             business_id: '',
             action_url: '',
             end_date: '',
-            description: ''
+            description: '',
+            target_type: 'general',
+            target_id: '',
+            target_name: '',
+            discount_type: 'percentage',
+            discount_value: '',
+            code: '',
+            cta_text: ''
         });
         setShowModal(true);
     };
 
     const handleOpenEdit = (promo) => {
         setEditingPromo(promo);
-        // Si no tiene negocio pero tiene URL en description, separarlo
+        const parsed = parsePromotionTarget(promo);
         const isUrl = promo.description?.startsWith('http://') || promo.description?.startsWith('https://') || promo.description?.startsWith('/');
         setForm({
             title: promo.title || '',
             discount: promo.discount || '',
             image: promo.image || '',
             business_id: promo.business_id || '',
-            action_url: isUrl ? promo.description : '',
+            action_url: parsed.action_url || (isUrl ? promo.description : ''),
             end_date: promo.end_date || (promo.expires_at ? promo.expires_at.split('T')[0] : ''),
-            description: isUrl ? '' : (promo.description || '')
+            description: parsed.text || (isUrl ? '' : (promo.description || '')),
+            target_type: parsed.target_type || 'general',
+            target_id: parsed.target_id || '',
+            target_name: parsed.target_name || '',
+            discount_type: parsed.discount_type || 'percentage',
+            discount_value: parsed.discount_value || '',
+            code: parsed.code || '',
+            cta_text: parsed.cta_text || ''
         });
         setShowModal(true);
     };
@@ -186,17 +293,44 @@ export default function PromotionsTab({ businesses = [] }) {
             }
 
             // Si es publicidad general y tiene action_url, lo guardamos en description para que el Home lo use como link
-            const finalDescription = (!form.business_id && cleanActionUrl)
-                ? cleanActionUrl
-                : (form.description?.trim() || null);
+            let finalDescription = null;
+            if (!form.business_id && cleanActionUrl && !form.description?.trim() && !form.cta_text?.trim()) {
+                finalDescription = cleanActionUrl;
+            } else {
+                const meta = {
+                    text: form.description?.trim() || '',
+                    code: form.code?.trim().toUpperCase() || '',
+                    target_type: form.target_type || 'general',
+                    target_id: form.target_id || null,
+                    target_name: form.target_name || '',
+                    discount_type: form.discount_type || 'percentage',
+                    discount_value: Number(form.discount_value || 0),
+                    cta_text: form.cta_text?.trim() || '',
+                    action_url: cleanActionUrl || ''
+                };
+                finalDescription = JSON.stringify(meta);
+            }
+
+            let computedDiscount = form.discount.trim();
+            if (!computedDiscount && form.discount_value > 0) {
+                computedDiscount = form.discount_type === 'fixed'
+                    ? `$${Number(form.discount_value).toLocaleString('es-AR')} OFF`
+                    : `${form.discount_value}% OFF`;
+            }
+            if (!computedDiscount) {
+                computedDiscount = 'PROMO';
+            }
 
             // Sanitizamos el payload exacto de la tabla promotions de Supabase
             const promoPayload = {
                 title: form.title.trim(),
-                discount: form.discount.trim() || 'PROMO',
+                discount: computedDiscount,
                 image: form.image.trim(),
                 business_id: form.business_id ? form.business_id : null,
                 description: finalDescription,
+                service_id: (form.target_type === 'service' && form.target_id) ? form.target_id : null,
+                discount_type: form.discount_type || 'percentage',
+                discount_value: Number(form.discount_value || 0),
                 end_date: form.end_date ? form.end_date : null,
                 active: true
             };
@@ -371,6 +505,38 @@ export default function PromotionsTab({ businesses = [] }) {
                                 {/* Content */}
                                 <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
                                     <div>
+                                        {(() => {
+                                            const parsedTarget = parsePromotionTarget(promo);
+                                            return (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                                    <span style={{
+                                                        fontSize: '10.5px',
+                                                        fontWeight: '800',
+                                                        padding: '3px 8px',
+                                                        borderRadius: '6px',
+                                                        background: 'rgba(56, 189, 248, 0.15)',
+                                                        color: '#38bdf8'
+                                                    }}>
+                                                        {parsedTarget.target_type === 'service' ? '💆 SERVICIO' :
+                                                         parsedTarget.target_type === 'category' ? '🏷️ CATEGORÍA' :
+                                                         parsedTarget.target_type === 'store' ? '🛍️ TIENDA' : '🌐 GENERAL'}
+                                                    </span>
+                                                    {parsedTarget.code && (
+                                                        <span style={{
+                                                            fontSize: '10.5px',
+                                                            fontWeight: '800',
+                                                            padding: '3px 8px',
+                                                            borderRadius: '6px',
+                                                            background: 'rgba(16, 185, 129, 0.15)',
+                                                            color: '#10b981'
+                                                        }}>
+                                                            🎟️ {parsedTarget.code}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+
                                         <h4 style={{
                                             margin: '0 0 6px 0',
                                             fontSize: '16px',
@@ -381,13 +547,46 @@ export default function PromotionsTab({ businesses = [] }) {
                                             {promo.title}
                                         </h4>
                                         <p style={{
-                                            margin: '0 0 8px 0',
+                                            margin: '0 0 6px 0',
                                             fontSize: '13px',
                                             color: linkedBiz ? '#60a5fa' : '#34d399',
                                             fontWeight: '600'
                                         }}>
                                             {linkedBiz ? `🏢 ${linkedBiz.name}` : '🌐 General / Campaña Turnitos'}
                                         </p>
+
+                                        {(() => {
+                                            const pt = parsePromotionTarget(promo);
+                                            if (pt.target_type === 'service' && pt.target_name) {
+                                                return (
+                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#cbd5e1' }}>
+                                                        💆 Servicio: <strong style={{ color: '#10b981' }}>{pt.target_name}</strong>
+                                                    </p>
+                                                );
+                                            }
+                                            if (pt.target_type === 'product' && pt.target_name) {
+                                                return (
+                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#cbd5e1' }}>
+                                                        🛍️ Producto: <strong style={{ color: '#38bdf8' }}>{pt.target_name}</strong>
+                                                    </p>
+                                                );
+                                            }
+                                            if (pt.target_type === 'category' && pt.target_name) {
+                                                return (
+                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#cbd5e1' }}>
+                                                        🏷️ Categoría: <strong style={{ color: '#f59e0b' }}>{pt.target_name}</strong>
+                                                    </p>
+                                                );
+                                            }
+                                            if (pt.target_type === 'store') {
+                                                return (
+                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#cbd5e1' }}>
+                                                        🏬 Alcance: <strong style={{ color: '#a855f7' }}>Toda la Tienda</strong>
+                                                    </p>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
 
                                         {isExternal && !linkedBiz && (
                                             <p style={{ margin: '0 0 8px 0', fontSize: '11.5px', color: '#94a3b8', wordBreak: 'break-all' }}>
@@ -593,7 +792,13 @@ export default function PromotionsTab({ businesses = [] }) {
                             </label>
                             <select
                                 value={form.business_id}
-                                onChange={(e) => setForm({ ...form, business_id: e.target.value })}
+                                onChange={(e) => setForm({
+                                    ...form,
+                                    business_id: e.target.value,
+                                    target_type: 'general',
+                                    target_id: '',
+                                    target_name: ''
+                                })}
                                 style={{
                                     width: '100%',
                                     padding: '10px 14px',
@@ -611,6 +816,397 @@ export default function PromotionsTab({ businesses = [] }) {
                                 ))}
                             </select>
                         </div>
+
+                        {/* Opciones Avanzadas cuando hay un negocio vinculado */}
+                        {form.business_id && (() => {
+                            const selectedBiz = businesses.find(b => b.id === form.business_id);
+
+                            return (
+                                <div style={{
+                                    background: 'rgba(255, 255, 255, 0.03)',
+                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                    borderRadius: '12px',
+                                    padding: '14px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '14px'
+                                }}>
+                                    <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <label style={{ fontSize: '12px', fontWeight: '700', color: '#cbd5e1' }}>
+                                                🎯 Alcance del Beneficio
+                                            </label>
+                                            {loadingBizDetails && (
+                                                <span style={{ fontSize: '11px', color: '#38bdf8' }}>
+                                                    ⏳ Cargando datos de la BD...
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: '8px' }}>
+                                            {[
+                                                { id: 'general', label: '🌐 General', desc: 'Todo el negocio' },
+                                                { id: 'service', label: '💆 Servicio', desc: `Servicio (${bizServices.length})` },
+                                                { id: 'category', label: '🏷️ Categoría', desc: `Categoría (${bizCategories.length})` },
+                                                { id: 'product', label: '🛍️ Producto', desc: `Producto (${bizProducts.length})` },
+                                                { id: 'store', label: '🏬 Tienda', desc: 'Toda la tienda' }
+                                            ].map(t => (
+                                                <button
+                                                    key={t.id}
+                                                    type="button"
+                                                    onClick={() => setForm({ ...form, target_type: t.id, target_id: '', target_name: '' })}
+                                                    style={{
+                                                        padding: '8px 10px',
+                                                        borderRadius: '8px',
+                                                        border: form.target_type === t.id ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                                                        background: form.target_type === t.id ? 'rgba(16, 185, 129, 0.15)' : '#0a0f1d',
+                                                        color: form.target_type === t.id ? '#10b981' : '#cbd5e1',
+                                                        cursor: 'pointer',
+                                                        textAlign: 'center',
+                                                        fontSize: '12px',
+                                                        fontWeight: '700',
+                                                        transition: 'all 0.15s ease'
+                                                    }}
+                                                >
+                                                    <div>{t.label}</div>
+                                                    <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px', fontWeight: '400' }}>{t.desc}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Si el objetivo es servicio específico */}
+                                    {form.target_type === 'service' && (
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                                Seleccionar Servicio en Promoción (de la BD) *
+                                            </label>
+                                            {loadingBizDetails ? (
+                                                <div style={{ padding: '10px', fontSize: '12px', color: '#94a3b8' }}>
+                                                    ⏳ Cargando servicios de la base de datos...
+                                                </div>
+                                            ) : bizServices.length > 0 ? (
+                                                <select
+                                                    required
+                                                    value={form.target_id}
+                                                    onChange={(e) => {
+                                                        const sId = e.target.value;
+                                                        const sObj = bizServices.find(s => String(s.id) === String(sId));
+                                                        setForm({
+                                                            ...form,
+                                                            target_id: sId,
+                                                            target_name: sObj?.name || ''
+                                                        });
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px 14px',
+                                                        background: '#0a0f1d',
+                                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                        borderRadius: '8px',
+                                                        color: '#f8fafc',
+                                                        fontSize: '13px'
+                                                    }}
+                                                >
+                                                    <option value="">-- Elige un servicio ({bizServices.length} disponibles) --</option>
+                                                    {bizServices.map(s => (
+                                                        <option key={s.id} value={s.id}>
+                                                            {s.name} (${Number(s.price || 0).toLocaleString('es-AR')}) {s.category ? `• [${s.category}]` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#f87171', marginBottom: '6px' }}>
+                                                        ⚠️ Este negocio no tiene servicios registrados en la base de datos.
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Escribir nombre del servicio manualmente..."
+                                                        value={form.target_name}
+                                                        onChange={(e) => setForm({ ...form, target_name: e.target.value })}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '10px 14px',
+                                                            background: '#0a0f1d',
+                                                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                            borderRadius: '8px',
+                                                            color: '#f8fafc',
+                                                            fontSize: '13px'
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Si el objetivo es categoría */}
+                                    {form.target_type === 'category' && (
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                                Categoría a la que aplica el descuento (de la BD) *
+                                            </label>
+                                            {loadingBizDetails ? (
+                                                <div style={{ padding: '10px', fontSize: '12px', color: '#94a3b8' }}>
+                                                    ⏳ Cargando categorías de la base de datos...
+                                                </div>
+                                            ) : bizCategories.length > 0 ? (
+                                                <select
+                                                    required
+                                                    value={form.target_name}
+                                                    onChange={(e) => setForm({ ...form, target_name: e.target.value, target_id: '' })}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px 14px',
+                                                        background: '#0a0f1d',
+                                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                        borderRadius: '8px',
+                                                        color: '#f8fafc',
+                                                        fontSize: '13px'
+                                                    }}
+                                                >
+                                                    <option value="">-- Elige una categoría ({bizCategories.length} disponibles) --</option>
+                                                    {bizCategories.map((cat, idx) => (
+                                                        <option key={idx} value={cat.value}>
+                                                            {cat.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#f87171', marginBottom: '6px' }}>
+                                                        ⚠️ No se encontraron categorías cargadas para este negocio.
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Nombre de la categoría (Ej: Manicuría, Uñas, etc.)"
+                                                        value={form.target_name}
+                                                        onChange={(e) => setForm({ ...form, target_name: e.target.value })}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '10px 14px',
+                                                            background: '#0a0f1d',
+                                                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                            borderRadius: '8px',
+                                                            color: '#f8fafc',
+                                                            fontSize: '13px'
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Si el objetivo es producto específico de tienda */}
+                                    {form.target_type === 'product' && (
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                                Seleccionar Producto de la Tienda (de la BD) *
+                                            </label>
+                                            {loadingBizDetails ? (
+                                                <div style={{ padding: '10px', fontSize: '12px', color: '#94a3b8' }}>
+                                                    ⏳ Cargando productos de la tienda desde la BD...
+                                                </div>
+                                            ) : bizProducts.length > 0 ? (
+                                                <select
+                                                    required
+                                                    value={form.target_id}
+                                                    onChange={(e) => {
+                                                        const pId = e.target.value;
+                                                        const pObj = bizProducts.find(p => String(p.id) === String(pId));
+                                                        setForm({
+                                                            ...form,
+                                                            target_id: pId,
+                                                            target_name: pObj?.name || ''
+                                                        });
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '10px 14px',
+                                                        background: '#0a0f1d',
+                                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                        borderRadius: '8px',
+                                                        color: '#f8fafc',
+                                                        fontSize: '13px'
+                                                    }}
+                                                >
+                                                    <option value="">-- Elige un producto ({bizProducts.length} disponibles) --</option>
+                                                    {bizProducts.map(p => (
+                                                        <option key={p.id} value={p.id}>
+                                                            {p.name} (${Number(p.price || 0).toLocaleString('es-AR')}) {p.category ? `• [${p.category}]` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: '#f87171', marginBottom: '6px' }}>
+                                                        ⚠️ Este negocio aún no tiene productos cargados en su tienda online.
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Escribir nombre del producto..."
+                                                        value={form.target_name}
+                                                        onChange={(e) => setForm({ ...form, target_name: e.target.value })}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '10px 14px',
+                                                            background: '#0a0f1d',
+                                                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                            borderRadius: '8px',
+                                                            color: '#f8fafc',
+                                                            fontSize: '13px'
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Si el objetivo es toda la tienda */}
+                                    {form.target_type === 'store' && (
+                                        <div style={{
+                                            background: 'rgba(16, 185, 129, 0.08)',
+                                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                                            borderRadius: '8px',
+                                            padding: '10px 12px',
+                                            fontSize: '12px',
+                                            color: '#10b981'
+                                        }}>
+                                            🛍️ Esta promoción dirigirá a los usuarios a la Tienda Online del negocio y aplicará el beneficio en su carrito de compras.
+                                        </div>
+                                    )}
+
+                                    {/* Descuentos y Código */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                                Tipo de Descuento
+                                            </label>
+                                            <select
+                                                value={form.discount_type}
+                                                onChange={(e) => setForm({ ...form, discount_type: e.target.value })}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '10px 14px',
+                                                    background: '#0a0f1d',
+                                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                    borderRadius: '8px',
+                                                    color: '#f8fafc',
+                                                    fontSize: '13px'
+                                                }}
+                                            >
+                                                <option value="percentage">% Porcentaje OFF</option>
+                                                <option value="fixed">$ Monto Fijo</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                                Valor {form.discount_type === 'percentage' ? '(%)' : '($)'}
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                placeholder={form.discount_type === 'percentage' ? 'Ej: 20' : 'Ej: 2500'}
+                                                value={form.discount_value}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    const defaultBadge = val > 0
+                                                        ? (form.discount_type === 'fixed' ? `$${Number(val).toLocaleString('es-AR')} OFF` : `${val}% OFF`)
+                                                        : '';
+                                                    setForm({
+                                                        ...form,
+                                                        discount_value: val,
+                                                        discount: defaultBadge || form.discount
+                                                    });
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '10px 14px',
+                                                    background: '#0a0f1d',
+                                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                    borderRadius: '8px',
+                                                    color: '#f8fafc',
+                                                    fontSize: '13px'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                            Código de Cupón (Opcional)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Ej: LUMORE20 o PROMOVERANO"
+                                            value={form.code}
+                                            onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 14px',
+                                                background: '#0a0f1d',
+                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                borderRadius: '8px',
+                                                color: '#10b981',
+                                                fontWeight: '800',
+                                                fontSize: '13px',
+                                                letterSpacing: '0.6px'
+                                            }}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                            Descripción / Condiciones (Para el Modal de la Promo)
+                                        </label>
+                                        <textarea
+                                            rows={2}
+                                            placeholder="Ej: Válido para tu primer turno abonando con transferencia o efectivo."
+                                            value={form.description}
+                                            onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 14px',
+                                                background: '#0a0f1d',
+                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                borderRadius: '8px',
+                                                color: '#f8fafc',
+                                                fontSize: '13px',
+                                                resize: 'vertical'
+                                            }}
+                                        />
+                                        <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                                            💡 Opcional. Si lo dejás vacío, el modal no mostrará ningún texto secundario.
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                            Texto del Botón de Acción (Opcional)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Ej: Reservar con Descuento / Aprovechar Oferta"
+                                            value={form.cta_text}
+                                            onChange={(e) => setForm({ ...form, cta_text: e.target.value })}
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px 14px',
+                                                background: '#0a0f1d',
+                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                borderRadius: '8px',
+                                                color: '#f8fafc',
+                                                fontSize: '13px',
+                                                boxSizing: 'border-box'
+                                            }}
+                                        />
+                                        <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                                            💡 Si lo dejás vacío, el botón se adaptará automáticamente según la acción.
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* Campo condicional: Si es General, botón de acción / URL de destino */}
                         {!form.business_id && (

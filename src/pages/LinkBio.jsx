@@ -223,8 +223,12 @@ const LinkBio = ({ overrideSlug = null }) => {
             subtitle: link.subtitle || (link.file_name ? `Archivo: ${link.file_name}` : null),
             icon: link.icon || (isPdf ? '📄' : '🔗'),
             action: () => {
-                const target = link.file_url || link.url;
-                if (target) window.open(target, '_blank');
+                let target = link.file_url || link.url || '';
+                if (!target) return;
+                if (!target.startsWith('http://') && !target.startsWith('https://')) {
+                    target = `https://${target}`;
+                }
+                window.open(target, '_blank', 'noopener,noreferrer');
             },
             bgColor: btnBg,
             textColor: btnColor,

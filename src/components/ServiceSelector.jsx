@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Info, X, Calendar, CalendarCheck, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
+import { Clock, Info, X, Calendar, CalendarCheck, CheckCircle2, ArrowRight, Sparkles, Tag } from 'lucide-react';
+import { doesPromoApplyToService, calculatePromoDiscount, parsePromotionTarget } from '../utils/promotionUtils';
 
-export default function ServiceSelector({ services, selected, onSelect, color = '#00E676' }) {
+export default function ServiceSelector({ services, selected, onSelect, color = '#00E676', activePromotion = null }) {
     const [activeCategory, setActiveCategory] = useState('Todos');
     const [categories, setCategories] = useState(['Todos']);
     const [detailService, setDetailService] = useState(null);
@@ -13,6 +14,19 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
             setCategories(uniqueCategories);
         }
     }, [services]);
+
+    // If active promotion targets a specific category, auto-switch to it
+    useEffect(() => {
+        if (activePromotion && categories.length > 1) {
+            const parsed = parsePromotionTarget(activePromotion);
+            if (parsed.target_type === 'category' && parsed.target_name) {
+                const match = categories.find(c => c.toLowerCase().trim() === parsed.target_name.toLowerCase().trim());
+                if (match) {
+                    setActiveCategory(match);
+                }
+            }
+        }
+    }, [activePromotion, categories]);
 
     const filteredServices = activeCategory === 'Todos'
         ? services
@@ -57,6 +71,9 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                 {filteredServices.map(service => {
                     const isSelected = selected?.id === service.id;
+                    const promoApplies = doesPromoApplyToService(activePromotion, service);
+                    const promoInfo = promoApplies ? calculatePromoDiscount(service.price, activePromotion) : null;
+                    const promoParsed = promoApplies ? parsePromotionTarget(activePromotion) : null;
                     return (
                         <div
                             key={service.id}
@@ -65,13 +82,13 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 position: 'relative',
                                 padding: '20px',
                                 borderRadius: '18px',
-                                border: isSelected ? `2px solid ${color}` : '1px solid var(--border)',
+                                border: isSelected ? `2px solid ${color}` : (promoApplies ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border)'),
                                 backgroundColor: 'var(--bg-card)',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
                                 boxShadow: isSelected
                                     ? `0 4px 18px ${color}30`
-                                    : '0 2px 8px rgba(0,0,0,0.04)',
+                                    : (promoApplies ? '0 4px 14px rgba(16, 185, 129, 0.1)' : '0 2px 8px rgba(0,0,0,0.04)'),
                                 transform: isSelected ? 'translateY(-2px)' : 'translateY(0)',
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -91,6 +108,30 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                             }}
                         >
                             <div>
+                                {/* Promotional Tag */}
+                                {promoApplies && promoInfo && promoInfo.discountAmount > 0 && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '10px',
+                                        right: isSelected ? '46px' : '10px',
+                                        padding: '4px 9px',
+                                        borderRadius: '8px',
+                                        backgroundColor: '#10b981',
+                                        color: '#ffffff',
+                                        fontSize: '11px',
+                                        fontWeight: '800',
+                                        zIndex: 3,
+                                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.45)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        letterSpacing: '0.3px'
+                                    }}>
+                                        <Tag size={12} />
+                                        <span>{promoParsed.discount_label}</span>
+                                    </div>
+                                )}
+
                                 {/* Selected Badge */}
                                 {isSelected && (
                                     <div style={{
@@ -241,13 +282,38 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 paddingTop: '12px',
                                 borderTop: '1px solid var(--border)'
                             }}>
-                                <div style={{
-                                    fontSize: '18px',
-                                    fontWeight: '900',
-                                    color: color,
-                                    letterSpacing: '-0.3px'
-                                }}>
-                                    ${Number(service.price || 0).toLocaleString('es-AR')}
+                                <div>
+                                    {promoApplies && promoInfo && promoInfo.discountAmount > 0 ? (
+                                        <div>
+                                            <div style={{
+                                                fontSize: '11.5px',
+                                                color: 'var(--text-secondary)',
+                                                textDecoration: 'line-through',
+                                                fontWeight: '600',
+                                                lineHeight: 1
+                                            }}>
+                                                ${Number(service.price || 0).toLocaleString('es-AR')}
+                                            </div>
+                                            <div style={{
+                                                fontSize: '18px',
+                                                fontWeight: '900',
+                                                color: '#10b981',
+                                                letterSpacing: '-0.3px',
+                                                marginTop: '2px'
+                                            }}>
+                                                ${promoInfo.finalPrice.toLocaleString('es-AR')}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            fontSize: '18px',
+                                            fontWeight: '900',
+                                            color: color,
+                                            letterSpacing: '-0.3px'
+                                        }}>
+                                            ${Number(service.price || 0).toLocaleString('es-AR')}
+                                        </div>
+                                    )}
                                 </div>
                                 <div style={{
                                     fontSize: '12px',
@@ -438,9 +504,32 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
 
                                         <div style={{ flex: 1, textAlign: 'right' }}>
                                             <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', fontWeight: '600' }}>Valor</span>
-                                            <strong style={{ fontSize: '20px', color: color, fontWeight: '900' }}>
-                                                ${Number(detailService.price || 0).toLocaleString('es-AR')}
-                                            </strong>
+                                            {(() => {
+                                                const dPromoApplies = doesPromoApplyToService(activePromotion, detailService);
+                                                const dPromoInfo = dPromoApplies ? calculatePromoDiscount(detailService.price, activePromotion) : null;
+                                                if (dPromoApplies && dPromoInfo && dPromoInfo.discountAmount > 0) {
+                                                    return (
+                                                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '8px' }}>
+                                                            <span style={{
+                                                                fontSize: '13px',
+                                                                color: 'var(--text-secondary)',
+                                                                textDecoration: 'line-through',
+                                                                fontWeight: '600'
+                                                            }}>
+                                                                ${Number(detailService.price || 0).toLocaleString('es-AR')}
+                                                            </span>
+                                                            <strong style={{ fontSize: '20px', color: '#10b981', fontWeight: '900' }}>
+                                                                ${dPromoInfo.finalPrice.toLocaleString('es-AR')}
+                                                            </strong>
+                                                        </div>
+                                                    );
+                                                }
+                                                return (
+                                                    <strong style={{ fontSize: '20px', color: color, fontWeight: '900' }}>
+                                                        ${Number(detailService.price || 0).toLocaleString('es-AR')}
+                                                    </strong>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>

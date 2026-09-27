@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDisplayDate, formatFriendlyDate, calculateEndTime } from '../utils/dateUtils';
+import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
 let globalCachedPaymentData = {
@@ -91,13 +92,17 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
     // 🎫 Calculate promo discount (based on slot base price only)
     let promoDiscount = 0;
     let promoLabel = '';
-    if (activePromotion && activePromotion.discount_value > 0) {
-        if (activePromotion.discount_type === 'fixed') {
-            promoDiscount = Math.min(activePromotion.discount_value, basePrice);
-            promoLabel = `Cupón -$${promoDiscount.toLocaleString('es-AR')}`;
-        } else {
-            promoDiscount = Math.round(basePrice * (activePromotion.discount_value / 100));
-            promoLabel = `Cupón ${activePromotion.discount_value}% OFF`;
+    if (activePromotion) {
+        const parsed = parsePromotionTarget(activePromotion);
+        let applies = true;
+        if (parsed.target_type === 'service' && parsed.target_id) {
+            applies = String(parsed.target_id) === String(bookingDetails.serviceId) ||
+                      bookingDetails.serviceName?.toLowerCase().trim() === parsed.target_name?.toLowerCase().trim();
+        }
+        if (applies) {
+            const { discountAmount } = calculatePromoDiscount(basePrice, activePromotion);
+            promoDiscount = discountAmount;
+            promoLabel = parsed.discount_label ? `Cupón ${parsed.discount_label}` : 'Descuento';
         }
     }
 

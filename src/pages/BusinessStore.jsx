@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useLayoutEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search,
@@ -18,11 +18,14 @@ import {
     MessageCircle,
     Truck,
     ShieldCheck,
-    Trash2
+    Trash2,
+    Tag
 } from 'lucide-react';
 import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import { isFreePlan } from '../utils/subscriptionUtils';
+import PromotionModal from '../components/promotions/PromotionModal';
+import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 
 const STORE_DIFFERENTIALS = [
     {
@@ -50,6 +53,11 @@ export default function BusinessStore({ overrideSlug }) {
     const businessSlug = overrideSlug || routeSlug;
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams] = useSearchParams();
+
+    // Promotion state
+    const [activePromotion, setActivePromotion] = useState(null);
+    const [showPromoModal, setShowPromoModal] = useState(false);
 
     const [business, setBusiness] = useState(() => {
         if (location.state?.business) return location.state.business;
@@ -89,22 +97,34 @@ export default function BusinessStore({ overrideSlug }) {
     // Promotional advertising banner carousel state
     const storeBanners = useMemo(() => {
         if (Array.isArray(business?.metadata?.store_banners) && business.metadata.store_banners.length > 0) {
-            return business.metadata.store_banners.filter(Boolean);
+            const valid = business.metadata.store_banners.filter(Boolean);
+            if (valid.length > 0) return valid;
         }
         if (business?.metadata?.store_banner_image) {
-            return [
-                business.metadata.store_banner_image,
-                '/spa_banner_1.jpg',
-                '/spa_banner_2.jpg'
-            ];
+            return [business.metadata.store_banner_image];
         }
-        return [
-            '/spa_banner_1.jpg',
-            '/spa_banner_2.jpg'
-        ];
-    }, [business?.metadata?.store_banners, business?.metadata?.store_banner_image]);
+        if (business?.banner_image) {
+            return [business.banner_image];
+        }
+        if (business?.image) {
+            return [business.image];
+        }
+        return [];
+    }, [business?.metadata?.store_banners, business?.metadata?.store_banner_image, business?.banner_image, business?.image]);
 
     const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+
+    // Preload banners for smooth, zero-latency transitions
+    useEffect(() => {
+        if (storeBanners.length > 1) {
+            storeBanners.forEach(url => {
+                if (url) {
+                    const img = new Image();
+                    img.src = url;
+                }
+            });
+        }
+    }, [storeBanners]);
 
     useEffect(() => {
         if (storeBanners.length <= 1) return;
@@ -169,6 +189,38 @@ export default function BusinessStore({ overrideSlug }) {
         };
         fetchBusiness();
     }, [businessSlug]);
+
+    // Detect promoId in URL
+    useEffect(() => {
+        const promoId = searchParams.get('promoId');
+        if (promoId && business) {
+            const fetchPromo = async () => {
+                try {
+                    const promo = await serviceAdapter.getPromotionById(promoId);
+                    if (promo && promo.business_id === business.id) {
+                        setActivePromotion(promo);
+                        setShowPromoModal(true);
+                        const parsed = parsePromotionTarget(promo);
+                        if (parsed.target_type === 'category' && parsed.target_name) {
+                            setActiveCategory(parsed.target_name);
+                        }
+                        if (parsed.target_type === 'product' && parsed.target_id && products.length > 0) {
+                            const foundP = products.find(p => String(p.id) === String(parsed.target_id) || p.name?.toLowerCase().trim() === parsed.target_name?.toLowerCase().trim());
+                            if (foundP) {
+                                setSelectedProductModal(foundP);
+                                setModalQty(1);
+                                setActiveImageIndex(0);
+                                setSelectedSize(null);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error fetching promo in store:', e);
+                }
+            };
+            fetchPromo();
+        }
+    }, [searchParams, business, products.length]);
 
     // Theme setup matching LinkBio / BusinessProfile with useLayoutEffect for zero-latency dark transition
     useLayoutEffect(() => {
@@ -264,6 +316,50 @@ export default function BusinessStore({ overrideSlug }) {
     const getCartTotal = () => cart.reduce((acc, item) => acc + (Number(item.price || 0) * item.qty), 0);
     const getCartCount = () => cart.reduce((acc, item) => acc + item.qty, 0);
 
+    const getCartDiscount = () => {
+        if (!activePromotion) return 0;
+        const parsed = parsePromotionTarget(activePromotion);
+        if (parsed.discount_value <= 0) return 0;
+
+        if (parsed.target_type === 'store' || parsed.target_type === 'general') {
+            const subtotal = getCartTotal();
+            const { discountAmount } = calculatePromoDiscount(subtotal, activePromotion);
+            return discountAmount;
+        }
+
+        if (parsed.target_type === 'product') {
+            let discount = 0;
+            cart.forEach(item => {
+                if (String(item.id) === String(parsed.target_id) || item.name?.toLowerCase().trim() === parsed.target_name?.toLowerCase().trim()) {
+                    const itemSubtotal = Number(item.price || 0) * item.qty;
+                    const res = calculatePromoDiscount(itemSubtotal, activePromotion);
+                    discount += res.discountAmount;
+                }
+            });
+            return discount;
+        }
+
+        if (parsed.target_type === 'category') {
+            let discount = 0;
+            cart.forEach(item => {
+                if (item.category && item.category.toLowerCase().trim() === parsed.target_name?.toLowerCase().trim()) {
+                    const itemSubtotal = Number(item.price || 0) * item.qty;
+                    const res = calculatePromoDiscount(itemSubtotal, activePromotion);
+                    discount += res.discountAmount;
+                }
+            });
+            return discount;
+        }
+
+        return 0;
+    };
+
+    const getCartFinalTotal = () => {
+        const subtotal = getCartTotal();
+        const discount = getCartDiscount();
+        return Math.max(0, subtotal - discount);
+    };
+
     const handleGoBack = () => {
         if (selectedProductModal) {
             setSelectedProductModal(null);
@@ -313,9 +409,14 @@ export default function BusinessStore({ overrideSlug }) {
         const productListText = cart.map(item =>
             `• ${item.qty}x ${item.name}${item.selectedSize ? ` (${item.selectedSize})` : ''} — $${(Number(item.price) * item.qty).toLocaleString('es-AR')}`
         ).join('\n');
-        const totalText = getCartTotal().toLocaleString('es-AR');
 
-        const message = `¡Hola ${business.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${productListText}\n\n*Total a pagar:* $${totalText}\n\n¿Tienen disponibilidad para coordinar el retiro/entrega? ¡Gracias!`;
+        const discount = getCartDiscount();
+        const totalText = getCartFinalTotal().toLocaleString('es-AR');
+        const discountText = discount > 0
+            ? `\n*Descuento Cupón:* -$${discount.toLocaleString('es-AR')} (${parsePromotionTarget(activePromotion).discount_label})\n`
+            : '';
+
+        const message = `¡Hola ${business.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${productListText}\n${discountText}\n*Total a pagar:* $${totalText}\n\n¿Tienen disponibilidad para coordinar el retiro/entrega? ¡Gracias!`;
 
         window.open(`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
         setCart([]);
@@ -538,21 +639,57 @@ export default function BusinessStore({ overrideSlug }) {
                         style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '10px',
+                            gap: '9px',
                             background: getCartCount() > 0 ? primaryColor : 'var(--bg-main)',
                             color: getCartCount() > 0 ? '#ffffff' : 'var(--text-primary)',
                             border: getCartCount() > 0 ? 'none' : '1px solid var(--border)',
                             borderRadius: '24px',
-                            padding: '10px 20px',
-                            fontSize: '13px',
+                            padding: '8px 16px',
+                            fontSize: '13.5px',
                             fontWeight: '700',
                             cursor: 'pointer',
-                            transition: 'all 0.18s ease',
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                             boxShadow: getCartCount() > 0 ? `0 4px 14px ${primaryColor}40` : 'none'
+                        }}
+                        onMouseEnter={e => {
+                            if (getCartCount() === 0) {
+                                e.currentTarget.style.borderColor = primaryColor;
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                            } else {
+                                e.currentTarget.style.transform = 'translateY(-1px) scale(1.02)';
+                            }
+                        }}
+                        onMouseLeave={e => {
+                            if (getCartCount() === 0) {
+                                e.currentTarget.style.borderColor = 'var(--border)';
+                                e.currentTarget.style.transform = 'none';
+                            } else {
+                                e.currentTarget.style.transform = 'none';
+                            }
                         }}
                     >
                         <ShoppingBag size={17} />
-                        <span>Carrito ({getCartCount()})</span>
+                        <span>Carrito</span>
+                        {getCartCount() > 0 && (
+                            <span style={{
+                                backgroundColor: '#ffffff',
+                                color: primaryColor,
+                                fontSize: '11px',
+                                fontWeight: '800',
+                                borderRadius: '12px',
+                                minWidth: '22px',
+                                height: '22px',
+                                padding: '0 6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                lineHeight: 1,
+                                transition: 'all 0.2s ease',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.14)'
+                            }}>
+                                {getCartCount()}
+                            </span>
+                        )}
                     </button>
                 </header>
 
@@ -656,30 +793,38 @@ export default function BusinessStore({ overrideSlug }) {
                 {/* ═══ 2. PROMOTIONAL ADVERTISING BANNER CAROUSEL ═══ */}
                 {business.metadata?.has_store_banner !== false && (
                     <div className="store-unified-banner" style={{
+                        position: 'relative',
+                        backgroundColor: '#111827',
+                        backgroundImage: storeBanners.length > 0
+                            ? `url(${storeBanners[activeBannerIndex]})`
+                            : `linear-gradient(135deg, ${primaryColor} 0%, #1e1b4b 100%)`,
+                        backgroundPosition: 'center',
+                        backgroundSize: 'cover',
+                        backgroundRepeat: 'no-repeat',
                         boxShadow: `0 12px 36px ${primaryColor}30`,
                         border: '1px solid rgba(255,255,255,0.16)'
                     }}>
                         {/* Animated Advertising Banners with Smooth Crossfade Transition */}
-                        <AnimatePresence initial={false} mode="sync">
-                            <motion.div
-                                key={activeBannerIndex}
-                                initial={{ opacity: 0, scale: 1.02 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.75, ease: 'easeInOut' }}
-                                style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    background: storeBanners.length > 0
-                                        ? `url(${storeBanners[activeBannerIndex]}) center/cover no-repeat`
-                                        : `linear-gradient(135deg, ${primaryColor} 0%, #1e1b4b 100%)`,
-                                    zIndex: 1
-                                }}
-                            />
-                        </AnimatePresence>
+                        {storeBanners.length > 1 && (
+                            <AnimatePresence initial={false}>
+                                <motion.div
+                                    key={activeBannerIndex}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.65, ease: 'easeInOut' }}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        background: `url(${storeBanners[activeBannerIndex]}) center/cover no-repeat`,
+                                        zIndex: 1
+                                    }}
+                                />
+                            </AnimatePresence>
+                        )}
 
                         {/* Soft Vignette Overlay for Depth */}
                         <div style={{
@@ -1769,6 +1914,73 @@ export default function BusinessStore({ overrideSlug }) {
                             {/* Cart Total & WhatsApp Checkout Button */}
                             {cart.length > 0 && (
                                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '18px' }}>
+                                    {/* Active Promo in Cart Drawer */}
+                                    {activePromotion && getCartDiscount() > 0 && (
+                                        <div style={{
+                                            background: 'rgba(16, 185, 129, 0.08)',
+                                            border: '1px dashed rgba(16, 185, 129, 0.4)',
+                                            borderRadius: '12px',
+                                            padding: '8px 12px',
+                                            marginBottom: '14px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <Tag size={14} color="#10b981" />
+                                                <span style={{ fontSize: '12px', fontWeight: '700', color: '#10b981' }}>
+                                                    {parsePromotionTarget(activePromotion).discount_label} aplicado
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setActivePromotion(null)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: 'var(--text-secondary)',
+                                                    cursor: 'pointer',
+                                                    fontSize: '13px',
+                                                    padding: '2px 4px'
+                                                }}
+                                                title="Quitar descuento"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Subtotal if discount exists */}
+                                    {getCartDiscount() > 0 && (
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            marginBottom: '6px',
+                                            fontSize: '13px',
+                                            color: 'var(--text-secondary)'
+                                        }}>
+                                            <span>Subtotal:</span>
+                                            <span style={{ textDecoration: 'line-through' }}>
+                                                ${getCartTotal().toLocaleString('es-AR')}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Discount line */}
+                                    {getCartDiscount() > 0 && (
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            marginBottom: '10px',
+                                            fontSize: '13.5px',
+                                            fontWeight: '700',
+                                            color: '#10b981'
+                                        }}>
+                                            <span>Descuento Promoción:</span>
+                                            <span>-${getCartDiscount().toLocaleString('es-AR')}</span>
+                                        </div>
+                                    )}
+
                                     <div style={{
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -1779,7 +1991,7 @@ export default function BusinessStore({ overrideSlug }) {
                                             Total del pedido:
                                         </span>
                                         <span style={{ fontWeight: '900', fontSize: '20px', color: 'var(--text-primary)' }}>
-                                            ${getCartTotal().toLocaleString('es-AR')}
+                                            ${getCartFinalTotal().toLocaleString('es-AR')}
                                         </span>
                                     </div>
 
@@ -1907,7 +2119,7 @@ export default function BusinessStore({ overrideSlug }) {
                                     color: '#fff',
                                     letterSpacing: '-0.3px'
                                 }}>
-                                    ${getCartTotal().toLocaleString('es-AR')}
+                                    ${getCartFinalTotal().toLocaleString('es-AR')}
                                 </span>
                                 <div style={{
                                     background: 'rgba(255,255,255,0.24)',
@@ -2288,6 +2500,30 @@ export default function BusinessStore({ overrideSlug }) {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Promotion Modal */}
+            <PromotionModal
+                isOpen={showPromoModal}
+                onClose={() => setShowPromoModal(false)}
+                promotion={activePromotion}
+                business={business}
+                onSelectService={() => {
+                    navigate(`/${business.slug}?promoId=${activePromotion?.id}`);
+                }}
+                onFilterCategory={(cat) => {
+                    setActiveCategory(cat);
+                }}
+                onGoToStore={(targetId) => {
+                    if (targetId && products.length > 0) {
+                        const p = products.find(prod => String(prod.id) === String(targetId));
+                        if (p) {
+                            setSelectedProductModal(p);
+                            setModalQty(1);
+                            setActiveImageIndex(0);
+                        }
+                    }
+                }}
+            />
         </div>
     );
 }

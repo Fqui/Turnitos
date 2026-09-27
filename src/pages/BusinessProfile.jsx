@@ -18,6 +18,8 @@ import BookingSummary from '../components/BookingSummary';
 import BookingSuccessModal from '../components/BookingSuccessModal';
 import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import SEOHead from '../components/SEOHead';
+import PromotionModal from '../components/promotions/PromotionModal';
+import { parsePromotionTarget } from '../utils/promotionUtils';
 
 import ProfileHeroBanner from '../components/profile/ProfileHeroBanner';
 import ProfileHighlightsAndStore from '../components/profile/ProfileHighlightsAndStore';
@@ -76,6 +78,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
     // Promotion state
     const [activePromotion, setActivePromotion] = useState(null);
+    const [showPromoModal, setShowPromoModal] = useState(false);
 
     // Refs for auto-scrolling
     const calendarRef = useRef(null);
@@ -348,11 +351,18 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     const promo = await serviceAdapter.getPromotionById(promoId);
                     if (promo && promo.business_id === business.id) {
                         setActivePromotion(promo);
-                        if (promo.sport_type && business.type === 'sport') {
+                        setShowPromoModal(true);
+
+                        const parsed = parsePromotionTarget(promo);
+
+                        if (parsed.target_type === 'sport' && promo.sport_type && business.type === 'sport') {
                             setSelectedItem(promo.sport_type);
                         }
-                        if (promo.service_id && business.type === 'service' && business.services) {
-                            const matchingService = business.services.find(s => s.id === promo.service_id);
+                        if (parsed.target_type === 'service' && business.type === 'service' && business.services) {
+                            const matchingService = business.services.find(s =>
+                                String(s.id) === String(parsed.target_id) ||
+                                s.name?.toLowerCase().trim() === parsed.target_name?.toLowerCase().trim()
+                            );
                             if (matchingService) {
                                 setSelectedItem(matchingService);
                             }
@@ -365,6 +375,30 @@ export default function BusinessProfile({ business: initialBusiness }) {
             fetchPromotion();
         }
     }, [searchParams, business]);
+
+    const handlePromoSelectService = (service) => {
+        setSelectedItem(service);
+        setSelectedDate(null);
+        setSelectedTime(null);
+        setSelectedSpecialist(null);
+        setAvailableSpecialists([]);
+        setTimeout(() => {
+            if (calendarRef.current) {
+                calendarRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 150);
+    };
+
+    const handlePromoFilterCategory = (categoryName) => {
+        const el = document.getElementById('servicios');
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+    const handlePromoGoToStore = (targetId) => {
+        navigate(`/${business.slug}/tienda?promoId=${activePromotion?.id}${targetId ? `&productId=${targetId}` : ''}`);
+    };
 
     // Theme Management
     useEffect(() => {
@@ -659,50 +693,16 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         />
                     )}
 
-                    {/* Active Promotion Banner */}
-                    {activePromotion && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            style={{
-                                margin: '0 0 20px 0',
-                                padding: '12px 16px',
-                                borderRadius: '12px',
-                                background: 'linear-gradient(135deg, #10b98115, #10b98108)',
-                                border: '1px solid #10b98140',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px'
-                            }}
-                        >
-                            <span style={{ fontSize: '22px' }}>🎫</span>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
-                                    ¡Cupón activado!
-                                </div>
-                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                    {activePromotion.discount_type === 'fixed'
-                                        ? `$${activePromotion.discount_value} de descuento`
-                                        : `${activePromotion.discount_value}% OFF`
-                                    } — {activePromotion.title}
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setActivePromotion(null)}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'var(--text-secondary)',
-                                    cursor: 'pointer',
-                                    fontSize: '18px',
-                                    padding: '4px'
-                                }}
-                                title="Quitar cupón"
-                            >
-                                ✕
-                            </button>
-                        </motion.div>
-                    )}
+                    {/* Promotion Modal */}
+                    <PromotionModal
+                        isOpen={showPromoModal}
+                        onClose={() => setShowPromoModal(false)}
+                        promotion={activePromotion}
+                        business={business}
+                        onSelectService={handlePromoSelectService}
+                        onFilterCategory={handlePromoFilterCategory}
+                        onGoToStore={handlePromoGoToStore}
+                    />
 
                     {/* Service Selector (Only for Service businesses) */}
                     {business.type === 'service' && (
@@ -713,6 +713,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             <ServiceSelector
                                 services={business.services}
                                 selected={selectedItem}
+                                activePromotion={activePromotion}
                                 onSelect={(service) => {
                                     setSelectedItem(service);
                                     setSelectedDate(null);

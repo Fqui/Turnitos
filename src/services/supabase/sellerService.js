@@ -582,6 +582,7 @@ export async function getAllBusinesses() {
         .from('businesses')
         .select(`
             *,
+            services (*),
             courts (*),
             specialists (*),
             subscriptions (*),

@@ -51,8 +51,13 @@ export default function VenueGeneralTab({
                 <label style={labelStyle}>Descripción Corta (Bajada)</label>
                 <textarea
                     style={{ ...inputStyle, minHeight: '80px' }}
-                    value={formData.description !== undefined ? formData.description : ''}
-                    onChange={e => handleInputChange('description', e.target.value)}
+                    value={formData.description ?? formData.bio_description ?? ''}
+                    onChange={e => {
+                        const val = e.target.value;
+                        handleInputChange('description', val);
+                        handleInputChange('bio_description', val);
+                        handleMetadataChange('bio_description', val);
+                    }}
                     placeholder="Ej: Un quincho exclusivo con pileta y asador para tus eventos familiares y cumpleaños..."
                 />
                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>

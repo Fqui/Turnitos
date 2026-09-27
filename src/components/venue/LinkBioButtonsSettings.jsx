@@ -164,13 +164,20 @@ export default function LinkBioButtonsSettings({
                 ? 'card'
                 : formState.buttonColor;
 
+        let formattedUrl = formState.url.trim();
+        if (formState.linkType === 'url') {
+            if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+                formattedUrl = `https://${formattedUrl}`;
+            }
+        }
+
         const newLinkObj = {
             id: formState.id || 'link_' + Date.now(),
             title: formState.title.trim(),
             subtitle: formState.subtitle.trim() || null,
             icon: formState.icon || '🔗',
-            url: formState.url.trim(),
-            file_url: formState.linkType === 'file' ? formState.url.trim() : null,
+            url: formattedUrl,
+            file_url: formState.linkType === 'file' ? formattedUrl : null,
             file_name: formState.linkType === 'file' ? (formState.fileName || null) : null,
             file_size: formState.linkType === 'file' ? (formState.fileSize || null) : null,
             button_color: effectiveColor,
@@ -775,7 +782,10 @@ export default function LinkBioButtonsSettings({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {customLinks.map((link, idx) => {
                         const isEnabled = link.enabled !== false;
-                        const targetUrl = link.file_url || link.url;
+                        const rawTarget = link.file_url || link.url || '';
+                        const targetUrl = rawTarget
+                            ? (rawTarget.startsWith('http://') || rawTarget.startsWith('https://') ? rawTarget : `https://${rawTarget}`)
+                            : null;
                         const isCardColor = !link.button_color || link.button_color === 'card';
                         const resolvedBg = link.button_color === 'primary'
                             ? businessBrandColor
