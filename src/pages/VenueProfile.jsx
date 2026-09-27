@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
-import L from 'leaflet';
+import { MapContainer, Marker } from 'react-leaflet';
+import { TurnitosTileLayer, createTurnitosMarkerIcon } from '../components/common/TurnitosMap';
 import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
 import SEOHead from '../components/SEOHead';
@@ -733,33 +733,30 @@ export default function VenueProfile({ business: initialBusiness }) {
                     {/* Map Section */}
                     {business.latitude && business.longitude && (
                         <div style={{
-                            background: cardBg,
+                            background: 'var(--bg-card)',
                             borderRadius: '24px',
                             padding: '32px',
                             boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-                            border: `1px solid ${borderColor}`
+                            border: '1px solid var(--border)'
                         }}>
-                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: textColor, marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '16px' }}>
                                 Ubicación
                             </h2>
 
                             {business.address && (
-                                <div style={{ fontSize: '15px', color: secondaryTextColor, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span style={{ fontSize: '18px' }}>🏠</span> {business.address}
                                 </div>
                             )}
 
-                            <div style={{ height: '300px', borderRadius: '16px', overflow: 'hidden', position: 'relative' }}>
+                            <div style={{ height: '300px', borderRadius: '16px', overflow: 'hidden', position: 'relative', border: '1px solid var(--border)', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
                                 <MapContainer
                                     center={[business.latitude, business.longitude]}
                                     zoom={15}
                                     style={{ height: '100%', width: '100%' }}
                                 >
-                                    <TileLayer
-                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                    />
-                                    <Marker position={[business.latitude, business.longitude]} />
+                                    <TurnitosTileLayer forceTheme={(business.theme || business.metadata?.theme) === 'dark' ? 'dark' : 'light'} />
+                                    <Marker position={[business.latitude, business.longitude]} icon={createTurnitosMarkerIcon(business.primary_color || business.button_color || '#10B981', '🏡')} />
                                 </MapContainer>
 
                                 <a
@@ -780,7 +777,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                         fontWeight: '700',
                                         fontSize: '14px',
                                         padding: '10px 20px',
-                                        background: primaryColor,
+                                        background: business.primary_color || business.button_color || '#10B981',
                                         borderRadius: '50px',
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                                         border: '2px solid white',

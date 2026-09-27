@@ -175,6 +175,86 @@ textarea {
   background: var(--text-muted);
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* ═══════════════════════════════════════════
+   MODERN LEAFLET MAP STYLING & ANIMATIONS
+   ═══════════════════════════════════════════ */
+@keyframes turnitos-map-pulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+
+.turnitos-custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-container {
+  font-family: inherit !important;
+  background: var(--bg-card) !important;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+}
+
+.leaflet-control-zoom a {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border) !important;
+  transition: all 0.15s ease !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--bg-main) !important;
+  color: var(--primary-paddle) !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(4px) !important;
+  border-radius: 6px 0 0 0 !important;
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+}
+
+[data-theme="dark"] .leaflet-control-attribution {
+  background: rgba(28, 28, 28, 0.8) !important;
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .leaflet-control-attribution a {
+  color: var(--text-secondary) !important;
+}
+
+/* Dark Mode: estiliza las teselas libres de OpenStreetMap a modo oscuro sin requerir API Key */
+[data-theme="dark"] .leaflet-tile-pane {
+  filter: brightness(0.65) invert(1) contrast(1.6) hue-rotate(200deg) saturate(0.35) brightness(0.85);
+}
+
 /* ═══════════════════════════════════════════
    UTILITY CLASSES
    ═══════════════════════════════════════════ */

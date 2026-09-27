@@ -1,5 +1,6 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, Marker } from 'react-leaflet';
+import { TurnitosTileLayer, createTurnitosMarkerIcon } from '../common/TurnitosMap';
 import { parseAmenity } from '../common/AmenityIcon';
 
 export default function ProfileInfoSection({
@@ -144,10 +145,8 @@ export default function ProfileInfoSection({
                             dragging={false}
                             scrollWheelZoom={false}
                         >
-                            <TileLayer
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            />
-                            <Marker position={[business.latitude, business.longitude]} />
+                            <TurnitosTileLayer />
+                            <Marker position={[business.latitude, business.longitude]} icon={createTurnitosMarkerIcon(primaryColor, '📍')} />
                         </MapContainer>
                         <a
                             href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}

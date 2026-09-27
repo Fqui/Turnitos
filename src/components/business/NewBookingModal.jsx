@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import CustomDropdown from '../common/CustomDropdown';
 
 const NewBookingModal = ({
@@ -103,6 +103,36 @@ const NewBookingModal = ({
         ];
     }, [currentBusiness]);
 
+    // Helper to calculate Venue Rental base price based on duration, guests and tiers
+    const calculateVenueBasePrice = useCallback((guests, durationHours) => {
+        const tiers = (currentBusiness?.pricing_tiers && currentBusiness.pricing_tiers.length > 0)
+            ? currentBusiness.pricing_tiers
+            : (currentBusiness?.metadata?.pricing_tiers && currentBusiness.metadata.pricing_tiers.length > 0)
+                ? currentBusiness.metadata.pricing_tiers
+                : [];
+
+        let pricePerHour = 0;
+        if (tiers.length === 0) {
+            pricePerHour = Number(currentBusiness?.price_per_hour || currentBusiness?.price || 0);
+        } else {
+            const guestNum = Number(guests || 0);
+            const tier = tiers.find(t => {
+                const minG = Number(t.min_guests !== undefined ? t.min_guests : t.min !== undefined ? t.min : 0);
+                const maxG = Number(t.max_guests !== undefined ? t.max_guests : t.max !== undefined ? t.max : 999);
+                return guestNum >= minG && guestNum <= maxG;
+            });
+            pricePerHour = Number(tier?.price || tiers[0]?.price || currentBusiness?.price_per_hour || 0);
+        }
+
+        const hours = Number(durationHours) || 4;
+        const durationDiscounts = currentBusiness?.duration_discounts || currentBusiness?.metadata?.duration_discounts || {};
+        const durationDiscountPct = Number(durationDiscounts[hours] || 0);
+
+        const rawBase = pricePerHour * hours;
+        const discount = durationDiscountPct > 0 ? Math.round(rawBase * (durationDiscountPct / 100)) : 0;
+        return Math.max(0, rawBase - discount);
+    }, [currentBusiness]);
+
     // Selected Resource Name & Base Price (Auto-set and fixed)
     const selectedResourceInfo = useMemo(() => {
         const courtId = newBookingData.courtId || newBookingData.serviceId;
@@ -111,21 +141,27 @@ const NewBookingModal = ({
 
         let name = newBookingData.resourceName || court?.name || service?.name;
         if (!name) {
-            if (isRental) name = 'Espacio / Salón';
+            if (isRental) name = currentBusiness?.name || 'Espacio / Salón';
             else if (isPadel) name = 'Cancha de Pádel';
             else if (isFutbol) name = 'Cancha de Fútbol';
             else if (currentBusiness?.type === 'sport') name = 'Cancha Asignada';
             else name = 'Servicio General';
         }
 
-        const price = Number(court?.price || service?.price || newBookingData.basePrice || newBookingData.price || 0);
+        let price = 0;
+        if (isRental) {
+            // For rentals, space price is the base rental rate (not the total with extras)
+            price = Number(newBookingData.basePrice || calculateVenueBasePrice(newBookingData.guestCount, newBookingData.durationHours || (Number(newBookingData.duration) / 60) || 4));
+        } else {
+            price = Number(court?.price || service?.price || newBookingData.basePrice || 0);
+        }
 
         return {
             name: name,
             price: price,
             displayText: `${name}${price > 0 ? ` • $${price.toLocaleString('es-AR')}` : ''}`
         };
-    }, [newBookingData.courtId, newBookingData.serviceId, newBookingData.resourceName, newBookingData.basePrice, newBookingData.price, currentBusiness, isRental, isPadel, isFutbol]);
+    }, [newBookingData.courtId, newBookingData.serviceId, newBookingData.resourceName, newBookingData.basePrice, newBookingData.guestCount, newBookingData.durationHours, newBookingData.duration, currentBusiness, isRental, isPadel, isFutbol, calculateVenueBasePrice]);
 
     // Business predefined catalog additionals (ONLY additional services / extras, exclude amenities)
     const catalogAdditionals = useMemo(() => {
@@ -209,10 +245,6 @@ const NewBookingModal = ({
     // Auto-set duration, default base price, and calculate deposit when modal opens
     useEffect(() => {
         if (isOpen) {
-            const base = selectedResourceInfo.price > 0
-                ? selectedResourceInfo.price
-                : Number(currentBusiness?.base_price || currentBusiness?.price || 0);
-
             let initialDurationMin = 60;
             if (isRental) initialDurationMin = 240;
             else if (isPadel) initialDurationMin = Number(currentBusiness?.slot_duration || 90);
@@ -222,6 +254,18 @@ const NewBookingModal = ({
             const durationToUse = Number(newBookingData.duration) || initialDurationMin;
             const durationHoursToUse = Number(newBookingData.durationHours) || (durationToUse / 60);
 
+            let initialBase = 0;
+            if (isRental) {
+                initialBase = Number(newBookingData.basePrice) > 0
+                    ? Number(newBookingData.basePrice)
+                    : calculateVenueBasePrice(newBookingData.guestCount, durationHoursToUse);
+            } else {
+                const courtId = newBookingData.courtId || newBookingData.serviceId;
+                const court = (currentBusiness?.courts || []).find(c => String(c.id) === String(courtId));
+                const service = (currentBusiness?.services || []).find(s => String(s.id) === String(newBookingData.serviceId));
+                initialBase = Number(court?.price || service?.price || newBookingData.basePrice || currentBusiness?.base_price || currentBusiness?.price || 0);
+            }
+
             setNewBookingData(prev => {
                 const extrasTotal = (prev.selectedServices || []).reduce((sum, item) => {
                     const price = typeof item === 'object' ? Number(item.price || 0) : 0;
@@ -229,7 +273,9 @@ const NewBookingModal = ({
                     return sum + (price * qty);
                 }, 0);
 
-                const currentBase = prev.basePrice !== undefined && Number(prev.basePrice) > 0 ? Number(prev.basePrice) : base;
+                const currentBase = (prev.basePrice !== undefined && Number(prev.basePrice) > 0)
+                    ? Number(prev.basePrice)
+                    : initialBase;
                 const newTotal = currentBase + extrasTotal;
                 const deposit = isManualDeposit && prev.depositAmount !== undefined && prev.depositAmount !== ''
                     ? prev.depositAmount
@@ -246,12 +292,14 @@ const NewBookingModal = ({
                 };
             });
         }
-    }, [isOpen, selectedResourceInfo.price, currentBusiness, isRental, isPadel, isFutbol, isService]);
+    }, [isOpen]);
 
     // Helpers to update additionals and recalculate totals
     const updateSelectedServices = (updatedList) => {
         const extrasTotal = updatedList.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
-        const base = Number(newBookingData.basePrice || selectedResourceInfo.price || currentBusiness?.base_price || currentBusiness?.price || 0);
+        const base = isRental
+            ? Number(newBookingData.basePrice || calculateVenueBasePrice(newBookingData.guestCount, newBookingData.durationHours || 4))
+            : Number(newBookingData.basePrice || selectedResourceInfo.price || currentBusiness?.base_price || currentBusiness?.price || 0);
         const newTotal = base + extrasTotal;
 
         setNewBookingData(prev => {
@@ -260,6 +308,7 @@ const NewBookingModal = ({
                 ...prev,
                 selectedServices: updatedList,
                 servicesTotal: extrasTotal,
+                basePrice: base,
                 price: newTotal,
                 depositAmount: newDeposit
             };
@@ -951,11 +1000,21 @@ const NewBookingModal = ({
                                         <button
                                             key={opt.hours}
                                             type="button"
-                                            onClick={() => setNewBookingData(prev => ({
-                                                ...prev,
-                                                duration: opt.hours * 60,
-                                                durationHours: opt.hours
-                                            }))}
+                                            onClick={() => {
+                                                const newHours = opt.hours;
+                                                const newBase = calculateVenueBasePrice(newBookingData.guestCount, newHours);
+                                                const extras = Number(newBookingData.servicesTotal || 0);
+                                                const newTotal = newBase + extras;
+                                                const newDeposit = isManualDeposit ? newBookingData.depositAmount : calculateAutoDeposit(newBase, extras);
+                                                setNewBookingData(prev => ({
+                                                    ...prev,
+                                                    duration: opt.hours * 60,
+                                                    durationHours: opt.hours,
+                                                    basePrice: newBase,
+                                                    price: newTotal,
+                                                    depositAmount: newDeposit
+                                                }));
+                                            }}
                                             style={{
                                                 padding: '6px 12px',
                                                 borderRadius: '8px',
@@ -1069,10 +1128,22 @@ const NewBookingModal = ({
                                     value={newBookingData.guestCount || ''}
                                     onChange={(e) => {
                                         const val = e.target.value;
-                                        if (val !== '' && Number(val) > maxCapacity) {
-                                            setNewBookingData({ ...newBookingData, guestCount: maxCapacity });
+                                        const guests = (val !== '' && Number(val) > maxCapacity) ? maxCapacity : val;
+                                        if (isRental) {
+                                            const currentHours = Number(newBookingData.durationHours) || (Number(newBookingData.duration) / 60) || 4;
+                                            const newBase = calculateVenueBasePrice(guests, currentHours);
+                                            const extras = Number(newBookingData.servicesTotal || 0);
+                                            const newTotal = newBase + extras;
+                                            const newDeposit = isManualDeposit ? newBookingData.depositAmount : calculateAutoDeposit(newBase, extras);
+                                            setNewBookingData(prev => ({
+                                                ...prev,
+                                                guestCount: guests,
+                                                basePrice: newBase,
+                                                price: newTotal,
+                                                depositAmount: newDeposit
+                                            }));
                                         } else {
-                                            setNewBookingData({ ...newBookingData, guestCount: val });
+                                            setNewBookingData(prev => ({ ...prev, guestCount: guests }));
                                         }
                                     }}
                                     placeholder={`Ej. 30`}
@@ -1300,6 +1371,31 @@ const NewBookingModal = ({
 
                     {/* Precios: Total & Seña */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        {isRental && (
+                            <div style={{
+                                gridColumn: '1 / -1',
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                background: 'rgba(0, 230, 118, 0.08)',
+                                border: '1px solid rgba(0, 230, 118, 0.2)',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '6px',
+                                fontSize: '12px',
+                                color: 'var(--text-secondary)'
+                            }}>
+                                <span>
+                                    🏡 Base Alquiler ({newBookingData.durationHours || 4} hs): <strong style={{ color: 'var(--primary-paddle)' }}>${Number(newBookingData.basePrice || 0).toLocaleString('es-AR')}</strong>
+                                </span>
+                                {Number(newBookingData.servicesTotal || 0) > 0 && (
+                                    <span>
+                                        + Extras ({selectedAdditionals.length}): <strong style={{ color: 'var(--text-primary)' }}>${Number(newBookingData.servicesTotal).toLocaleString('es-AR')}</strong>
+                                    </span>
+                                )}
+                            </div>
+                        )}
                         <div>
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
                                 💵 Precio Total ($)

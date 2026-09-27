@@ -41,8 +41,30 @@ class AnalyticsService {
      * @param {Object} dateRange - { preset, start, end }
      * @returns {Object} { metrics, trends, peakHours, customerInsights }
      */
-    computeAnalyticsFromBookings(bookings = [], dateRange = null) {
+    computeAnalyticsFromBookings(bookings = [], dateRange = null, business = null) {
         const allBookings = Array.isArray(bookings) ? bookings : [];
+
+        // Detección de negocio de alquiler / venue
+        const isRental = Boolean(
+            business?.type === 'venue' ||
+            business?.type === 'alquiler' ||
+            business?.type === 'rental' ||
+            business?.is_rental ||
+            (business?.category || '').toLowerCase().includes('alquiler') ||
+            (business?.category || '').toLowerCase().includes('quincho') ||
+            (business?.category || '').toLowerCase().includes('quinta') ||
+            (business?.category || '').toLowerCase().includes('salon') ||
+            (business?.category || '').toLowerCase().includes('salón') ||
+            (business?.category || '').toLowerCase().includes('evento') ||
+            (business?.categories?.name || '').toLowerCase().includes('alquiler') ||
+            (business?.categories?.name || '').toLowerCase().includes('quincho') ||
+            (business?.slug || '').toLowerCase().includes('quincho') ||
+            (business?.slug || '').toLowerCase().includes('roma') ||
+            (Array.isArray(bookings) && bookings.some(b => 
+                b.guest_count || b.guestCount || b.metadata?.guest_count || b.metadata?.guestCount ||
+                b.durationHours || b.duration_hours || b.metadata?.durationHours
+            ))
+        );
 
         // 1. Filtrar bloqueos y normalizar fechas
         const nonBlocked = allBookings
@@ -79,6 +101,7 @@ class AnalyticsService {
 
         const totalBookings = activeBookings.length;
         const completedBookings = filteredBookings.filter(b => b.status === 'completed' || b.status === 'attended').length;
+        const confirmedBookings = filteredBookings.filter(b => b.status === 'confirmed' || b.status === 'deposit_paid').length;
         const pendingBookings = filteredBookings.filter(b => b.status === 'pending').length;
         const cancelledBookings = filteredBookings.filter(b => b.status === 'cancelled').length;
 
@@ -88,7 +111,7 @@ class AnalyticsService {
             return sum + (isNaN(val) ? 0 : val);
         }, 0);
 
-        // Ingresos cobrados
+        // Ingresos cobrados (eventos finalizados o atendidos)
         const collectedRevenue = filteredBookings
             .filter(b => b.status === 'completed' || b.status === 'attended')
             .reduce((sum, b) => {
@@ -96,23 +119,224 @@ class AnalyticsService {
                 return sum + (isNaN(val) ? 0 : val);
             }, 0);
 
-        // Total señas cobradas
+        // Total señas cobradas (anticipos ingresados)
         const totalDeposits = activeBookings.reduce((sum, b) => {
             const dep = Number(b.deposit_amount ?? b.depositAmount ?? b.metadata?.deposit_amount ?? b.metadata?.depositAmount ?? 0);
             return sum + (isNaN(dep) ? 0 : dep);
         }, 0);
 
+        // Saldos futuros a cobrar al ingresar el evento (precio total - seña recibida)
+        const pendingBalance = activeBookings
+            .filter(b => b.status === 'confirmed' || b.status === 'deposit_paid')
+            .reduce((sum, b) => {
+                const price = Number(b.price ?? b.total_price ?? b.totalPrice ?? 0);
+                const dep = Number(b.deposit_amount ?? b.depositAmount ?? b.metadata?.deposit_amount ?? b.metadata?.depositAmount ?? 0);
+                const bal = price > dep ? (price - dep) : 0;
+                return sum + (isNaN(bal) ? 0 : bal);
+            }, 0);
+
         // Ticket promedio
         const avgBookingValue = totalBookings > 0 ? Math.round(totalRevenue / totalBookings) : 0;
 
-        // Tasa de efectividad
+        // Tasa de efectividad / concreción
         const totalAttempts = totalBookings + cancelledBookings;
         const completionRate = totalAttempts > 0 ? (totalBookings / totalAttempts) * 100 : (totalBookings > 0 ? 100 : 0);
 
-        // 4. Rendimiento por Cancha
+        // Anticipación promedio de reserva (Lead Time en días)
+        let leadTimeDaysTotal = 0;
+        let leadTimeValidCount = 0;
+        activeBookings.forEach(b => {
+            const eventDateStr = b._normalizedDate;
+            const createdAtStr = b.created_at;
+            if (eventDateStr && createdAtStr) {
+                const ev = new Date(eventDateStr + 'T00:00:00');
+                const cr = new Date(createdAtStr);
+                if (!isNaN(ev.getTime()) && !isNaN(cr.getTime())) {
+                    const diffDays = Math.round((ev.getTime() - cr.getTime()) / (1000 * 3600 * 24));
+                    if (diffDays >= 0 && diffDays <= 365) {
+                        leadTimeDaysTotal += diffDays;
+                        leadTimeValidCount++;
+                    }
+                }
+            }
+        });
+        const avgLeadTimeDays = leadTimeValidCount > 0
+            ? Math.round(leadTimeDaysTotal / leadTimeValidCount)
+            : null;
+
+        // Ocupación del Calendario (Fines de semana y fechas del período)
+        let calStart = dateRange?.start ? normalizeDate(dateRange.start) : null;
+        let calEnd = dateRange?.end ? normalizeDate(dateRange.end) : null;
+
+        if (!calStart || !calEnd) {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = now.getMonth();
+            const firstD = new Date(y, m, 1);
+            const lastD = new Date(y, m + 1, 0);
+            calStart = firstD.toISOString().split('T')[0];
+            calEnd = lastD.toISOString().split('T')[0];
+        }
+
+        let totalDaysInPeriod = 0;
+        let totalWeekendDaysInPeriod = 0;
+        let bookedDaysCount = 0;
+        let bookedWeekendDaysCount = 0;
+
+        const bookedDatesSet = new Set(
+            activeBookings.map(b => b._normalizedDate).filter(Boolean)
+        );
+
+        if (calStart && calEnd) {
+            const curDate = new Date(calStart + 'T00:00:00');
+            const targetEndDate = new Date(calEnd + 'T00:00:00');
+            let safety = 0;
+
+            while (curDate <= targetEndDate && safety < 370) {
+                const dateIso = curDate.toISOString().split('T')[0];
+                const dayOfWeek = curDate.getDay(); // 0: Dom, 5: Vie, 6: Sáb
+                const isWknd = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
+
+                totalDaysInPeriod++;
+                if (isWknd) totalWeekendDaysInPeriod++;
+
+                if (bookedDatesSet.has(dateIso)) {
+                    bookedDaysCount++;
+                    if (isWknd) bookedWeekendDaysCount++;
+                }
+
+                curDate.setDate(curDate.getDate() + 1);
+                safety++;
+            }
+        }
+
+        const weekendOccupancyRate = totalWeekendDaysInPeriod > 0
+            ? Math.round((bookedWeekendDaysCount / totalWeekendDaysInPeriod) * 100)
+            : 0;
+
+        const totalOccupancyRate = totalDaysInPeriod > 0
+            ? Math.round((bookedDaysCount / totalDaysInPeriod) * 100)
+            : 0;
+
+        const freeWeekendDays = Math.max(0, totalWeekendDaysInPeriod - bookedWeekendDaysCount);
+        const freeTotalDays = Math.max(0, totalDaysInPeriod - bookedDaysCount);
+
+        // Evolución Mensual / Estacionalidad (Mes a Mes)
+        const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const monthlyMap = {};
+
+        // Asegurar últimos 6 meses para visualización clara
+        const refDate = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(refDate.getFullYear(), refDate.getMonth() - i, 1);
+            const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            monthlyMap[ym] = {
+                yearMonth: ym,
+                monthLabel: `${MONTH_NAMES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`,
+                events: 0,
+                revenue: 0,
+                deposits: 0
+            };
+        }
+
+        // Sumar datos de todas las reservas activas
+        nonBlocked.forEach(b => {
+            if (!ACTIVE_STATES.includes(b.status)) return;
+            const d = b._normalizedDate;
+            if (!d) return;
+            const ym = d.substring(0, 7);
+            if (!monthlyMap[ym]) {
+                const parts = ym.split('-');
+                const y = parts[0];
+                const m = parseInt(parts[1], 10) - 1;
+                monthlyMap[ym] = {
+                    yearMonth: ym,
+                    monthLabel: `${MONTH_NAMES[m] || 'Mes'} ${y.slice(2)}`,
+                    events: 0,
+                    revenue: 0,
+                    deposits: 0
+                };
+            }
+            monthlyMap[ym].events += 1;
+            const price = Number(b.price ?? b.total_price ?? b.totalPrice ?? 0) || 0;
+            monthlyMap[ym].revenue += price;
+            const dep = Number(b.deposit_amount ?? b.depositAmount ?? b.metadata?.deposit_amount ?? b.metadata?.depositAmount ?? 0);
+            monthlyMap[ym].deposits += (isNaN(dep) ? 0 : dep);
+        });
+
+        const monthlyEvolution = Object.values(monthlyMap)
+            .sort((a, b) => a.yearMonth.localeCompare(b.yearMonth));
+
+        // Impacto de Adicionales & Extras (Upselling)
+        let totalExtrasRevenue = 0;
+        let eventsWithExtras = 0;
+
+        activeBookings.forEach(b => {
+            const rawServices = b.selected_services || b.selectedServices || b.additional_services || b.metadata?.selectedServices || [];
+            let hasExtras = false;
+            if (Array.isArray(rawServices) && rawServices.length > 0) {
+                rawServices.forEach(item => {
+                    let price = 0;
+                    let qty = 1;
+                    if (typeof item === 'object' && item !== null) {
+                        price = Number(item.price || 0);
+                        qty = Math.max(1, parseInt(item.quantity, 10) || 1);
+                    }
+                    if (price > 0 || (typeof item === 'string' && item.trim())) {
+                        totalExtrasRevenue += (price * qty);
+                        hasExtras = true;
+                    }
+                });
+            }
+            if (hasExtras) eventsWithExtras++;
+        });
+
+        const extrasRevenuePercent = totalRevenue > 0
+            ? Math.round((totalExtrasRevenue / totalRevenue) * 100)
+            : 0;
+
+        const extrasAdoptionRate = totalBookings > 0
+            ? Math.round((eventsWithExtras / totalBookings) * 100)
+            : 0;
+
+        const baseRentalRevenue = Math.max(0, totalRevenue - totalExtrasRevenue);
+        const baseRentalPercent = 100 - extrasRevenuePercent;
+
+        // Pipeline Futuro (Próximos Eventos & Saldos por Cobrar)
+        const todayNow = new Date();
+        const todayIso = `${todayNow.getFullYear()}-${String(todayNow.getMonth() + 1).padStart(2, '0')}-${String(todayNow.getDate()).padStart(2, '0')}`;
+
+        const limit30 = new Date(todayNow);
+        limit30.setDate(todayNow.getDate() + 30);
+        const limit30Iso = `${limit30.getFullYear()}-${String(limit30.getMonth() + 1).padStart(2, '0')}-${String(limit30.getDate()).padStart(2, '0')}`;
+
+        let futureEventsCount = 0;
+        let futureRevenue = 0;
+        let futurePendingBalance = 0;
+        let next30DaysEvents = 0;
+        let next30DaysRevenue = 0;
+
+        nonBlocked.forEach(b => {
+            if (!ACTIVE_STATES.includes(b.status)) return;
+            const d = b._normalizedDate;
+            if (d && d >= todayIso) {
+                futureEventsCount++;
+                const price = Number(b.price ?? b.total_price ?? b.totalPrice ?? 0);
+                const dep = Number(b.deposit_amount ?? b.depositAmount ?? b.metadata?.deposit_amount ?? b.metadata?.depositAmount ?? 0);
+                futureRevenue += price;
+                futurePendingBalance += Math.max(0, price - dep);
+
+                if (d <= limit30Iso) {
+                    next30DaysEvents++;
+                    next30DaysRevenue += price;
+                }
+            }
+        });
+
+        // 4. Rendimiento por Cancha / Espacio
         const courtMap = {};
         activeBookings.forEach(b => {
-            const name = b.courts?.name || b.court_name || b.resource_name || b.resourceName || b.services?.name || b.service_name || 'Cancha Principal';
+            const name = b.courts?.name || b.court_name || b.resource_name || b.resourceName || b.services?.name || b.service_name || (isRental ? 'Espacio Principal' : 'Cancha Principal');
             if (!courtMap[name]) {
                 courtMap[name] = { name, count: 0, revenue: 0 };
             }
@@ -127,7 +351,7 @@ class AnalyticsService {
             }))
             .sort((a, b) => b.count - a.count);
 
-        // 5. Desglose de Adicionales Vendidos
+        // 5. Desglose de Adicionales Vendidos con tasa de penetración
         const additionalsMap = {};
         activeBookings.forEach(b => {
             const rawServices = b.selected_services || b.selectedServices || b.additional_services || b.metadata?.selectedServices || [];
@@ -147,16 +371,22 @@ class AnalyticsService {
 
                     if (name) {
                         if (!additionalsMap[name]) {
-                            additionalsMap[name] = { name, quantity: 0, revenue: 0 };
+                            additionalsMap[name] = { name, quantity: 0, revenue: 0, bookingCount: 0 };
                         }
                         additionalsMap[name].quantity += qty;
                         additionalsMap[name].revenue += (price * qty);
+                        additionalsMap[name].bookingCount += 1;
                     }
                 });
             }
         });
 
-        const additionalsBreakdown = Object.values(additionalsMap).sort((a, b) => b.quantity - a.quantity);
+        const additionalsBreakdown = Object.values(additionalsMap)
+            .map(item => ({
+                ...item,
+                penetration: totalBookings > 0 ? Math.round((item.bookingCount / totalBookings) * 100) : 0
+            }))
+            .sort((a, b) => b.quantity - a.quantity);
 
         // 6. Top Clientes
         const customerMap = {};
@@ -293,15 +523,45 @@ class AnalyticsService {
                 totalRevenue,
                 collectedRevenue,
                 totalDeposits,
+                pendingBalance,
                 totalBookings,
                 completedBookings,
+                confirmedBookings,
                 pendingBookings,
                 cancelledBookings,
                 avgBookingValue,
                 completionRate,
                 courtsBreakdown,
                 additionalsBreakdown,
-                topCustomers
+                topCustomers,
+                // Métricas específicas de Alquileres / Venues
+                isRental,
+                // Ocupación de Calendario
+                weekendOccupancyRate,
+                totalOccupancyRate,
+                totalWeekendDaysInPeriod,
+                bookedWeekendDaysCount,
+                freeWeekendDays,
+                totalDaysInPeriod,
+                bookedDaysCount,
+                freeTotalDays,
+                // Anticipación
+                avgLeadTimeDays,
+                // Impacto de Extras / Upselling
+                totalExtrasRevenue,
+                extrasRevenuePercent,
+                eventsWithExtras,
+                extrasAdoptionRate,
+                baseRentalRevenue,
+                baseRentalPercent,
+                // Pipeline Futuro
+                futureEventsCount,
+                futureRevenue,
+                futurePendingBalance,
+                next30DaysEvents,
+                next30DaysRevenue,
+                // Evolución Mensual (Estacionalidad)
+                monthlyEvolution
             },
             trends,
             peakHours,

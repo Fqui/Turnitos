@@ -1,19 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import { TurnitosTileLayer, defaultTurnitosIcon } from '../common/TurnitosMap';
 import supabaseService from '../../services/supabaseService';
 import { generateBusinessCredentials, validateSubscriptionLimit, slugify } from '../../utils/businessUtils';
 import { resizeImage, validateImageFile } from '../../utils/imageUtils';
 import CostBreakdown from '../CostBreakdown';
-
-// Fix for default marker icon
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
 
 const SUGGESTED_COLORS = ['#00E676', '#2196F3', '#9C27B0', '#FF9800', '#E91E63', '#00BCD4'];
 
@@ -24,16 +16,16 @@ function LocationPicker({ position, onLocationChange }) {
                 onLocationChange(e.latlng);
             },
         });
-        return position ? <Marker position={position} /> : null;
+        return position ? <Marker position={position} icon={defaultTurnitosIcon} /> : null;
     }
 
     return (
         <MapContainer
             center={position || [-29.4135, -66.8558]} // La Rioja, Argentina
             zoom={13}
-            style={{ height: '300px', width: '100%', borderRadius: '12px' }}
+            style={{ height: '300px', width: '100%', borderRadius: '16px' }}
         >
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <TurnitosTileLayer />
             <LocationMarker />
         </MapContainer>
     );

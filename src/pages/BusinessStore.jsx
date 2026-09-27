@@ -17,7 +17,6 @@ import {
     Check,
     MessageCircle,
     Truck,
-    ShieldCheck,
     Trash2,
     Tag
 } from 'lucide-react';
@@ -26,27 +25,6 @@ import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import { isFreePlan } from '../utils/subscriptionUtils';
 import PromotionModal from '../components/promotions/PromotionModal';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
-
-const STORE_DIFFERENTIALS = [
-    {
-        id: 'whatsapp',
-        icon: MessageCircle,
-        title: 'Pedido Directo',
-        desc: 'Coordiná por WhatsApp'
-    },
-    {
-        id: 'shipping',
-        icon: Truck,
-        title: 'Retiro o Envío',
-        desc: 'En local o a domicilio'
-    },
-    {
-        id: 'payment',
-        icon: ShieldCheck,
-        title: 'Pago Flexible',
-        desc: 'Efectivo o transferencia'
-    }
-];
 
 export default function BusinessStore({ overrideSlug }) {
     const { businessSlug: routeSlug } = useParams();
@@ -83,17 +61,6 @@ export default function BusinessStore({ overrideSlug }) {
     const [toastMessage, setToastMessage] = useState(null);
     const [showLeaveConfirmation, setShowLeaveConfirmation] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
-
-    // Differential cards cycling transition
-    const [activeDiffIndex, setActiveDiffIndex] = useState(0);
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setActiveDiffIndex((prev) => (prev + 1) % STORE_DIFFERENTIALS.length);
-        }, 3200);
-        return () => clearInterval(timer);
-    }, []);
-
     // Promotional advertising banner carousel state
     const storeBanners = useMemo(() => {
         if (Array.isArray(business?.metadata?.store_banners) && business.metadata.store_banners.length > 0) {
@@ -825,61 +792,6 @@ export default function BusinessStore({ overrideSlug }) {
                                 />
                             </AnimatePresence>
                         )}
-
-                        {/* Soft Vignette Overlay for Depth */}
-                        <div style={{
-                            position: 'absolute',
-                            inset: 0,
-                            background: 'linear-gradient(to right, rgba(0,0,0,0.15) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.3) 100%)',
-                            pointerEvents: 'none',
-                            zIndex: 2
-                        }} />
-
-                        {/* Floating Right Differentials Card */}
-                        <div className="store-banner-differentials">
-                            <div className="store-diff-carousel-wrapper">
-                                <AnimatePresence mode="wait">
-                                    {(() => {
-                                        const currentDiff = STORE_DIFFERENTIALS[activeDiffIndex];
-                                        const DiffIcon = currentDiff.icon;
-                                        return (
-                                            <motion.div
-                                                key={currentDiff.id}
-                                                initial={{ opacity: 0, y: 10, scale: 0.96 }}
-                                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                exit={{ opacity: 0, y: -10, scale: 0.96 }}
-                                                transition={{ duration: 0.32, ease: 'easeOut' }}
-                                                className="store-diff-active-card"
-                                                onClick={() => setActiveDiffIndex((prev) => (prev + 1) % STORE_DIFFERENTIALS.length)}
-                                                title="Hacé clic para ver el siguiente beneficio"
-                                            >
-                                                <div className="store-diff-icon">
-                                                    <DiffIcon size={16} />
-                                                </div>
-                                                <div className="store-diff-info">
-                                                    <span className="store-diff-title">{currentDiff.title}</span>
-                                                    <span className="store-diff-desc">{currentDiff.desc}</span>
-                                                </div>
-                                            </motion.div>
-                                        );
-                                    })()}
-                                </AnimatePresence>
-                            </div>
-
-                            {/* Micro Dots Indicator for Differentials */}
-                            <div className="store-diff-dots">
-                                {STORE_DIFFERENTIALS.map((diff, idx) => (
-                                    <button
-                                        key={diff.id}
-                                        type="button"
-                                        className={`store-diff-dot ${idx === activeDiffIndex ? 'active' : ''}`}
-                                        onClick={() => setActiveDiffIndex(idx)}
-                                        aria-label={`Ver ${diff.title}`}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-
                         {/* Carousel Pagination Dots (Center Bottom) */}
                         {storeBanners.length > 1 && (
                             <div className="store-banner-carousel-dots">

@@ -1,29 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import { TurnitosTileLayer, defaultTurnitosIcon } from '../common/TurnitosMap';
 import supabaseService from '../../services/supabaseService';
 import { useNotification } from '../../contexts/NotificationContext';
 import { generateBusinessCredentials, slugify } from '../../utils/businessUtils';
 import { resizeImage, validateImageFile } from '../../utils/imageUtils';
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
 
 const SUGGESTED_COLORS = ['#FF5722', '#FF9800', '#FFC107', '#4CAF50', '#00BCD4', '#9C27B0'];
 
 function LocationPicker({ position, onLocationChange }) {
     function LocationMarker() {
         useMapEvents({ click(e) { onLocationChange(e.latlng); } });
-        return position ? <Marker position={position} /> : null;
+        return position ? <Marker position={position} icon={defaultTurnitosIcon} /> : null;
     }
     return (
-        <MapContainer center={position || [-29.4135, -66.8558]} zoom={13} style={{ height: '300px', width: '100%', borderRadius: '12px' }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <MapContainer center={position || [-29.4135, -66.8558]} zoom={13} style={{ height: '300px', width: '100%', borderRadius: '16px' }}>
+            <TurnitosTileLayer />
             <LocationMarker />
         </MapContainer>
     );

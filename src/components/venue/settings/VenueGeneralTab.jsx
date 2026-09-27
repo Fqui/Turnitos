@@ -1,18 +1,7 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
+import { MapContainer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+import { TurnitosTileLayer, defaultTurnitosIcon } from '../../common/TurnitosMap';
 
 function LocationPicker({ position, onLocationSelect }) {
     useMapEvents({
@@ -20,7 +9,7 @@ function LocationPicker({ position, onLocationSelect }) {
             onLocationSelect(e.latlng);
         },
     });
-    return position ? <Marker position={position} /> : null;
+    return position ? <Marker position={position} icon={defaultTurnitosIcon} /> : null;
 }
 
 export default function VenueGeneralTab({
@@ -95,7 +84,7 @@ export default function VenueGeneralTab({
                     scrollWheelZoom={false}
                     style={{ height: '100%', width: '100%' }}
                 >
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <TurnitosTileLayer />
                     <LocationPicker
                         position={formData.latitude ? [formData.latitude, formData.longitude] : null}
                         onLocationSelect={latlng => {

@@ -99,12 +99,44 @@ export default function BusinessPortal() {
     const [dateRange, setDateRange] = useState(null);
     const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
+    const storedBizObj = (() => {
+        try {
+            const raw = localStorage.getItem('business');
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            return null;
+        }
+    })();
+
+    const currentBusiness = businesses.find(b => String(b.id) === String(selectedBusinessId))
+        || (storedBizObj && String(storedBizObj.id) === String(selectedBusinessId) ? storedBizObj : null)
+        || (businesses.length > 0 ? businesses[0] : null)
+        || storedBizObj
+        || null;
+
+    const isRentalBusiness = Boolean(
+        currentBusiness?.type === 'venue' ||
+        currentBusiness?.type === 'alquiler' ||
+        currentBusiness?.type === 'rental' ||
+        Boolean(currentBusiness?.is_rental) ||
+        (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
+        (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
+        (currentBusiness?.category || '').toLowerCase().includes('quinta') ||
+        (currentBusiness?.category || '').toLowerCase().includes('salon') ||
+        (currentBusiness?.category || '').toLowerCase().includes('salón') ||
+        (currentBusiness?.category || '').toLowerCase().includes('evento') ||
+        (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
+        (currentBusiness?.categories?.name || '').toLowerCase().includes('quincho') ||
+        (currentBusiness?.slug || '').toLowerCase().includes('quincho') ||
+        (currentBusiness?.slug || '').toLowerCase().includes('roma')
+    );
+
     // Compute analytics data when entering analytics view or changing date range/business/bookings
     useEffect(() => {
         if (!selectedBusinessId || viewMode !== 'analytics') return;
 
         try {
-            const result = analyticsService.computeAnalyticsFromBookings(bookings, dateRange);
+            const result = analyticsService.computeAnalyticsFromBookings(bookings, dateRange, currentBusiness);
             if (result) {
                 setMetrics(result.metrics);
                 setTrends(result.trends || []);
@@ -114,7 +146,7 @@ export default function BusinessPortal() {
         } catch (err) {
             console.error("Error computing analytics data:", err);
         }
-    }, [selectedBusinessId, viewMode, dateRange, bookings]);
+    }, [selectedBusinessId, viewMode, dateRange, bookings, currentBusiness]);
 
     // Booking Modal State
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -403,6 +435,27 @@ export default function BusinessPortal() {
         const defaultDurationMinutes = isRental
             ? 240
             : Number(currentBusiness?.slot_duration || currentBusiness?.court_duration || 60);
+        const defaultDurationHours = defaultDurationMinutes / 60;
+
+        let initialBasePrice = selectedPrice;
+        if (isRental && initialBasePrice === 0) {
+            const tiers = (currentBusiness?.pricing_tiers && currentBusiness.pricing_tiers.length > 0)
+                ? currentBusiness.pricing_tiers
+                : (currentBusiness?.metadata?.pricing_tiers && currentBusiness.metadata.pricing_tiers.length > 0)
+                    ? currentBusiness.metadata.pricing_tiers
+                    : [];
+            let pricePerHour = 0;
+            if (tiers.length > 0) {
+                pricePerHour = Number(tiers[0]?.price || currentBusiness?.price_per_hour || 0);
+            } else {
+                pricePerHour = Number(currentBusiness?.price_per_hour || currentBusiness?.price || 0);
+            }
+            const durationDiscounts = currentBusiness?.duration_discounts || currentBusiness?.metadata?.duration_discounts || {};
+            const discountPct = Number(durationDiscounts[defaultDurationHours] || 0);
+            const rawBase = pricePerHour * defaultDurationHours;
+            const discount = discountPct > 0 ? Math.round(rawBase * (discountPct / 100)) : 0;
+            initialBasePrice = Math.max(0, rawBase - discount);
+        }
 
         setNewBookingData({
             date: dateStr,
@@ -412,11 +465,11 @@ export default function BusinessPortal() {
             customerEmail: '',
             serviceId: selectedResId,
             courtId: selectedResId,
-            resourceName: selectedResName,
-            price: selectedPrice,
-            basePrice: selectedPrice,
+            resourceName: selectedResName || (isRental ? (currentBusiness?.name || 'Espacio / Salón') : ''),
+            price: initialBasePrice,
+            basePrice: initialBasePrice,
             duration: defaultDurationMinutes,
-            durationHours: defaultDurationMinutes / 60,
+            durationHours: defaultDurationHours,
             selectedServices: [],
             servicesTotal: 0
         });
@@ -497,11 +550,6 @@ export default function BusinessPortal() {
         }
 
         const isCourt = currentBusiness?.courts?.some(c => c.id === newBookingData.serviceId);
-
-        const isRentalBusiness = currentBusiness?.type === 'venue' ||
-            currentBusiness?.type === 'alquiler' ||
-            (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-            (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler');
 
         const defaultDurationMin = isRentalBusiness
             ? 240
@@ -943,30 +991,6 @@ export default function BusinessPortal() {
         );
     }
 
-    const storedBizObj = (() => {
-        try {
-            const raw = localStorage.getItem('business');
-            return raw ? JSON.parse(raw) : null;
-        } catch (e) {
-            return null;
-        }
-    })();
-
-    const currentBusiness = businesses.find(b => String(b.id) === String(selectedBusinessId))
-        || (storedBizObj && String(storedBizObj.id) === String(selectedBusinessId) ? storedBizObj : null)
-        || (businesses.length > 0 ? businesses[0] : null)
-        || storedBizObj
-        || null;
-
-    const isRentalBusiness = currentBusiness?.type === 'venue' ||
-        currentBusiness?.type === 'alquiler' ||
-        (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.slug || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.slug || '').toLowerCase().includes('roma');
-
     return (
         <div style={{
             display: 'flex',
@@ -1074,6 +1098,8 @@ export default function BusinessPortal() {
                                 setDateRange={setDateRange}
                                 analyticsLoading={analyticsLoading}
                                 isMobile={isMobile}
+                                isRentalBusiness={isRentalBusiness}
+                                currentBusiness={currentBusiness}
                             />
                         ) : viewMode === 'subscription' ? (
                             <BusinessSubscriptionView

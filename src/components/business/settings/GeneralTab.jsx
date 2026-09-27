@@ -1,16 +1,6 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+import { MapContainer, Marker, useMapEvents } from 'react-leaflet';
+import { TurnitosTileLayer, defaultTurnitosIcon } from '../../common/TurnitosMap';
 
 function LocationPicker({ position, onLocationSelect }) {
     useMapEvents({
@@ -18,7 +8,7 @@ function LocationPicker({ position, onLocationSelect }) {
             onLocationSelect(e.latlng);
         },
     });
-    return position ? <Marker position={position} /> : null;
+    return position ? <Marker position={position} icon={defaultTurnitosIcon} /> : null;
 }
 
 export default function GeneralTab({
@@ -62,10 +52,7 @@ export default function GeneralTab({
                     <label style={{ ...labelStyle, fontSize: '13px', color: 'var(--text-secondary)' }}>Ubicación en el Mapa (Click para marcar)</label>
                     <div style={{ height: '300px', borderRadius: '12px', overflow: 'hidden', marginTop: '8px', border: '1px solid var(--border)', zIndex: 0 }}>
                         <MapContainer key={`${mapCenter[0]}-${mapCenter[1]}`} center={mapCenter} zoom={13} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-                            <TileLayer
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            />
+                            <TurnitosTileLayer />
                             <LocationPicker
                                 position={formData.latitude ? [formData.latitude, formData.longitude] : null}
                                 onLocationSelect={(latlng) => {

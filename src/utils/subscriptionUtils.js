@@ -187,7 +187,18 @@ export function calculateBookingCommission({ planId, price = 0, isMarketplace = 
         return Math.round(Number(price || 0) * 0.05);
     }
     if (isMarketplace) {
-        if (planId === PLAN_IDS.RENTAL || businessType === 'rental' || businessType === 'venue') {
+        const type = String(businessType || '').toLowerCase();
+        const pId = String(planId || '').toLowerCase();
+        const isRental = pId === PLAN_IDS.RENTAL || 
+            pId.includes('rental') || 
+            pId.includes('alquiler') || 
+            type === 'rental' || 
+            type === 'venue' || 
+            type === 'alquiler' ||
+            type.includes('quincho') ||
+            type.includes('salon');
+
+        if (isRental) {
             return Math.round(Number(price || 0) * 0.03);
         }
         return 500;

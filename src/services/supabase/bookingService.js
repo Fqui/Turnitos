@@ -182,7 +182,8 @@ export async function createBooking(bookingData) {
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const startOfMonth = `${year}-${month}-01`;
-        const endOfMonth = `${year}-${month}-31`;
+        const lastDayNum = new Date(year, now.getMonth() + 1, 0).getDate();
+        const endOfMonth = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`;
 
         try {
             const { count: monthlyBookingsCount } = await supabase

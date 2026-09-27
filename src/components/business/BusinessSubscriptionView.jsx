@@ -401,7 +401,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                         border: '1px solid var(--border)'
                     }}>
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: '600' }}>
-                            Turnos desde TurnitosLR
+                            {isRental ? 'Reservas desde TurnitosLR' : 'Turnos desde TurnitosLR'}
                         </div>
                         <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>
                             {marketplaceCount}
@@ -415,7 +415,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                         border: '1px solid var(--border)'
                     }}>
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: '600' }}>
-                            Comisión por Turno
+                            {isRental ? 'Comisión por Reserva' : 'Comisión por Turno'}
                         </div>
                         <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary-paddle)' }}>
                             {isFree ? '5%' : (isRental ? '3%' : '$500')}
@@ -440,7 +440,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                 {/* Marketplace Bookings List Table */}
                 <div>
                     <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '14px', color: 'var(--text-primary)' }}>
-                        Detalle de Turnos Generados desde el Marketplace
+                        {isRental ? 'Detalle de Reservas Generadas desde el Marketplace' : 'Detalle de Turnos Generados desde el Marketplace'}
                     </h4>
 
                     {loading ? (
@@ -466,7 +466,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                                         <th style={{ padding: '10px 12px', fontWeight: '600' }}>Fecha y Hora</th>
                                         <th style={{ padding: '10px 12px', fontWeight: '600' }}>Cliente</th>
                                         <th style={{ padding: '10px 12px', fontWeight: '600' }}>Teléfono</th>
-                                        <th style={{ padding: '10px 12px', fontWeight: '600' }}>Valor Turno</th>
+                                        <th style={{ padding: '10px 12px', fontWeight: '600' }}>{isRental ? 'Valor Alquiler' : 'Valor Turno'}</th>
                                         <th style={{ padding: '10px 12px', fontWeight: '600', textAlign: 'right' }}>Comisión</th>
                                     </tr>
                                 </thead>
@@ -502,10 +502,12 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
 
             {/* Total Settlement Summary Card */}
             <div style={{
-                background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.08) 0%, rgba(20, 25, 30, 0.95) 100%)',
+                background: 'var(--bg-card)',
+                backgroundImage: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%)',
                 borderRadius: '20px',
                 padding: '24px',
-                border: '1px solid rgba(0, 230, 118, 0.25)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
                 display: 'flex',
                 flexDirection: isMobile ? 'column' : 'row',
                 justifyContent: 'space-between',

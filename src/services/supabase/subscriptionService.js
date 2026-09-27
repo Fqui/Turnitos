@@ -18,19 +18,37 @@ export async function getSubscription(businessId) {
 export async function getMonthlyBookingsStats(businessId, monthDate = new Date()) {
     try {
         const year = monthDate.getFullYear();
-        const month = String(monthDate.getMonth() + 1).padStart(2, '0');
+        const monthNum = monthDate.getMonth() + 1;
+        const month = String(monthNum).padStart(2, '0');
         const startOfMonth = `${year}-${month}-01`;
-        const endOfMonth = `${year}-${month}-31`;
+        const lastDayNum = new Date(year, monthNum, 0).getDate();
+        const endOfMonth = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`;
+        const startOfMonthIso = `${startOfMonth}T00:00:00.000Z`;
+        const endOfMonthIso = `${endOfMonth}T23:59:59.999Z`;
+
+        const filter = `and(created_at.gte.${startOfMonthIso},created_at.lte.${endOfMonthIso}),and(date.gte.${startOfMonth},date.lte.${endOfMonth})`;
 
         const { data: bookings, error } = await supabase
             .from('bookings')
             .select('id, date, time, customer_name, customer_phone, price, status, metadata, created_at')
             .eq('business_id', businessId)
-            .gte('date', startOfMonth)
-            .lte('date', endOfMonth)
-            .order('date', { ascending: false });
+            .or(filter)
+            .order('created_at', { ascending: false });
 
         if (error) throw error;
+
+        // Fetch business info to check plan and type
+        const { data: bizData } = await supabase
+            .from('businesses')
+            .select('type, category, subscription_plan_id')
+            .eq('id', businessId)
+            .maybeSingle();
+
+        const isRentalBiz = bizData?.type === 'alquiler' ||
+            bizData?.type === 'rental' ||
+            bizData?.type === 'venue' ||
+            (bizData?.category || '').toLowerCase().includes('alquiler') ||
+            (bizData?.category || '').toLowerCase().includes('quincho');
 
         const nonBlockedBookings = (bookings || []).filter(b => 
             b.status !== 'cancelled' && 
@@ -39,14 +57,25 @@ export async function getMonthlyBookingsStats(businessId, monthDate = new Date()
             !b.customer_name?.toUpperCase().includes('BLOQUEADO') &&
             !b.notes?.toUpperCase().includes('BLOQUEO')
         );
-        const marketplaceBookings = nonBlockedBookings.filter(b => b.metadata?.booking_source === 'marketplace');
-        const directBookings = nonBlockedBookings.filter(b => b.metadata?.booking_source !== 'marketplace');
+
+        const isItemMarketplace = (b) => {
+            const src = b.metadata?.booking_source || b.booking_source || b.bookingSource || b.metadata?.source;
+            return src === 'marketplace';
+        };
+
+        const marketplaceBookings = nonBlockedBookings.filter(isItemMarketplace);
+        const directBookings = nonBlockedBookings.filter(b => !isItemMarketplace(b));
 
         let totalMarketplaceCommission = 0;
         marketplaceBookings.forEach(b => {
-            const comm = b.metadata?.commission_amount !== undefined 
-                ? Number(b.metadata.commission_amount) 
-                : 500;
+            let comm = 0;
+            if (isRentalBiz) {
+                comm = Math.round(Number(b.price || 0) * 0.03);
+            } else if (b.metadata?.commission_amount !== undefined && b.metadata?.commission_amount !== null && Number(b.metadata.commission_amount) > 0) {
+                comm = Number(b.metadata.commission_amount);
+            } else {
+                comm = 500;
+            }
             totalMarketplaceCommission += comm;
         });
 
