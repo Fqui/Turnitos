@@ -38,6 +38,15 @@ export default function VenueBookingWizardModal({
     borderColor,
     primaryColor
 }) {
+    // Deposit calculation
+    const depositSettings = business?.payment_settings?.deposit || business?.metadata?.payment_settings?.deposit;
+    const hasDeposit = Boolean(depositSettings?.enabled && (Number(depositSettings?.percentage) > 0 || Number(depositSettings?.fixed_amount) > 0));
+    const depositPct = depositSettings?.percentage ? Number(depositSettings.percentage) : null;
+    const depositAmount = depositPct
+        ? Math.round(totalPrice * (depositPct / 100))
+        : (depositSettings?.fixed_amount ? Number(depositSettings.fixed_amount) : 0);
+    const remainingBalance = Math.max(0, totalPrice - depositAmount);
+
     return (
         <AnimatePresence>
             {showBookingModal && (
@@ -71,21 +80,21 @@ export default function VenueBookingWizardModal({
                             width: '100%',
                             maxHeight: '90vh',
                             overflow: 'auto',
-                            padding: '32px',
+                            padding: '28px 24px',
                             display: 'flex',
                             flexDirection: 'column',
                             boxShadow: '0 25px 60px rgba(0,0,0,0.3)'
                         }}
                     >
                         {/* Header & Steps Indicator */}
-                        <div style={{ marginBottom: '24px' }}>
+                        <div style={{ marginBottom: '22px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                 <motion.h2
                                     key={bookingStep}
-                                    initial={{ opacity: 0, y: -6 }}
+                                    initial={{ opacity: 0, y: -4 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.2 }}
-                                    style={{ fontSize: '24px', fontWeight: '900', margin: 0, color: textColor }}
+                                    style={{ fontSize: '22px', fontWeight: '900', margin: 0, color: textColor }}
                                 >
                                     {bookingStep === 1 && 'Detalles del Evento'}
                                     {bookingStep === 2 && 'Servicios Adicionales'}
@@ -94,9 +103,24 @@ export default function VenueBookingWizardModal({
                                 </motion.h2>
                                 <button
                                     onClick={() => setShowBookingModal(false)}
-                                    style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: secondaryTextColor }}
+                                    style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '50%',
+                                        background: 'rgba(0, 0, 0, 0.05)',
+                                        border: 'none',
+                                        fontSize: '15px',
+                                        cursor: 'pointer',
+                                        color: secondaryTextColor,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'background 0.2s ease',
+                                        padding: 0
+                                    }}
+                                    aria-label="Cerrar modal"
                                 >
-                                    ×
+                                    ✕
                                 </button>
                             </div>
 
@@ -105,11 +129,10 @@ export default function VenueBookingWizardModal({
                                 {[1, 2, 3, 4].map(step => (
                                     <div key={step} style={{
                                         flex: 1,
-                                        height: '5px',
-                                        borderRadius: '3px',
-                                        background: step <= bookingStep ? primaryColor : borderColor,
-                                        transition: 'background 0.35s ease, transform 0.2s ease',
-                                        transform: step === bookingStep ? 'scaleY(1.2)' : 'scaleY(1)'
+                                        height: '4px',
+                                        borderRadius: '2px',
+                                        background: step <= bookingStep ? primaryColor : (borderColor || 'rgba(0,0,0,0.1)'),
+                                        transition: 'background 0.3s ease'
                                     }} />
                                 ))}
                             </div>
@@ -379,57 +402,74 @@ export default function VenueBookingWizardModal({
                                     transition={{ duration: 0.22, ease: 'easeOut' }}
                                     style={{ flex: 1 }}
                                 >
-                                    <div style={{ background: subCardBg, borderRadius: '16px', padding: '24px' }}>
-                                        {/* Date & Guests */}
+                                    <div style={{
+                                        background: subCardBg,
+                                        borderRadius: '16px',
+                                        padding: '24px'
+                                    }}>
+                                        {/* Date & Guests (2 Columns) */}
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                                             <div>
                                                 <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>FECHA</div>
-                                                <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>
+                                                <div style={{ fontSize: '15px', fontWeight: '700', color: textColor, textTransform: 'capitalize' }}>
                                                     {selectedDate?.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                                                 </div>
                                             </div>
-                                            <div>
+                                            <div style={{ textAlign: 'right' }}>
                                                 <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>INVITADOS</div>
                                                 <div style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>{guestCount} pers.</div>
                                             </div>
                                         </div>
 
-                                        {/* Breakdown */}
+                                        {/* Breakdown list */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: secondaryTextColor, fontSize: '14px' }}>Alquiler base ({duration}h)</span>
-                                                <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>${rawBasePrice.toLocaleString()}</span>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ color: secondaryTextColor, fontSize: '14px' }}>
+                                                    Alquiler base ({duration}h)
+                                                </span>
+                                                <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>
+                                                    ${rawBasePrice.toLocaleString('es-AR')}
+                                                </span>
                                             </div>
 
                                             {durationDiscountPct > 0 && (
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10B981', fontSize: '14px', fontWeight: '600' }}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    color: '#10B981',
+                                                    fontSize: '14px',
+                                                    fontWeight: '600'
+                                                }}>
                                                     <span>Descuento por {duration}hs ({durationDiscountPct}% OFF)</span>
-                                                    <span>-${durationDiscountAmount.toLocaleString()}</span>
+                                                    <span>-${durationDiscountAmount.toLocaleString('es-AR')}</span>
                                                 </div>
                                             )}
 
                                             {selectedServices.map((service, idx) => (
-                                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <span style={{ color: secondaryTextColor, fontSize: '14px' }}>{service.name}</span>
-                                                    <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>+${service.price.toLocaleString()}</span>
+                                                    <span style={{ fontWeight: '600', fontSize: '14px', color: textColor }}>
+                                                        +${service.price.toLocaleString('es-AR')}
+                                                    </span>
                                                 </div>
                                             ))}
 
-                                            {couponDiscountAmount > 0 && (
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#10B981', fontSize: '14px', fontWeight: '700' }}>
-                                                    <span>Cupón ({appliedCoupon.coupon?.code})</span>
-                                                    <span>-${couponDiscountAmount.toLocaleString()}</span>
-                                                </div>
-                                            )}
-
                                             {appliedCoupon?.giftBenefit && (
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#3B82F6', fontSize: '14px', fontWeight: '700' }}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    color: '#2563EB',
+                                                    fontSize: '14px',
+                                                    fontWeight: '700'
+                                                }}>
                                                     <span>🎁 Beneficio incluido:</span>
                                                     <span>{appliedCoupon.giftBenefit}</span>
                                                 </div>
                                             )}
 
-                                            {/* Coupon Input */}
+                                            {/* Coupon Component */}
                                             <CouponInput
                                                 coupons={business?.coupons || business?.metadata?.coupons || []}
                                                 totalAmount={subtotalPrice}
@@ -437,13 +477,19 @@ export default function VenueBookingWizardModal({
                                                 appliedCoupon={appliedCoupon}
                                                 onApplyCoupon={(res) => setAppliedCoupon(res)}
                                                 onRemoveCoupon={() => setAppliedCoupon(null)}
+                                                primaryColor={primaryColor}
+                                                textColor={textColor}
+                                                secondaryTextColor={secondaryTextColor}
+                                                borderColor={borderColor}
                                             />
 
-                                            <div style={{ height: '1px', background: borderColor, margin: '8px 0' }} />
+                                            <div style={{ height: '1px', background: borderColor || 'rgba(0,0,0,0.08)', margin: '6px 0' }} />
 
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <span style={{ fontWeight: '700', fontSize: '16px', color: textColor }}>Total Final</span>
-                                                <span style={{ fontWeight: '900', fontSize: '24px', color: primaryColor }}>${totalPrice.toLocaleString()}</span>
+                                                <span style={{ fontWeight: '900', fontSize: '24px', color: primaryColor }}>
+                                                    ${totalPrice.toLocaleString('es-AR')}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -486,19 +532,19 @@ export default function VenueBookingWizardModal({
                         </AnimatePresence>
 
                         {/* Footer Buttons */}
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                             {bookingStep > 1 && (
                                 <motion.button
-                                    whileTap={{ scale: 0.95 }}
+                                    whileTap={{ scale: 0.96 }}
                                     onClick={() => {
                                         setBookingStep(prev => prev - 1)
                                     }}
                                     style={{
-                                        padding: '16px 24px',
+                                        padding: '16px 28px',
                                         borderRadius: '14px',
                                         border: `1px solid ${borderColor}`,
-                                        background: btnBg,
-                                        fontSize: '16px',
+                                        background: btnBg || '#fff',
+                                        fontSize: '15px',
                                         fontWeight: '600',
                                         cursor: 'pointer',
                                         color: secondaryTextColor
@@ -536,12 +582,12 @@ export default function VenueBookingWizardModal({
                                 }}
                                 style={{
                                     flex: 1,
-                                    padding: '16px',
+                                    padding: '16px 24px',
                                     borderRadius: '14px',
                                     border: 'none',
                                     background: primaryColor,
                                     color: 'white',
-                                    fontSize: '16px',
+                                    fontSize: '15px',
                                     fontWeight: '700',
                                     cursor: 'pointer',
                                     boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)'

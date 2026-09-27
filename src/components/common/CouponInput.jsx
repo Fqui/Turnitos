@@ -128,7 +128,11 @@ export default function CouponInput({
     appliedCoupon = null,
     onApplyCoupon,
     onRemoveCoupon,
-    isMobile = false
+    isMobile = false,
+    primaryColor,
+    textColor = 'inherit',
+    secondaryTextColor = '#64748B',
+    borderColor = 'rgba(0, 0, 0, 0.12)'
 }) {
     const [inputCode, setInputCode] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
@@ -169,42 +173,35 @@ export default function CouponInput({
         const isGift = appliedCoupon.coupon?.type === 'gift';
         return (
             <div style={{
-                background: isGift ? 'rgba(59, 130, 246, 0.12)' : 'rgba(132, 204, 22, 0.12)',
-                border: isGift ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid rgba(132, 204, 22, 0.35)',
-                borderRadius: '12px',
-                padding: '10px 14px',
+                background: isGift ? 'rgba(59, 130, 246, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                border: isGift ? '1px dashed rgba(59, 130, 246, 0.35)' : '1px dashed rgba(16, 185, 129, 0.35)',
+                borderRadius: '10px',
+                padding: '8px 12px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: '10px',
-                marginTop: '12px',
-                transition: 'all 0.2s ease'
+                gap: '8px',
+                marginTop: '4px'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                    <span style={{ fontSize: '18px' }}>{isGift ? '🎁' : '🏷️'}</span>
-                    <div style={{ overflow: 'hidden' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                            <span style={{
-                                fontWeight: '900',
-                                fontSize: '12.5px',
-                                background: isGift ? '#3B82F6' : 'var(--primary-paddle, #84CC16)',
-                                color: '#000',
-                                padding: '2px 6px',
-                                borderRadius: '4px'
-                            }}>
-                                {appliedCoupon.coupon?.code}
-                            </span>
-                            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                {isGift
-                                    ? appliedCoupon.giftBenefit
-                                    : `-$${Number(appliedCoupon.discountAmount || 0).toLocaleString('es-AR')}`}
-                            </span>
-                        </div>
-                        {appliedCoupon.coupon?.description && (
-                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                {appliedCoupon.coupon.description}
-                            </div>
-                        )}
+                    <span style={{ fontSize: '15px' }}>{isGift ? '🎁' : '🏷️'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{
+                            fontWeight: '800',
+                            fontSize: '12px',
+                            background: isGift ? '#3B82F6' : (primaryColor || '#10B981'),
+                            color: '#fff',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            letterSpacing: '0.5px'
+                        }}>
+                            {appliedCoupon.coupon?.code}
+                        </span>
+                        <span style={{ fontSize: '12.5px', fontWeight: '700', color: isGift ? '#2563EB' : '#059669' }}>
+                            {isGift
+                                ? appliedCoupon.giftBenefit
+                                : `-$${Number(appliedCoupon.discountAmount || 0).toLocaleString('es-AR')}`}
+                        </span>
                     </div>
                 </div>
 
@@ -214,64 +211,49 @@ export default function CouponInput({
                     style={{
                         background: 'transparent',
                         border: 'none',
-                        color: 'var(--text-secondary)',
-                        fontSize: '16px',
+                        color: '#EF4444',
+                        fontSize: '12px',
+                        fontWeight: '700',
                         cursor: 'pointer',
-                        padding: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
+                        padding: '4px 8px'
                     }}
-                    title="Quitar cupón"
                 >
-                    ✕
+                    Quitar
                 </button>
             </div>
         );
     }
 
     return (
-        <div style={{ marginTop: '12px' }}>
+        <div style={{ marginTop: '4px' }}>
             {!isExpanded ? (
                 <button
                     type="button"
                     onClick={() => setIsExpanded(true)}
                     style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--primary-paddle, #84CC16)',
-                        fontSize: '12.5px',
-                        fontWeight: '700',
+                        width: '100%',
+                        background: 'rgba(0, 0, 0, 0.03)',
+                        border: `1px dashed ${borderColor || 'rgba(0,0,0,0.18)'}`,
+                        borderRadius: '10px',
+                        padding: '9px 14px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: secondaryTextColor,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         gap: '6px',
-                        padding: 0
+                        transition: 'all 0.2s ease',
+                        boxSizing: 'border-box'
                     }}
                 >
-                    <span>🏷️</span> ¿Tenés un código de descuento o beneficio?
+                    <span style={{ fontSize: '14px' }}>🏷️</span>
+                    <span>¿Tenés un código de descuento?</span>
                 </button>
             ) : (
-                <div style={{
-                    background: 'var(--bg-main)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '12px',
-                    padding: '10px 12px'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-                            🏷️ Código de Descuento o Beneficio
-                        </span>
-                        <button
-                            type="button"
-                            onClick={() => { setIsExpanded(false); setErrorMsg(''); }}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '14px', cursor: 'pointer' }}
-                        >
-                            ✕
-                        </button>
-                    </div>
-
-                    <form onSubmit={handleApply} style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ width: '100%', boxSizing: 'border-box' }}>
+                    <form onSubmit={handleApply} style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
                         <input
                             type="text"
                             value={inputCode}
@@ -279,40 +261,68 @@ export default function CouponInput({
                                 setInputCode(e.target.value.toUpperCase());
                                 if (errorMsg) setErrorMsg('');
                             }}
-                            placeholder="Ej: JUEVES15"
+                            placeholder="Ingresá tu código"
+                            autoFocus
                             style={{
                                 flex: 1,
-                                padding: '8px 12px',
-                                borderRadius: '8px',
-                                border: errorMsg ? '1px solid #EF4444' : '1px solid var(--border)',
-                                background: 'var(--bg-card)',
-                                color: 'var(--text-primary)',
+                                height: '40px',
+                                padding: '0 12px',
+                                borderRadius: '10px',
+                                border: errorMsg ? '1.5px solid #EF4444' : `1px solid ${borderColor}`,
+                                background: '#fff',
+                                color: textColor,
                                 fontSize: '13px',
                                 fontWeight: '700',
                                 textTransform: 'uppercase',
-                                outline: 'none'
+                                letterSpacing: '0.5px',
+                                outline: 'none',
+                                boxSizing: 'border-box'
                             }}
                         />
                         <button
                             type="submit"
                             style={{
-                                padding: '8px 14px',
-                                borderRadius: '8px',
+                                height: '40px',
+                                padding: '0 16px',
+                                borderRadius: '10px',
                                 border: 'none',
-                                background: 'var(--primary-paddle, #84CC16)',
-                                color: '#000',
-                                fontWeight: '800',
-                                fontSize: '12.5px',
+                                background: primaryColor || '#1B4332',
+                                color: '#fff',
+                                fontWeight: '700',
+                                fontSize: '13px',
                                 cursor: 'pointer',
-                                whiteSpace: 'nowrap'
+                                whiteSpace: 'nowrap',
+                                boxSizing: 'border-box'
                             }}
                         >
                             Aplicar
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => { setIsExpanded(false); setErrorMsg(''); setInputCode(''); }}
+                            style={{
+                                height: '40px',
+                                width: '40px',
+                                borderRadius: '10px',
+                                border: `1px solid ${borderColor}`,
+                                background: 'transparent',
+                                color: secondaryTextColor,
+                                fontSize: '14px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxSizing: 'border-box',
+                                padding: 0
+                            }}
+                            title="Cancelar"
+                        >
+                            ✕
+                        </button>
                     </form>
 
                     {errorMsg && (
-                        <div style={{ color: '#EF4444', fontSize: '11.5px', fontWeight: '600', marginTop: '6px' }}>
+                        <div style={{ color: '#EF4444', fontSize: '11.5px', fontWeight: '600', marginTop: '6px', paddingLeft: '4px' }}>
                             ⚠️ {errorMsg}
                         </div>
                     )}

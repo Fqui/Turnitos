@@ -57,22 +57,6 @@ export default function VenueGallerySection({
                         alt={galleryImages[0].caption || 'Imagen principal'}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
-                    {galleryImages[0].caption && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '16px',
-                            left: '16px',
-                            background: 'rgba(0,0,0,0.6)',
-                            backdropFilter: 'blur(10px)',
-                            color: 'white',
-                            padding: '8px 16px',
-                            borderRadius: '12px',
-                            fontSize: '13px',
-                            fontWeight: '600'
-                        }}>
-                            {galleryImages[0].caption}
-                        </div>
-                    )}
                 </div>
 
                 {/* Secondary Grid Thumbnails */}
@@ -111,26 +95,6 @@ export default function VenueGallerySection({
                                             alt={img.caption || `Imagen ${actualIndex + 1}`}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                         />
-                                        {img.caption && !showRemaining && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                bottom: '8px',
-                                                left: '8px',
-                                                background: 'rgba(0,0,0,0.6)',
-                                                backdropFilter: 'blur(4px)',
-                                                color: 'white',
-                                                padding: '4px 10px',
-                                                borderRadius: '8px',
-                                                fontSize: '11px',
-                                                fontWeight: '600',
-                                                maxWidth: '90%',
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis'
-                                            }}>
-                                                {img.caption}
-                                            </div>
-                                        )}
                                         {showRemaining && (
                                             <div style={{
                                                 position: 'absolute',
