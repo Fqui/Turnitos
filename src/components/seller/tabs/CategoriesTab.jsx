@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import supabaseService from '../../../services/supabaseService';
+import { useNotification } from '../../../contexts/NotificationContext';
 
 function SimpleModal({ title, children, onClose }) {
     return (
@@ -29,9 +30,25 @@ function SimpleModal({ title, children, onClose }) {
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <h2 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '18px', margin: 0, color: '#f1f5f9' }}>
-                    {title}
-                </h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#f1f5f9' }}>
+                        {title}
+                    </h2>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#94a3b8',
+                            fontSize: '18px',
+                            cursor: 'pointer',
+                            padding: '4px 8px',
+                            borderRadius: '6px'
+                        }}
+                    >
+                        ✕
+                    </button>
+                </div>
                 {children}
             </div>
         </div>
@@ -45,6 +62,7 @@ export default function CategoriesTab({
     onDeleteSubcategory,
     onReload
 }) {
+    const { showToast } = useNotification();
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
     const [editingCategory, setEditingCategory] = useState(null);
@@ -56,15 +74,17 @@ export default function CategoriesTab({
         try {
             if (editingCategory) {
                 await supabaseService.updateCategory(editingCategory.id, categoryForm);
+                showToast('Categoría actualizada con éxito', 'success');
             } else {
                 await supabaseService.createCategory(categoryForm);
+                showToast('Categoría creada con éxito', 'success');
             }
             setShowCategoryModal(false);
             setEditingCategory(null);
             setCategoryForm({ name: '', icon: '', description: '' });
             if (onReload) onReload();
         } catch (err) {
-            alert(err.message);
+            showToast(err.message, 'error');
         }
     };
 
@@ -72,15 +92,17 @@ export default function CategoriesTab({
         try {
             if (editingSubcategory) {
                 await supabaseService.updateSubcategory(editingSubcategory.id, subcategoryForm);
+                showToast('Subcategoría actualizada con éxito', 'success');
             } else {
                 await supabaseService.createSubcategory(subcategoryForm);
+                showToast('Subcategoría creada con éxito', 'success');
             }
             setShowSubcategoryModal(false);
             setEditingSubcategory(null);
             setSubcategoryForm({ name: '', description: '', category_id: '' });
             if (onReload) onReload();
         } catch (err) {
-            alert(err.message);
+            showToast(err.message, 'error');
         }
     };
 

@@ -911,11 +911,25 @@ export async function resetBusinessPasswordAsSuperAdmin(businessId, businessName
  * Delete business as super admin
  */
 export async function deleteBusinessAsSuperAdmin(businessId) {
+    const safeDelete = async (table) => {
+        try {
+            await supabase.from(table).delete().eq('business_id', businessId);
+        } catch (e) {
+            console.warn(`Could not delete from ${table}:`, e);
+        }
+    };
+
     await Promise.all([
-        supabase.from('bookings').delete().eq('business_id', businessId),
-        supabase.from('resources').delete().eq('business_id', businessId),
-        supabase.from('seller_commissions').delete().eq('business_id', businessId),
-        supabase.from('subscription_payments').delete().eq('business_id', businessId)
+        safeDelete('bookings'),
+        safeDelete('services'),
+        safeDelete('courts'),
+        safeDelete('specialists'),
+        safeDelete('business_subcategories'),
+        safeDelete('resources'),
+        safeDelete('reviews'),
+        safeDelete('promotions'),
+        safeDelete('seller_commissions'),
+        safeDelete('subscription_payments')
     ]);
 
     const { error } = await supabase
@@ -991,6 +1005,12 @@ export async function getBookingsAnalytics() {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10);
 
+    const normalizedRecentBookings = (allBookings?.slice(0, 50) || []).map(b => ({
+        ...b,
+        business_name: b.business_name || b.businesses?.name || 'Negocio',
+        category_name: b.category_name || b.businesses?.categories?.name || 'General'
+    }));
+
     return {
         totalBookings,
         thisMonthCount,
@@ -1003,7 +1023,7 @@ export async function getBookingsAnalytics() {
         avgBookingValue,
         statusBreakdown,
         topBusinesses,
-        recentBookings: allBookings?.slice(0, 20) || []
+        recentBookings: normalizedRecentBookings
     };
 }
 

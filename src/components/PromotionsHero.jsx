@@ -122,12 +122,67 @@ export default function PromotionsHero({ promotions, businesses }) {
                     >
                         {/* Si no hay negocio pero hay link (guardado en description o action_url), abrimos enlace externo o ruta */}
                         {(() => {
-                            const isExternal = currentPromo.description?.startsWith('http://') || currentPromo.description?.startsWith('https://');
-                            const targetUrl = isExternal
-                                ? currentPromo.description
-                                : (currentPromo.description?.startsWith('/') ? currentPromo.description : `/${business?.slug || generateSlug(business?.name || '')}?promoId=${currentPromo.id}`);
+                            const isGeneralCampaign = !currentPromo.business_id;
 
-                            const content = (
+                            let meta = null;
+                            try {
+                                if (currentPromo.description && typeof currentPromo.description === 'string' && currentPromo.description.trim().startsWith('{')) {
+                                    meta = JSON.parse(currentPromo.description);
+                                }
+                            } catch (e) {}
+
+                            const actionUrl = meta?.action_url || (typeof currentPromo.description === 'string' && (currentPromo.description.startsWith('http://') || currentPromo.description.startsWith('https://') || currentPromo.description.startsWith('/')) ? currentPromo.description : '');
+
+                            const isExternal = actionUrl?.startsWith('http://') || actionUrl?.startsWith('https://');
+                            const targetUrl = actionUrl || (business?.slug ? `/${business.slug}?promoId=${currentPromo.id}` : (business?.name ? `/${generateSlug(business.name)}?promoId=${currentPromo.id}` : '/negocios'));
+
+                            const content = isGeneralCampaign ? (
+                                /* 🌐 Campaña General: Banner total sin división */
+                                <div className="promo-card promo-card--general">
+                                    <div className="promo-image-container promo-image-container--general" style={{ overflow: 'hidden' }}>
+                                        {currentPromo.image && !imgError ? (
+                                            <img
+                                                src={currentPromo.image}
+                                                alt={currentPromo.title || 'Publicidad Turnitos'}
+                                                onLoad={() => {
+                                                    setLoadedImages(prev => {
+                                                        const next = new Set(prev);
+                                                        next.add(currentPromo.image);
+                                                        return next;
+                                                    });
+                                                }}
+                                                onError={() => {
+                                                    setFailedImages(prev => {
+                                                        const next = new Set(prev);
+                                                        next.add(currentPromo.image);
+                                                        return next;
+                                                    });
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                    objectPosition: 'center',
+                                                    display: 'block'
+                                                }}
+                                            />
+                                        ) : (
+                                            <div style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                background: 'linear-gradient(135deg, #00E67620 0%, #2979FF20 100%)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '48px'
+                                            }}>
+                                                🏷️
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                /* 🏢 Promoción de Negocio Específico: Split imagen a la izquierda y textos/descuento a la derecha */
                                 <div className="promo-card">
                                     {/* Image Section */}
                                     <div className="promo-image-container" style={{ overflow: 'hidden', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
@@ -201,7 +256,7 @@ export default function PromotionsHero({ promotions, businesses }) {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 <span style={{ fontSize: '16px' }}>{business?.name ? '📍' : '⚡'}</span>
                                                 <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'var(--font-title)' }}>
-                                                    {business?.name || (isExternal ? 'Conocé Más ➔' : 'Ver Más')}
+                                                    {business?.name || 'Ver Negocio'}
                                                 </span>
                                             </div>
                                         </motion.div>
@@ -270,31 +325,33 @@ export default function PromotionsHero({ promotions, businesses }) {
                 )}
 
                 {/* Indicators */}
-                <div style={{
-                    position: 'absolute',
-                    bottom: '18px',
-                    right: '18px',
-                    display: 'flex',
-                    gap: '6px',
-                    zIndex: 10
-                }}>
-                    {promotions.map((_, idx) => (
-                        <div
-                            key={idx}
-                            onClick={() => setCurrentIndex(idx)}
-                            style={{
-                                width: idx === currentIndex ? '24px' : '8px',
-                                height: '8px',
-                                borderRadius: '4px',
-                                background: 'white',
-                                opacity: idx === currentIndex ? 1 : 0.4,
-                                transition: 'all 0.3s',
-                                cursor: 'pointer',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                            }}
-                        />
-                    ))}
-                </div>
+                {promotions.length > 1 && (
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '18px',
+                        right: '18px',
+                        display: 'flex',
+                        gap: '6px',
+                        zIndex: 10
+                    }}>
+                        {promotions.map((_, idx) => (
+                            <div
+                                key={idx}
+                                onClick={() => setCurrentIndex(idx)}
+                                style={{
+                                    width: idx === currentIndex ? '24px' : '8px',
+                                    height: '8px',
+                                    borderRadius: '4px',
+                                    background: 'white',
+                                    opacity: idx === currentIndex ? 1 : 0.4,
+                                    transition: 'all 0.3s',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
         </section>
     );

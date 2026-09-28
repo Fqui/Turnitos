@@ -5,11 +5,25 @@ export default function ResetPasswordModal({ credentials, onClose }) {
 
     if (!credentials) return null;
 
+    const loginUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://www.turnitoslr.com'}/login`;
+    const messageText = `¡Hola! 👋 Tus nuevos datos de acceso para el portal de *${credentials.businessName}* son:\n\n📧 *Email:* ${credentials.email}\n🔑 *Clave Provisoria:* ${credentials.tempPassword}\n\nIngresá en ${loginUrl} para acceder a tu panel. Al iniciar sesión se te solicitará configurar tu contraseña definitiva.`;
+
     const handleCopy = () => {
-        const text = `¡Hola! Tus nuevos datos de acceso para el portal de ${credentials.businessName} son:\n\n📧 Email: ${credentials.email}\n🔑 Clave Provisoria: ${credentials.tempPassword}\n\nIngresá en https://www.turnitoslr.com/login para acceder a tu panel. Se te pedirá elegir tu clave propia al ingresar.`;
-        navigator.clipboard.writeText(text);
+        navigator.clipboard.writeText(messageText);
         setCopied(true);
         setTimeout(() => setCopied(false), 3000);
+    };
+
+    // Clean phone number for WhatsApp
+    let phone = (credentials.whatsapp || '').replace(/\D/g, '');
+    if (phone.startsWith('0')) phone = phone.substring(1);
+    if (phone.length === 10) phone = '549' + phone;
+    if (phone.length === 11 && phone.startsWith('15')) phone = '549' + phone.substring(2);
+    if (phone && !phone.startsWith('54') && phone.length <= 11) phone = '549' + phone;
+
+    const handleOpenWhatsApp = () => {
+        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(messageText)}`;
+        window.open(waUrl, '_blank');
     };
 
     return (
@@ -26,14 +40,33 @@ export default function ResetPasswordModal({ credentials, onClose }) {
         }}>
             <div style={{
                 width: '100%',
-                maxWidth: '440px',
+                maxWidth: '460px',
                 background: '#111827',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '16px',
                 padding: '26px',
                 color: '#f8fafc',
-                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5)'
+                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5)',
+                position: 'relative'
             }}>
+                <button
+                    onClick={onClose}
+                    style={{
+                        position: 'absolute',
+                        top: '16px',
+                        right: '16px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#94a3b8',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        padding: '4px 8px'
+                    }}
+                    title="Cerrar"
+                >
+                    ✕
+                </button>
+
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                     <div style={{
                         width: '50px',
@@ -91,36 +124,73 @@ export default function ResetPasswordModal({ credentials, onClose }) {
                             {credentials.tempPassword}
                         </strong>
                     </div>
+                    {credentials.whatsapp && (
+                        <div>
+                            <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '3px' }}>
+                                Teléfono / WhatsApp:
+                            </span>
+                            <span style={{ color: '#34d399', fontWeight: '600' }}>{credentials.whatsapp}</span>
+                        </div>
+                    )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        {phone && (
+                            <button
+                                type="button"
+                                onClick={handleOpenWhatsApp}
+                                style={{
+                                    flex: 1,
+                                    padding: '11px 14px',
+                                    background: '#25D366',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    color: '#000',
+                                    fontWeight: '800',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.15s ease'
+                                }}
+                            >
+                                <span>📲</span> Enviar por WhatsApp
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={handleCopy}
+                            style={{
+                                flex: 1,
+                                padding: '11px 16px',
+                                background: copied ? '#059669' : '#10b981',
+                                border: 'none',
+                                borderRadius: '10px',
+                                color: '#000',
+                                fontWeight: '800',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                            }}
+                        >
+                            {copied ? '✓ ¡Copiado!' : '📋 Copiar Texto'}
+                        </button>
+                    </div>
+
                     <button
-                        onClick={handleCopy}
-                        style={{
-                            flex: 1,
-                            padding: '11px 16px',
-                            background: copied ? '#059669' : '#10b981',
-                            border: 'none',
-                            borderRadius: '10px',
-                            color: '#000',
-                            fontWeight: '800',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                        }}
-                    >
-                        {copied ? '✓ ¡Copiado!' : '📋 Copiar para WhatsApp'}
-                    </button>
-                    <button
+                        type="button"
                         onClick={onClose}
                         style={{
-                            padding: '11px 18px',
+                            padding: '10px 18px',
                             background: '#1e293b',
                             border: '1px solid #334155',
                             borderRadius: '10px',
                             color: '#cbd5e1',
                             fontWeight: '700',
-                            fontSize: '13px',
+                            fontSize: '12px',
                             cursor: 'pointer'
                         }}
                     >

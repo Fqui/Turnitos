@@ -8,7 +8,8 @@ export default function GlobalSearchModal({
     sellers = [],
     categories = [],
     bookingsData = null,
-    onViewSellerDetails
+    onViewSellerDetails,
+    onSelectBusiness
 }) {
     const cleanQuery = (searchQuery || '').trim().toLowerCase();
 
@@ -22,7 +23,7 @@ export default function GlobalSearchModal({
         ? categories.filter(c => (c.name || '').toLowerCase().includes(cleanQuery))
         : [];
     const matchedBookings = cleanQuery
-        ? (bookingsData?.recentBookings || []).filter(b => (b.customer_name || '').toLowerCase().includes(cleanQuery) || (b.business_name || '').toLowerCase().includes(cleanQuery))
+        ? (bookingsData?.recentBookings || []).filter(b => (b.customer_name || '').toLowerCase().includes(cleanQuery) || (b.business_name || b.businesses?.name || '').toLowerCase().includes(cleanQuery))
         : [];
 
     return (
@@ -109,18 +110,28 @@ export default function GlobalSearchModal({
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 {matchedBusinesses.map(b => (
-                                    <div key={b.id} style={{
-                                        padding: '10px 12px',
-                                        background: '#1e293b',
-                                        borderRadius: '8px',
-                                        fontSize: '13px',
-                                        color: '#f8fafc',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}>
+                                    <div
+                                        key={b.id}
+                                        onClick={() => {
+                                            if (onSelectBusiness) onSelectBusiness(b);
+                                            onClose();
+                                        }}
+                                        style={{
+                                            padding: '10px 12px',
+                                            background: '#1e293b',
+                                            borderRadius: '8px',
+                                            fontSize: '13px',
+                                            color: '#f8fafc',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            cursor: 'pointer',
+                                            transition: 'background 0.15s ease'
+                                        }}
+                                        title="Click para ver o editar este negocio"
+                                    >
                                         <div>
-                                            <strong>{b.name}</strong> <span style={{ color: '#94a3b8', fontSize: '11px' }}>• {b.location}</span>
+                                            <strong>{b.name}</strong> <span style={{ color: '#94a3b8', fontSize: '11px' }}>• {b.location || 'Sin ubicación'}</span>
                                         </div>
                                         <span style={{
                                             fontSize: '10px',
@@ -130,7 +141,7 @@ export default function GlobalSearchModal({
                                             color: b.subscription_status === 'active' ? '#34d399' : '#fbbf24',
                                             fontWeight: '700'
                                         }}>
-                                            {b.subscription_status}
+                                            {b.subscription_status || 'trial'}
                                         </span>
                                     </div>
                                 ))}

@@ -48,41 +48,62 @@ const SellerDetailModal = ({ seller, onClose }) => {
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', position: 'relative' }}>
                     <div style={{
                         width: '72px',
                         height: '72px',
                         borderRadius: '20px',
-                        background: seller.seller.is_active
+                        background: seller.seller?.is_active
                             ? 'linear-gradient(135deg, var(--primary-paddle), #059669)'
                             : 'linear-gradient(135deg, #ef4444, #dc2626)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '32px',
+                        fontSize: '28px',
                         fontWeight: '900',
                         color: '#000'
                     }}>
-                        {seller.seller.first_name[0]}{seller.seller.last_name[0]}
+                        {(seller.seller?.first_name?.[0] || 'V')}{(seller.seller?.last_name?.[0] || '')}
                     </div>
                     <div style={{ flex: 1 }}>
-                        <h2 style={{ fontSize: '28px', fontWeight: '800', margin: 0, marginBottom: '4px' }}>
-                            {seller.seller.first_name} {seller.seller.last_name}
+                        <h2 style={{ fontSize: '24px', fontWeight: '800', margin: 0, marginBottom: '4px', color: '#f8fafc' }}>
+                            {seller.seller?.first_name} {seller.seller?.last_name}
                         </h2>
-                        <div style={{ fontSize: '15px', opacity: 0.7 }}>
-                            {seller.seller.email}
+                        <div style={{ fontSize: '14px', opacity: 0.7, color: '#94a3b8' }}>
+                            {seller.seller?.email} {seller.seller?.phone ? `• ${seller.seller?.phone}` : ''}
                         </div>
                     </div>
                     <div style={{
-                        padding: '12px 24px',
-                        background: seller.seller.is_active ? 'rgba(0, 230, 118, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        padding: '8px 18px',
+                        background: seller.seller?.is_active ? 'rgba(0, 230, 118, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                         borderRadius: '12px',
-                        fontSize: '14px',
+                        fontSize: '13px',
                         fontWeight: '700',
-                        color: seller.seller.is_active ? 'var(--primary-paddle)' : '#ef4444'
+                        color: seller.seller?.is_active ? 'var(--primary-paddle)' : '#ef4444',
+                        border: `1px solid ${seller.seller?.is_active ? 'rgba(0, 230, 118, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                     }}>
-                        {seller.seller.is_active ? '✓ Activo' : '✗ Inactivo'}
+                        {seller.seller?.is_active ? '✓ Activo' : '✗ Inactivo'}
                     </div>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '10px',
+                            width: '36px',
+                            height: '36px',
+                            color: '#94a3b8',
+                            fontSize: '18px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginLeft: '8px'
+                        }}
+                        title="Cerrar"
+                    >
+                        ✕
+                    </button>
                 </div>
 
                 {/* Stats Grid */}

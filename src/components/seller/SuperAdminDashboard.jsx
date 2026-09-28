@@ -197,7 +197,7 @@ export default function SuperAdminDashboard() {
 
         try {
             const creds = await supabaseService.resetBusinessPasswordAsSuperAdmin(business.id, business.name);
-            setResetCredentialsModal(creds);
+            setResetCredentialsModal({ ...creds, whatsapp: business.whatsapp || '', slug: business.slug || '' });
             showToast('🔑 Contraseña provisoria generada', 'success');
         } catch (err) {
             console.error('Error resetting password:', err);
@@ -252,7 +252,7 @@ export default function SuperAdminDashboard() {
     };
 
     const handleExportBusinessesCSV = () => {
-        if (!businesses.length) return alert('No hay negocios para exportar.');
+        if (!businesses.length) return showToast('No hay negocios para exportar', 'warning');
         const headers = ['Nombre', 'Categoría', 'Ubicación', 'Vendedor', 'Estado Suscripción', 'Email'];
         const rows = businesses.map(b => [
             `"${(b.name || '').replace(/"/g, '""')}"`,
@@ -370,6 +370,7 @@ export default function SuperAdminDashboard() {
                         <div>
                             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#f8fafc', textTransform: 'capitalize' }}>
                                 {activeTab === 'overview' && '📊 Dashboard General'}
+                                {activeTab === 'promotions' && '🔥 Publicidades Home'}
                                 {activeTab === 'businesses' && '🏢 Gestión de Negocios'}
                                 {activeTab === 'sellers' && '👥 Red de Vendedores'}
                                 {activeTab === 'bookings' && '🎫 Reservas Globales'}
@@ -506,6 +507,10 @@ export default function SuperAdminDashboard() {
                     categories={categories}
                     bookingsData={bookingsData}
                     onViewSellerDetails={handleViewSellerDetails}
+                    onSelectBusiness={(biz) => {
+                        setEditingBusiness(biz);
+                        setShowBusinessModal(true);
+                    }}
                 />
             )}
 

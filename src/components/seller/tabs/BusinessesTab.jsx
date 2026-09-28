@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNotification } from '../../../contexts/NotificationContext';
 
 export default function BusinessesTab({
     businesses = [],
@@ -11,6 +12,7 @@ export default function BusinessesTab({
     onResetPassword,
     onUpdateSubscriptionStatus
 }) {
+    const { showToast } = useNotification();
     const [search, setSearch] = useState('');
     const [quickStatusLoading, setQuickStatusLoading] = useState(null);
 
@@ -40,14 +42,17 @@ export default function BusinessesTab({
     // Handle "Login As" / Impersonation
     const handleLoginAs = (business) => {
         try {
-            // Store business session format in localStorage
-            localStorage.setItem('business', JSON.stringify(business));
+            // Store business session format in localStorage, bypassing password change prompt for SuperAdmin
+            const impersonated = { ...business, password_changed: true };
+            localStorage.setItem('business', JSON.stringify(impersonated));
             localStorage.setItem('turnitos_business_email', business.email || '');
+            localStorage.removeItem('turnitos_must_change_password');
+            showToast(`Abriendo portal de ${business.name}...`, 'info');
             // Open portal in new tab
             window.open('/portal', '_blank');
         } catch (e) {
             console.error('Error in Login As:', e);
-            alert('No se pudo abrir la sesión del negocio');
+            showToast('No se pudo abrir la sesión del negocio', 'error');
         }
     };
 

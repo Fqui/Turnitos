@@ -489,6 +489,37 @@ textarea {
   background: var(--bg-card);
 }
 
+/* Campaña General: Banner total al 100% sin división */
+.promo-card.promo-card--general {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: inherit;
+  background: var(--bg-card);
+}
+
+.promo-image-container--general {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  flex: none !important;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.promo-image-container--general img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  display: block !important;
+}
+
 .promo-image-container {
   position: relative;
   flex: 1.2;

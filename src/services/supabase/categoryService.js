@@ -74,8 +74,14 @@ export async function deleteCategory(categoryId) {
         .limit(1);
 
     if (businesses && businesses.length > 0) {
-        throw new Error('No se puede eliminar la categoría porque hay negocios asociados');
+        throw new Error('No se puede eliminar la categoría porque hay negocios asociados a ella.');
     }
+
+    // Delete child subcategories first to avoid foreign key constraints
+    await supabase
+        .from('subcategories')
+        .delete()
+        .eq('category_id', categoryId);
 
     const { error } = await supabase
         .from('categories')

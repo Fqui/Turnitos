@@ -810,11 +810,29 @@ export default function PromotionsTab({ businesses = [] }) {
                                     boxSizing: 'border-box'
                                 }}
                             >
-                                <option value="">🌐 Campaña General (Sin negocio - Lleva a link externo/página)</option>
+                                <option value="">🌐 Campaña General (Sin negocio - Banner completo 100% de ancho sin división)</option>
                                 {businesses.map(b => (
                                     <option key={b.id} value={b.id}>🏢 {b.name}</option>
                                 ))}
                             </select>
+
+                            {!form.business_id && (
+                                <div style={{
+                                    marginTop: '8px',
+                                    padding: '10px 14px',
+                                    background: 'rgba(59, 130, 246, 0.08)',
+                                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                                    borderRadius: '8px',
+                                    fontSize: '12px',
+                                    color: '#93c5fd',
+                                    lineHeight: 1.45
+                                }}>
+                                    📢 <strong>Modo Campaña General:</strong> En el Home la imagen se mostrará como un <strong>banner gráfico completo al 100% de ancho</strong> (sin división en columnas ni textos del sistema superpuestos).
+                                    <div style={{ marginTop: '5px', fontSize: '11.5px', color: '#cbd5e1' }}>
+                                        📐 <strong>Tamaño ideal recomendado para el diseño:</strong> <strong>1200 × 300 px</strong> (o 2400 × 600 px en HD, proporción 4:1) para que el diseño ocupe todo el ancho sin recortar nada.
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Opciones Avanzadas cuando hay un negocio vinculado */}

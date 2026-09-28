@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import supabaseService from '../../services/supabaseService';
+import { useNotification } from '../../contexts/NotificationContext';
 
 export default function ReviewsTab({ bookingsData, businesses }) {
+    const { showToast } = useNotification();
     const [activeSubTab, setActiveSubTab] = useState('requests'); // 'requests' | 'published'
     const [reviews, setReviews] = useState([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
@@ -33,9 +35,9 @@ export default function ReviewsTab({ bookingsData, businesses }) {
         try {
             await supabaseService.deleteOrModerateReview(reviewId, newStatus);
             setReviews(prev => prev.filter(r => newStatus === 'delete' ? r.id !== reviewId : true).map(r => r.id === reviewId ? { ...r, status: newStatus } : r));
-            alert('Estado de la reseña actualizado con éxito.');
+            showToast('Estado de la reseña actualizado con éxito', 'success');
         } catch (err) {
-            alert('Error al moderar reseña: ' + err.message);
+            showToast('Error al moderar reseña: ' + err.message, 'error');
         }
     };
 
@@ -63,7 +65,7 @@ export default function ReviewsTab({ bookingsData, businesses }) {
             window.open(waUrl, '_blank');
         } catch (err) {
             console.error('Error sending WhatsApp review link:', err);
-            alert('Error al generar enlace de WhatsApp: ' + err.message);
+            showToast('Error al generar enlace de WhatsApp: ' + err.message, 'error');
         } finally {
             setGeneratingTokenId(null);
         }

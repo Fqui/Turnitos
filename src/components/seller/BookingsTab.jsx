@@ -1,6 +1,8 @@
 import React from 'react';
+import { useNotification } from '../../contexts/NotificationContext';
 
 const BookingsTab = ({ bookingsData }) => {
+    const { showToast } = useNotification();
     if (!bookingsData) {
         return (
             <div style={{ textAlign: 'center', padding: '64px', opacity: 0.5 }}>
@@ -38,13 +40,13 @@ const BookingsTab = ({ bookingsData }) => {
 
     const handleExportCSV = () => {
         const bookings = bookingsData.recentBookings || [];
-        if (!bookings.length) return alert('No hay reservas para exportar.');
+        if (!bookings.length) return showToast('No hay reservas para exportar', 'warning');
         
         const headers = ['Cliente', 'Teléfono', 'Negocio', 'Fecha', 'Estado', 'Monto'];
         const rows = bookings.map(b => [
             `"${(b.customer_name || 'Cliente').replace(/"/g, '""')}"`,
             `"${(b.customer_phone || '').replace(/"/g, '""')}"`,
-            `"${(b.business_name || '').replace(/"/g, '""')}"`,
+            `"${(b.business_name || b.businesses?.name || 'Negocio').replace(/"/g, '""')}"`,
             `"${formatDate(b.created_at)}"`,
             `"${b.status || ''}"`,
             b.price || 0
@@ -250,7 +252,7 @@ const BookingsTab = ({ bookingsData }) => {
                                             {b.customer_name || 'Cliente'}
                                             {b.customer_phone && <div style={{ fontSize: '10px', color: '#6b7280' }}>{b.customer_phone}</div>}
                                         </td>
-                                        <td style={{ padding: '10px 12px', color: '#9ca3af' }}>{b.business_name}</td>
+                                        <td style={{ padding: '10px 12px', color: '#9ca3af' }}>{b.business_name || b.businesses?.name || 'Negocio'}</td>
                                         <td style={{ padding: '10px 12px', color: '#9ca3af' }}>{formatDate(b.created_at)}</td>
                                         <td style={{ padding: '10px 12px' }}>
                                             <span style={{
