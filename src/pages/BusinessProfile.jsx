@@ -476,7 +476,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
         return rules || {};
     }, [business?.booking_rules]);
 
-    // 🏷️ Día Especial con Precio Promocional (Baja demanda)
+    // 🏷️ Día Especial con Precio Promocional
     const specialPriceDay = useMemo(() => {
         if (!selectedDate || !business?.special_days) return null;
         const dateStr = selectedDate instanceof Date
@@ -590,8 +590,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
             }
 
             let finalPrice = finalDetails.price;
-            let discountApplied = 0;
-            if (activePromotion && activePromotion.discount_value > 0) {
+            let discountApplied = finalDetails.discount || 0;
+            if (activePromotion && activePromotion.discount_value > 0 && discountApplied === 0) {
                 if (activePromotion.discount_type === 'fixed') {
                     discountApplied = Math.min(activePromotion.discount_value, finalPrice);
                 } else {
@@ -622,8 +622,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     selected_services: selectedExtrasList,
                     additionalServices: selectedExtrasList,
                     extras: selectedExtrasList,
-                    deposit_amount: finalDetails.depositAmount || null
+                    deposit_amount: finalDetails.depositAmount || null,
+                    coupon_code: finalDetails.coupon_code || finalDetails.coupon?.code || null,
+                    coupon_title: finalDetails.coupon?.gift_title || finalDetails.coupon?.description || null
                 },
+                coupon_code: finalDetails.coupon_code || finalDetails.coupon?.code || null,
                 promo_id: activePromotion?.id || null,
                 discount_applied: discountApplied,
                 history: [
@@ -637,6 +640,28 @@ export default function BusinessProfile({ business: initialBusiness }) {
             };
 
             await serviceAdapter.createBooking(bookingData);
+
+            // If a business coupon was applied, increment used_count
+            if (finalDetails.coupon?.code && business.id) {
+                try {
+                    const currentCoupons = business.coupons || business.metadata?.coupons || [];
+                    const updatedCoupons = currentCoupons.map(c => {
+                        if ((c.code || '').trim().toUpperCase() === finalDetails.coupon.code.trim().toUpperCase()) {
+                            return { ...c, used_count: Number(c.used_count || 0) + 1 };
+                        }
+                        return c;
+                    });
+                    serviceAdapter.patchBusiness(business.id, {
+                        coupons: updatedCoupons,
+                        metadata: {
+                            ...(business.metadata || {}),
+                            coupons: updatedCoupons
+                        }
+                    }).catch(e => console.warn('Could not increment coupon used_count:', e));
+                } catch (e) {
+                    console.warn('Coupon counter error:', e);
+                }
+            }
 
             try {
                 if (pushService?.notifyBusinessNewBooking) {
@@ -909,34 +934,70 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                 boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
                                 border: '1px solid var(--border)'
                             }}>
-                                {/* Low-demand special price / discount banner */}
+                                {/* Special price / discount banner */}
                                 {specialPriceDay && (
                                     <div style={{
-                                        padding: '12px 16px',
+                                        padding: '14px 18px',
                                         marginBottom: '16px',
-                                        borderRadius: '14px',
-                                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                                        borderRadius: '16px',
+                                        background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%)',
+                                        border: '1.5px solid rgba(16, 185, 129, 0.3)',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '12px'
+                                        gap: '14px',
+                                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)',
+                                        position: 'relative',
+                                        overflow: 'hidden'
                                     }}>
-                                        <span style={{ fontSize: '24px' }}>🏷️</span>
-                                        <div>
-                                            <div style={{ fontSize: '14px', fontWeight: '800', color: '#10b981' }}>
-                                                ¡Tarifa Especial por Baja Demanda! {
-                                                    specialPriceDay.priceMode === 'discount_percent' && specialPriceDay.priceVal 
-                                                        ? `(${specialPriceDay.priceVal}% OFF)`
+                                        {/* Decorative circle */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            right: '-20px',
+                                            top: '-20px',
+                                            width: '80px',
+                                            height: '80px',
+                                            borderRadius: '50%',
+                                            background: 'rgba(16, 185, 129, 0.1)',
+                                            pointerEvents: 'none'
+                                        }} />
+                                        <div style={{
+                                            width: '44px',
+                                            height: '44px',
+                                            minWidth: '44px',
+                                            borderRadius: '12px',
+                                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '20px',
+                                            boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)'
+                                        }}>
+                                            🔥
+                                        </div>
+                                        <div style={{ position: 'relative', zIndex: 1, flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: '14px', fontWeight: '800', color: '#065f46' }}>
+                                                    {specialPriceDay.description || '¡Oferta del Día!'}
+                                                </span>
+                                                <span style={{
+                                                    padding: '2px 8px',
+                                                    borderRadius: '20px',
+                                                    background: '#059669',
+                                                    color: '#fff',
+                                                    fontSize: '11px',
+                                                    fontWeight: '800',
+                                                    letterSpacing: '0.3px'
+                                                }}>
+                                                    {specialPriceDay.priceMode === 'discount_percent' && specialPriceDay.priceVal 
+                                                        ? `${specialPriceDay.priceVal}% OFF`
                                                         : specialPriceDay.priceMode === 'fixed'
-                                                            ? `($${Number(specialPriceDay.priceVal).toLocaleString('es-AR')})`
-                                                            : ''
-                                                }
+                                                            ? `$${Number(specialPriceDay.priceVal).toLocaleString('es-AR')}`
+                                                            : 'PROMO'}
+                                                </span>
                                             </div>
-                                            {specialPriceDay.description && (
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                                    {specialPriceDay.description}
-                                                </div>
-                                            )}
+                                            <div style={{ fontSize: '12px', color: '#047857', marginTop: '3px', fontWeight: '500' }}>
+                                                Precio especial aplicado a todos los turnos de hoy
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -1040,6 +1101,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     const resources = business.type === 'sport'
                                         ? (business.courts || []).map(c => ({
                                             ...c,
+                                            originalPrice: c.price || 0,
                                             price: calculateSpecialDayPrice(c.price || 0)
                                         }))
                                         : (qualifiedSpecialists.length > 0
@@ -1047,6 +1109,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 id: s.id,
                                                 name: s.name,
                                                 features: [s.role || 'Especialista'],
+                                                originalPrice: selectedItem?.price || 0,
                                                 price: calculateSpecialDayPrice(selectedItem?.price || 0),
                                                 sport: null,
                                                 capacity: s.capacity || 1
@@ -1055,6 +1118,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 id: selectedItem?.id || 'no-specialist',
                                                 name: 'Sin profesional asignado',
                                                 features: ['Servicio'],
+                                                originalPrice: selectedItem?.price || 0,
                                                 price: calculateSpecialDayPrice(selectedItem?.price || 0),
                                                 sport: null,
                                                 capacity: 1
@@ -1080,11 +1144,14 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 closingTime={close}
                                                 timeRanges={ranges}
                                                 onSlotSelect={(slotData) => {
+                                                    const courtItem = (business.courts || []).find(c => c.id === slotData.courtId);
+                                                    const rawPrice = courtItem?.price !== undefined ? courtItem.price : (slotData.price || 0);
                                                     setSelectedTime({
                                                         time: slotData.time,
                                                         courtId: slotData.courtId,
                                                         courtName: slotData.courtName,
-                                                        price: calculateSpecialDayPrice(slotData.price),
+                                                        originalPrice: rawPrice,
+                                                        price: calculateSpecialDayPrice(rawPrice),
                                                         duration: slotData.duration
                                                     });
                                                     setShowModal(true);
@@ -1101,20 +1168,24 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 if (courtId) {
                                                     const court = resources.find(r => r.id === courtId);
                                                     const courtName = court ? court.name : 'Cancha';
-                                                    const rawCourtPrice = price !== undefined ? price : (court ? court.price : 0);
+                                                    const courtItem = (business.courts || []).find(c => c.id === courtId);
+                                                    const rawCourtPrice = courtItem?.price !== undefined ? courtItem.price : (court?.originalPrice || price || 0);
                                                     setSelectedTime({
                                                         time,
                                                         courtId,
                                                         courtName,
+                                                        originalPrice: rawCourtPrice,
                                                         price: calculateSpecialDayPrice(rawCourtPrice),
-                                                        duration: duration || (business.type === 'service' ? selectedItem.duration : 60)
+                                                        duration: duration || (business.type === 'service' ? selectedItem?.duration : 60)
                                                     });
                                                 } else {
+                                                    const rawPrice = selectedItem?.price || 0;
                                                     setSelectedTime({
                                                         time,
                                                         courtId: null,
                                                         courtName: null,
-                                                        price: calculateSpecialDayPrice(selectedItem?.price || 0)
+                                                        originalPrice: rawPrice,
+                                                        price: calculateSpecialDayPrice(rawPrice)
                                                     });
                                                 }
 
@@ -1293,45 +1364,64 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     )}
 
                     {/* BookingSummary Modal */}
-                    {showModal && selectedTime && (
-                        <BookingSummary
-                            bookingDetails={{
-                                businessName: business.name,
-                                serviceName: business.type === 'venue' ? `Alquiler ${selectedDuration}hs` : (business.type === 'service' ? selectedItem?.name : selectedItem),
-                                specialistName: selectedSpecialist?.name,
-                                date: selectedDate instanceof Date
-                                    ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
-                                    : selectedDate,
-                                time: selectedTime.time || selectedTime,
-                                duration: selectedTime.duration || (business.type === 'service' ? selectedItem?.duration : 60),
-                                price: (selectedTime.price !== undefined && selectedTime.price !== null
-                                    ? selectedTime.price
-                                    : calculateSpecialDayPrice(business.type === 'service' ? (selectedItem?.price || 0) : 0)),
-                                originalPrice: (business.type === 'service' ? (selectedItem?.price || 0) : (selectedTime.price || 0)),
-                                specialDayDiscount: specialPriceDay ? {
-                                    description: specialPriceDay.description || 'Precio especial por baja demanda',
-                                    priceMode: specialPriceDay.priceMode,
-                                    priceVal: specialPriceDay.priceVal,
-                                    discountAmount: Math.max(0, (business.type === 'service' ? (selectedItem?.price || 0) : (selectedTime.price || 0)) - (selectedTime.price !== undefined ? selectedTime.price : calculateSpecialDayPrice(business.type === 'service' ? (selectedItem?.price || 0) : 0)))
-                                } : null,
-                                courtName: business.type === 'sport' ? selectedTime.courtName : null,
-                                courtId: business.type === 'sport' ? selectedTime.courtId : null,
-                                extras: selectedAdditionalServices,
-                                business: business,
-                                businessPhone: business.whatsapp || business.phone,
-                                businessBank: business.bank_name,
-                                businessAccountHolder: business.account_holder,
-                                businessAlias: business.bank_alias,
-                                businessCBU: business.cbu
-                            }}
-                            availableExtras={(business?.additional_services || []).filter(s => s.is_active !== false)}
-                            activePromotion={activePromotion}
-                            sportColor={primaryColor}
-                            onClose={() => setShowModal(false)}
-                            onConfirm={handleConfirmBooking}
-                            isSubmitting={isSubmitting}
-                        />
-                    )}
+                    {showModal && selectedTime && (() => {
+                        const rawOriginalPrice = business.type === 'venue'
+                            ? Number(business.price_per_hour || business.price_per_day || 0) * (selectedDuration || 1)
+                            : (business.type === 'service'
+                                ? Number(selectedItem?.price || 0)
+                                : Number(selectedTime.originalPrice ?? selectedTime.price ?? 0));
+
+                        const discountedPrice = (selectedTime.price !== undefined && selectedTime.price !== null)
+                            ? Number(selectedTime.price)
+                            : calculateSpecialDayPrice(rawOriginalPrice);
+
+                        const discountAmount = Math.max(0, rawOriginalPrice - discountedPrice);
+
+                        return (
+                            <BookingSummary
+                                bookingDetails={{
+                                    businessName: business.name,
+                                    serviceName: business.type === 'venue' ? `Alquiler ${selectedDuration}hs` : (business.type === 'service' ? selectedItem?.name : selectedItem),
+                                    specialistName: selectedSpecialist?.name,
+                                    date: selectedDate instanceof Date
+                                        ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+                                        : selectedDate,
+                                    time: selectedTime.time || selectedTime,
+                                    duration: selectedTime.duration || (business.type === 'service' ? selectedItem?.duration : 60),
+                                    price: discountedPrice,
+                                    originalPrice: rawOriginalPrice,
+                                    specialDayDiscount: (specialPriceDay && discountAmount > 0) ? {
+                                        description: specialPriceDay.description || 'Oferta del día',
+                                        priceMode: specialPriceDay.priceMode,
+                                        priceVal: specialPriceDay.priceVal,
+                                        discountAmount: discountAmount
+                                    } : null,
+                                    courtName: business.type === 'sport' ? selectedTime.courtName : null,
+                                    courtId: business.type === 'sport' ? selectedTime.courtId : null,
+                                    extras: selectedAdditionalServices,
+                                    business: business,
+                                    businessPhone: business.whatsapp || business.phone,
+                                    businessBank: business.bank_name,
+                                    businessAccountHolder: business.account_holder,
+                                    businessAlias: business.bank_alias,
+                                    businessCBU: business.cbu
+                                }}
+                                availableExtras={(business?.additional_services || []).filter(s => {
+                                    if (s.is_active === false) return false;
+                                    const selectedServiceId = selectedItem?.id;
+                                    if (!s.applicable_services || s.applicable_services.length === 0 || s.applicable_to === 'all') {
+                                        return true;
+                                    }
+                                    return selectedServiceId && s.applicable_services.includes(selectedServiceId);
+                                })}
+                                activePromotion={activePromotion}
+                                sportColor={primaryColor}
+                                onClose={() => setShowModal(false)}
+                                onConfirm={handleConfirmBooking}
+                                isSubmitting={isSubmitting}
+                            />
+                        );
+                    })()}
 
                     {/* Booking Success Modal */}
                     {showSuccessModal && (

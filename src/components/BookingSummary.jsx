@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDisplayDate, formatFriendlyDate, calculateEndTime } from '../utils/dateUtils';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
+import CouponInput from './common/CouponInput';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
 let globalCachedPaymentData = {
@@ -11,12 +12,24 @@ let globalCachedPaymentData = {
 
 export default function BookingSummary({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting, activePromotion, availableExtras }) {
     const incomingBusiness = bookingDetails?.business || {};
+    const selectedServiceId = bookingDetails?.service?.id || bookingDetails?.item?.id;
+
+    const filterExtra = (extra) => {
+        if (extra.is_active === false) return false;
+        // Si no tiene restricción de servicios o es 'all', aplica a cualquier reserva
+        if (!extra.applicable_services || extra.applicable_services.length === 0 || extra.applicable_to === 'all') {
+            return true;
+        }
+        // Si tiene restricción específica, solo mostrar si coincide con el servicio del turno
+        return selectedServiceId && extra.applicable_services.includes(selectedServiceId);
+    };
+
     const effectiveExtras = (availableExtras && availableExtras.length > 0)
-        ? availableExtras.filter(s => s.is_active !== false)
+        ? availableExtras.filter(filterExtra)
         : (incomingBusiness?.additional_services && incomingBusiness.additional_services.length > 0)
-            ? incomingBusiness.additional_services.filter(s => s.is_active !== false)
+            ? incomingBusiness.additional_services.filter(filterExtra)
             : (incomingBusiness?.metadata?.additional_services && incomingBusiness.metadata.additional_services.length > 0)
-                ? incomingBusiness.metadata.additional_services.filter(s => s.is_active !== false)
+                ? incomingBusiness.metadata.additional_services.filter(filterExtra)
                 : [];
     const hasExtras = effectiveExtras.length > 0;
 
@@ -96,8 +109,31 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
 
     const [selectedExtras, setSelectedExtras] = useState(bookingDetails.extras || []);
 
-    const { date, time, courtName, serviceName, price: basePrice, specialistName, duration } = bookingDetails;
-    const price = basePrice + selectedExtras.reduce((sum, e) => sum + (Number(e.price) * (e.quantity || 1)), 0);
+    const {
+        date,
+        time,
+        courtName,
+        serviceName,
+        price: basePrice,
+        originalPrice,
+        specialDayDiscount,
+        specialistName,
+        duration
+    } = bookingDetails;
+
+    const extrasTotal = selectedExtras.reduce((sum, e) => sum + (Number(e.price) * (e.quantity || 1)), 0);
+
+    // Special Day Discount details
+    const hasSpecialDiscount = specialDayDiscount && specialDayDiscount.discountAmount > 0;
+    const specialDiscount = hasSpecialDiscount ? specialDayDiscount.discountAmount : 0;
+    const effectiveOriginalBasePrice = (originalPrice && originalPrice > basePrice)
+        ? originalPrice
+        : (hasSpecialDiscount ? basePrice + specialDiscount : basePrice);
+
+    // Total before discounts
+    const subtotalBeforeDiscounts = effectiveOriginalBasePrice + extrasTotal;
+
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
 
     // 🎫 Calculate promo discount (based on slot base price only)
     let promoDiscount = 0;
@@ -116,11 +152,18 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
         }
     }
 
-    const finalPrice = price - promoDiscount;
+    // 🏷️ Calculate user-entered coupon discount
+    const couponDiscount = (appliedCoupon && appliedCoupon.coupon?.type !== 'gift')
+        ? Number(appliedCoupon.discountAmount || 0)
+        : 0;
+
+    const totalDiscount = promoDiscount + couponDiscount;
+    const price = basePrice + extrasTotal;
+    const finalPrice = Math.max(0, price - totalDiscount);
+    const hasAnyDiscount = hasSpecialDiscount || totalDiscount > 0;
 
     // Calculate deposit: (Base price percentage) + 100% of additional services
-    const basePriceAfterPromo = Math.max(0, basePrice - promoDiscount);
-    const extrasTotal = selectedExtras.reduce((sum, e) => sum + (Number(e.price) * (e.quantity || 1)), 0);
+    const basePriceAfterDiscount = Math.max(0, basePrice - totalDiscount);
     let depositAmount = 0;
     let depositLabel = 'Seña';
 
@@ -131,13 +174,13 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
         const fixed = parseInt(depositSettings.fixed_amount);
 
         if (depositSettings.percentage && !isNaN(percentage) && percentage > 0) {
-            depositAmount = Math.round(basePriceAfterPromo * (percentage / 100)) + extrasTotal;
+            depositAmount = Math.round(basePriceAfterDiscount * (percentage / 100)) + extrasTotal;
             depositLabel = `Seña (${percentage}%)` + (extrasTotal > 0 ? ' + Adicionales' : '');
         } else if (!isNaN(fixed) && fixed > 0) {
-            depositAmount = fixed + extrasTotal;
+            depositAmount = Math.min(fixed + extrasTotal, finalPrice);
             depositLabel = 'Seña (Monto Fijo)' + (extrasTotal > 0 ? ' + Adicionales' : '');
         } else {
-            depositAmount = Math.round(basePriceAfterPromo * 0.3) + extrasTotal;
+            depositAmount = Math.round(basePriceAfterDiscount * 0.3) + extrasTotal;
             depositLabel = 'Seña (30%)' + (extrasTotal > 0 ? ' + Adicionales' : '');
         }
     }
@@ -156,6 +199,13 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
 
     const hasBankDetails = bankDetails.banco || bankDetails.alias || bankDetails.cbu;
 
+    // 🛡️ Validaciones del formulario de contacto
+    const isFirstNameValid = firstName.trim().length >= 2;
+    const isLastNameValid = lastName.trim().length >= 2;
+    const cleanCustomerPhone = customerPhone.replace(/\D/g, '');
+    const isPhoneValid = cleanCustomerPhone.length >= 10 && cleanCustomerPhone.length <= 15;
+    const isFormValid = isFirstNameValid && isLastNameValid && isPhoneValid;
+
     const handleConfirmPayment = () => {
         const customerName = `${firstName} ${lastName}`;
 
@@ -172,8 +222,14 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                 return `- ${qty > 1 ? `${qty}x ` : ''}${e.name} ($${total})`;
             }).join('\n')
             : '';
+        // Add coupon details to WhatsApp message
+        const couponText = appliedCoupon
+            ? (appliedCoupon.coupon?.type === 'gift'
+                ? `\n🎁 Beneficio cupón: ${appliedCoupon.coupon?.code} (${appliedCoupon.giftBenefit})`
+                : `\n🎟️ Cupón aplicado: ${appliedCoupon.coupon?.code} (-$${couponDiscount.toLocaleString('es-AR')})`)
+            : '';
             
-        const message = `Hola, mi nombre es ${customerName}. Reservé ${displayServiceName}${specialistText}, el día ${formattedDate} a las ${time}.${extrasText}\n\nA continuación le envío una captura del comprobante.`;
+        const message = `Hola, mi nombre es ${customerName}. Reservé ${displayServiceName}${specialistText}, el día ${formattedDate} a las ${time}.${extrasText}${couponText}\n\nA continuación le envío una captura del comprobante.`;
 
         const businessPhone = bookingDetails.businessPhone || '5493804123456';
 
@@ -182,7 +238,16 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
         window.open(whatsappUrl, '_blank');
 
         // Call parent confirm
-        onConfirm({ ...bookingDetails, customerName, customerPhone, extras: selectedExtras, price });
+        onConfirm({
+            ...bookingDetails,
+            customerName,
+            customerPhone,
+            extras: selectedExtras,
+            price: finalPrice,
+            coupon: appliedCoupon?.coupon || null,
+            coupon_code: appliedCoupon?.coupon?.code || null,
+            discount: totalDiscount
+        });
     };
 
     const copyToClipboard = async (text, field) => {
@@ -349,17 +414,17 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '42vh', overflowY: 'auto', paddingRight: '4px' }}>
                                     {(() => {
                                         const effectiveExtras = (availableExtras && availableExtras.length > 0)
-                                            ? availableExtras
+                                            ? availableExtras.filter(filterExtra)
                                             : (business?.additional_services && business.additional_services.length > 0)
-                                                ? business.additional_services.filter(s => s.is_active !== false)
+                                                ? business.additional_services.filter(filterExtra)
                                                 : (business?.metadata?.additional_services && business.metadata.additional_services.length > 0)
-                                                    ? business.metadata.additional_services.filter(s => s.is_active !== false)
+                                                    ? business.metadata.additional_services.filter(filterExtra)
                                                     : [];
 
                                         if (effectiveExtras.length === 0) {
                                             return (
                                                 <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
-                                                    No hay adicionales recomendados disponibles.
+                                                    No hay adicionales recomendados disponibles para este turno.
                                                 </div>
                                             );
                                         }
@@ -368,6 +433,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                             const selectedItem = selectedExtras.find(e => e.name === extra.name);
                                             const isSelected = !!selectedItem;
                                             const qty = selectedItem?.quantity || 1;
+                                            const allowsMultiple = !!extra.allow_quantity;
                                             const extraImage = extra.image || extra.image_url || (
                                                 extra.name.includes('Pala') ? 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=200&q=80' :
                                                 extra.name.includes('Pelotas') ? 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=200&q=80' :
@@ -416,7 +482,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                             {extra.name}
                                                         </div>
                                                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                                            {extra.desc || extra.category || (extra.name.includes('Alquiler') ? 'Alquiler para el partido' : 'Adicional para tu turno')}
+                                                            {extra.desc || extra.category || (allowsMultiple ? 'Producto adicional' : 'Servicio extra')}
                                                         </div>
                                                     </div>
                                                     <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
@@ -425,25 +491,48 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                         </div>
 
                                                         {isSelected ? (
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '12px', border: `1px solid ${sportColor}` }}>
+                                                            allowsMultiple ? (
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '12px', border: `1px solid ${sportColor}` }}>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={handleDecrement}
+                                                                        style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 4px' }}
+                                                                    >
+                                                                        -
+                                                                    </button>
+                                                                    <span style={{ fontSize: '12px', fontWeight: '800', color: sportColor, minWidth: '16px', textAlign: 'center' }}>
+                                                                        {qty}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={handleIncrement}
+                                                                        style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 4px' }}
+                                                                    >
+                                                                        +
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={handleDecrement}
-                                                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 4px' }}
+                                                                    onClick={() => setSelectedExtras(prev => prev.filter(e => e.name !== extra.name))}
+                                                                    style={{
+                                                                        fontSize: '11px',
+                                                                        color: sportColor,
+                                                                        backgroundColor: `${sportColor}15`,
+                                                                        border: `1.5px solid ${sportColor}`,
+                                                                        fontWeight: '700',
+                                                                        padding: '4px 10px',
+                                                                        borderRadius: '10px',
+                                                                        cursor: 'pointer',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px'
+                                                                    }}
+                                                                    title="Quitar este adicional"
                                                                 >
-                                                                    -
+                                                                    ✓ Agregado
                                                                 </button>
-                                                                <span style={{ fontSize: '12px', fontWeight: '800', color: sportColor, minWidth: '16px', textAlign: 'center' }}>
-                                                                    {qty}
-                                                                </span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={handleIncrement}
-                                                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 4px' }}
-                                                                >
-                                                                    +
-                                                                </button>
-                                                            </div>
+                                                            )
                                                         ) : (
                                                             <button
                                                                 type="button"
@@ -453,8 +542,8 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                                     color: '#000',
                                                                     backgroundColor: sportColor,
                                                                     fontWeight: '700',
-                                                                    padding: '4px 10px',
-                                                                    borderRadius: '12px',
+                                                                    padding: '5px 12px',
+                                                                    borderRadius: '10px',
                                                                     border: 'none',
                                                                     cursor: 'pointer'
                                                                 }}
@@ -583,8 +672,8 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                     borderBottom: `1px dashed ${sportColor}30`
                                                 }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                                        <span>{courtName || serviceName}</span>
-                                                        <span>${basePrice.toLocaleString('es-AR')}</span>
+                                                        <span>{courtName || serviceName} (Base)</span>
+                                                        <span>${effectiveOriginalBasePrice.toLocaleString('es-AR')}</span>
                                                     </div>
                                                     {selectedExtras.map((extra, idx) => {
                                                         const qty = extra.quantity || 1;
@@ -599,72 +688,130 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                 </div>
                                             )}
 
-                                            {/* Subtotal */}
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                                                    {promoDiscount > 0 ? 'Subtotal' : 'Total a pagar'}
-                                                </span>
-                                                <span style={{
-                                                    fontSize: promoDiscount > 0 ? '14px' : '18px',
-                                                    fontWeight: promoDiscount > 0 ? '600' : '900',
-                                                    color: promoDiscount > 0 ? 'var(--text-secondary)' : sportColor,
-                                                    textDecoration: promoDiscount > 0 ? 'line-through' : 'none'
-                                                }}>
-                                                    ${price.toLocaleString('es-AR')}
-                                                </span>
-                                            </div>
-
-                                            {/* Special Day Low-Demand Discount Row */}
-                                            {bookingDetails.specialDayDiscount && bookingDetails.specialDayDiscount.discountAmount > 0 && (
-                                                <div style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    padding: '6px 10px',
-                                                    borderRadius: '8px',
-                                                    backgroundColor: '#10b98115',
-                                                    border: '1px dashed #10b981'
-                                                }}>
-                                                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        🏷️ {bookingDetails.specialDayDiscount.description || 'Descuento día de baja demanda'}
-                                                    </span>
-                                                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>
-                                                        -${bookingDetails.specialDayDiscount.discountAmount.toLocaleString('es-AR')}
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            {/* Promo Row */}
-                                            {promoDiscount > 0 && (
+                                            {/* If discounts exist, show Subtotal row */}
+                                            {hasAnyDiscount ? (
                                                 <>
-                                                    <div style={{
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        padding: '6px 10px',
-                                                        borderRadius: '8px',
-                                                        backgroundColor: '#10b98120',
-                                                        border: '1px dashed #10b981'
-                                                    }}>
-                                                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            🎫 {promoLabel}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                            Subtotal
                                                         </span>
-                                                        <span style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
-                                                            -${promoDiscount.toLocaleString('es-AR')}
+                                                        <span style={{
+                                                            fontSize: '14px',
+                                                            fontWeight: '600',
+                                                            color: 'var(--text-secondary)',
+                                                            textDecoration: 'line-through'
+                                                        }}>
+                                                            ${subtotalBeforeDiscounts.toLocaleString('es-AR')}
                                                         </span>
                                                     </div>
+
+                                                    {/* Special Day Discount Row */}
+                                                    {hasSpecialDiscount && (
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            padding: '8px 12px',
+                                                            borderRadius: '10px',
+                                                            background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.15))',
+                                                            border: '1px solid rgba(16,185,129,0.3)'
+                                                        }}>
+                                                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#059669', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                                🔥 {specialDayDiscount.description || 'Oferta del día'}{
+                                                                    specialDayDiscount.priceMode === 'discount_percent' && specialDayDiscount.priceVal
+                                                                        ? ` (${specialDayDiscount.priceVal}% OFF)`
+                                                                        : ''
+                                                                }
+                                                            </span>
+                                                            <span style={{ fontSize: '13px', fontWeight: '800', color: '#059669' }}>
+                                                                -${specialDiscount.toLocaleString('es-AR')}
+                                                            </span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Promo Coupon Row */}
+                                                    {promoDiscount > 0 && (
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            padding: '8px 12px',
+                                                            borderRadius: '10px',
+                                                            backgroundColor: '#10b98120',
+                                                            border: '1px dashed #10b981'
+                                                        }}>
+                                                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                🎫 {promoLabel}
+                                                            </span>
+                                                            <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>
+                                                                -${promoDiscount.toLocaleString('es-AR')}
+                                                            </span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Applied Coupon Row */}
+                                                    {appliedCoupon && (
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            padding: '8px 12px',
+                                                            borderRadius: '10px',
+                                                            backgroundColor: appliedCoupon.coupon?.type === 'gift' ? 'rgba(59, 130, 246, 0.12)' : `${sportColor}15`,
+                                                            border: appliedCoupon.coupon?.type === 'gift' ? '1px dashed #3B82F6' : `1px dashed ${sportColor}60`
+                                                        }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <span style={{ fontSize: '12.5px', fontWeight: '700', color: appliedCoupon.coupon?.type === 'gift' ? '#2563EB' : sportColor, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                                    {appliedCoupon.coupon?.type === 'gift' ? '🎁' : '🏷️'} Cupón {appliedCoupon.coupon?.code}
+                                                                    {appliedCoupon.coupon?.type === 'gift' && ` (${appliedCoupon.giftBenefit})`}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setAppliedCoupon(null)}
+                                                                    style={{
+                                                                        background: 'rgba(239, 68, 68, 0.1)',
+                                                                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                                                                        color: '#EF4444',
+                                                                        fontSize: '11px',
+                                                                        fontWeight: '700',
+                                                                        cursor: 'pointer',
+                                                                        padding: '2px 7px',
+                                                                        borderRadius: '5px'
+                                                                    }}
+                                                                    title="Quitar cupón"
+                                                                >
+                                                                    ✕ Quitar
+                                                                </button>
+                                                            </div>
+                                                            {appliedCoupon.coupon?.type !== 'gift' && (
+                                                                <span style={{ fontSize: '13px', fontWeight: '800', color: sportColor }}>
+                                                                    -${couponDiscount.toLocaleString('es-AR')}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Total a pagar con descuento */}
                                                     <div style={{
                                                         display: 'flex',
                                                         justifyContent: 'space-between',
                                                         alignItems: 'center',
                                                         paddingTop: '4px'
                                                     }}>
-                                                        <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>Total con descuento</span>
+                                                        <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>Total a pagar</span>
                                                         <span style={{ fontSize: '20px', fontWeight: '900', color: sportColor }}>
                                                             ${finalPrice.toLocaleString('es-AR')}
                                                         </span>
                                                     </div>
                                                 </>
+                                            ) : (
+                                                /* No discounts: plain Total a pagar */
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Total a pagar</span>
+                                                    <span style={{ fontSize: '18px', fontWeight: '900', color: sportColor }}>
+                                                        ${finalPrice.toLocaleString('es-AR')}
+                                                    </span>
+                                                </div>
                                             )}
 
                                             {/* Deposit */}
@@ -682,6 +829,23 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                     ${depositAmount.toLocaleString('es-AR')}
                                                 </span>
                                             </div>
+                                        </div>
+                                    )}
+
+                                    {/* Coupon Input Component (hidden when already applied to avoid duplicate box) */}
+                                    {price > 0 && !appliedCoupon && (
+                                        <div style={{ marginTop: '2px' }}>
+                                            <CouponInput
+                                                coupons={incomingBusiness?.coupons || incomingBusiness?.metadata?.coupons || []}
+                                                totalAmount={basePrice}
+                                                bookingDate={date}
+                                                customerPhone={customerPhone}
+                                                serviceId={selectedServiceId}
+                                                appliedCoupon={appliedCoupon}
+                                                onApplyCoupon={setAppliedCoupon}
+                                                onRemoveCoupon={() => setAppliedCoupon(null)}
+                                                primaryColor={sportColor}
+                                            />
                                         </div>
                                     )}
                                 </div>
@@ -734,38 +898,93 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                     </div>
 
                                     <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                                        Teléfono
+                                        Teléfono (WhatsApp)
                                     </label>
-                                    <input
-                                        type="tel"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        maxLength={15}
-                                        value={customerPhone}
-                                        onKeyDown={(e) => {
-                                            if (
-                                                ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(e.key) ||
-                                                e.ctrlKey || e.metaKey
-                                            ) {
-                                                return;
-                                            }
-                                            if (!/^[0-9]$/.test(e.key)) {
-                                                e.preventDefault();
-                                            }
-                                        }}
-                                        onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
-                                        placeholder="Ej: 3804123456"
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px 16px',
-                                            borderRadius: '12px',
-                                            border: '1px solid var(--border)',
-                                            backgroundColor: 'var(--bg-main)',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '16px',
-                                            outline: 'none'
-                                        }}
-                                    />
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            type="tel"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            maxLength={15}
+                                            value={customerPhone}
+                                            onKeyDown={(e) => {
+                                                if (
+                                                    ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(e.key) ||
+                                                    e.ctrlKey || e.metaKey
+                                                ) {
+                                                    return;
+                                                }
+                                                if (!/^[0-9]$/.test(e.key)) {
+                                                    e.preventDefault();
+                                                }
+                                            }}
+                                            onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
+                                            placeholder="Ej: 3804123456"
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px 48px 12px 16px',
+                                                borderRadius: '12px',
+                                                border: `1.5px solid ${
+                                                    customerPhone.length === 0
+                                                        ? 'var(--border)'
+                                                        : isPhoneValid
+                                                            ? '#10b981'
+                                                            : '#f59e0b'
+                                                }`,
+                                                backgroundColor: 'var(--bg-main)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '16px',
+                                                outline: 'none',
+                                                boxShadow: customerPhone.length > 0
+                                                    ? (isPhoneValid ? '0 0 0 3px rgba(16,185,129,0.12)' : '0 0 0 3px rgba(245,158,11,0.12)')
+                                                    : 'none',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        />
+                                        {customerPhone.length > 0 && (
+                                            <span style={{
+                                                position: 'absolute',
+                                                right: '14px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                fontSize: '13px',
+                                                color: isPhoneValid ? '#10b981' : '#f59e0b',
+                                                fontWeight: '700',
+                                                userSelect: 'none'
+                                            }}>
+                                                {isPhoneValid ? '✓' : `${cleanCustomerPhone.length}/10`}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {/* Feedback de validación en tiempo real */}
+                                    {customerPhone.length > 0 && !isPhoneValid && (
+                                        <div style={{
+                                            marginTop: '6px',
+                                            fontSize: '12px',
+                                            color: '#d97706',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            fontWeight: '500'
+                                        }}>
+                                            <span>⚠️</span>
+                                            <span>Ingresá al menos 10 dígitos con código de área (ej: 3804123456). Faltan {10 - cleanCustomerPhone.length} {10 - cleanCustomerPhone.length === 1 ? 'dígito' : 'dígitos'}.</span>
+                                        </div>
+                                    )}
+                                    {isPhoneValid && (
+                                        <div style={{
+                                            marginTop: '6px',
+                                            fontSize: '12px',
+                                            color: '#059669',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            fontWeight: '600'
+                                        }}>
+                                            <span>✓</span>
+                                            <span>Número válido para notificaciones y WhatsApp</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Cancellation Policy Notice */}
@@ -824,20 +1043,23 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                         {hasExtras ? 'Volver' : 'Cancelar'}
                                     </button>
                                     <button
-                                        onClick={() => setCurrentStep(3)}
-                                        disabled={!firstName || !lastName || !customerPhone}
+                                        onClick={() => {
+                                            if (!isFormValid) return;
+                                            setCurrentStep(3);
+                                        }}
+                                        disabled={!isFormValid}
                                         style={{
                                             flex: 2,
                                             padding: '16px',
                                             borderRadius: '12px',
                                             border: 'none',
-                                            backgroundColor: (!firstName || !lastName || !customerPhone) ? 'var(--border)' : (sportColor || 'var(--primary-paddle)'),
-                                            color: (!firstName || !lastName || !customerPhone) ? 'var(--text-secondary)' : '#ffffff',
+                                            backgroundColor: !isFormValid ? 'var(--border)' : (sportColor || 'var(--primary-paddle)'),
+                                            color: !isFormValid ? 'var(--text-secondary)' : '#ffffff',
                                             fontSize: '16px',
                                             fontWeight: '700',
-                                            cursor: (!firstName || !lastName || !customerPhone) ? 'not-allowed' : 'pointer',
-                                            opacity: (!firstName || !lastName || !customerPhone) ? 0.8 : 1,
-                                            boxShadow: (!firstName || !lastName || !customerPhone) ? 'none' : `0 8px 20px ${sportColor}40`,
+                                            cursor: !isFormValid ? 'not-allowed' : 'pointer',
+                                            opacity: !isFormValid ? 0.7 : 1,
+                                            boxShadow: !isFormValid ? 'none' : `0 8px 20px ${sportColor}40`,
                                             transition: 'all 0.2s'
                                         }}
                                     >

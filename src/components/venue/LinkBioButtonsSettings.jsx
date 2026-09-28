@@ -5,10 +5,60 @@ import { EmojiPickerModal } from '../common/AmenityIcon';
 
 const PRESET_EMOJIS = ['📄', '📋', '🍔', '🍕', '🍻', '👥', '🎵', '⭐', '🌐', '💳', '📍', '📞', '🎁', '💬', '⚽', '🎾', '🏖️', '🔥'];
 
+const PRESET_TEMPLATES = [
+    {
+        label: '💬 WhatsApp',
+        title: 'Consultas por WhatsApp',
+        subtitle: 'Atención personalizada y dudas',
+        icon: '💬',
+        linkType: 'url',
+        url: 'https://wa.me/',
+        colorType: 'custom',
+        buttonColor: '#25D366'
+    },
+    {
+        label: '📄 Lista de Precios',
+        title: 'Lista de Precios',
+        subtitle: 'Precios actualizados de nuestros servicios',
+        icon: '📄',
+        linkType: 'file',
+        colorType: 'primary'
+    },
+    {
+        label: '📸 Instagram / Trabajos',
+        title: 'Nuestro Instagram',
+        subtitle: 'Mirá fotos y videos de nuestros trabajos',
+        icon: '📸',
+        linkType: 'url',
+        url: 'https://instagram.com/',
+        colorType: 'custom',
+        buttonColor: '#EC4899'
+    },
+    {
+        label: '📍 Cómo Llegar',
+        title: 'Cómo Llegar',
+        subtitle: 'Ver ubicación en Google Maps',
+        icon: '📍',
+        linkType: 'url',
+        url: 'https://maps.google.com/',
+        colorType: 'card'
+    },
+    {
+        label: '📜 Políticas y Señas',
+        title: 'Políticas y Cancelaciones',
+        subtitle: 'Información sobre señas y cancelaciones',
+        icon: '📜',
+        linkType: 'file',
+        colorType: 'card'
+    }
+];
+
 export default function LinkBioButtonsSettings({
     customLinks = [],
     onChange,
-    primaryColor = '#84CC16'
+    primaryColor = '#84CC16',
+    businessSlug = null,
+    isServiceBusiness = false
 }) {
     const { showToast, showConfirm } = useNotification();
     const [isAdding, setIsAdding] = useState(false);
@@ -198,18 +248,57 @@ export default function LinkBioButtonsSettings({
         resetForm();
     };
 
-    const handleDeleteLink = (index) => {
+    const handleDeleteLink = async (index) => {
         const item = customLinks[index];
-        showConfirm({
-            title: '¿Eliminar botón?',
-            message: `¿Estás seguro de eliminar el botón "${item.title}"?`,
-            confirmText: 'Eliminar',
-            onConfirm: () => {
-                const updated = customLinks.filter((_, i) => i !== index);
-                onChange(updated);
-                showToast('Botón eliminado', 'info');
-            }
+        const confirmed = await showConfirm(
+            '¿Eliminar botón?',
+            `¿Estás seguro de eliminar el botón "${item.title}"?`,
+            'Eliminar',
+            'Cancelar'
+        );
+        if (confirmed) {
+            const updated = customLinks.filter((_, i) => i !== index);
+            onChange(updated);
+            showToast('Botón eliminado', 'info');
+        }
+    };
+
+    const handleMoveUp = (index) => {
+        if (index <= 0) return;
+        const updated = [...customLinks];
+        const temp = updated[index - 1];
+        updated[index - 1] = updated[index];
+        updated[index] = temp;
+        onChange(updated);
+        showToast('Posición actualizada', 'info');
+    };
+
+    const handleMoveDown = (index) => {
+        if (index >= customLinks.length - 1) return;
+        const updated = [...customLinks];
+        const temp = updated[index + 1];
+        updated[index + 1] = updated[index];
+        updated[index] = temp;
+        onChange(updated);
+        showToast('Posición actualizada', 'info');
+    };
+
+    const applyPresetTemplate = (template) => {
+        resetForm();
+        setFormState({
+            id: 'link_' + Date.now(),
+            title: template.title,
+            subtitle: template.subtitle,
+            icon: template.icon,
+            linkType: template.linkType,
+            url: template.url || '',
+            fileName: '',
+            fileSize: '',
+            colorType: template.colorType,
+            buttonColor: template.colorType === 'primary' ? businessBrandColor : (template.buttonColor || businessBrandColor),
+            enabled: true
         });
+        setIsAdding(true);
     };
 
     const handleToggleLink = (index) => {
@@ -285,6 +374,57 @@ export default function LinkBioButtonsSettings({
                         <span>➕</span> Agregar Botón
                     </button>
                 )}
+            </div>
+
+            {/* Quick Templates Bar */}
+            <div style={{
+                background: 'var(--bg-main)',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: '1px solid var(--border)',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                flexWrap: 'wrap'
+            }}>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span>💡</span> Sugerencias rápidas:
+                </span>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
+                    {PRESET_TEMPLATES.map((tmpl, tIdx) => (
+                        <button
+                            key={tIdx}
+                            type="button"
+                            onClick={() => applyPresetTemplate(tmpl)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '5px 11px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-card)',
+                                color: 'var(--text-primary)',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.borderColor = 'var(--primary-paddle, #84CC16)';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.borderColor = 'var(--border)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                        >
+                            <span>{tmpl.icon}</span>
+                            <span>{tmpl.label}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Add / Edit Form Modal / Box */}
@@ -859,7 +999,49 @@ export default function LinkBioButtonsSettings({
                                 </div>
 
                                 {/* Actions */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {/* Reorder Up / Down */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleMoveUp(idx)}
+                                            disabled={idx === 0}
+                                            style={{
+                                                padding: '3px 6px',
+                                                borderRadius: '4px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-card)',
+                                                color: idx === 0 ? 'var(--text-secondary)' : 'var(--text-primary)',
+                                                opacity: idx === 0 ? 0.25 : 1,
+                                                fontSize: '10px',
+                                                cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                                                lineHeight: 1
+                                            }}
+                                            title="Subir posición"
+                                        >
+                                            ▲
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleMoveDown(idx)}
+                                            disabled={idx === customLinks.length - 1}
+                                            style={{
+                                                padding: '3px 6px',
+                                                borderRadius: '4px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-card)',
+                                                color: idx === customLinks.length - 1 ? 'var(--text-secondary)' : 'var(--text-primary)',
+                                                opacity: idx === customLinks.length - 1 ? 0.25 : 1,
+                                                fontSize: '10px',
+                                                cursor: idx === customLinks.length - 1 ? 'not-allowed' : 'pointer',
+                                                lineHeight: 1
+                                            }}
+                                            title="Bajar posición"
+                                        >
+                                            ▼
+                                        </button>
+                                    </div>
+
                                     {targetUrl && (
                                         <a
                                             href={targetUrl}

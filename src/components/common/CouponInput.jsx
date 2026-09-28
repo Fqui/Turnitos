@@ -9,7 +9,8 @@ export const validateCoupon = ({
     bookingDate = '',
     totalAmount = 0,
     customerPhone = '',
-    existingBookings = []
+    existingBookings = [],
+    serviceId = null
 }) => {
     if (!code || !code.trim()) {
         return { valid: false, error: 'Ingresa un código de cupón' };
@@ -91,6 +92,16 @@ export const validateCoupon = ({
         }
     }
 
+    // Check Applicable Services Scope
+    if (coupon.applicable_to === 'services' && Array.isArray(coupon.applicable_services) && coupon.applicable_services.length > 0) {
+        if (serviceId && !coupon.applicable_services.includes(serviceId)) {
+            return {
+                valid: false,
+                error: 'Este cupón no es válido para el servicio seleccionado'
+            };
+        }
+    }
+
     // Calculate Discount Amount
     let discountAmount = 0;
     let giftBenefit = null;
@@ -125,18 +136,21 @@ export default function CouponInput({
     totalAmount = 0,
     bookingDate = '',
     customerPhone = '',
+    serviceId = null,
     appliedCoupon = null,
     onApplyCoupon,
     onRemoveCoupon,
     isMobile = false,
     primaryColor,
-    textColor = 'inherit',
-    secondaryTextColor = '#64748B',
-    borderColor = 'rgba(0, 0, 0, 0.12)'
+    textColor = 'var(--text-primary, #0F172A)',
+    secondaryTextColor = 'var(--text-secondary, #64748B)',
+    borderColor = 'var(--border, rgba(0, 0, 0, 0.12))'
 }) {
     const [inputCode, setInputCode] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [isExpanded, setIsExpanded] = useState(Boolean(appliedCoupon));
+
+    const brandColor = primaryColor || 'var(--primary-paddle, #84CC16)';
 
     const handleApply = (e) => {
         if (e) e.preventDefault();
@@ -147,7 +161,8 @@ export default function CouponInput({
             coupons,
             bookingDate,
             totalAmount,
-            customerPhone
+            customerPhone,
+            serviceId
         });
 
         if (!result.valid) {
@@ -173,8 +188,8 @@ export default function CouponInput({
         const isGift = appliedCoupon.coupon?.type === 'gift';
         return (
             <div style={{
-                background: isGift ? 'rgba(59, 130, 246, 0.08)' : 'rgba(16, 185, 129, 0.08)',
-                border: isGift ? '1px dashed rgba(59, 130, 246, 0.35)' : '1px dashed rgba(16, 185, 129, 0.35)',
+                background: isGift ? 'rgba(59, 130, 246, 0.08)' : `${brandColor}15`,
+                border: isGift ? '1px dashed rgba(59, 130, 246, 0.35)' : `1px dashed ${brandColor}60`,
                 borderRadius: '10px',
                 padding: '8px 12px',
                 display: 'flex',
@@ -189,7 +204,7 @@ export default function CouponInput({
                         <span style={{
                             fontWeight: '800',
                             fontSize: '12px',
-                            background: isGift ? '#3B82F6' : (primaryColor || '#10B981'),
+                            background: isGift ? '#3B82F6' : brandColor,
                             color: '#fff',
                             padding: '2px 8px',
                             borderRadius: '4px',
@@ -197,7 +212,7 @@ export default function CouponInput({
                         }}>
                             {appliedCoupon.coupon?.code}
                         </span>
-                        <span style={{ fontSize: '12.5px', fontWeight: '700', color: isGift ? '#2563EB' : '#059669' }}>
+                        <span style={{ fontSize: '12.5px', fontWeight: '700', color: isGift ? '#2563EB' : brandColor }}>
                             {isGift
                                 ? appliedCoupon.giftBenefit
                                 : `-$${Number(appliedCoupon.discountAmount || 0).toLocaleString('es-AR')}`}
@@ -269,7 +284,7 @@ export default function CouponInput({
                                 padding: '0 12px',
                                 borderRadius: '10px',
                                 border: errorMsg ? '1.5px solid #EF4444' : `1px solid ${borderColor}`,
-                                background: '#fff',
+                                background: 'var(--bg-card, #fff)',
                                 color: textColor,
                                 fontSize: '13px',
                                 fontWeight: '700',
@@ -286,7 +301,7 @@ export default function CouponInput({
                                 padding: '0 16px',
                                 borderRadius: '10px',
                                 border: 'none',
-                                background: primaryColor || '#1B4332',
+                                background: brandColor,
                                 color: '#fff',
                                 fontWeight: '700',
                                 fontSize: '13px',

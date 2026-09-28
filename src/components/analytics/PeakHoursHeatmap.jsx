@@ -152,7 +152,7 @@ export default function PeakHoursHeatmap({ data, labels }) {
                         fontSize: '11px',
                         color: 'var(--text-secondary)'
                     }}>
-                        <span>Baja demanda</span>
+                        <span>Menor afluencia</span>
                         <div style={{ display: 'flex', gap: '3px' }}>
                             {[0, 0.25, 0.5, 0.75, 1].map((intensity, i) => (
                                 <div

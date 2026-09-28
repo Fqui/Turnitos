@@ -435,7 +435,7 @@ export default function ServiciosForm({ business, onSave, onCancel }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {formData.amenities.map((amenity, index) => (
                         <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', backgroundColor: 'var(--primary-paddle)20', borderRadius: '20px', border: '1px solid var(--primary-paddle)' }}>
-                            <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{amenity}</span>
+                            <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{typeof amenity === 'object' ? (amenity?.name || '') : amenity}</span>
                             <button type="button" onClick={() => setFormData({ ...formData, amenities: formData.amenities.filter((_, i) => i !== index) })} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '16px', padding: '0', lineHeight: '1' }}>×</button>
                         </div>
                     ))}

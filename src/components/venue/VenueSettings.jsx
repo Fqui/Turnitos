@@ -637,6 +637,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
                 {activeTab === 'coupons' && (
                     <CouponsSettings
                         coupons={formData.coupons || formData.metadata?.coupons || business?.coupons || business?.metadata?.coupons || []}
+                        primaryColor={formData.primary_color || business?.primary_color}
                         onChange={(newCoupons) => {
                             handleInputChange('coupons', newCoupons);
                             handleMetadataChange('coupons', newCoupons);

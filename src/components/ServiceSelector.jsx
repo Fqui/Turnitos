@@ -158,7 +158,8 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 {/* Service Image Container */}
                                 <div style={{
                                     position: 'relative',
-                                    height: '145px',
+                                    width: '100%',
+                                    aspectRatio: '4 / 3',
                                     borderRadius: '14px',
                                     overflow: 'hidden',
                                     marginBottom: '14px',
@@ -172,7 +173,8 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                             style={{
                                                 width: '100%',
                                                 height: '100%',
-                                                objectFit: 'cover'
+                                                objectFit: 'cover',
+                                                objectPosition: 'center'
                                             }}
                                         />
                                     ) : (
@@ -409,7 +411,8 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                             <div style={{
                                 position: 'relative',
                                 width: '100%',
-                                height: '210px',
+                                aspectRatio: '16 / 10',
+                                maxHeight: '280px',
                                 backgroundColor: '#0f172a',
                                 overflow: 'hidden',
                                 flexShrink: 0
@@ -421,7 +424,8 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                         style={{
                                             width: '100%',
                                             height: '100%',
-                                            objectFit: 'cover'
+                                            objectFit: 'cover',
+                                            objectPosition: 'center'
                                         }}
                                     />
                                 ) : (

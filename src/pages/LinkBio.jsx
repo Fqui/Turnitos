@@ -8,8 +8,8 @@ import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
 import SEOHead from '../components/SEOHead';
 import { findBusinessBySlug } from '../utils/utils';
-import { isFreePlan } from '../utils/subscriptionUtils';
 import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerModal';
+import ProfileHighlightsBar from '../components/profile/ProfileHighlightsBar';
 
 // Fix for default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -72,17 +72,19 @@ const LinkBio = ({ overrideSlug = null }) => {
     useEffect(() => {
         const fetchBusiness = async () => {
             try {
-                const allBusinesses = await serviceAdapter.getBusinesses();
-                const foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
+                let foundBusiness = null;
+                try {
+                    foundBusiness = await serviceAdapter.getBusinessBySlug(businessSlug);
+                } catch (e) {
+                    console.warn('Error fetching by slug in LinkBio:', e);
+                }
+
+                if (!foundBusiness) {
+                    const allBusinesses = await serviceAdapter.getBusinesses();
+                    foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
+                }
+
                 if (foundBusiness) {
-                    if (isFreePlan(foundBusiness.subscription_plan_id || foundBusiness.subscription_plan_name)) {
-                        if (overrideSlug) {
-                            navigate('/turnos', { replace: true });
-                        } else {
-                            navigate(`/${foundBusiness.slug || businessSlug}`, { replace: true });
-                        }
-                        return;
-                    }
                     setBusiness(foundBusiness);
                 }
             } catch (error) {
@@ -197,6 +199,8 @@ const LinkBio = ({ overrideSlug = null }) => {
         }
         return true;
     });
+
+    const permanentHighlights = (highlights || []).filter(item => !item.is_story && ((item.images && item.images.length > 0) || !!item.cover_image));
 
     // Parse custom buttons created by the business
     const customLinks = (business.custom_links || business.metadata?.custom_links || [])
@@ -464,6 +468,27 @@ const LinkBio = ({ overrideSlug = null }) => {
                 setStoryViewerList={setStoryViewerList}
                 activeStories={activeStories}
             />
+
+            {/* Permanent Highlights (Destacadas) */}
+            {permanentHighlights && permanentHighlights.length > 0 && (
+                <div style={{
+                    width: '100%',
+                    maxWidth: isDesktop ? '420px' : '480px',
+                    marginBottom: '16px',
+                    padding: '0 8px',
+                    flexShrink: 0
+                }}>
+                    <ProfileHighlightsBar
+                        permanentHighlights={permanentHighlights}
+                        onSelectHighlight={(index) => {
+                            setStoryViewerList(permanentHighlights);
+                            setSelectedHighlight(index);
+                            setSelectedPhotoIndex(0);
+                        }}
+                        noBorder={true}
+                    />
+                </div>
+            )}
 
             {/* Main Links Section */}
             <div className="linkbio-links-section" style={{ width: '100%', maxWidth: isDesktop ? '420px' : '480px', display: 'flex', flexDirection: 'column', gap: linkGap, marginBottom: '6px', padding: '0 16px', flexShrink: 0 }}>

@@ -564,8 +564,9 @@ export default function VenueBookingWizardModal({
                                         const phone = document.getElementById('customerPhone')?.value;
                                         const email = document.getElementById('customerEmail')?.value;
 
-                                        if (!firstName || !lastName || !phone) {
-                                            showAlert('Campos requeridos', 'Por favor completa nombre, apellido y teléfono.', 'warning', 'Entendido');
+                                        const cleanDigits = (phone || '').replace(/\D/g, '');
+                                        if (!firstName?.trim() || !lastName?.trim() || cleanDigits.length < 10) {
+                                            showAlert('Datos requeridos', 'Por favor ingresa nombre, apellido y un teléfono válido con código de área (mínimo 10 dígitos, ej: 3804123456).', 'warning', 'Entendido');
                                             return;
                                         }
 

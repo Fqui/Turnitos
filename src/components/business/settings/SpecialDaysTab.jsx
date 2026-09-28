@@ -36,8 +36,10 @@ export default function SpecialDaysTab({
             else if (type === 'special_hours') desc = `Horario especial (${openTime} - ${closeTime} hs)`;
             else if (type === 'special_price') {
                 desc = priceMode === 'fixed' 
-                    ? `Tarifa especial $${Number(priceVal || 0).toLocaleString('es-AR')}`
-                    : `${priceVal}% OFF (Baja demanda)`;
+                    ? `Precio especial $${Number(priceVal || 0).toLocaleString('es-AR')}`
+                    : priceMode === 'surcharge'
+                        ? `Recargo +${priceVal}%`
+                        : `¡${priceVal}% OFF!`;
             }
         }
 
@@ -65,18 +67,18 @@ export default function SpecialDaysTab({
     return (
         <div style={{ display: 'grid', gap: '24px' }}>
             <div>
-                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)' }}>
-                    Días Especiales y Precios de Baja Demanda
+                <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '22px' }}>📅</span> Días Especiales y Ofertas
                 </h3>
                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-                    Configura días cerrados, feriados o promociones con descuento en días de baja demanda para incentivar reservas.
+                    Configura feriados, cierres especiales o activa ofertas y descuentos en días puntuales para atraer más reservas.
                 </p>
             </div>
 
             {/* Add New Special Day Card */}
-            <div style={{ padding: '20px', background: 'var(--bg-main)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                    Agregar Día Especial o Descuento
+            <div style={{ padding: '20px', background: 'var(--bg-main)', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ➕ Nuevo Día Especial
                 </h4>
                 <div style={{ display: 'grid', gap: '14px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
@@ -96,9 +98,9 @@ export default function SpecialDaysTab({
                                 onChange={(e) => setType(e.target.value)}
                                 style={inputStyle}
                             >
-                                <option value="special_price">🏷️ Descuento / Precio Promocional (Baja Demanda)</option>
-                                <option value="special_hours">🕐 Horario Especial (Apertura / Cierre distintos)</option>
-                                <option value="closed">🚫 Cerrado (No se aceptan reservas)</option>
+                                <option value="special_price">🏷️ Oferta / Descuento Promocional</option>
+                                <option value="special_hours">🕐 Horario Especial</option>
+                                <option value="closed">🚫 Cerrado</option>
                                 <option value="holiday">🎉 Feriado</option>
                             </select>
                         </div>
@@ -110,35 +112,35 @@ export default function SpecialDaysTab({
                             display: 'grid',
                             gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
                             gap: '12px',
-                            padding: '14px',
-                            background: 'var(--bg-card)',
-                            borderRadius: '10px',
-                            border: '1px solid #10b98140'
+                            padding: '16px',
+                            background: 'linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.02))',
+                            borderRadius: '14px',
+                            border: '1px solid rgba(16,185,129,0.25)'
                         }}>
                             <div>
-                                <label style={{ ...labelStyle, marginBottom: '4px', color: '#10b981', fontWeight: '700' }}>
-                                    Modalidad de Descuento
+                                <label style={{ ...labelStyle, marginBottom: '4px', color: '#059669', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Tipo de Oferta
                                 </label>
                                 <select
                                     value={priceMode}
                                     onChange={(e) => setPriceMode(e.target.value)}
                                     style={inputStyle}
                                 >
-                                    <option value="discount_percent">Descuento Porcentual (% OFF sobre el precio)</option>
-                                    <option value="fixed">Precio Fijo Promocional ($)</option>
-                                    <option value="surcharge">Recargo Extra (%)</option>
+                                    <option value="discount_percent">% Descuento (Ej: 20% OFF)</option>
+                                    <option value="fixed">Precio Fijo ($)</option>
+                                    <option value="surcharge">Recargo (%)</option>
                                 </select>
                             </div>
                             <div>
-                                <label style={{ ...labelStyle, marginBottom: '4px', color: '#10b981', fontWeight: '700' }}>
-                                    {priceMode === 'fixed' ? 'Precio Promocional ($)' : 'Porcentaje (% de descuento)'}
+                                <label style={{ ...labelStyle, marginBottom: '4px', color: '#059669', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    {priceMode === 'fixed' ? 'Precio Promocional ($)' : priceMode === 'surcharge' ? 'Porcentaje de Recargo' : 'Porcentaje de Descuento'}
                                 </label>
                                 <input
                                     type="number"
                                     min="0"
                                     value={priceVal}
                                     onChange={(e) => setPriceVal(e.target.value)}
-                                    placeholder={priceMode === 'fixed' ? 'Ej: 8000' : 'Ej: 20 (para 20% OFF)'}
+                                    placeholder={priceMode === 'fixed' ? 'Ej: 8000' : 'Ej: 20'}
                                     style={inputStyle}
                                 />
                             </div>
@@ -178,12 +180,12 @@ export default function SpecialDaysTab({
                     )}
 
                     <div>
-                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Motivo o Título de la Promoción (Opcional)</label>
+                        <label style={{ ...labelStyle, marginBottom: '4px' }}>Nombre de la oferta (Opcional — visible para el cliente)</label>
                         <input
                             type="text"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Ej: Martes 20% OFF baja demanda, Víspera de feriado, etc."
+                            placeholder="Ej: Martes Promo, Happy Hour, Oferta Flash..."
                             style={inputStyle}
                         />
                     </div>
@@ -220,65 +222,95 @@ export default function SpecialDaysTab({
                     {specialDays
                         .sort((a, b) => new Date(a.date) - new Date(b.date))
                         .map((day, index) => {
-                            const typeLabels = {
-                                closed: { label: 'Cerrado', color: '#ef4444', icon: '🚫' },
-                                holiday: { label: 'Feriado', color: '#f59e0b', icon: '🎉' },
-                                special_hours: { label: 'Horario Especial', color: '#3b82f6', icon: '🕐' },
-                                special_price: { label: 'Precio Especial', color: '#10b981', icon: '🏷️' }
+                            const typeConfig = {
+                                closed: { label: 'Cerrado', gradient: 'linear-gradient(135deg, #fef2f2, #fee2e2)', borderColor: '#fca5a5', textColor: '#dc2626', icon: '🚫' },
+                                holiday: { label: 'Feriado', gradient: 'linear-gradient(135deg, #fffbeb, #fef3c7)', borderColor: '#fcd34d', textColor: '#d97706', icon: '🎉' },
+                                special_hours: { label: 'Horario Especial', gradient: 'linear-gradient(135deg, #eff6ff, #dbeafe)', borderColor: '#93c5fd', textColor: '#2563eb', icon: '🕐' },
+                                special_price: { label: 'Oferta', gradient: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', borderColor: '#6ee7b7', textColor: '#059669', icon: '🔥' }
                             };
-                            const typeInfo = typeLabels[day.type] || typeLabels.closed;
+                            const cfg = typeConfig[day.type] || typeConfig.closed;
+                            const isPast = new Date(day.date + 'T23:59:59') < new Date();
 
                             return (
                                 <div key={day.id || index} style={{
-                                    padding: '16px',
-                                    background: 'var(--bg-main)',
-                                    borderRadius: '12px',
-                                    border: '1px solid var(--border)',
+                                    padding: '16px 18px',
+                                    background: isPast ? 'var(--bg-main)' : cfg.gradient,
+                                    borderRadius: '14px',
+                                    border: `1.5px solid ${isPast ? 'var(--border)' : cfg.borderColor}`,
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
-                                    gap: '16px'
+                                    gap: '14px',
+                                    opacity: isPast ? 0.5 : 1,
+                                    transition: 'all 0.2s ease'
                                 }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                                            <span style={{ fontSize: '18px' }}>{typeInfo.icon}</span>
-                                            <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                {new Date(day.date + 'T00:00:00').toLocaleDateString('es-AR', {
-                                                    weekday: 'long',
-                                                    year: 'numeric',
-                                                    month: 'long',
-                                                    day: 'numeric'
-                                                })}
-                                            </span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                    {/* Date circle */}
+                                    <div style={{
+                                        width: '52px',
+                                        minWidth: '52px',
+                                        height: '52px',
+                                        borderRadius: '14px',
+                                        background: isPast ? 'var(--border)' : cfg.textColor,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#fff',
+                                        lineHeight: 1
+                                    }}>
+                                        <span style={{ fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', opacity: 0.9 }}>
+                                            {new Date(day.date + 'T00:00:00').toLocaleDateString('es-AR', { month: 'short' })}
+                                        </span>
+                                        <span style={{ fontSize: '20px', fontWeight: '800' }}>
+                                            {new Date(day.date + 'T00:00:00').getDate()}
+                                        </span>
+                                    </div>
+
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
                                             <span style={{
-                                                padding: '3px 8px',
+                                                padding: '2px 8px',
                                                 borderRadius: '6px',
-                                                background: `${typeInfo.color}20`,
-                                                color: typeInfo.color,
-                                                fontSize: '12px',
-                                                fontWeight: '700'
+                                                background: `${cfg.textColor}18`,
+                                                color: cfg.textColor,
+                                                fontSize: '11px',
+                                                fontWeight: '800',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.3px'
                                             }}>
-                                                {typeInfo.label}
+                                                {cfg.icon} {cfg.label}
                                             </span>
-                                            {day.type === 'special_hours' && day.open && day.close && (
-                                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#3b82f6' }}>
-                                                    {day.open} - {day.close} hs
-                                                </span>
-                                            )}
                                             {day.type === 'special_price' && day.priceVal !== undefined && (
-                                                <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>
+                                                <span style={{
+                                                    padding: '2px 8px',
+                                                    borderRadius: '6px',
+                                                    background: '#059669',
+                                                    color: '#fff',
+                                                    fontSize: '11px',
+                                                    fontWeight: '800'
+                                                }}>
                                                     {day.priceMode === 'fixed'
-                                                        ? `$${Number(day.priceVal).toLocaleString('es-AR')} Fijo`
+                                                        ? `$${Number(day.priceVal).toLocaleString('es-AR')}`
                                                         : day.priceMode === 'surcharge'
-                                                            ? `+${day.priceVal}% Recargo`
+                                                            ? `+${day.priceVal}%`
                                                             : `${day.priceVal}% OFF`}
                                                 </span>
                                             )}
+                                            {day.type === 'special_hours' && day.open && day.close && (
+                                                <span style={{ fontSize: '12px', fontWeight: '700', color: '#2563eb' }}>
+                                                    {day.open} – {day.close}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                            {new Date(day.date + 'T00:00:00').toLocaleDateString('es-AR', {
+                                                weekday: 'long',
+                                                day: 'numeric',
+                                                month: 'long'
+                                            })}
                                             {day.description && (
-                                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                                    — {day.description}
+                                                <span style={{ fontWeight: '400', color: 'var(--text-secondary)', marginLeft: '6px' }}>
+                                                    · {day.description}
                                                 </span>
                                             )}
                                         </div>
@@ -295,27 +327,34 @@ export default function SpecialDaysTab({
                                             }
                                         }}
                                         style={{
-                                            padding: '8px 12px',
-                                            borderRadius: '8px',
-                                            border: '1px solid #ef4444',
-                                            background: 'rgba(239, 68, 68, 0.1)',
+                                            padding: '8px',
+                                            borderRadius: '10px',
+                                            border: 'none',
+                                            background: 'rgba(239, 68, 68, 0.08)',
                                             color: '#ef4444',
                                             cursor: 'pointer',
                                             fontWeight: '600',
-                                            fontSize: '13px'
+                                            fontSize: '14px',
+                                            transition: 'background 0.2s'
                                         }}
-                                        title="Eliminar día especial"
+                                        title="Eliminar"
+                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'}
                                     >
-                                        🗑️
+                                        ✕
                                     </button>
                                 </div>
                             );
                         })}
                 </div>
             ) : (
-                <div style={{ textAlign: 'center', padding: '36px', background: 'var(--bg-main)', borderRadius: '12px' }}>
-                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
-                        No hay días especiales o descuentos configurados.
+                <div style={{ textAlign: 'center', padding: '40px 24px', background: 'var(--bg-main)', borderRadius: '16px', border: '2px dashed var(--border)' }}>
+                    <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.4 }}>📅</div>
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0, fontWeight: '500' }}>
+                        No hay días especiales configurados.
+                    </p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                        Agrega ofertas, feriados o días cerrados arriba.
                     </p>
                 </div>
             )}

@@ -70,33 +70,41 @@ export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00
                                 {dayNumber}
                             </span>
 
-                            {/* Badge for Special Days */}
+                            {/* Badge for Special Days — Discount/Promo */}
                             {special && special.type === 'special_price' && (
                                 <span style={{
-                                    fontSize: '9px',
+                                    fontSize: '8px',
                                     fontWeight: '800',
-                                    background: isSelected ? '#ffffff' : '#10b981',
+                                    background: isSelected
+                                        ? 'rgba(255,255,255,0.95)'
+                                        : 'linear-gradient(135deg, #10b981, #059669)',
                                     color: isSelected ? '#059669' : '#ffffff',
-                                    padding: '1px 5px',
-                                    borderRadius: '6px',
-                                    marginTop: '3px',
-                                    letterSpacing: '0.2px',
-                                    lineHeight: '1.2'
+                                    padding: '2px 6px',
+                                    borderRadius: '20px',
+                                    marginTop: '4px',
+                                    letterSpacing: '0.3px',
+                                    lineHeight: '1.3',
+                                    textTransform: 'uppercase',
+                                    boxShadow: isSelected ? 'none' : '0 2px 6px rgba(16,185,129,0.35)',
+                                    animation: 'badgePulse 2s ease-in-out infinite',
+                                    whiteSpace: 'nowrap'
                                 }}>
-                                    {special.priceMode === 'discount_percent' && special.priceVal ? `-${special.priceVal}%` : 'PROMO'}
+                                    {special.priceMode === 'discount_percent' && special.priceVal ? `${special.priceVal}% OFF` : special.priceMode === 'fixed' ? '💰 OFERTA' : '🔥 PROMO'}
                                 </span>
                             )}
 
+                            {/* Badge for Closed / Holiday */}
                             {special && (special.type === 'closed' || special.type === 'holiday') && (
                                 <span style={{
-                                    fontSize: '9px',
+                                    fontSize: '8px',
                                     fontWeight: '700',
-                                    color: isSelected ? '#fff' : '#ef4444',
-                                    opacity: 0.85,
+                                    color: isSelected ? 'rgba(255,255,255,0.8)' : '#ef4444',
+                                    opacity: 0.9,
                                     marginTop: '3px',
-                                    lineHeight: '1.2'
+                                    lineHeight: '1.2',
+                                    letterSpacing: '0.2px'
                                 }}>
-                                    Cerrado
+                                    {special.type === 'holiday' ? '🎉' : '✕'}
                                 </span>
                             )}
                         </button>

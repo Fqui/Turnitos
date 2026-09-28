@@ -1,7 +1,7 @@
 import React from 'react';
 import { MapContainer, Marker } from 'react-leaflet';
 import { TurnitosTileLayer, createTurnitosMarkerIcon } from '../common/TurnitosMap';
-import { parseAmenity } from '../common/AmenityIcon';
+import AmenityIcon, { parseAmenity } from '../common/AmenityIcon';
 
 export default function ProfileInfoSection({
     business,
@@ -201,8 +201,20 @@ export default function ProfileInfoSection({
                                     const parsed = parseAmenity(rawAmenity);
                                     if (!parsed.name) return null;
                                     return (
-                                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
-                                            <span style={{ fontSize: '16px' }}>✓</span>
+                                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: '500' }}>
+                                            <span style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: '28px',
+                                                height: '28px',
+                                                borderRadius: '8px',
+                                                background: `${primaryColor || '#3ECF8E'}18`,
+                                                color: primaryColor || '#3ECF8E',
+                                                flexShrink: 0
+                                            }}>
+                                                <AmenityIcon icon={parsed.icon || 'Sparkles'} size={16} />
+                                            </span>
                                             <span>{parsed.name}</span>
                                         </div>
                                     );

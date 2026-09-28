@@ -13,11 +13,15 @@ const DAYS_MAP = [
 
 export default function CouponsSettings({
     coupons = [],
+    services = [],
+    primaryColor,
     onChange
 }) {
     const { showToast, showConfirm } = useNotification();
     const [isAdding, setIsAdding] = useState(false);
     const [editingIndex, setEditingIndex] = useState(null);
+
+    const brandColor = primaryColor || 'var(--primary-paddle, #84CC16)';
 
     // Form state
     const [formState, setFormState] = useState({
@@ -35,6 +39,8 @@ export default function CouponsSettings({
         start_date: '',
         end_date: '',
         one_per_customer: true,
+        applicable_to: 'all', // 'all' | 'services'
+        applicable_services: [],
         active: true
     });
 
@@ -54,6 +60,8 @@ export default function CouponsSettings({
             start_date: '',
             end_date: '',
             one_per_customer: true,
+            applicable_to: 'all',
+            applicable_services: [],
             active: true
         });
         setIsAdding(false);
@@ -87,6 +95,8 @@ export default function CouponsSettings({
             start_date: item.start_date || '',
             end_date: item.end_date || '',
             one_per_customer: item.one_per_customer !== false,
+            applicable_to: item.applicable_to || (Array.isArray(item.applicable_services) && item.applicable_services.length > 0 ? 'services' : 'all'),
+            applicable_services: Array.isArray(item.applicable_services) ? item.applicable_services : [],
             active: item.active !== false
         });
         setIsAdding(true);
@@ -133,12 +143,17 @@ export default function CouponsSettings({
         }
 
         if (formState.type === 'gift' && !formState.gift_title.trim()) {
-            showToast('⚠️ Describe el beneficio o regalo (ej: Bolsa de leña gratis)', 'warning');
+            showToast('⚠️ Describe el beneficio o regalo (ej: Esmaltado simple de regalo)', 'warning');
             return;
         }
 
         if ((formState.type === 'percentage' || formState.type === 'fixed') && (!formState.value || Number(formState.value) <= 0)) {
             showToast('⚠️ Ingresa un valor de descuento válido', 'warning');
+            return;
+        }
+
+        if (formState.applicable_to === 'services' && (!formState.applicable_services || formState.applicable_services.length === 0)) {
+            showToast('⚠️ Selecciona al menos un servicio para el alcance del cupón', 'warning');
             return;
         }
 
@@ -150,13 +165,15 @@ export default function CouponsSettings({
             value: formState.type === 'gift' ? 0 : Number(formState.value || 0),
             gift_title: formState.type === 'gift' ? formState.gift_title.trim() : null,
             min_spend: Number(formState.min_spend || 0),
-            max_discount: formState.max_discount ? Number(formState.max_discount) : null,
+            max_discount: (formState.type === 'percentage' && formState.max_discount) ? Number(formState.max_discount) : null,
             max_uses: formState.max_uses ? Number(formState.max_uses) : null,
             used_count: formState.used_count || 0,
             valid_days: formState.valid_days.length === 7 || formState.valid_days.length === 0 ? [] : formState.valid_days,
             start_date: formState.start_date || null,
             end_date: formState.end_date || null,
             one_per_customer: formState.one_per_customer,
+            applicable_to: formState.applicable_to || 'all',
+            applicable_services: formState.applicable_to === 'services' ? formState.applicable_services : [],
             active: formState.active
         };
 
@@ -173,18 +190,19 @@ export default function CouponsSettings({
         resetForm();
     };
 
-    const handleDeleteCoupon = (index) => {
+    const handleDeleteCoupon = async (index) => {
         const item = coupons[index];
-        showConfirm({
-            title: '¿Eliminar cupón?',
-            message: `¿Estás seguro de eliminar el cupón "${item.code}"?`,
-            confirmText: 'Eliminar',
-            onConfirm: () => {
-                const updated = coupons.filter((_, i) => i !== index);
-                onChange(updated);
-                showToast('Cupón eliminado', 'info');
-            }
-        });
+        const confirmed = await showConfirm(
+            '¿Eliminar cupón?',
+            `¿Estás seguro de eliminar el cupón "${item.code}"?`,
+            'Eliminar',
+            'Cancelar'
+        );
+        if (confirmed) {
+            const updated = coupons.filter((_, i) => i !== index);
+            onChange(updated);
+            showToast('Cupón eliminado', 'info');
+        }
     };
 
     const handleToggleActive = (index) => {
@@ -218,7 +236,7 @@ export default function CouponsSettings({
                 <div>
                     <h2 style={sectionTitleStyle}>🎟️ Cupones y Promociones</h2>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-                        Crea códigos de descuento en porcentaje, monto fijo o beneficios de regalo (ej: leña gratis, horas extra) para llenar días libres.
+                        Crea códigos de descuento en porcentaje, monto fijo o beneficios de regalo para fidelizar clientes y llenar tus días de menor demanda.
                     </p>
                 </div>
 
@@ -232,8 +250,8 @@ export default function CouponsSettings({
                             gap: '8px',
                             padding: '10px 20px',
                             borderRadius: '10px',
-                            background: 'var(--primary-paddle, #84CC16)',
-                            color: '#000',
+                            background: brandColor,
+                            color: '#fff',
                             border: 'none',
                             fontWeight: '800',
                             fontSize: '13.5px',
@@ -251,7 +269,7 @@ export default function CouponsSettings({
             {isAdding && (
                 <div style={{
                     background: 'var(--bg-main)',
-                    border: '1.5px solid var(--primary-paddle, #84CC16)',
+                    border: `1.5px solid ${brandColor}`,
                     borderRadius: '14px',
                     padding: '20px',
                     marginBottom: '24px',
@@ -282,9 +300,9 @@ export default function CouponsSettings({
                                 style={{
                                     padding: '10px 12px',
                                     borderRadius: '10px',
-                                    border: formState.type === 'percentage' ? '1.5px solid var(--primary-paddle, #84CC16)' : '1px solid var(--border)',
-                                    background: formState.type === 'percentage' ? 'rgba(132, 204, 22, 0.15)' : 'var(--bg-card)',
-                                    color: formState.type === 'percentage' ? 'var(--primary-paddle, #84CC16)' : 'var(--text-secondary)',
+                                    border: formState.type === 'percentage' ? `1.5px solid ${brandColor}` : '1px solid var(--border)',
+                                    background: formState.type === 'percentage' ? `${brandColor}20` : 'var(--bg-card)',
+                                    color: formState.type === 'percentage' ? brandColor : 'var(--text-secondary)',
                                     fontWeight: '700',
                                     fontSize: '13px',
                                     cursor: 'pointer',
@@ -301,9 +319,9 @@ export default function CouponsSettings({
                                 style={{
                                     padding: '10px 12px',
                                     borderRadius: '10px',
-                                    border: formState.type === 'fixed' ? '1.5px solid var(--primary-paddle, #84CC16)' : '1px solid var(--border)',
-                                    background: formState.type === 'fixed' ? 'rgba(132, 204, 22, 0.15)' : 'var(--bg-card)',
-                                    color: formState.type === 'fixed' ? 'var(--primary-paddle, #84CC16)' : 'var(--text-secondary)',
+                                    border: formState.type === 'fixed' ? `1.5px solid ${brandColor}` : '1px solid var(--border)',
+                                    background: formState.type === 'fixed' ? `${brandColor}20` : 'var(--bg-card)',
+                                    color: formState.type === 'fixed' ? brandColor : 'var(--text-secondary)',
                                     fontWeight: '700',
                                     fontSize: '13px',
                                     cursor: 'pointer',
@@ -398,7 +416,7 @@ export default function CouponsSettings({
                                     step="500"
                                     value={formState.value}
                                     onChange={(e) => setFormState(prev => ({ ...prev, value: e.target.value }))}
-                                    placeholder="5000"
+                                    placeholder="2000"
                                     style={{
                                         width: '100%',
                                         padding: '10px 12px',
@@ -422,7 +440,33 @@ export default function CouponsSettings({
                                     type="text"
                                     value={formState.gift_title}
                                     onChange={(e) => setFormState(prev => ({ ...prev, gift_title: e.target.value }))}
-                                    placeholder="Ej: Bolsa de leña gratis para el asado"
+                                    placeholder="Ej: Esmaltado simple de regalo, Masaje express, etc."
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid var(--border)',
+                                        background: 'var(--bg-card)',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '13.5px'
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {/* Max Discount for Percentage */}
+                        {formState.type === 'percentage' && (
+                            <div>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                                    Tope Máximo de Descuento ($) (Opcional)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="500"
+                                    value={formState.max_discount}
+                                    onChange={(e) => setFormState(prev => ({ ...prev, max_discount: e.target.value }))}
+                                    placeholder="Ej: 3000 (Sin tope si se deja vacío)"
                                     style={{
                                         width: '100%',
                                         padding: '10px 12px',
@@ -461,7 +505,7 @@ export default function CouponsSettings({
                         {/* Min Spend */}
                         <div>
                             <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                                Monto Mínimo de Compra ($)
+                                Monto Mínimo de Turno / Compra ($)
                             </label>
                             <input
                                 type="number"
@@ -527,6 +571,146 @@ export default function CouponsSettings({
                         </div>
                     </div>
 
+                    {/* One per customer Switch */}
+                    <div style={{
+                        marginTop: '16px',
+                        background: 'var(--bg-card)',
+                        padding: '12px 16px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px'
+                    }}>
+                        <div>
+                            <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>🔒</span> 1 solo uso por cliente
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                Evita que un mismo cliente vuelva a canjear este cupón con su número de teléfono.
+                            </div>
+                        </div>
+                        <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer', flexShrink: 0 }}>
+                            <input
+                                type="checkbox"
+                                checked={formState.one_per_customer}
+                                onChange={(e) => setFormState(prev => ({ ...prev, one_per_customer: e.target.checked }))}
+                                style={{ opacity: 0, width: 0, height: 0 }}
+                            />
+                            <span style={{
+                                position: 'absolute',
+                                cursor: 'pointer',
+                                top: 0, left: 0, right: 0, bottom: 0,
+                                backgroundColor: formState.one_per_customer ? brandColor : 'var(--border)',
+                                borderRadius: '24px',
+                                transition: '0.2s'
+                            }}>
+                                <span style={{
+                                    position: 'absolute',
+                                    content: '""',
+                                    height: '18px',
+                                    width: '18px',
+                                    left: formState.one_per_customer ? '23px' : '3px',
+                                    bottom: '3px',
+                                    backgroundColor: '#fff',
+                                    borderRadius: '50%',
+                                    transition: '0.2s'
+                                }} />
+                            </span>
+                        </label>
+                    </div>
+
+                    {/* Services Scope Selector */}
+                    {services && services.length > 0 && (
+                        <div style={{ marginTop: '16px', background: 'var(--bg-card)', padding: '14px 16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '8px' }}>
+                                💼 Alcance del Cupón
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormState(prev => ({ ...prev, applicable_to: 'all', applicable_services: [] }))}
+                                    style={{
+                                        flex: 1,
+                                        padding: '8px 12px',
+                                        borderRadius: '8px',
+                                        border: formState.applicable_to === 'all' ? `1.5px solid ${brandColor}` : '1px solid var(--border)',
+                                        background: formState.applicable_to === 'all' ? `${brandColor}20` : 'var(--bg-main)',
+                                        color: formState.applicable_to === 'all' ? brandColor : 'var(--text-secondary)',
+                                        fontWeight: '700',
+                                        fontSize: '12px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Aplica a todos los servicios
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormState(prev => ({ ...prev, applicable_to: 'services' }))}
+                                    style={{
+                                        flex: 1,
+                                        padding: '8px 12px',
+                                        borderRadius: '8px',
+                                        border: formState.applicable_to === 'services' ? `1.5px solid ${brandColor}` : '1px solid var(--border)',
+                                        background: formState.applicable_to === 'services' ? `${brandColor}20` : 'var(--bg-main)',
+                                        color: formState.applicable_to === 'services' ? brandColor : 'var(--text-secondary)',
+                                        fontWeight: '700',
+                                        fontSize: '12px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Solo servicios específicos
+                                </button>
+                            </div>
+
+                            {formState.applicable_to === 'services' && (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px', marginTop: '8px' }}>
+                                    {services.map(srv => {
+                                        const isChecked = (formState.applicable_services || []).includes(srv.id);
+                                        return (
+                                            <label
+                                                key={srv.id}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    padding: '8px 10px',
+                                                    borderRadius: '6px',
+                                                    background: isChecked ? `${brandColor}15` : 'var(--bg-main)',
+                                                    border: isChecked ? `1px solid ${brandColor}` : '1px solid var(--border)',
+                                                    fontSize: '12.5px',
+                                                    cursor: 'pointer',
+                                                    fontWeight: isChecked ? '700' : '500',
+                                                    color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)'
+                                                }}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked;
+                                                        setFormState(prev => {
+                                                            const cur = prev.applicable_services || [];
+                                                            return {
+                                                                ...prev,
+                                                                applicable_services: checked ? [...cur, srv.id] : cur.filter(id => id !== srv.id)
+                                                            };
+                                                        });
+                                                    }}
+                                                    style={{ accentColor: brandColor }}
+                                                />
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {srv.name}
+                                                </span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Valid Days of Week Selector */}
                     <div style={{ marginTop: '16px', background: 'var(--bg-card)', padding: '14px 16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
@@ -537,7 +721,7 @@ export default function CouponsSettings({
                                 <button
                                     type="button"
                                     onClick={handleSelectWeekdays}
-                                    style={{ background: 'transparent', border: 'none', color: 'var(--primary-paddle, #84CC16)', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer' }}
+                                    style={{ background: 'transparent', border: 'none', color: brandColor, fontSize: '11.5px', fontWeight: '700', cursor: 'pointer' }}
                                 >
                                     Solo Lun-Jue
                                 </button>
@@ -545,7 +729,7 @@ export default function CouponsSettings({
                                 <button
                                     type="button"
                                     onClick={handleSelectAllDays}
-                                    style={{ background: 'transparent', border: 'none', color: 'var(--primary-paddle, #84CC16)', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer' }}
+                                    style={{ background: 'transparent', border: 'none', color: brandColor, fontSize: '11.5px', fontWeight: '700', cursor: 'pointer' }}
                                 >
                                     Todos los días
                                 </button>
@@ -563,9 +747,9 @@ export default function CouponsSettings({
                                         style={{
                                             padding: '6px 12px',
                                             borderRadius: '8px',
-                                            border: isSelected ? '1.5px solid var(--primary-paddle, #84CC16)' : '1px solid var(--border)',
-                                            background: isSelected ? 'rgba(132, 204, 22, 0.15)' : 'var(--bg-main)',
-                                            color: isSelected ? 'var(--primary-paddle, #84CC16)' : 'var(--text-secondary)',
+                                            border: isSelected ? `1.5px solid ${brandColor}` : '1px solid var(--border)',
+                                            background: isSelected ? `${brandColor}20` : 'var(--bg-main)',
+                                            color: isSelected ? brandColor : 'var(--text-secondary)',
                                             fontWeight: isSelected ? '800' : '600',
                                             fontSize: '12px',
                                             cursor: 'pointer'
@@ -603,8 +787,8 @@ export default function CouponsSettings({
                                 padding: '8px 20px',
                                 borderRadius: '8px',
                                 border: 'none',
-                                background: 'var(--primary-paddle, #84CC16)',
-                                color: '#000',
+                                background: brandColor,
+                                color: '#fff',
                                 fontWeight: '800',
                                 fontSize: '13.5px',
                                 cursor: 'pointer'
@@ -639,9 +823,9 @@ export default function CouponsSettings({
                             style={{
                                 padding: '8px 16px',
                                 borderRadius: '8px',
-                                background: 'rgba(132, 204, 22, 0.15)',
-                                border: '1px solid var(--primary-paddle, #84CC16)',
-                                color: 'var(--primary-paddle, #84CC16)',
+                                background: `${brandColor}20`,
+                                border: `1px solid ${brandColor}`,
+                                color: brandColor,
                                 fontWeight: '700',
                                 fontSize: '13px',
                                 cursor: 'pointer'
@@ -659,6 +843,7 @@ export default function CouponsSettings({
                         const isFixed = coupon.type === 'fixed';
                         const isExpired = coupon.end_date && new Date().toISOString().split('T')[0] > coupon.end_date;
                         const isExhausted = coupon.max_uses && Number(coupon.used_count || 0) >= Number(coupon.max_uses);
+                        const isRestricted = coupon.applicable_to === 'services' && Array.isArray(coupon.applicable_services) && coupon.applicable_services.length > 0;
 
                         return (
                             <div
@@ -681,8 +866,8 @@ export default function CouponsSettings({
                                         width: '42px',
                                         height: '42px',
                                         borderRadius: '10px',
-                                        background: isGift ? 'rgba(59, 130, 246, 0.15)' : 'rgba(132, 204, 22, 0.15)',
-                                        color: isGift ? '#3B82F6' : 'var(--primary-paddle, #84CC16)',
+                                        background: isGift ? 'rgba(59, 130, 246, 0.15)' : `${brandColor}20`,
+                                        color: isGift ? '#3B82F6' : brandColor,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -707,13 +892,25 @@ export default function CouponsSettings({
                                                 {coupon.code}
                                             </span>
 
-                                            <span style={{ fontSize: '13.5px', fontWeight: '800', color: isGift ? '#3B82F6' : 'var(--primary-paddle, #84CC16)' }}>
+                                            <span style={{ fontSize: '13.5px', fontWeight: '800', color: isGift ? '#3B82F6' : brandColor }}>
                                                 {isGift
                                                     ? coupon.gift_title
                                                     : isFixed
                                                         ? `$${Number(coupon.value || 0).toLocaleString('es-AR')} OFF`
                                                         : `${coupon.value}% OFF`}
                                             </span>
+
+                                            {coupon.max_discount && (
+                                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                                    (Tope: ${Number(coupon.max_discount).toLocaleString('es-AR')})
+                                                </span>
+                                            )}
+
+                                            {coupon.one_per_customer && (
+                                                <span style={{ fontSize: '10.5px', background: 'rgba(99, 102, 241, 0.15)', color: '#6366F1', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                                                    1x cliente
+                                                </span>
+                                            )}
 
                                             {isExpired && (
                                                 <span style={{ fontSize: '10.5px', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
@@ -729,6 +926,11 @@ export default function CouponsSettings({
 
                                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                             {coupon.description && <span>{coupon.description} •</span>}
+                                            {isRestricted ? (
+                                                <span>Servicios: {coupon.applicable_services.length} seleccionados •</span>
+                                            ) : (
+                                                <span>Todos los servicios •</span>
+                                            )}
                                             {Array.isArray(coupon.valid_days) && coupon.valid_days.length > 0 && coupon.valid_days.length < 7 ? (
                                                 <span>Días: {coupon.valid_days.map(d => DAYS_MAP[d]?.label).join(', ')} •</span>
                                             ) : (
