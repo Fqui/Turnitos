@@ -34,7 +34,7 @@ export default function GeneralTab({
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     placeholder="Breve descripción de tu negocio que verán tus clientes..."
                 />
-                <p style={hintStyle}>Esta descripción se mostrará en tu perfil de turnos, en tu página de LinkBio (debajo de tu logo) y al compartir tu enlace por WhatsApp.</p>
+                <p style={hintStyle}>Esta descripción se mostrará en tu perfil de turnos y en tu página de LinkBio. Los saltos de línea se respetarán.</p>
             </div>
 
             {/* Location Section */}
@@ -75,11 +75,9 @@ export default function GeneralTab({
                 <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>Contacto y Redes Sociales</h4>
                 <div style={{ display: 'grid', gap: '16px' }}>
                     <div> <label style={labelStyle}>WhatsApp de Contacto</label> <input type="text" style={inputStyle} placeholder="+54911..." value={formData.whatsapp ?? ''} onChange={(e) => handleInputChange('whatsapp', e.target.value)} /> </div>
-                    <div> <label style={labelStyle}>Teléfono Alternativo</label> <input type="text" style={inputStyle} placeholder="3804..." value={formData.phone ?? ''} onChange={(e) => handleInputChange('phone', e.target.value)} /> </div>
                     <div> <label style={labelStyle}>Instagram</label> <input type="text" style={inputStyle} placeholder="@usuario" value={formData.instagram ?? ''} onChange={(e) => handleInputChange('instagram', e.target.value)} /> </div>
                     <div> <label style={labelStyle}>TikTok</label> <input type="text" style={inputStyle} placeholder="@usuario" value={formData.tiktok ?? ''} onChange={(e) => handleInputChange('tiktok', e.target.value)} /> </div>
                     <div> <label style={labelStyle}>Facebook</label> <input type="text" style={inputStyle} placeholder="@usuario o URL" value={formData.facebook ?? ''} onChange={(e) => handleInputChange('facebook', e.target.value)} /> </div>
-                    <div> <label style={labelStyle}>Sitio Web</label> <input type="text" style={inputStyle} placeholder="https://..." value={formData.website ?? ''} onChange={(e) => handleInputChange('website', e.target.value)} /> </div>
                 </div>
             </div>
 
@@ -93,11 +91,9 @@ export default function GeneralTab({
                         latitude: formData.latitude,
                         longitude: formData.longitude,
                         whatsapp: formData.whatsapp,
-                        phone: formData.phone,
                         instagram: formData.instagram,
                         tiktok: formData.tiktok,
-                        facebook: formData.facebook,
-                        website: formData.website
+                        facebook: formData.facebook
                     })}
                     style={saveButtonStyle}
                     disabled={saving}

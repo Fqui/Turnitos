@@ -17,7 +17,9 @@ const TimeSlotPicker = ({
     selectedDate,
     maxCapacity,
     businessCapacity, // ✅ Total capacity of the business (fallback)
-    serviceDuration // 🆕 Duration of the service for validation
+    serviceDuration, // 🆕 Duration of the service for validation
+    minAdvanceHours = 0, // 🆕 Minimum hours of advance booking required
+    bufferMinutes = 0 // 🆕 Buffer/cleaning time between bookings
 }) => {
     // Use selectedTime.time directly from props
     const selectedTimeSlot = selectedTime?.time || null;
@@ -73,25 +75,28 @@ const TimeSlotPicker = ({
         return validTimeRanges.some(range => checkRange(slotMinutes, range.open, range.close));
     };
 
-    // Helper: Check if a time slot is in the past (only for today)
+    // Helper: Check if a time slot is in the past or within the minimum advance hours
     const isPastTime = (slotMinutes) => {
         if (!selectedDate) return false;
 
         const now = new Date();
         const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-        const slotDateStr = selectedDate instanceof Date
-            ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
-            : (typeof selectedDate === 'string' ? selectedDate.split('T')[0] : '');
+        const slotDate = selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
+        const slotDateStr = `${slotDate.getFullYear()}-${String(slotDate.getMonth() + 1).padStart(2, '0')}-${String(slotDate.getDate()).padStart(2, '0')}`;
 
-        // Only filter if selected date is today
-        if (slotDateStr !== currentDate) return false;
+        // Build the full slot datetime to compare against now + minAdvanceHours
+        const slotDateTime = new Date(slotDate);
+        slotDateTime.setHours(Math.floor(slotMinutes / 60), slotMinutes % 60, 0, 0);
 
         // If slot is after midnight of the current shift (>= 1440), it is later tonight in the future
-        if (slotMinutes >= 1440) return false;
+        if (slotMinutes >= 1440 && slotDateStr === currentDate) return false;
 
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        return slotMinutes <= currentMinutes;
+        // Calculate the minimum allowed booking time (now + minAdvanceHours)
+        const minAllowedTime = new Date(now.getTime() + (minAdvanceHours * 60 * 60 * 1000));
+
+        // Block if the slot is before the minimum allowed time
+        return slotDateTime <= minAllowedTime;
     };
 
     // Helper: Check if a court is booked at a specific time
@@ -144,12 +149,13 @@ const TimeSlotPicker = ({
             const bookingDate = `${bookingDateObj.getFullYear()}-${String(bookingDateObj.getMonth() + 1).padStart(2, '0')}-${String(bookingDateObj.getDate()).padStart(2, '0')}`;
             if (bookingDate !== slotDate) return false;
 
-            // Calculate booking time range
+            // Calculate booking time range with buffer
             const bookingStartMinutes = timeToMinutes(booking.time);
-            const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
+            const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60) + (bufferMinutes || 0);
 
-            // Check overlap: (start < bookingEnd) AND (end > bookingStart)
-            const overlaps = (startMinutes < bookingEndMinutes) && (endMinutes > bookingStartMinutes);
+            // Check overlap: (start < bookingEnd + buffer) AND (end + buffer > bookingStart)
+            const effectiveEndMinutes = endMinutes + (bufferMinutes || 0);
+            const overlaps = (startMinutes < bookingEndMinutes) && (effectiveEndMinutes > bookingStartMinutes);
 
 
             return overlaps;
@@ -257,7 +263,7 @@ const TimeSlotPicker = ({
                 if (bookingDate !== slotDate || !isActive) return false;
                 
                 const bookingStartMinutes = timeToMinutes(booking.time);
-                const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
+                const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60) + (bufferMinutes || 0);
                 
                 return minutes >= bookingStartMinutes && minutes < bookingEndMinutes;
             }).length || 0;
@@ -280,9 +286,9 @@ const TimeSlotPicker = ({
 
                     if (bookingDate !== slotDate || !matchesResource || !isActive) return false;
 
-                    // Check if this booking overlaps with current time slot
+                    // Check if this booking overlaps with current time slot (including buffer)
                     const bookingStartMinutes = timeToMinutes(booking.time);
-                    const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60);
+                    const bookingEndMinutes = bookingStartMinutes + (booking.duration || 60) + (bufferMinutes || 0);
 
                     return minutes >= bookingStartMinutes && minutes < bookingEndMinutes;
                 }).length || 0;

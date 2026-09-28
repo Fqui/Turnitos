@@ -29,6 +29,22 @@ export function processBusinessData(data) {
         business.payment_settings = {};
     }
 
+    if (business.booking_rules) {
+        if (typeof business.booking_rules === 'string') {
+            try {
+                business.booking_rules = JSON.parse(business.booking_rules);
+            } catch (e) {
+                business.booking_rules = {};
+            }
+        }
+    } else if (business.metadata?.booking_rules) {
+        business.booking_rules = typeof business.metadata.booking_rules === 'string'
+            ? (() => { try { return JSON.parse(business.metadata.booking_rules); } catch(e) { return {}; } })()
+            : business.metadata.booking_rules;
+    } else {
+        business.booking_rules = {};
+    }
+
     if (business.time_ranges && typeof business.time_ranges === 'string') {
         try {
             business.time_ranges = JSON.parse(business.time_ranges);
@@ -1024,7 +1040,7 @@ export async function patchBusiness(businessId, updates) {
         'primary_color', 'price_per_hour', 'price_per_day', 'pricing_model',
         'rental_duration_options', 'additional_services', 'included_amenities',
         'gallery_images', 'max_capacity', 'capacity', 'capacity_limit', 'sport_types',
-        'service_categories', 'time_ranges', 'payment_settings', 'auth_id', 'metadata',
+        'service_categories', 'time_ranges', 'payment_settings', 'booking_rules', 'auth_id', 'metadata',
         'store_enabled', 'address', 'city', 'description', 'password_changed',
         'subscription_status', 'trial_end_date'
     ]);
@@ -1034,6 +1050,9 @@ export async function patchBusiness(businessId, updates) {
 
     if (updates.metadata && typeof updates.metadata === 'object') {
         metadataUpdates = { ...updates.metadata };
+    }
+    if (updates.booking_rules !== undefined) {
+        metadataUpdates.booking_rules = updates.booking_rules;
     }
     if (updates.website !== undefined) {
         metadataUpdates.website = updates.website;

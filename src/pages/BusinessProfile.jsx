@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import 'leaflet/dist/leaflet.css';
@@ -463,11 +463,127 @@ export default function BusinessProfile({ business: initialBusiness }) {
         (business?.category === 'beauty' ? '#FF4081' :
             business?.category === 'health' ? '#2979FF' : '#00E676');
 
+    // 📜 Booking rules & policies
+    const bookingRules = useMemo(() => {
+        let rules = business?.booking_rules;
+        if (typeof rules === 'string') {
+            try {
+                rules = JSON.parse(rules);
+            } catch (e) {
+                rules = {};
+            }
+        }
+        return rules || {};
+    }, [business?.booking_rules]);
+
+    // 🏷️ Día Especial con Precio Promocional (Baja demanda)
+    const specialPriceDay = useMemo(() => {
+        if (!selectedDate || !business?.special_days) return null;
+        const dateStr = selectedDate instanceof Date
+            ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+            : (typeof selectedDate === 'string' ? selectedDate.split('T')[0] : '');
+
+        return (business.special_days || []).find(sd => sd.date === dateStr && sd.type === 'special_price') || null;
+    }, [selectedDate, business?.special_days]);
+
+    const calculateSpecialDayPrice = useCallback((basePrice) => {
+        if (!specialPriceDay || basePrice === undefined || basePrice === null) return basePrice;
+        const mode = specialPriceDay.priceMode;
+        const val = Number(specialPriceDay.priceVal) || 0;
+
+        if (mode === 'fixed') {
+            return val;
+        } else if (mode === 'discount_percent' || mode === 'multiplier') {
+            return Math.max(0, Math.round(basePrice * (1 - (val / 100))));
+        } else if (mode === 'surcharge') {
+            return Math.round(basePrice * (1 + (val / 100)));
+        }
+        return basePrice;
+    }, [specialPriceDay]);
+
     // Confirm booking handler
     const handleConfirmBooking = async (finalDetails) => {
         setIsSubmitting(true);
 
         try {
+            // 🛡️ VALIDACIONES DE REGLAS DE RESERVA (booking_rules)
+            const advanceRules = bookingRules?.advance_booking || {};
+            const minHours = Number(advanceRules.min_hours) || 0;
+            const maxDays = Number(advanceRules.max_days) || 0;
+            const limitsRules = bookingRules?.limits || {};
+            const maxPerDay = Number(limitsRules.max_per_day) || 0;
+            const maxPerWeek = Number(limitsRules.max_per_week) || 0;
+
+            const now = new Date();
+
+            // 1. Validar mínimo de horas de anticipación
+            if (minHours > 0 && finalDetails.date && finalDetails.time) {
+                const targetBookingDateTime = new Date(`${finalDetails.date}T${finalDetails.time}:00`);
+                const hoursDifference = (targetBookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+                if (hoursDifference < minHours) {
+                    throw new Error(`Este negocio requiere reservar con al menos ${minHours} hora(s) de anticipación.`);
+                }
+            }
+
+            // 2. Validar máximo de días de anticipación
+            if (maxDays > 0 && finalDetails.date) {
+                const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const [targetYear, targetMonth, targetDay] = finalDetails.date.split('-').map(Number);
+                const targetMidnight = new Date(targetYear, targetMonth - 1, targetDay);
+                const daysDifference = Math.round((targetMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
+                if (daysDifference > maxDays) {
+                    throw new Error(`Solo se pueden realizar reservas con hasta ${maxDays} días de anticipación.`);
+                }
+            }
+
+            // 3. Validar límite de reservas por cliente por día y por semana
+            const rawPhone = finalDetails.customerPhone || '';
+            const cleanPhone = rawPhone.replace(/\D/g, '');
+
+            if (cleanPhone && existingBookings && existingBookings.length > 0) {
+                if (maxPerDay > 0 && finalDetails.date) {
+                    const dayBookingsCount = existingBookings.filter(b => {
+                        if (b.status === 'cancelled' || b.status === 'rejected') return false;
+                        const bDate = typeof b.date === 'string' ? b.date.split('T')[0] : '';
+                        if (bDate !== finalDetails.date) return false;
+                        const bPhone = (b.customer_phone || b.customerPhone || b.phone || '').replace(/\D/g, '');
+                        return bPhone && bPhone === cleanPhone;
+                    }).length;
+
+                    if (dayBookingsCount >= maxPerDay) {
+                        throw new Error(`Has alcanzado el límite máximo de ${maxPerDay} reserva(s) por día para tu número de teléfono.`);
+                    }
+                }
+
+                if (maxPerWeek > 0 && finalDetails.date) {
+                    const [targetYear, targetMonth, targetDay] = finalDetails.date.split('-').map(Number);
+                    const targetDateObj = new Date(targetYear, targetMonth - 1, targetDay);
+                    const dayOfWeek = targetDateObj.getDay(); // 0 is Sun, 1 is Mon...
+                    const distanceToMonday = (dayOfWeek + 6) % 7;
+                    const weekStart = new Date(targetDateObj);
+                    weekStart.setDate(weekStart.getDate() - distanceToMonday);
+                    weekStart.setHours(0, 0, 0, 0);
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekEnd.getDate() + 6);
+                    weekEnd.setHours(23, 59, 59, 999);
+
+                    const weekBookingsCount = existingBookings.filter(b => {
+                        if (b.status === 'cancelled' || b.status === 'rejected') return false;
+                        const bDateStr = typeof b.date === 'string' ? b.date.split('T')[0] : '';
+                        if (!bDateStr) return false;
+                        const [bY, bM, bD] = bDateStr.split('-').map(Number);
+                        const bDateObj = new Date(bY, bM - 1, bD);
+                        if (bDateObj < weekStart || bDateObj > weekEnd) return false;
+                        const bPhone = (b.customer_phone || b.customerPhone || b.phone || '').replace(/\D/g, '');
+                        return bPhone && bPhone === cleanPhone;
+                    }).length;
+
+                    if (weekBookingsCount >= maxPerWeek) {
+                        throw new Error(`Has alcanzado el límite máximo de ${maxPerWeek} reserva(s) por semana para tu número de teléfono.`);
+                    }
+                }
+            }
+
             let finalSpecialistId = selectedSpecialist?.id;
             if (business.type === 'service' && !finalSpecialistId && availableSpecialists.length > 0) {
                 finalSpecialistId = availableSpecialists[0].id;
@@ -763,6 +879,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                             setAvailableSpecialists([]);
                                         }}
                                         sportColor={primaryColor}
+                                        maxDays={bookingRules?.advance_booking?.max_days || 30}
                                     />
                                 ) : (
                                     <Calendar
@@ -774,6 +891,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                             setAvailableSpecialists([]);
                                         }}
                                         sportColor={primaryColor}
+                                        maxDays={bookingRules?.advance_booking?.max_days || 30}
+                                        specialDays={business?.special_days || []}
                                     />
                                 )}
                             </div>
@@ -790,6 +909,38 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                 boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
                                 border: '1px solid var(--border)'
                             }}>
+                                {/* Low-demand special price / discount banner */}
+                                {specialPriceDay && (
+                                    <div style={{
+                                        padding: '12px 16px',
+                                        marginBottom: '16px',
+                                        borderRadius: '14px',
+                                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px'
+                                    }}>
+                                        <span style={{ fontSize: '24px' }}>🏷️</span>
+                                        <div>
+                                            <div style={{ fontSize: '14px', fontWeight: '800', color: '#10b981' }}>
+                                                ¡Tarifa Especial por Baja Demanda! {
+                                                    specialPriceDay.priceMode === 'discount_percent' && specialPriceDay.priceVal 
+                                                        ? `(${specialPriceDay.priceVal}% OFF)`
+                                                        : specialPriceDay.priceMode === 'fixed'
+                                                            ? `($${Number(specialPriceDay.priceVal).toLocaleString('es-AR')})`
+                                                            : ''
+                                                }
+                                            </div>
+                                            {specialPriceDay.description && (
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                                    {specialPriceDay.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {(() => {
                                     const businessHours = getBusinessHours(selectedDate);
                                     const { open, close, ranges } = businessHours;
@@ -887,13 +1038,16 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     })();
 
                                     const resources = business.type === 'sport'
-                                        ? (business.courts || [])
+                                        ? (business.courts || []).map(c => ({
+                                            ...c,
+                                            price: calculateSpecialDayPrice(c.price || 0)
+                                        }))
                                         : (qualifiedSpecialists.length > 0
                                             ? qualifiedSpecialists.map(s => ({
                                                 id: s.id,
                                                 name: s.name,
                                                 features: [s.role || 'Especialista'],
-                                                price: selectedItem?.price || 0,
+                                                price: calculateSpecialDayPrice(selectedItem?.price || 0),
                                                 sport: null,
                                                 capacity: s.capacity || 1
                                             }))
@@ -901,7 +1055,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 id: selectedItem?.id || 'no-specialist',
                                                 name: 'Sin profesional asignado',
                                                 features: ['Servicio'],
-                                                price: selectedItem?.price || 0,
+                                                price: calculateSpecialDayPrice(selectedItem?.price || 0),
                                                 sport: null,
                                                 capacity: 1
                                             }]);
@@ -930,7 +1084,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                         time: slotData.time,
                                                         courtId: slotData.courtId,
                                                         courtName: slotData.courtName,
-                                                        price: slotData.price,
+                                                        price: calculateSpecialDayPrice(slotData.price),
                                                         duration: slotData.duration
                                                     });
                                                     setShowModal(true);
@@ -947,18 +1101,20 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 if (courtId) {
                                                     const court = resources.find(r => r.id === courtId);
                                                     const courtName = court ? court.name : 'Cancha';
+                                                    const rawCourtPrice = price !== undefined ? price : (court ? court.price : 0);
                                                     setSelectedTime({
                                                         time,
                                                         courtId,
                                                         courtName,
-                                                        price: price !== undefined ? price : (court ? court.price : 0),
+                                                        price: calculateSpecialDayPrice(rawCourtPrice),
                                                         duration: duration || (business.type === 'service' ? selectedItem.duration : 60)
                                                     });
                                                 } else {
                                                     setSelectedTime({
                                                         time,
                                                         courtId: null,
-                                                        courtName: null
+                                                        courtName: null,
+                                                        price: calculateSpecialDayPrice(selectedItem?.price || 0)
                                                     });
                                                 }
 
@@ -980,13 +1136,14 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                         const reqStart = timeToMin(time);
                                                         const reqEnd = reqStart + serviceDuration;
 
+                                                        const bufferMins = Number(bookingRules?.time?.buffer_minutes) || 0;
                                                         const overlappingBookings = (existingBookings || []).filter(b => {
                                                             if (b.status === 'cancelled') return false;
                                                             const bDate = typeof b.date === 'string' ? b.date.split('T')[0] : '';
                                                             if (bDate && dateStr && bDate !== dateStr) return false;
                                                             const bStart = timeToMin(b.time);
-                                                            const bEnd = bStart + (b.duration || 60);
-                                                            return reqStart < bEnd && reqEnd > bStart;
+                                                            const bEnd = bStart + (b.duration || 60) + bufferMins;
+                                                            return reqStart < bEnd && (reqEnd + bufferMins) > bStart;
                                                         });
 
                                                         const busySpecIds = new Set(
@@ -1047,6 +1204,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                             maxCapacity={business.max_capacity || 1}
                                             businessCapacity={businessCapacity}
                                             serviceDuration={business.type === 'service' ? (selectedItem?.duration || 60) : null}
+                                            minAdvanceHours={Number(bookingRules?.advance_booking?.min_hours) || 0}
+                                            bufferMinutes={Number(bookingRules?.time?.buffer_minutes) || 0}
                                         />
                                     );
                                 })()}
@@ -1145,7 +1304,16 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     : selectedDate,
                                 time: selectedTime.time || selectedTime,
                                 duration: selectedTime.duration || (business.type === 'service' ? selectedItem?.duration : 60),
-                                price: (selectedTime.price || (business.type === 'service' ? selectedItem?.price : 0)),
+                                price: (selectedTime.price !== undefined && selectedTime.price !== null
+                                    ? selectedTime.price
+                                    : calculateSpecialDayPrice(business.type === 'service' ? (selectedItem?.price || 0) : 0)),
+                                originalPrice: (business.type === 'service' ? (selectedItem?.price || 0) : (selectedTime.price || 0)),
+                                specialDayDiscount: specialPriceDay ? {
+                                    description: specialPriceDay.description || 'Precio especial por baja demanda',
+                                    priceMode: specialPriceDay.priceMode,
+                                    priceVal: specialPriceDay.priceVal,
+                                    discountAmount: Math.max(0, (business.type === 'service' ? (selectedItem?.price || 0) : (selectedTime.price || 0)) - (selectedTime.price !== undefined ? selectedTime.price : calculateSpecialDayPrice(business.type === 'service' ? (selectedItem?.price || 0) : 0)))
+                                } : null,
                                 courtName: business.type === 'sport' ? selectedTime.courtName : null,
                                 courtId: business.type === 'sport' ? selectedTime.courtId : null,
                                 extras: selectedAdditionalServices,

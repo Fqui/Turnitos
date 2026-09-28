@@ -367,7 +367,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                 <h1 className="linkbio-name" style={{ fontSize: nameFontSize, fontWeight: '800', marginBottom: '2px', color: 'var(--text-primary)' }}>
                     {business.name}
                 </h1>
-                <p className="linkbio-desc" style={{ fontSize: descFontSize, color: 'var(--text-secondary)', marginBottom: descMargin, lineHeight: 1.35, maxWidth: '380px', margin: `0 auto ${descMargin}` }}>
+                <p className="linkbio-desc" style={{ fontSize: descFontSize, color: 'var(--text-secondary)', marginBottom: descMargin, lineHeight: 1.45, maxWidth: '380px', margin: `0 auto ${descMargin}`, whiteSpace: 'pre-line' }}>
                     {business.bio_description || business.description || business.metadata?.bio_description || '¡Reserva tu turno online de forma rápida y sencilla!'}
                 </p>
 

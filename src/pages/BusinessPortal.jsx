@@ -802,7 +802,22 @@ export default function BusinessPortal() {
                 }
                 return updated;
             } else if (action === 'cancel') {
-                const reason = prompt('Por favor, ingresa el motivo de la cancelación:');
+                let cancellationWarning = '';
+                const bookingRules = typeof business?.booking_rules === 'string'
+                    ? (() => { try { return JSON.parse(business.booking_rules); } catch(e) { return {}; } })()
+                    : (business?.booking_rules || {});
+                const deadlineHours = Number(bookingRules?.cancellation?.deadline_hours) || 0;
+                const refundPolicy = bookingRules?.cancellation?.refund_policy || 'full';
+
+                if (deadlineHours > 0 && selectedBooking.date && selectedBooking.time) {
+                    const bDateTime = new Date(`${selectedBooking.date}T${selectedBooking.time}:00`);
+                    const diffHours = (bDateTime.getTime() - new Date().getTime()) / (1000 * 60 * 60);
+                    if (diffHours < deadlineHours) {
+                        cancellationWarning = `\n\n⚠️ Aviso: La reserva está dentro del plazo de cancelación (${deadlineHours}hs antes). Política de reembolso: ${refundPolicy === 'none' ? 'sin reembolso' : refundPolicy === 'partial' ? 'reembolso parcial' : 'reembolso completo'}.`;
+                    }
+                }
+
+                const reason = prompt(`Por favor, ingresa el motivo de la cancelación:${cancellationWarning}`);
                 if (reason !== null) {
                     const currentHistory = Array.isArray(selectedBooking.history) ? selectedBooking.history : [];
                     const newHistory = [...currentHistory];

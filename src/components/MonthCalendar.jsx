@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function MonthCalendar({ selectedDate, onDateSelect, sportColor = '#00E676' }) {
+export default function MonthCalendar({ selectedDate, onDateSelect, sportColor = '#00E676', maxDays = null }) {
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -16,6 +16,8 @@ export default function MonthCalendar({ selectedDate, onDateSelect, sportColor =
     // Get today's date for comparison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    const maxAllowedDate = maxDays ? new Date(today.getTime() + (Number(maxDays) * 24 * 60 * 60 * 1000)) : null;
 
     // Generate calendar days
     const calendarDays = [];
@@ -43,7 +45,9 @@ export default function MonthCalendar({ selectedDate, onDateSelect, sportColor =
         if (!date) return false;
         const compareDate = new Date(date);
         compareDate.setHours(0, 0, 0, 0);
-        return compareDate < today;
+        if (compareDate < today) return true;
+        if (maxAllowedDate && compareDate > maxAllowedDate) return true;
+        return false;
     };
 
     return (

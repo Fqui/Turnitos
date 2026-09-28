@@ -184,7 +184,10 @@ export default function PoliciesAndPaymentsTab({
                 {/* Save Button */}
                 <button
                     type="button"
-                    onClick={() => handleSave()}
+                    onClick={() => handleSave({
+                        booking_rules: formData.booking_rules,
+                        payment_settings: formData.payment_settings
+                    })}
                     style={saveButtonStyle}
                     disabled={saving}
                 >
@@ -453,6 +456,7 @@ export default function PoliciesAndPaymentsTab({
                         <button
                             type="button"
                             onClick={() => handleSave({
+                                booking_rules: formData.booking_rules,
                                 payment_settings: formData.payment_settings
                             })}
                             style={saveButtonStyle}

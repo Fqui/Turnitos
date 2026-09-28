@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDisplayDate, formatFriendlyDate, calculateEndTime } from '../utils/dateUtils';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
@@ -83,6 +83,16 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
     }, []);
 
     if (!bookingDetails) return null;
+
+    const bookingRules = useMemo(() => {
+        let r = business?.booking_rules || bookingDetails?.business?.booking_rules;
+        if (typeof r === 'string') {
+            try { return JSON.parse(r); } catch (e) { return {}; }
+        }
+        return r || {};
+    }, [business?.booking_rules, bookingDetails?.business?.booking_rules]);
+
+    const cancellationPolicy = bookingRules?.cancellation || null;
 
     const [selectedExtras, setSelectedExtras] = useState(bookingDetails.extras || []);
 
@@ -604,6 +614,26 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                 </span>
                                             </div>
 
+                                            {/* Special Day Low-Demand Discount Row */}
+                                            {bookingDetails.specialDayDiscount && bookingDetails.specialDayDiscount.discountAmount > 0 && (
+                                                <div style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    padding: '6px 10px',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: '#10b98115',
+                                                    border: '1px dashed #10b981'
+                                                }}>
+                                                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        🏷️ {bookingDetails.specialDayDiscount.description || 'Descuento día de baja demanda'}
+                                                    </span>
+                                                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>
+                                                        -${bookingDetails.specialDayDiscount.discountAmount.toLocaleString('es-AR')}
+                                                    </span>
+                                                </div>
+                                            )}
+
                                             {/* Promo Row */}
                                             {promoDiscount > 0 && (
                                                 <>
@@ -737,6 +767,36 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                         }}
                                     />
                                 </div>
+
+                                {/* Cancellation Policy Notice */}
+                                {cancellationPolicy && (
+                                    <div style={{
+                                        marginBottom: '16px',
+                                        padding: '12px 14px',
+                                        borderRadius: '12px',
+                                        backgroundColor: 'var(--bg-main)',
+                                        border: '1px solid var(--border)',
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '10px'
+                                    }}>
+                                        <span style={{ fontSize: '16px' }}>ℹ️</span>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Política de cancelación: </strong>
+                                            {cancellationPolicy.deadline_hours > 0 ? (
+                                                <>Cancela gratis hasta <strong>{cancellationPolicy.deadline_hours} hs antes</strong> del turno ({
+                                                    cancellationPolicy.refund_policy === 'full' ? 'reembolso completo' :
+                                                    cancellationPolicy.refund_policy === 'partial' ? 'reembolso parcial' :
+                                                    'sin reembolso'
+                                                }).</>
+                                            ) : (
+                                                cancellationPolicy.refund_policy === 'none'
+                                                    ? 'Este negocio no admite cancelaciones ni reembolsos.'
+                                                    : 'Cancelación disponible según políticas del comercio.'
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Action Buttons */}
                                 <div style={{ display: 'flex', gap: '12px' }}>

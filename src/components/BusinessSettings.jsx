@@ -327,7 +327,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const tabs = [
         { id: 'general', label: 'General y Ubicación', icon: '📍' },
         { id: 'appearance', label: 'Apariencia y Colores', icon: '🎨' },
-        { id: 'subscription', label: 'Suscripción', icon: '💳' },
+        { id: 'subscription', label: isServiceBusiness ? 'Profesionales' : isSport ? 'Canchas' : 'Suscripción', icon: isServiceBusiness ? '👤' : isSport ? '🏟️' : '💳' },
         ...(isServiceBusiness ? [{ id: 'services', label: 'Servicios', icon: '💼' }] : []),
         ...(isRentalBusiness ? [{ id: 'rental', label: 'Alquiler', icon: '🔑' }] : []),
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
