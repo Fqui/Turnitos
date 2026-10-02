@@ -803,9 +803,9 @@ export default function BusinessPortal() {
                 return updated;
             } else if (action === 'cancel') {
                 let cancellationWarning = '';
-                const bookingRules = typeof business?.booking_rules === 'string'
-                    ? (() => { try { return JSON.parse(business.booking_rules); } catch(e) { return {}; } })()
-                    : (business?.booking_rules || {});
+                const bookingRules = typeof currentBusiness?.booking_rules === 'string'
+                    ? (() => { try { return JSON.parse(currentBusiness.booking_rules); } catch(e) { return {}; } })()
+                    : (currentBusiness?.booking_rules || {});
                 const deadlineHours = Number(bookingRules?.cancellation?.deadline_hours) || 0;
                 const refundPolicy = bookingRules?.cancellation?.refund_policy || 'full';
 

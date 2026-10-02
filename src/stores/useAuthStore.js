@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import serviceAdapter from '../services/serviceAdapter';
+import supabaseService from '../services/supabaseService';
 import { pushService } from '../services/pushService';
 
 export const useAuthStore = create((set, get) => ({
@@ -13,94 +14,80 @@ export const useAuthStore = create((set, get) => ({
     requirePasswordChange: false,
     currentBusinessId: null,
 
-    // Initialize session from localStorage
+    // Restore the portal session: requires a real Supabase Auth session
+    // (owner, assigned seller or super admin). localStorage only remembers
+    // which business was open.
     checkAutoLogin: async () => {
         set({ loading: true });
         const mustChangePassword = localStorage.getItem('turnitos_must_change_password') === 'true';
 
-        // Format 1: unified login (/admin/login)
-        const storedBusiness = localStorage.getItem('business');
-        if (storedBusiness) {
+        try {
+            let storedBiz = null;
             try {
-                const biz = JSON.parse(storedBusiness);
-                if (biz && biz.id) {
-                    const [businessesData, detailedBiz] = await Promise.all([
-                        serviceAdapter.getBusinesses(),
-                        serviceAdapter.getBusinessById(biz.id).catch(() => null)
-                    ]);
-                    const fullBiz = detailedBiz || businessesData.find(b => String(b.id) === String(biz.id)) || biz;
-                    const finalBusinesses = businessesData.map(b => String(b.id) === String(fullBiz.id) ? fullBiz : b);
-                    if (!finalBusinesses.some(b => String(b.id) === String(fullBiz.id))) {
-                        finalBusinesses.push(fullBiz);
-                    }
-
-                    if (mustChangePassword || fullBiz.password_changed === false) {
-                        set({
-                            requirePasswordChange: true,
-                            currentBusinessId: fullBiz.id,
-                            selectedBusinessId: fullBiz.id,
-                            currentBusiness: fullBiz,
-                            businesses: finalBusinesses,
-                            loginEmail: fullBiz.email,
-                            loading: false
-                        });
-                        return;
-                    }
-
-                    set({
-                        selectedBusinessId: fullBiz.id,
-                        currentBusiness: fullBiz,
-                        businesses: finalBusinesses,
-                        isLoggedIn: true,
-                        loginEmail: fullBiz.email,
-                        loading: false
-                    });
-                    return;
-                }
-            } catch (err) {
-                console.warn('Auto-login error with stored business:', err);
+                storedBiz = JSON.parse(localStorage.getItem('business') || 'null');
+            } catch {
+                storedBiz = null;
             }
-        }
 
-        // Format 2: legacy login at /portal
-        const storedEmail = localStorage.getItem('turnitos_business_email');
-        if (storedEmail) {
-            set({ loginEmail: storedEmail, rememberMe: true });
-            try {
-                const businessesData = await serviceAdapter.getBusinesses();
-                const biz = businessesData.find(b => b.email === storedEmail);
-                if (biz) {
-                    const detailedBiz = await serviceAdapter.getBusinessById(biz.id).catch(() => null);
-                    const fullBiz = detailedBiz || biz;
-                    const finalBusinesses = businessesData.map(b => String(b.id) === String(fullBiz.id) ? fullBiz : b);
+            let businessId = null;
+            let role = null;
 
-                    if (mustChangePassword || fullBiz.password_changed === false) {
-                        set({
-                            requirePasswordChange: true,
-                            currentBusinessId: fullBiz.id,
-                            selectedBusinessId: fullBiz.id,
-                            currentBusiness: fullBiz,
-                            businesses: finalBusinesses,
-                            loading: false
-                        });
-                        return;
-                    }
-
-                    set({
-                        selectedBusinessId: fullBiz.id,
-                        currentBusiness: fullBiz,
-                        businesses: finalBusinesses,
-                        isLoggedIn: true,
-                        loading: false
-                    });
-                    return;
+            if (serviceAdapter.isDemoMode) {
+                businessId = storedBiz?.id || null;
+                role = 'owner';
+            } else {
+                if (storedBiz?.id) {
+                    role = await supabaseService.canAccessBusinessPortal(storedBiz.id);
+                    if (role) businessId = storedBiz.id;
                 }
-            } catch (err) {
-                console.warn('Auto-login error with legacy email:', err);
+                if (!businessId) {
+                    businessId = await supabaseService.getSessionBusinessId();
+                    role = businessId ? 'owner' : null;
+                }
             }
-        }
 
-        set({ loading: false });
+            if (!businessId) {
+                localStorage.removeItem('business');
+                set({ isLoggedIn: false, loading: false });
+                return;
+            }
+
+            const [businessesData, detailedBiz] = await Promise.all([
+                serviceAdapter.getBusinesses(),
+                serviceAdapter.getBusinessById(businessId).catch(() => null)
+            ]);
+            const fullBiz = detailedBiz || businessesData.find(b => String(b.id) === String(businessId)) || storedBiz;
+            const finalBusinesses = businessesData.map(b => String(b.id) === String(fullBiz.id) ? fullBiz : b);
+            if (!finalBusinesses.some(b => String(b.id) === String(fullBiz.id))) {
+                finalBusinesses.push(fullBiz);
+            }
+
+            // Only the owner is asked to change a provisional password
+            if (role === 'owner' && (mustChangePassword || fullBiz.password_changed === false)) {
+                set({
+                    requirePasswordChange: true,
+                    currentBusinessId: fullBiz.id,
+                    selectedBusinessId: fullBiz.id,
+                    currentBusiness: fullBiz,
+                    businesses: finalBusinesses,
+                    loginEmail: fullBiz.email,
+                    loading: false
+                });
+                return;
+            }
+
+            set({
+                selectedBusinessId: fullBiz.id,
+                currentBusiness: fullBiz,
+                businesses: finalBusinesses,
+                isLoggedIn: true,
+                loginEmail: fullBiz.email,
+                loading: false
+            });
+        } catch (err) {
+            console.warn('Auto-login error:', err);
+            set({ isLoggedIn: false, loading: false });
+        }
     },
 
     login: async (email, password, remember = false) => {

@@ -32,6 +32,23 @@ export async function loginSeller(email, password) {
 }
 
 /**
+ * Vendedor activo de la sesión actual de Supabase Auth, o null si no hay.
+ */
+export async function getCurrentSeller() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return null;
+
+    const { data } = await supabase
+        .from('sellers')
+        .select('*')
+        .eq('auth_id', session.user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+    return data || null;
+}
+
+/**
  * Get all businesses for a seller
  */
 export async function getSellerBusinesses(sellerId) {
@@ -453,24 +470,6 @@ export async function loginSuperAdmin(email, password) {
         throw new Error('Por favor ingresa tu email y contraseña.');
     }
 
-    const { data: adminRecord } = await supabase
-        .from('super_admins')
-        .select('*')
-        .eq('email', cleanEmail)
-        .maybeSingle();
-
-    const isMasterOwner = cleanEmail === 'fernandoquintero1994@gmail.com';
-
-    if (adminRecord || isMasterOwner) {
-        return {
-            id: adminRecord?.id || 'master-super-admin',
-            email: cleanEmail,
-            firstName: adminRecord?.first_name || 'Fernando',
-            lastName: adminRecord?.last_name || 'Quintero',
-            role: 'super_admin'
-        };
-    }
-
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password
@@ -480,11 +479,48 @@ export async function loginSuperAdmin(email, password) {
         throw new Error('Email o contraseña incorrectos.');
     }
 
+    const { data: adminRecord } = await supabase
+        .from('super_admins')
+        .select('*')
+        .eq('auth_id', authData.user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+    if (!adminRecord) {
+        await supabase.auth.signOut();
+        throw new Error('Esta cuenta no tiene permisos de Super Admin.');
+    }
+
     return {
-        id: authData.user.id,
-        email: authData.user.email,
-        firstName: 'Super',
-        lastName: 'Admin',
+        id: adminRecord.id,
+        email: adminRecord.email,
+        firstName: adminRecord.first_name,
+        lastName: adminRecord.last_name,
+        role: 'super_admin'
+    };
+}
+
+/**
+ * Super admin de la sesión actual de Supabase Auth, o null si no hay.
+ */
+export async function getCurrentSuperAdmin() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return null;
+
+    const { data: adminRecord } = await supabase
+        .from('super_admins')
+        .select('*')
+        .eq('auth_id', session.user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+    if (!adminRecord) return null;
+
+    return {
+        id: adminRecord.id,
+        email: adminRecord.email,
+        firstName: adminRecord.first_name,
+        lastName: adminRecord.last_name,
         role: 'super_admin'
     };
 }

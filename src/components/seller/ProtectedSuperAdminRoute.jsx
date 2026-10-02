@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import supabaseService from '../../services/supabaseService';
 
 export default function ProtectedSuperAdminRoute({ children }) {
@@ -7,20 +7,29 @@ export default function ProtectedSuperAdminRoute({ children }) {
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [checking, setChecking] = useState(true);
+    const [isAuthorized, setIsAuthorized] = useState(false);
 
-    const superAdmin = localStorage.getItem('superAdmin');
+    // Validate against the real Supabase session, not just localStorage
+    useEffect(() => {
+        let cancelled = false;
+        supabaseService.getCurrentSuperAdmin()
+            .then((admin) => {
+                if (cancelled) return;
+                if (admin) {
+                    localStorage.setItem('superAdmin', JSON.stringify(admin));
+                    setIsAuthorized(true);
+                } else {
+                    localStorage.removeItem('superAdmin');
+                }
+            })
+            .catch(() => localStorage.removeItem('superAdmin'))
+            .finally(() => { if (!cancelled) setChecking(false); });
+        return () => { cancelled = true; };
+    }, []);
 
-    // If already authenticated via login, render dashboard
-    if (superAdmin) {
-        try {
-            const parsed = JSON.parse(superAdmin);
-            if (parsed && (parsed.role === 'super_admin' || parsed.email)) {
-                return children;
-            }
-        } catch (e) {
-            localStorage.removeItem('superAdmin');
-        }
-    }
+    if (checking) return null;
+    if (isAuthorized) return children;
 
     // Otherwise, show the SuperAdmin PIN / Password security gate
     const handlePinSubmit = async (e) => {

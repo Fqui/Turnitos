@@ -411,61 +411,32 @@ export async function getBusinessBySlug(slug) {
 }
 
 export async function login(email, password) {
-    let authUser = null;
-    try {
-        const { data: authData } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
-        if (authData?.user) {
-            authUser = authData.user;
-        }
-    } catch (e) {
-        console.warn('Supabase Auth signIn failed:', e);
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password
+    });
+
+    if (authError || !authData?.user) {
+        throw new Error('Email o contraseña incorrectos.');
     }
 
+    const authUser = authData.user;
     let business = null;
-    if (authUser) {
-        const { data } = await supabase
-            .from('businesses')
-            .select('id')
-            .or(`auth_id.eq.${authUser.id},email.eq.${email}`)
-            .maybeSingle();
 
-        if (data?.id) {
-            business = await getBusinessById(data.id);
-        }
+    const { data: owned } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('auth_id', authUser.id)
+        .maybeSingle();
+
+    if (owned?.id) {
+        business = await getBusinessById(owned.id);
     }
 
     if (!business) {
-        const { data } = await supabase
-            .from('businesses')
-            .select('id')
-            .eq('email', email)
-            .maybeSingle();
-
-        if (data?.id) {
-            business = await getBusinessById(data.id);
-        }
-
-        if (business && !authUser) {
-            try {
-                const { data: signUpData } = await supabase.auth.signUp({
-                    email,
-                    password
-                });
-                if (signUpData?.user) {
-                    authUser = signUpData.user;
-                    await supabase.from('businesses').update({ auth_id: authUser.id }).eq('id', business.id);
-                }
-            } catch (e) {
-                console.warn('Auto sign up fallback failed:', e);
-            }
-        }
-    }
-
-    if (!business) {
-        throw new Error('Credenciales inválidas');
+        await supabase.auth.signOut();
+        throw new Error('Esta cuenta no tiene un negocio asociado.');
     }
 
     return {
@@ -474,6 +445,59 @@ export async function login(email, password) {
         subscriptionStatus: business.subscription_status,
         trialEndDate: business.trial_end_date
     };
+}
+
+/**
+ * Rol con el que la sesión actual de Supabase puede operar el portal de este negocio:
+ * 'owner', 'super_admin', 'seller' o null si no tiene acceso.
+ */
+export async function canAccessBusinessPortal(businessId) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid || !businessId) return null;
+
+    const { data: biz } = await supabase
+        .from('businesses')
+        .select('auth_id, seller_id')
+        .eq('id', businessId)
+        .maybeSingle();
+    if (!biz) return null;
+    if (biz.auth_id === uid) return 'owner';
+
+    const { data: admin } = await supabase
+        .from('super_admins')
+        .select('id')
+        .eq('auth_id', uid)
+        .eq('is_active', true)
+        .maybeSingle();
+    if (admin) return 'super_admin';
+
+    if (biz.seller_id) {
+        const { data: seller } = await supabase
+            .from('sellers')
+            .select('id')
+            .eq('auth_id', uid)
+            .eq('is_active', true)
+            .maybeSingle();
+        if (seller && String(seller.id) === String(biz.seller_id)) return 'seller';
+    }
+
+    return null;
+}
+
+/**
+ * Negocio del dueño logueado en Supabase Auth, si hay sesión.
+ */
+export async function getSessionBusinessId() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return null;
+    const { data } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('auth_id', uid)
+        .maybeSingle();
+    return data?.id || null;
 }
 
 export async function logout() {

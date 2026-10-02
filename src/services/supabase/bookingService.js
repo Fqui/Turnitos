@@ -45,6 +45,55 @@ export async function getBookings(businessId, date = null) {
     return { bookings: bookingsWithResourceId };
 }
 
+/**
+ * Reservas para la web pública: solo disponibilidad, sin datos del cliente.
+ */
+export async function getPublicBookings(businessId, date = null) {
+    let query = supabase
+        .from('bookings_public')
+        .select('*')
+        .eq('business_id', businessId);
+
+    if (date) {
+        query = query.eq('date', date);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const bookings = (data || []).map(booking => ({
+        ...booking,
+        resource_id: booking.resource_id || booking.court_id || booking.service_id
+    }));
+
+    return { bookings };
+}
+
+/**
+ * Suma un uso al cupón del negocio (sin tocar el resto de la metadata).
+ */
+export async function incrementCouponUsage(businessId, code) {
+    const { error } = await supabase.rpc('increment_coupon_usage', {
+        p_business_id: businessId,
+        p_code: code
+    });
+    if (error) throw error;
+}
+
+/**
+ * Reservas activas de un teléfono en un negocio entre dos fechas (YYYY-MM-DD).
+ */
+export async function countCustomerBookings(businessId, phone, fromDate, toDate) {
+    const { data, error } = await supabase.rpc('count_customer_bookings', {
+        p_business_id: businessId,
+        p_phone: phone,
+        p_from: fromDate,
+        p_to: toDate
+    });
+    if (error) throw error;
+    return data || 0;
+}
+
 export async function validateBookingAvailability(businessId, startTime, endTime, excludeBookingId = null) {
     const { data, error } = await supabase
         .rpc('check_business_availability', {
@@ -112,7 +161,7 @@ export async function createBooking(bookingData) {
 
     if (finalResourceId) {
         const { data: conflicts, error: conflictError } = await supabase
-            .from('bookings')
+            .from('bookings_public')
             .select('id')
             .eq('resource_id', finalResourceId)
             .neq('status', 'cancelled')
@@ -187,7 +236,7 @@ export async function createBooking(bookingData) {
 
         try {
             const { count: monthlyBookingsCount } = await supabase
-                .from('bookings')
+                .from('bookings_public')
                 .select('id', { count: 'exact', head: true })
                 .eq('business_id', targetBusinessId)
                 .neq('status', 'cancelled')
@@ -271,33 +320,36 @@ export async function createBooking(bookingData) {
         specialist_id_raw: bookingData.specialistId || bookingData.specialist_id || null
     };
 
-    const { data, error } = await supabase
+    // The id is generated here so public visitors (who can't read bookings back
+    // under RLS) still get the created booking without `.select()`.
+    const newBooking = {
+        id: crypto.randomUUID(),
+        business_id: targetBusinessId,
+        service_id: targetServiceId,
+        court_id: targetCourtId,
+        specialist_id: targetSpecialistId,
+        resource_id: finalResourceId || null,
+        date: formatDateLocal(bookingData.date),
+        time: bookingData.time || '00:00',
+        customer_name: targetCustomerName ? targetCustomerName.toUpperCase() : '',
+        customer_phone: targetCustomerPhone || '',
+        customer_email: targetCustomerEmail || null,
+        status: bookingData.status || 'pending',
+        price: bookingPrice,
+        duration: bookingData.duration,
+        metadata: safeMetadata,
+        guest_count: bookingData.guestCount || bookingData.guest_count || null,
+        selected_services: bookingData.selectedServices || bookingData.selected_services || [],
+        services_total: bookingData.servicesTotal || bookingData.services_total || 0,
+        base_price: bookingData.basePrice || bookingData.base_price || null
+    };
+
+    const { error } = await supabase
         .from('bookings')
-        .insert([{
-            business_id: targetBusinessId,
-            service_id: targetServiceId,
-            court_id: targetCourtId,
-            specialist_id: targetSpecialistId,
-            resource_id: finalResourceId || null,
-            date: formatDateLocal(bookingData.date),
-            time: bookingData.time || '00:00',
-            customer_name: targetCustomerName ? targetCustomerName.toUpperCase() : '',
-            customer_phone: targetCustomerPhone || '',
-            customer_email: targetCustomerEmail || null,
-            status: bookingData.status || 'pending',
-            price: bookingPrice,
-            duration: bookingData.duration,
-            metadata: safeMetadata,
-            guest_count: bookingData.guestCount || bookingData.guest_count || null,
-            selected_services: bookingData.selectedServices || bookingData.selected_services || [],
-            services_total: bookingData.servicesTotal || bookingData.services_total || 0,
-            base_price: bookingData.basePrice || bookingData.base_price || null
-        }])
-        .select()
-        .single();
+        .insert([newBooking]);
 
     if (error) throw error;
-    return data;
+    return { ...newBooking, created_at: new Date().toISOString() };
 }
 
 export async function updateBookingStatus(id, status, metadata = {}) {

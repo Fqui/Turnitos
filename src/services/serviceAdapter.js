@@ -71,6 +71,21 @@ class ServiceAdapter {
         return this.service.getBookings(businessId, date);
     }
 
+    async getPublicBookings(businessId, date = null) {
+        if (this.isDemoMode) return this.service.getBookings(businessId, date);
+        return this.service.getPublicBookings(businessId, date);
+    }
+
+    async incrementCouponUsage(businessId, code) {
+        if (this.isDemoMode) return;
+        return this.service.incrementCouponUsage(businessId, code);
+    }
+
+    async countCustomerBookings(businessId, phone, fromDate, toDate) {
+        if (this.isDemoMode) return 0;
+        return this.service.countCustomerBookings(businessId, phone, fromDate, toDate);
+    }
+
     async createBooking(bookingData) {
         return this.service.createBooking(bookingData);
     }

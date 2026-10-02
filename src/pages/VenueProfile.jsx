@@ -65,7 +65,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const refreshDataSilently = async (bId) => {
         if (!bId) return;
         try {
-            const res = await serviceAdapter.getBookings(bId);
+            const res = await serviceAdapter.getPublicBookings(bId);
             const list = Array.isArray(res) ? res : (res && Array.isArray(res.bookings) ? res.bookings : []);
             setVenueBookings(list);
 

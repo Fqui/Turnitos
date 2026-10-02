@@ -11,7 +11,7 @@ envText.split('\n').forEach(line => {
 });
 
 // Use SERVICE ROLE KEY to bypass RLS
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdGFrcWJlZ3R0c2F6aGtjc212Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzYyNTI5MiwiZXhwIjoyMDc5MjAxMjkyfQ.t-NQ7DKxonVxbTs95gGSYF863lKGF4zWZJ2L1HAmTMQ';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(env.VITE_SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const uuid = () => randomUUID();

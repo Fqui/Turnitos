@@ -45,6 +45,14 @@ class SupabaseService {
         return businessService.logout();
     }
 
+    async canAccessBusinessPortal(businessId) {
+        return businessService.canAccessBusinessPortal(businessId);
+    }
+
+    async getSessionBusinessId() {
+        return businessService.getSessionBusinessId();
+    }
+
     async createBusiness(businessData) {
         return businessService.createBusiness(businessData);
     }
@@ -64,6 +72,18 @@ class SupabaseService {
     // --- Bookings ---
     async getBookings(businessId, date = null) {
         return bookingService.getBookings(businessId, date);
+    }
+
+    async getPublicBookings(businessId, date = null) {
+        return bookingService.getPublicBookings(businessId, date);
+    }
+
+    async incrementCouponUsage(businessId, code) {
+        return bookingService.incrementCouponUsage(businessId, code);
+    }
+
+    async countCustomerBookings(businessId, phone, fromDate, toDate) {
+        return bookingService.countCustomerBookings(businessId, phone, fromDate, toDate);
     }
 
     async validateBookingAvailability(businessId, startTime, endTime, excludeBookingId = null) {
@@ -315,6 +335,14 @@ class SupabaseService {
         return sellerService.loginSuperAdmin(email, password);
     }
 
+    async getCurrentSeller() {
+        return sellerService.getCurrentSeller();
+    }
+
+    async getCurrentSuperAdmin() {
+        return sellerService.getCurrentSuperAdmin();
+    }
+
     async getAllSellers() {
         return sellerService.getAllSellers();
     }
@@ -411,10 +439,6 @@ class SupabaseService {
 
     async submitReviewByToken(token, { rating, comment, customer_name }) {
         return reviewService.submitReviewByToken(token, { rating, comment, customer_name });
-    }
-
-    async _recalculateBusinessRating(businessId) {
-        return reviewService.recalculateBusinessRating(businessId);
     }
 
     async getReviewsByBusinessId(businessId) {

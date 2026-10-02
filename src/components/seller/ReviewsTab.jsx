@@ -110,10 +110,10 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                 alignItems: 'center',
                 flexWrap: 'wrap',
                 gap: '12px',
-                background: '#111827',
+                background: 'var(--sa-surface)',
                 padding: '12px 16px',
                 borderRadius: '12px',
-                border: '1px solid #1f2937'
+                border: '1px solid var(--sa-surface-2)'
             }}>
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button
@@ -122,8 +122,8 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                             padding: '8px 16px',
                             borderRadius: '8px',
                             border: 'none',
-                            background: activeSubTab === 'requests' ? '#2563eb' : 'transparent',
-                            color: activeSubTab === 'requests' ? '#ffffff' : '#9ca3af',
+                            background: activeSubTab === 'requests' ? 'var(--sa-primary)' : 'transparent',
+                            color: activeSubTab === 'requests' ? '#ffffff' : 'var(--sa-text-muted)',
                             fontWeight: '700',
                             fontSize: '13px',
                             cursor: 'pointer',
@@ -138,8 +138,8 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                             padding: '8px 16px',
                             borderRadius: '8px',
                             border: 'none',
-                            background: activeSubTab === 'published' ? '#2563eb' : 'transparent',
-                            color: activeSubTab === 'published' ? '#ffffff' : '#9ca3af',
+                            background: activeSubTab === 'published' ? 'var(--sa-primary)' : 'transparent',
+                            color: activeSubTab === 'published' ? '#ffffff' : 'var(--sa-text-muted)',
                             fontWeight: '700',
                             fontSize: '13px',
                             cursor: 'pointer',
@@ -150,7 +150,7 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                     </button>
                 </div>
 
-                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                <div style={{ fontSize: '12px', color: 'var(--sa-text-muted)' }}>
                     🛡️ Enlaces únicos con token anti-fraude
                 </div>
             </div>
@@ -163,7 +163,7 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                         display: 'flex',
                         gap: '12px',
                         flexWrap: 'wrap',
-                        background: '#1e293b',
+                        background: 'var(--sa-surface-2)',
                         padding: '12px 16px',
                         borderRadius: '10px',
                         alignItems: 'center'
@@ -177,9 +177,9 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                 flex: '1 1 240px',
                                 padding: '8px 14px',
                                 borderRadius: '8px',
-                                border: '1px solid #334155',
-                                background: '#0f172a',
-                                color: '#f8fafc',
+                                border: '1px solid var(--sa-border-strong)',
+                                background: 'var(--sa-surface)',
+                                color: 'var(--sa-text)',
                                 fontSize: '13px',
                                 outline: 'none'
                             }}
@@ -192,9 +192,9 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                 style={{
                                     padding: '8px 14px',
                                     borderRadius: '8px',
-                                    border: '1px solid #334155',
-                                    background: '#0f172a',
-                                    color: '#f8fafc',
+                                    border: '1px solid var(--sa-border-strong)',
+                                    background: 'var(--sa-surface)',
+                                    color: 'var(--sa-text)',
                                     fontSize: '13px',
                                     outline: 'none'
                                 }}
@@ -209,32 +209,32 @@ export default function ReviewsTab({ bookingsData, businesses }) {
 
                     {/* Bookings List */}
                     <div style={{
-                        background: '#111827',
-                        border: '1px solid #1f2937',
+                        background: 'var(--sa-surface)',
+                        border: '1px solid var(--sa-surface-2)',
                         borderRadius: '12px',
                         overflow: 'hidden'
                     }}>
                         <div style={{
                             padding: '14px 16px',
-                            borderBottom: '1px solid #1f2937',
+                            borderBottom: '1px solid var(--sa-surface-2)',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center'
                         }}>
-                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--sa-text)', margin: 0 }}>
                                 Reservas Disponibles para Calificar ({filteredBookings.length})
                             </h3>
                         </div>
 
                         {filteredBookings.length === 0 ? (
-                            <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--sa-text-muted)', fontSize: '14px' }}>
                                 No se encontraron reservas que coincidan con la búsqueda.
                             </div>
                         ) : (
                             <div style={{ overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                                     <thead>
-                                        <tr style={{ background: '#1e293b', color: '#94a3b8', borderBottom: '1px solid #334155' }}>
+                                        <tr style={{ background: 'var(--sa-surface-2)', color: 'var(--sa-text-muted)', borderBottom: '1px solid var(--sa-border-strong)' }}>
                                             <th style={{ padding: '10px 14px' }}>Cliente</th>
                                             <th style={{ padding: '10px 14px' }}>Teléfono</th>
                                             <th style={{ padding: '10px 14px' }}>Negocio</th>
@@ -249,17 +249,17 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                             const isAlreadyRated = !!b.metadata?.review_submitted;
 
                                             return (
-                                                <tr key={b.id || idx} style={{ borderBottom: '1px solid #1f2937', color: '#f8fafc' }}>
+                                                <tr key={b.id || idx} style={{ borderBottom: '1px solid var(--sa-surface-2)', color: 'var(--sa-text)' }}>
                                                     <td style={{ padding: '12px 14px', fontWeight: '700' }}>
                                                         {b.customer_name || 'Cliente'}
                                                     </td>
-                                                    <td style={{ padding: '12px 14px', color: '#94a3b8' }}>
+                                                    <td style={{ padding: '12px 14px', color: 'var(--sa-text-muted)' }}>
                                                         {b.customer_phone || 'Sin tel'}
                                                     </td>
-                                                    <td style={{ padding: '12px 14px', color: '#60a5fa', fontWeight: '600' }}>
+                                                    <td style={{ padding: '12px 14px', color: 'var(--sa-primary-text)', fontWeight: '600' }}>
                                                         {b.business_name || 'Negocio'}
                                                     </td>
-                                                    <td style={{ padding: '12px 14px', color: '#94a3b8', fontSize: '12px' }}>
+                                                    <td style={{ padding: '12px 14px', color: 'var(--sa-text-muted)', fontSize: '12px' }}>
                                                         {b.created_at ? new Date(b.created_at).toLocaleDateString('es-AR') : '-'}
                                                     </td>
                                                     <td style={{ padding: '12px 14px' }}>
@@ -267,8 +267,8 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                                             <span style={{
                                                                 padding: '3px 8px',
                                                                 borderRadius: '12px',
-                                                                background: 'rgba(0, 230, 118, 0.15)',
-                                                                color: '#00E676',
+                                                                background: 'var(--sa-primary-soft)',
+                                                                color: 'var(--sa-primary)',
                                                                 fontSize: '11px',
                                                                 fontWeight: '800'
                                                             }}>
@@ -278,8 +278,8 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                                             <span style={{
                                                                 padding: '3px 8px',
                                                                 borderRadius: '12px',
-                                                                background: 'rgba(59, 130, 246, 0.15)',
-                                                                color: '#60a5fa',
+                                                                background: 'var(--sa-primary-soft)',
+                                                                color: 'var(--sa-primary-text)',
                                                                 fontSize: '11px',
                                                                 fontWeight: '800'
                                                             }}>
@@ -290,7 +290,7 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                                                 padding: '3px 8px',
                                                                 borderRadius: '12px',
                                                                 background: 'rgba(148, 163, 184, 0.1)',
-                                                                color: '#94a3b8',
+                                                                color: 'var(--sa-text-muted)',
                                                                 fontSize: '11px',
                                                                 fontWeight: '600'
                                                             }}>
@@ -324,8 +324,8 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                                                 disabled={generatingTokenId === b.id}
                                                                 style={{
                                                                     padding: '6px 10px',
-                                                                    background: '#334155',
-                                                                    color: '#f8fafc',
+                                                                    background: 'var(--sa-border-strong)',
+                                                                    color: 'var(--sa-text)',
                                                                     border: 'none',
                                                                     borderRadius: '6px',
                                                                     fontWeight: '700',
@@ -352,22 +352,22 @@ export default function ReviewsTab({ bookingsData, businesses }) {
             {/* SUB-TAB 2: RESEÑAS PUBLICADAS */}
             {activeSubTab === 'published' && (
                 <div style={{
-                    background: '#111827',
-                    border: '1px solid #1f2937',
+                    background: 'var(--sa-surface)',
+                    border: '1px solid var(--sa-surface-2)',
                     borderRadius: '12px',
                     padding: '20px'
                 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
+                        <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--sa-text)', margin: 0 }}>
                             Historial de Reseñas y Calificaciones ({reviews.length})
                         </h3>
                         <button
                             onClick={loadPublishedReviews}
                             style={{
                                 padding: '6px 12px',
-                                background: '#1e293b',
-                                color: '#60a5fa',
-                                border: '1px solid #334155',
+                                background: 'var(--sa-surface-2)',
+                                color: 'var(--sa-primary-text)',
+                                border: '1px solid var(--sa-border-strong)',
                                 borderRadius: '6px',
                                 fontSize: '12px',
                                 fontWeight: '700',
@@ -379,11 +379,11 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                     </div>
 
                     {loadingReviews ? (
-                        <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--sa-text-muted)' }}>
                             Cargando reseñas...
                         </div>
                     ) : reviews.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: '14px' }}>
+                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--sa-text-muted)', fontSize: '14px' }}>
                             Aún no hay reseñas registradas en la plataforma.
                         </div>
                     ) : (
@@ -392,8 +392,8 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                 <div
                                     key={r.id}
                                     style={{
-                                        background: '#1e293b',
-                                        border: '1px solid #334155',
+                                        background: 'var(--sa-surface-2)',
+                                        border: '1px solid var(--sa-border-strong)',
                                         borderRadius: '12px',
                                         padding: '16px',
                                         display: 'flex',
@@ -405,16 +405,16 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                                             <div>
-                                                <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
+                                                <h4 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--sa-text)', margin: 0 }}>
                                                     {r.customer_name || 'Cliente'}
                                                 </h4>
-                                                <span style={{ fontSize: '11px', color: '#60a5fa' }}>
+                                                <span style={{ fontSize: '11px', color: 'var(--sa-primary-text)' }}>
                                                     {r.businesses?.name || 'Negocio'}
                                                 </span>
                                             </div>
                                             <div style={{
                                                 background: 'rgba(251, 191, 36, 0.15)',
-                                                color: '#fbbf24',
+                                                color: 'var(--sa-warning)',
                                                 padding: '2px 8px',
                                                 borderRadius: '8px',
                                                 fontWeight: '800',
@@ -427,10 +427,10 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                         {r.comment && (
                                             <p style={{
                                                 fontSize: '13px',
-                                                color: '#cbd5e1',
+                                                color: 'var(--sa-text-2)',
                                                 margin: '8px 0',
                                                 lineHeight: '1.4',
-                                                background: '#0f172a',
+                                                background: 'var(--sa-surface)',
                                                 padding: '8px 12px',
                                                 borderRadius: '8px'
                                             }}>
@@ -439,7 +439,7 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                         )}
                                     </div>
 
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#94a3b8' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--sa-text-muted)' }}>
                                         <span>{r.created_at ? new Date(r.created_at).toLocaleDateString('es-AR') : '-'}</span>
                                         <div style={{ display: 'flex', gap: '6px' }}>
                                             <button
@@ -468,7 +468,7 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                                     borderRadius: '4px',
                                                     border: 'none',
                                                     background: 'rgba(239, 68, 68, 0.2)',
-                                                    color: '#f87171',
+                                                    color: 'var(--sa-danger)',
                                                     fontWeight: '700',
                                                     cursor: 'pointer',
                                                     fontSize: '10px'

@@ -251,7 +251,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
                     : selectedDate;
 
-                const { bookings } = await serviceAdapter.getBookings(business.id, dateStr);
+                const { bookings } = await serviceAdapter.getPublicBookings(business.id, dateStr);
                 setExistingBookings(bookings || []);
             } catch (error) {
                 console.error("Error fetching bookings:", error);
@@ -540,43 +540,30 @@ export default function BusinessProfile({ business: initialBusiness }) {
             const rawPhone = finalDetails.customerPhone || '';
             const cleanPhone = rawPhone.replace(/\D/g, '');
 
-            if (cleanPhone && existingBookings && existingBookings.length > 0) {
-                if (maxPerDay > 0 && finalDetails.date) {
-                    const dayBookingsCount = existingBookings.filter(b => {
-                        if (b.status === 'cancelled' || b.status === 'rejected') return false;
-                        const bDate = typeof b.date === 'string' ? b.date.split('T')[0] : '';
-                        if (bDate !== finalDetails.date) return false;
-                        const bPhone = (b.customer_phone || b.customerPhone || b.phone || '').replace(/\D/g, '');
-                        return bPhone && bPhone === cleanPhone;
-                    }).length;
+            if (cleanPhone && finalDetails.date) {
+                if (maxPerDay > 0) {
+                    const dayBookingsCount = await serviceAdapter.countCustomerBookings(
+                        business.id, cleanPhone, finalDetails.date, finalDetails.date
+                    );
 
                     if (dayBookingsCount >= maxPerDay) {
                         throw new Error(`Has alcanzado el límite máximo de ${maxPerDay} reserva(s) por día para tu número de teléfono.`);
                     }
                 }
 
-                if (maxPerWeek > 0 && finalDetails.date) {
+                if (maxPerWeek > 0) {
                     const [targetYear, targetMonth, targetDay] = finalDetails.date.split('-').map(Number);
                     const targetDateObj = new Date(targetYear, targetMonth - 1, targetDay);
-                    const dayOfWeek = targetDateObj.getDay(); // 0 is Sun, 1 is Mon...
-                    const distanceToMonday = (dayOfWeek + 6) % 7;
+                    const distanceToMonday = (targetDateObj.getDay() + 6) % 7;
                     const weekStart = new Date(targetDateObj);
                     weekStart.setDate(weekStart.getDate() - distanceToMonday);
-                    weekStart.setHours(0, 0, 0, 0);
                     const weekEnd = new Date(weekStart);
                     weekEnd.setDate(weekEnd.getDate() + 6);
-                    weekEnd.setHours(23, 59, 59, 999);
+                    const toKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-                    const weekBookingsCount = existingBookings.filter(b => {
-                        if (b.status === 'cancelled' || b.status === 'rejected') return false;
-                        const bDateStr = typeof b.date === 'string' ? b.date.split('T')[0] : '';
-                        if (!bDateStr) return false;
-                        const [bY, bM, bD] = bDateStr.split('-').map(Number);
-                        const bDateObj = new Date(bY, bM - 1, bD);
-                        if (bDateObj < weekStart || bDateObj > weekEnd) return false;
-                        const bPhone = (b.customer_phone || b.customerPhone || b.phone || '').replace(/\D/g, '');
-                        return bPhone && bPhone === cleanPhone;
-                    }).length;
+                    const weekBookingsCount = await serviceAdapter.countCustomerBookings(
+                        business.id, cleanPhone, toKey(weekStart), toKey(weekEnd)
+                    );
 
                     if (weekBookingsCount >= maxPerWeek) {
                         throw new Error(`Has alcanzado el límite máximo de ${maxPerWeek} reserva(s) por semana para tu número de teléfono.`);
@@ -643,24 +630,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
             // If a business coupon was applied, increment used_count
             if (finalDetails.coupon?.code && business.id) {
-                try {
-                    const currentCoupons = business.coupons || business.metadata?.coupons || [];
-                    const updatedCoupons = currentCoupons.map(c => {
-                        if ((c.code || '').trim().toUpperCase() === finalDetails.coupon.code.trim().toUpperCase()) {
-                            return { ...c, used_count: Number(c.used_count || 0) + 1 };
-                        }
-                        return c;
-                    });
-                    serviceAdapter.patchBusiness(business.id, {
-                        coupons: updatedCoupons,
-                        metadata: {
-                            ...(business.metadata || {}),
-                            coupons: updatedCoupons
-                        }
-                    }).catch(e => console.warn('Could not increment coupon used_count:', e));
-                } catch (e) {
-                    console.warn('Coupon counter error:', e);
-                }
+                serviceAdapter.incrementCouponUsage(business.id, finalDetails.coupon.code)
+                    .catch(e => console.warn('Could not increment coupon used_count:', e));
             }
 
             try {
