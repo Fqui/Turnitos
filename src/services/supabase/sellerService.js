@@ -887,25 +887,6 @@ export async function updateCurrentPassword(newPassword, userEmail = null, busin
                 if (!targetBusinessId) targetBusinessId = bizData[0].id;
             }
         }
-
-        if (targetEmail) {
-            try {
-                const { data: signUpData } = await supabase.auth.signUp({
-                    email: targetEmail,
-                    password: newPassword
-                });
-
-                if (signUpData?.user && targetBusinessId) {
-                    await supabase
-                        .from('businesses')
-                        .update({ auth_id: signUpData.user.id, password_changed: true })
-                        .eq('id', targetBusinessId);
-                }
-                updated = true;
-            } catch (authErr) {
-                console.warn('Auth signup fallback warning:', authErr);
-            }
-        }
     } catch (e) {
         console.warn('Fallback database update error:', e);
     }
@@ -916,31 +897,15 @@ export async function updateCurrentPassword(newPassword, userEmail = null, busin
 /**
  * Reset business password as super admin
  */
-export async function resetBusinessPasswordAsSuperAdmin(businessId, businessName) {
-    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    const lower = 'abcdefghijkmnpqrstuvwxyz';
-    const nums = '23456789';
-    const all = upper + lower + nums;
-    let tempPassword = '';
-    tempPassword += upper[Math.floor(Math.random() * upper.length)];
-    tempPassword += nums[Math.floor(Math.random() * nums.length)];
-    tempPassword += lower[Math.floor(Math.random() * lower.length)];
-    for (let i = 0; i < 5; i++) tempPassword += all[Math.floor(Math.random() * all.length)];
-    tempPassword = tempPassword.split('').sort(() => Math.random() - 0.5).join('');
-
-    const { data: business } = await supabase
-        .from('businesses')
-        .select('email, name')
-        .eq('id', businessId)
-        .single();
-
-    const email = business?.email || `${(businessName || 'business').toLowerCase().replace(/[^a-z0-9]/g, '')}@turnitoslr.com`;
-
-    return {
-        email,
-        tempPassword,
-        businessName: business?.name || businessName
-    };
+export async function resetBusinessPasswordAsSuperAdmin(businessId) {
+    const { data, error } = await supabase.functions.invoke('admin-accounts', {
+        body: { action: 'reset_password', business_id: businessId }
+    });
+    if (error) {
+        const detail = await error.context?.json?.().catch(() => null);
+        throw new Error(detail?.error || error.message || 'No se pudo restablecer la contraseña');
+    }
+    return data;
 }
 
 /**

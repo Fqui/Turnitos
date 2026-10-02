@@ -39,3 +39,6 @@ dist-ssr
 *.bak
 *.tmp
 *.temp
+
+# Claude Code (configuración personal)
+.claude/settings.local.json

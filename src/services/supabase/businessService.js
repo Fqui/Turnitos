@@ -598,18 +598,16 @@ export async function createBusiness(businessData) {
         max_capacity: businessData.max_capacity || 1
     };
 
+    // The account is created server-side so the admin/seller session stays intact
     if (!businessData.id && businessData.email && businessData.password) {
-        try {
-            const { data: authData } = await supabase.auth.signUp({
-                email: businessData.email,
-                password: businessData.password
-            });
-            if (authData?.user?.id) {
-                businessRecord.auth_id = authData.user.id;
-            }
-        } catch (e) {
-            console.warn('Could not auto-register user in Supabase Auth:', e);
+        const { data: account, error: accountError } = await supabase.functions.invoke('admin-accounts', {
+            body: { action: 'create_account', email: businessData.email, password: businessData.password }
+        });
+        if (accountError) {
+            const detail = await accountError.context?.json?.().catch(() => null);
+            throw new Error(detail?.error || 'No se pudo crear la cuenta del negocio');
         }
+        businessRecord.auth_id = account.user_id;
     }
 
     if (businessData.id) {

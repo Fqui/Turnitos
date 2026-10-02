@@ -149,14 +149,13 @@ export async function syncBusinessResources(businessId, businessType, requestedC
     const today = now.toISOString().split('T')[0];
     const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+    // Billing status and dates are only set when the subscription is created;
+    // the database recalculates monthly_price for business owners.
     const subPayload = {
         spaces_included: requestedCount,
         spaces_used: 0, // Reset to 0 during sync so spaces_used <= spaces_included constraint is never violated
         monthly_price: calculatedPrice,
         plan_name: planName,
-        status: 'active',
-        billing_start: today,
-        next_billing_date: nextMonth,
         updated_at: new Date().toISOString()
     };
 
@@ -180,7 +179,10 @@ export async function syncBusinessResources(businessId, businessType, requestedC
             .from('subscriptions')
             .insert({
                 business_id: businessId,
-                ...subPayload
+                ...subPayload,
+                status: 'active',
+                billing_start: today,
+                next_billing_date: nextMonth
             });
         if (subInsertErr) {
             console.error('Error inserting subscriptions:', subInsertErr);
