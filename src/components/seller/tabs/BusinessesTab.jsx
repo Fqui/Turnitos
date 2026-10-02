@@ -69,10 +69,10 @@ export default function BusinessesTab({
 
     return (
         <div style={{
-            background: 'linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(15, 23, 42, 0.85))',
+            background: 'linear-gradient(145deg, var(--sa-surface), var(--sa-surface))',
             borderRadius: '16px',
             padding: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            border: '1px solid var(--sa-border)',
             boxShadow: '0 4px 25px rgba(0, 0, 0, 0.3)'
         }}>
             {/* Header & Controls */}
@@ -85,18 +85,18 @@ export default function BusinessesTab({
                 gap: '14px'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                    <h3 style={{ fontSize: '17px', fontWeight: '800', margin: 0, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ fontSize: '17px', fontWeight: '800', margin: 0, color: 'var(--sa-text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>🏢</span> Directorio de Negocios ({businesses.length})
                     </h3>
 
                     {/* Filter Pills */}
-                    <div style={{ display: 'flex', gap: '4px', background: '#0f172a', padding: '3px', borderRadius: '10px', border: '1px solid #334155' }}>
+                    <div style={{ display: 'flex', gap: '4px', background: 'var(--sa-surface)', padding: '3px', borderRadius: '10px', border: '1px solid var(--sa-border-strong)' }}>
                         <button
                             onClick={() => setFilter && setFilter('all')}
                             style={{
                                 padding: '5px 12px',
-                                background: filter === 'all' ? '#2563eb' : 'transparent',
-                                color: filter === 'all' ? '#fff' : '#94a3b8',
+                                background: filter === 'all' ? 'var(--sa-primary)' : 'transparent',
+                                color: filter === 'all' ? '#fff' : 'var(--sa-text-muted)',
                                 border: 'none',
                                 borderRadius: '7px',
                                 fontSize: '12px',
@@ -111,7 +111,7 @@ export default function BusinessesTab({
                             style={{
                                 padding: '5px 12px',
                                 background: filter === 'active' ? '#10b981' : 'transparent',
-                                color: filter === 'active' ? '#fff' : '#94a3b8',
+                                color: filter === 'active' ? '#fff' : 'var(--sa-text-muted)',
                                 border: 'none',
                                 borderRadius: '7px',
                                 fontSize: '12px',
@@ -126,7 +126,7 @@ export default function BusinessesTab({
                             style={{
                                 padding: '5px 12px',
                                 background: filter === 'attention' ? '#f59e0b' : 'transparent',
-                                color: filter === 'attention' ? '#000' : '#fbbf24',
+                                color: filter === 'attention' ? '#000' : 'var(--sa-warning)',
                                 border: 'none',
                                 borderRadius: '7px',
                                 fontSize: '12px',
@@ -147,11 +147,11 @@ export default function BusinessesTab({
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         style={{
-                            background: '#0f172a',
-                            border: '1px solid #334155',
+                            background: 'var(--sa-surface)',
+                            border: '1px solid var(--sa-border-strong)',
                             borderRadius: '8px',
                             padding: '7px 12px',
-                            color: '#f8fafc',
+                            color: 'var(--sa-text)',
                             fontSize: '12px',
                             outline: 'none',
                             minWidth: '200px'
@@ -161,11 +161,11 @@ export default function BusinessesTab({
                     <button
                         onClick={onExportCSV}
                         style={{
-                            background: '#1e293b',
-                            border: '1px solid #334155',
+                            background: 'var(--sa-surface-2)',
+                            border: '1px solid var(--sa-border-strong)',
                             borderRadius: '8px',
                             padding: '7px 12px',
-                            color: '#cbd5e1',
+                            color: 'var(--sa-text-2)',
                             fontSize: '12px',
                             fontWeight: '600',
                             cursor: 'pointer',
@@ -180,7 +180,7 @@ export default function BusinessesTab({
                     <button
                         onClick={onCreate}
                         style={{
-                            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                            background: 'linear-gradient(135deg, var(--sa-primary), var(--sa-primary))',
                             border: 'none',
                             borderRadius: '8px',
                             padding: '7px 14px',
@@ -201,7 +201,7 @@ export default function BusinessesTab({
 
             {/* Businesses Grid / Table */}
             {filteredBusinesses.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8', fontSize: '14px' }}>
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--sa-text-muted)', fontSize: '14px' }}>
                     No se encontraron negocios con los filtros aplicados.
                 </div>
             ) : (
@@ -223,8 +223,8 @@ export default function BusinessesTab({
                             <div
                                 key={biz.id}
                                 style={{
-                                    background: '#0f172a',
-                                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                                    background: 'var(--sa-surface)',
+                                    border: '1px solid var(--sa-border)',
                                     borderRadius: '12px',
                                     padding: '14px 18px',
                                     display: 'flex',
@@ -248,7 +248,7 @@ export default function BusinessesTab({
                                             width: '42px',
                                             height: '42px',
                                             borderRadius: '10px',
-                                            background: '#1e293b',
+                                            background: 'var(--sa-surface-2)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -260,7 +260,7 @@ export default function BusinessesTab({
 
                                     <div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '15px', fontWeight: '800', color: '#f8fafc' }}>
+                                            <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--sa-text)' }}>
                                                 {biz.name}
                                             </span>
                                             <span style={{
@@ -275,7 +275,7 @@ export default function BusinessesTab({
                                                 {statusText}
                                             </span>
                                         </div>
-                                        <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                        <div style={{ fontSize: '12px', color: 'var(--sa-text-muted)', marginTop: '2px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                             <span>📍 {biz.location || 'Sin ubicación'}</span>
                                             <span>📁 {biz.categories?.name || biz.category || 'General'}</span>
                                             {biz.sellers && (
@@ -287,15 +287,15 @@ export default function BusinessesTab({
 
                                 {/* Quick Subscription Selector */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ fontSize: '11px', color: '#64748b' }}>Plan/Estado:</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--sa-text-muted)' }}>Plan/Estado:</span>
                                     <select
                                         value={biz.subscription_status || 'trial'}
                                         disabled={quickStatusLoading === biz.id}
                                         onChange={(e) => handleQuickStatus(biz.id, e.target.value)}
                                         style={{
-                                            background: '#1e293b',
-                                            color: '#f8fafc',
-                                            border: '1px solid #334155',
+                                            background: 'var(--sa-surface-2)',
+                                            color: 'var(--sa-text)',
+                                            border: '1px solid var(--sa-border-strong)',
                                             borderRadius: '6px',
                                             padding: '4px 8px',
                                             fontSize: '11px',
@@ -319,7 +319,7 @@ export default function BusinessesTab({
                                             background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.08))',
                                             border: '1px solid rgba(16, 185, 129, 0.3)',
                                             borderRadius: '8px',
-                                            color: '#34d399',
+                                            color: 'var(--sa-primary-text)',
                                             fontSize: '11px',
                                             fontWeight: '800',
                                             cursor: 'pointer',
@@ -337,10 +337,10 @@ export default function BusinessesTab({
                                         onClick={() => onEdit(biz)}
                                         style={{
                                             padding: '6px 10px',
-                                            background: '#1e293b',
-                                            border: '1px solid #334155',
+                                            background: 'var(--sa-surface-2)',
+                                            border: '1px solid var(--sa-border-strong)',
                                             borderRadius: '8px',
-                                            color: '#60a5fa',
+                                            color: 'var(--sa-primary-text)',
                                             fontSize: '11px',
                                             fontWeight: '700',
                                             cursor: 'pointer'
@@ -358,7 +358,7 @@ export default function BusinessesTab({
                                             background: 'rgba(245, 158, 11, 0.1)',
                                             border: '1px solid rgba(245, 158, 11, 0.3)',
                                             borderRadius: '8px',
-                                            color: '#fbbf24',
+                                            color: 'var(--sa-warning)',
                                             fontSize: '11px',
                                             fontWeight: '700',
                                             cursor: 'pointer'
@@ -376,7 +376,7 @@ export default function BusinessesTab({
                                             background: 'rgba(239, 68, 68, 0.1)',
                                             border: '1px solid rgba(239, 68, 68, 0.25)',
                                             borderRadius: '8px',
-                                            color: '#f87171',
+                                            color: 'var(--sa-danger)',
                                             fontSize: '11px',
                                             cursor: 'pointer'
                                         }}

@@ -9,20 +9,20 @@ export default function SellersTab({
 }) {
     return (
         <div style={{
-            background: 'linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(15, 23, 42, 0.85))',
+            background: 'linear-gradient(145deg, var(--sa-surface), var(--sa-surface))',
             borderRadius: '16px',
             padding: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            border: '1px solid var(--sa-border)',
             boxShadow: '0 4px 25px rgba(0, 0, 0, 0.3)'
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '17px', fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#f8fafc' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sa-text)' }}>
                     <span>👥</span> Red de Vendedores ({sellers.length})
                 </h3>
             </div>
 
             {sellers.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px 20px', color: '#94a3b8', fontSize: '13px' }}>
+                <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--sa-text-muted)', fontSize: '13px' }}>
                     No hay vendedores registrados en la plataforma.
                 </div>
             ) : (
@@ -39,7 +39,7 @@ export default function SellersTab({
                                     alignItems: 'center',
                                     gap: '14px',
                                     padding: '14px 18px',
-                                    background: '#0f172a',
+                                    background: 'var(--sa-surface)',
                                     borderRadius: '12px',
                                     border: `1px solid ${seller.is_active ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
                                     transition: 'all 0.15s ease',
@@ -52,8 +52,8 @@ export default function SellersTab({
                                     height: '42px',
                                     borderRadius: '10px',
                                     background: seller.is_active
-                                        ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
-                                        : 'linear-gradient(135deg, #64748b, #475569)',
+                                        ? 'linear-gradient(135deg, var(--sa-primary), var(--sa-primary))'
+                                        : 'linear-gradient(135deg, var(--sa-text-muted), var(--sa-border-strong))',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -66,10 +66,10 @@ export default function SellersTab({
                                 </div>
 
                                 <div style={{ flex: 1, minWidth: '200px' }}>
-                                    <div style={{ fontWeight: '800', fontSize: '15px', color: '#f8fafc' }}>
+                                    <div style={{ fontWeight: '800', fontSize: '15px', color: 'var(--sa-text)' }}>
                                         {seller.first_name} {seller.last_name}
                                     </div>
-                                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>
+                                    <div style={{ fontSize: '12px', color: 'var(--sa-text-muted)', marginBottom: '8px' }}>
                                         {seller.email} {seller.phone ? `• ${seller.phone}` : ''}
                                     </div>
                                     <div style={{ fontSize: '11px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -99,7 +99,7 @@ export default function SellersTab({
                                             borderRadius: '8px',
                                             fontSize: '11px',
                                             fontWeight: '800',
-                                            color: isSettled ? '#34d399' : '#fbbf24',
+                                            color: isSettled ? 'var(--sa-primary-text)' : 'var(--sa-warning)',
                                             cursor: 'pointer'
                                         }}
                                         title={isSettled ? 'Comisiones pagadas al vendedor' : 'Comisiones pendientes de pago'}
@@ -114,7 +114,7 @@ export default function SellersTab({
                                         borderRadius: '8px',
                                         fontSize: '11px',
                                         fontWeight: '700',
-                                        color: seller.is_active ? '#34d399' : '#f87171',
+                                        color: seller.is_active ? 'var(--sa-primary-text)' : 'var(--sa-danger)',
                                         border: `1px solid ${seller.is_active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                                     }}>
                                         {seller.is_active ? '✓ Activo' : '✗ Inactivo'}
@@ -128,10 +128,10 @@ export default function SellersTab({
                                         }}
                                         style={{
                                             padding: '6px 12px',
-                                            background: '#1e293b',
-                                            border: '1px solid #334155',
+                                            background: 'var(--sa-surface-2)',
+                                            border: '1px solid var(--sa-border-strong)',
                                             borderRadius: '8px',
-                                            color: '#e2e8f0',
+                                            color: 'var(--sa-text)',
                                             fontWeight: '700',
                                             cursor: 'pointer',
                                             fontSize: '11px'

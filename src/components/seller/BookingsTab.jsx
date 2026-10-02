@@ -28,13 +28,13 @@ const BookingsTab = ({ bookingsData }) => {
     const getStatusColor = (status) => {
         switch (status) {
             case 'confirmed':
-                return { bg: 'rgba(0, 230, 118, 0.1)', color: 'var(--primary-paddle)', label: 'Confirmada' };
+                return { bg: 'var(--sa-primary-soft)', color: 'var(--sa-primary-text)', label: 'Confirmada' };
             case 'pending':
-                return { bg: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24', label: 'Pendiente' };
+                return { bg: 'rgba(245, 158, 11, 0.1)', color: 'var(--sa-warning)', label: 'Pendiente' };
             case 'cancelled':
                 return { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', label: 'Cancelada' };
             default:
-                return { bg: 'rgba(148, 163, 184, 0.1)', color: '#94a3b8', label: status };
+                return { bg: 'rgba(148, 163, 184, 0.1)', color: 'var(--sa-text-muted)', label: status };
         }
     };
 
@@ -108,13 +108,13 @@ const BookingsTab = ({ bookingsData }) => {
             }}>
                 {/* Status Breakdown */}
                 <div style={{
-                    background: '#111827',
+                    background: 'var(--sa-surface)',
                     borderRadius: '12px',
                     padding: '16px 20px',
-                    border: '1px solid #1f2937',
+                    border: '1px solid var(--sa-surface-2)',
                     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                 }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sa-text)' }}>
                         <span>📋</span> Estados de Reservas
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -124,10 +124,10 @@ const BookingsTab = ({ bookingsData }) => {
 
                             return (
                                 <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ minWidth: '90px', fontSize: '12px', color: '#9ca3af', fontWeight: '600', textTransform: 'capitalize' }}>
+                                    <div style={{ minWidth: '90px', fontSize: '12px', color: 'var(--sa-text-muted)', fontWeight: '600', textTransform: 'capitalize' }}>
                                         {statusInfo.label}
                                     </div>
-                                    <div style={{ flex: 1, height: '24px', background: '#0f172a', borderRadius: '6px', overflow: 'hidden', position: 'relative', border: '1px solid #1e293b' }}>
+                                    <div style={{ flex: 1, height: '24px', background: 'var(--sa-surface)', borderRadius: '6px', overflow: 'hidden', position: 'relative', border: '1px solid var(--sa-surface-2)' }}>
                                         <div style={{
                                             height: '100%',
                                             width: `${percentage}%`,
@@ -137,8 +137,8 @@ const BookingsTab = ({ bookingsData }) => {
                                             transition: 'width 0.8s cubic-bezier(0.16, 1, 0.3, 1)'
                                         }} />
                                     </div>
-                                    <div style={{ minWidth: '70px', fontSize: '12px', fontWeight: '700', textAlign: 'right', color: '#f9fafb' }}>
-                                        {count} <span style={{ fontSize: '11px', color: '#6b7280' }}>({percentage}%)</span>
+                                    <div style={{ minWidth: '70px', fontSize: '12px', fontWeight: '700', textAlign: 'right', color: 'var(--sa-text)' }}>
+                                        {count} <span style={{ fontSize: '11px', color: 'var(--sa-text-muted)' }}>({percentage}%)</span>
                                     </div>
                                 </div>
                             );
@@ -148,13 +148,13 @@ const BookingsTab = ({ bookingsData }) => {
 
                 {/* Top Businesses */}
                 <div style={{
-                    background: '#111827',
+                    background: 'var(--sa-surface)',
                     borderRadius: '12px',
                     padding: '16px 20px',
-                    border: '1px solid #1f2937',
+                    border: '1px solid var(--sa-surface-2)',
                     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                 }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sa-text)' }}>
                         <span>🏆</span> Top Negocios por Reservas
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -164,15 +164,15 @@ const BookingsTab = ({ bookingsData }) => {
                                 alignItems: 'center',
                                 gap: '12px',
                                 padding: '8px 12px',
-                                background: '#1e293b',
+                                background: 'var(--sa-surface-2)',
                                 borderRadius: '8px',
-                                border: '1px solid #334155'
+                                border: '1px solid var(--sa-border-strong)'
                             }}>
                                 <div style={{
                                     width: '24px',
                                     height: '24px',
                                     borderRadius: '6px',
-                                    background: idx === 0 ? '#f59e0b' : '#3b82f6',
+                                    background: idx === 0 ? '#f59e0b' : 'var(--sa-primary)',
                                     color: 'white',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -183,10 +183,10 @@ const BookingsTab = ({ bookingsData }) => {
                                     {idx + 1}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontWeight: '700', fontSize: '12px', color: '#f9fafb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '12px', color: 'var(--sa-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {b.business_name}
                                     </div>
-                                    <div style={{ fontSize: '10px', color: '#9ca3af' }}>
+                                    <div style={{ fontSize: '10px', color: 'var(--sa-text-muted)' }}>
                                         {b.category_name}
                                     </div>
                                 </div>
@@ -194,7 +194,7 @@ const BookingsTab = ({ bookingsData }) => {
                                     <div style={{ fontWeight: '700', fontSize: '12px', color: '#10b981' }}>
                                         {b.booking_count}
                                     </div>
-                                    <div style={{ fontSize: '10px', color: '#6b7280' }}>
+                                    <div style={{ fontSize: '10px', color: 'var(--sa-text-muted)' }}>
                                         {formatCurrency(b.revenue)}
                                     </div>
                                 </div>
@@ -206,24 +206,24 @@ const BookingsTab = ({ bookingsData }) => {
 
             {/* Recent Bookings Table */}
             <div style={{
-                background: '#111827',
+                background: 'var(--sa-surface)',
                 borderRadius: '12px',
                 padding: '16px 20px',
-                border: '1px solid #1f2937',
+                border: '1px solid var(--sa-surface-2)',
                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: '700', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#f9fafb' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sa-text)' }}>
                         <span>📝</span> Últimas Reservas Registradas
                     </h3>
                     <button
                         onClick={handleExportCSV}
                         style={{
                             padding: '6px 12px',
-                            background: 'rgba(59, 130, 246, 0.1)',
+                            background: 'var(--sa-primary-soft)',
                             border: '1px solid rgba(59, 130, 246, 0.3)',
                             borderRadius: '6px',
-                            color: '#60a5fa',
+                            color: 'var(--sa-primary-text)',
                             fontSize: '11px',
                             fontWeight: '700',
                             cursor: 'pointer'
@@ -235,25 +235,25 @@ const BookingsTab = ({ bookingsData }) => {
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                         <thead>
-                            <tr style={{ borderBottom: '1px solid #1f2937', textAlign: 'left' }}>
-                                <th style={{ padding: '8px 12px', color: '#9ca3af', fontWeight: '700' }}>Cliente</th>
-                                <th style={{ padding: '8px 12px', color: '#9ca3af', fontWeight: '700' }}>Negocio</th>
-                                <th style={{ padding: '8px 12px', color: '#9ca3af', fontWeight: '700' }}>Fecha y Hora</th>
-                                <th style={{ padding: '8px 12px', color: '#9ca3af', fontWeight: '700' }}>Estado</th>
-                                <th style={{ padding: '8px 12px', color: '#9ca3af', fontWeight: '700', textAlign: 'right' }}>Monto</th>
+                            <tr style={{ borderBottom: '1px solid var(--sa-surface-2)', textAlign: 'left' }}>
+                                <th style={{ padding: '8px 12px', color: 'var(--sa-text-muted)', fontWeight: '700' }}>Cliente</th>
+                                <th style={{ padding: '8px 12px', color: 'var(--sa-text-muted)', fontWeight: '700' }}>Negocio</th>
+                                <th style={{ padding: '8px 12px', color: 'var(--sa-text-muted)', fontWeight: '700' }}>Fecha y Hora</th>
+                                <th style={{ padding: '8px 12px', color: 'var(--sa-text-muted)', fontWeight: '700' }}>Estado</th>
+                                <th style={{ padding: '8px 12px', color: 'var(--sa-text-muted)', fontWeight: '700', textAlign: 'right' }}>Monto</th>
                             </tr>
                         </thead>
                         <tbody>
                             {(bookingsData.recentBookings || []).map(b => {
                                 const statusInfo = getStatusColor(b.status);
                                 return (
-                                    <tr key={b.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                                        <td style={{ padding: '10px 12px', fontWeight: '600', color: '#f9fafb' }}>
+                                    <tr key={b.id} style={{ borderBottom: '1px solid var(--sa-hover)' }}>
+                                        <td style={{ padding: '10px 12px', fontWeight: '600', color: 'var(--sa-text)' }}>
                                             {b.customer_name || 'Cliente'}
-                                            {b.customer_phone && <div style={{ fontSize: '10px', color: '#6b7280' }}>{b.customer_phone}</div>}
+                                            {b.customer_phone && <div style={{ fontSize: '10px', color: 'var(--sa-text-muted)' }}>{b.customer_phone}</div>}
                                         </td>
-                                        <td style={{ padding: '10px 12px', color: '#9ca3af' }}>{b.business_name || b.businesses?.name || 'Negocio'}</td>
-                                        <td style={{ padding: '10px 12px', color: '#9ca3af' }}>{formatDate(b.created_at)}</td>
+                                        <td style={{ padding: '10px 12px', color: 'var(--sa-text-muted)' }}>{b.business_name || b.businesses?.name || 'Negocio'}</td>
+                                        <td style={{ padding: '10px 12px', color: 'var(--sa-text-muted)' }}>{formatDate(b.created_at)}</td>
                                         <td style={{ padding: '10px 12px' }}>
                                             <span style={{
                                                 padding: '3px 8px',
@@ -283,31 +283,31 @@ const BookingsTab = ({ bookingsData }) => {
 const BookingMetricCard = ({ icon, label, value, subtitle }) => (
     <div style={{
         padding: '14px 16px',
-        background: '#111827',
+        background: 'var(--sa-surface)',
         borderRadius: '12px',
-        border: '1px solid #1f2937',
+        border: '1px solid var(--sa-surface-2)',
         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
     }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <div style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--sa-text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {label}
             </div>
             <div style={{ 
                 fontSize: '16px', 
                 width: '32px',
                 height: '32px',
-                background: '#1e293b',
+                background: 'var(--sa-surface-2)',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
             }}>{icon}</div>
         </div>
-        <div style={{ fontSize: '22px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.3px', marginBottom: '2px' }}>
+        <div style={{ fontSize: '22px', fontWeight: '800', color: 'var(--sa-text)', letterSpacing: '-0.3px', marginBottom: '2px' }}>
             {value}
         </div>
         {subtitle && (
-            <div style={{ fontSize: '11px', color: '#6b7280' }}>
+            <div style={{ fontSize: '11px', color: 'var(--sa-text-muted)' }}>
                 {subtitle}
             </div>
         )}

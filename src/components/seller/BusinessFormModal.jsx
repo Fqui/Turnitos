@@ -385,7 +385,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
             style={{
                 position: 'fixed',
                 inset: 0,
-                background: 'rgba(5, 7, 15, 0.82)',
+                background: 'var(--sa-overlay)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -402,15 +402,15 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 exit={{ opacity: 0, scale: 0.94, y: 15 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                 style={{
-                    background: 'linear-gradient(170deg, #131722 0%, #0d1017 100%)',
+                    background: 'var(--sa-surface)',
                     borderRadius: '24px',
                     maxWidth: '740px',
                     width: '100%',
                     maxHeight: '90vh',
                     display: 'flex',
                     flexDirection: 'column',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    boxShadow: '0 25px 70px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.05) inset',
+                    border: '1px solid var(--sa-border-strong)',
+                    boxShadow: '0 25px 70px rgba(0, 0, 0, 0.7), 0 0 1px 1px var(--sa-hover) inset',
                     position: 'relative',
                     overflow: 'hidden'
                 }}
@@ -419,11 +419,11 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 {/* Header */}
                 <div style={{
                     padding: '24px 28px 20px',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderBottom: '1px solid var(--sa-border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    background: 'rgba(255, 255, 255, 0.02)'
+                    background: 'var(--sa-hover)'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                         <div style={{
@@ -431,7 +431,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             height: '46px',
                             borderRadius: '14px',
                             background: isSport
-                                ? 'linear-gradient(135deg, rgba(0, 230, 118, 0.2), rgba(0, 230, 118, 0.05))'
+                                ? 'linear-gradient(135deg, var(--sa-primary-soft), var(--sa-primary-soft))'
                                 : isService
                                 ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.05))'
                                 : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.05))',
@@ -445,7 +445,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                         </div>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+                                <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: 'var(--sa-text)', letterSpacing: '-0.02em' }}>
                                     {business ? 'Editar Negocio' : 'Nuevo Negocio'}
                                 </h2>
                                 <span style={{
@@ -455,14 +455,14 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     borderRadius: '6px',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.04em',
-                                    background: isSport ? 'rgba(0, 230, 118, 0.15)' : isService ? 'rgba(99, 102, 241, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                    color: isSport ? '#00E676' : isService ? '#818CF8' : '#FBBF24',
+                                    background: isSport ? 'var(--sa-primary-soft)' : isService ? 'rgba(99, 102, 241, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                    color: isSport ? 'var(--sa-primary)' : isService ? '#818CF8' : 'var(--sa-warning)',
                                     border: `1px solid ${isSport ? 'rgba(0, 230, 118, 0.3)' : isService ? 'rgba(99, 102, 241, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
                                 }}>
                                     {isSport ? 'Deportes' : isService ? 'Servicios' : 'Alquiler'}
                                 </span>
                             </div>
-                            <p style={{ margin: '3px 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                            <p style={{ margin: '3px 0 0', fontSize: '13px', color: 'var(--sa-text-muted)' }}>
                                 {business ? 'Actualizá los datos de configuración y suscripción' : 'Completá la información del club o local comercial'}
                             </p>
                         </div>
@@ -475,9 +475,9 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             width: '36px',
                             height: '36px',
                             borderRadius: '10px',
-                            background: 'rgba(255, 255, 255, 0.06)',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            color: 'rgba(255, 255, 255, 0.7)',
+                            background: 'var(--sa-border)',
+                            border: '1px solid var(--sa-border-strong)',
+                            color: 'var(--sa-text-muted)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -486,11 +486,11 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             transition: 'all 0.2s'
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                            e.currentTarget.style.background = 'var(--sa-border-strong)';
                             e.currentTarget.style.color = '#fff';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                            e.currentTarget.style.background = 'var(--sa-border)';
                             e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
                         }}
                     >
@@ -513,22 +513,22 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 >
                     {/* SECTION 1: IDENTIDAD */}
                     <div style={{
-                        background: 'rgba(255, 255, 255, 0.025)',
-                        border: '1px solid rgba(255, 255, 255, 0.07)',
+                        background: 'var(--sa-hover)',
+                        border: '1px solid var(--sa-border)',
                         borderRadius: '16px',
                         padding: '18px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '16px'
                     }}>
-                        <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255, 255, 255, 0.45)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--sa-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span>🏢</span> Identidad y Enlace Web
                         </div>
 
                         {/* Name */}
                         <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
-                                Nombre del Negocio <span style={{ color: '#00E676' }}>*</span>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
+                                Nombre del Negocio <span style={{ color: 'var(--sa-primary)' }}>*</span>
                             </label>
                             <input
                                 type="text"
@@ -539,20 +539,20 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                 style={{
                                     width: '100%',
                                     padding: '12px 14px',
-                                    background: 'rgba(0, 0, 0, 0.35)',
-                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                    background: 'var(--sa-surface-2)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '10px',
-                                    color: 'white',
+                                    color: 'var(--sa-text)',
                                     fontSize: '14px',
                                     outline: 'none',
                                     transition: 'border-color 0.2s, box-shadow 0.2s'
                                 }}
                                 onFocus={(e) => {
-                                    e.target.style.borderColor = '#00E676';
-                                    e.target.style.boxShadow = '0 0 0 3px rgba(0, 230, 118, 0.15)';
+                                    e.target.style.borderColor = 'var(--sa-primary)';
+                                    e.target.style.boxShadow = '0 0 0 3px var(--sa-primary-soft)';
                                 }}
                                 onBlur={(e) => {
-                                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                                    e.target.style.borderColor = 'var(--sa-border-strong)';
                                     e.target.style.boxShadow = 'none';
                                 }}
                             />
@@ -561,8 +561,8 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                         {/* Slug */}
                         <div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                <label style={{ fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
-                                    URL Pública (Slug) <span style={{ color: '#00E676' }}>*</span>
+                                <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
+                                    URL Pública (Slug) <span style={{ color: 'var(--sa-primary)' }}>*</span>
                                 </label>
                                 {isSlugManuallyEdited && (
                                     <button
@@ -574,7 +574,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                         style={{
                                             background: 'transparent',
                                             border: 'none',
-                                            color: '#00E676',
+                                            color: 'var(--sa-primary)',
                                             fontSize: '11px',
                                             fontWeight: '600',
                                             cursor: 'pointer',
@@ -588,19 +588,19 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                background: 'rgba(0, 0, 0, 0.35)',
-                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                background: 'var(--sa-surface-2)',
+                                border: '1px solid var(--sa-border-strong)',
                                 borderRadius: '10px',
                                 overflow: 'hidden'
                             }}>
                                 <span style={{
                                     padding: '12px 14px',
-                                    color: 'rgba(255, 255, 255, 0.45)',
+                                    color: 'var(--sa-text-muted)',
                                     fontSize: '13px',
                                     fontWeight: '500',
                                     userSelect: 'none',
-                                    borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-                                    background: 'rgba(255, 255, 255, 0.02)',
+                                    borderRight: '1px solid var(--sa-border)',
+                                    background: 'var(--sa-hover)',
                                     whiteSpace: 'nowrap'
                                 }}>
                                     turnitoslr.com/
@@ -616,7 +616,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                         padding: '12px 14px',
                                         background: 'transparent',
                                         border: 'none',
-                                        color: '#00E676',
+                                        color: 'var(--sa-primary)',
                                         fontSize: '14px',
                                         fontWeight: '600',
                                         outline: 'none'
@@ -628,23 +628,23 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
                     {/* SECTION 2: CATEGORÍA & SUBCATEGORÍAS */}
                     <div style={{
-                        background: 'rgba(255, 255, 255, 0.025)',
-                        border: '1px solid rgba(255, 255, 255, 0.07)',
+                        background: 'var(--sa-hover)',
+                        border: '1px solid var(--sa-border)',
                         borderRadius: '16px',
                         padding: '18px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '16px'
                     }}>
-                        <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255, 255, 255, 0.45)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--sa-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span>🏷️</span> Categorización del Negocio
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                             {/* Category Dropdown */}
                             <div ref={categoryRef} style={{ position: 'relative' }}>
-                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
-                                    Categoría Principal <span style={{ color: '#00E676' }}>*</span>
+                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
+                                    Categoría Principal <span style={{ color: 'var(--sa-primary)' }}>*</span>
                                 </label>
                                 <button
                                     type="button"
@@ -652,10 +652,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     style={{
                                         width: '100%',
                                         padding: '12px 14px',
-                                        background: 'rgba(0, 0, 0, 0.35)',
-                                        border: categoryOpen ? '1px solid #00E676' : '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--sa-surface-2)',
+                                        border: categoryOpen ? '1px solid var(--sa-primary)' : '1px solid var(--sa-border-strong)',
                                         borderRadius: '10px',
-                                        color: 'white',
+                                        color: 'var(--sa-text)',
                                         fontSize: '14px',
                                         outline: 'none',
                                         textAlign: 'left',
@@ -673,7 +673,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                 <strong style={{ fontWeight: '600' }}>{currentCategory.name}</strong>
                                             </>
                                         ) : (
-                                            <span style={{ color: 'rgba(255,255,255,0.4)' }}>Elegir categoría...</span>
+                                            <span style={{ color: 'var(--sa-text-muted)' }}>Elegir categoría...</span>
                                         )}
                                     </span>
                                     <motion.svg
@@ -698,8 +698,8 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                 left: 0,
                                                 right: 0,
                                                 zIndex: 1000,
-                                                backgroundColor: '#161a24',
-                                                border: '1px solid rgba(255, 255, 255, 0.18)',
+                                                backgroundColor: 'var(--sa-surface)',
+                                                border: '1px solid var(--sa-border-strong)',
                                                 borderRadius: '12px',
                                                 boxShadow: '0 15px 45px rgba(0,0,0,0.7)',
                                                 maxHeight: '280px',
@@ -728,18 +728,18 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             gap: '10px',
-                                                            backgroundColor: isSel ? 'rgba(0, 230, 118, 0.12)' : 'transparent',
-                                                            borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                                            backgroundColor: isSel ? 'var(--sa-primary-soft)' : 'transparent',
+                                                            borderBottom: '1px solid var(--sa-hover)'
                                                         }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isSel ? 'rgba(0, 230, 118, 0.18)' : 'rgba(255,255,255,0.06)'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isSel ? 'rgba(0, 230, 118, 0.12)' : 'transparent'}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isSel ? 'var(--sa-primary-soft)' : 'var(--sa-border)'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isSel ? 'var(--sa-primary-soft)' : 'transparent'}
                                                     >
                                                         <span style={{ fontSize: '18px' }}>{cat.icon || '🏷️'}</span>
-                                                        <span style={{ flex: 1, color: isSel ? '#00E676' : 'white', fontSize: '13px', fontWeight: isSel ? '700' : '500' }}>
+                                                        <span style={{ flex: 1, color: isSel ? 'var(--sa-primary)' : 'white', fontSize: '13px', fontWeight: isSel ? '700' : '500' }}>
                                                             {cat.name}
                                                         </span>
                                                         {isSel && (
-                                                            <svg width="14" height="14" viewBox="0 0 18 18" fill="#00E676">
+                                                            <svg width="14" height="14" viewBox="0 0 18 18" fill="var(--sa-primary)">
                                                                 <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
                                                             </svg>
                                                         )}
@@ -754,11 +754,11 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             {/* Subcategories Selector */}
                             <div ref={subcategoryRef} style={{ position: 'relative' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                    <label style={{ fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
+                                    <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
                                         Subcategorías
                                     </label>
                                     {(formData.subcategory_ids?.length > 0) && (
-                                        <span style={{ fontSize: '11px', color: '#00E676', fontWeight: '700' }}>
+                                        <span style={{ fontSize: '11px', color: 'var(--sa-primary)', fontWeight: '700' }}>
                                             {formData.subcategory_ids.length} elegida{formData.subcategory_ids.length !== 1 ? 's' : ''}
                                         </span>
                                     )}
@@ -769,10 +769,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     style={{
                                         width: '100%',
                                         padding: '12px 14px',
-                                        background: 'rgba(0, 0, 0, 0.35)',
-                                        border: subcategoryOpen ? '1px solid #00E676' : '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--sa-surface-2)',
+                                        border: subcategoryOpen ? '1px solid var(--sa-primary)' : '1px solid var(--sa-border-strong)',
                                         borderRadius: '10px',
-                                        color: 'white',
+                                        color: 'var(--sa-text)',
                                         fontSize: '13px',
                                         outline: 'none',
                                         textAlign: 'left',
@@ -821,8 +821,8 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                 left: 0,
                                                 right: 0,
                                                 zIndex: 1000,
-                                                backgroundColor: '#161a24',
-                                                border: '1px solid rgba(255, 255, 255, 0.18)',
+                                                backgroundColor: 'var(--sa-surface)',
+                                                border: '1px solid var(--sa-border-strong)',
                                                 borderRadius: '12px',
                                                 boxShadow: '0 15px 45px rgba(0,0,0,0.7)',
                                                 maxHeight: '300px',
@@ -830,7 +830,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                             }}
                                         >
                                             {/* Search box */}
-                                            <div style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'sticky', top: 0, background: '#161a24', zIndex: 2 }}>
+                                            <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--sa-border)', position: 'sticky', top: 0, background: 'var(--sa-surface)', zIndex: 2 }}>
                                                 <input
                                                     type="text"
                                                     value={subSearch}
@@ -840,10 +840,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                     style={{
                                                         width: '100%',
                                                         padding: '7px 10px',
-                                                        background: 'rgba(255,255,255,0.08)',
-                                                        border: '1px solid rgba(255,255,255,0.12)',
+                                                        background: 'var(--sa-border)',
+                                                        border: '1px solid var(--sa-border-strong)',
                                                         borderRadius: '8px',
-                                                        color: 'white',
+                                                        color: 'var(--sa-text)',
                                                         fontSize: '12px',
                                                         outline: 'none'
                                                     }}
@@ -852,7 +852,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
                                             {/* Quick Create Button */}
                                             {subSearch.trim() && !hasExactMatch && (
-                                                <div style={{ padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                                                <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--sa-border)' }}>
                                                     <button
                                                         type="button"
                                                         disabled={creatingSub}
@@ -863,10 +863,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                         style={{
                                                             width: '100%',
                                                             padding: '7px 10px',
-                                                            background: 'rgba(0, 230, 118, 0.15)',
-                                                            border: '1px dashed #00E676',
+                                                            background: 'var(--sa-primary-soft)',
+                                                            border: '1px dashed var(--sa-primary)',
                                                             borderRadius: '8px',
-                                                            color: '#00E676',
+                                                            color: 'var(--sa-primary)',
                                                             fontSize: '12px',
                                                             fontWeight: '700',
                                                             cursor: 'pointer'
@@ -893,16 +893,16 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             gap: '10px',
-                                                            backgroundColor: isSelected ? 'rgba(0, 230, 118, 0.12)' : 'transparent',
-                                                            borderBottom: '1px solid rgba(255,255,255,0.04)'
+                                                            backgroundColor: isSelected ? 'var(--sa-primary-soft)' : 'transparent',
+                                                            borderBottom: '1px solid var(--sa-hover)'
                                                         }}
                                                     >
                                                         <div style={{
                                                             width: '16px',
                                                             height: '16px',
                                                             borderRadius: '4px',
-                                                            border: isSelected ? '2px solid #00E676' : '2px solid rgba(255,255,255,0.3)',
-                                                            backgroundColor: isSelected ? '#00E676' : 'transparent',
+                                                            border: isSelected ? '2px solid var(--sa-primary)' : '2px solid rgba(255,255,255,0.3)',
+                                                            backgroundColor: isSelected ? 'var(--sa-primary)' : 'transparent',
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
@@ -921,14 +921,14 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                 );
                                             })}
 
-                                            <div style={{ padding: '6px 10px', display: 'flex', justifyContent: 'flex-end', position: 'sticky', bottom: 0, background: '#161a24' }}>
+                                            <div style={{ padding: '6px 10px', display: 'flex', justifyContent: 'flex-end', position: 'sticky', bottom: 0, background: 'var(--sa-surface)' }}>
                                                 <button
                                                     type="button"
                                                     onClick={() => setSubcategoryOpen(false)}
                                                     style={{
-                                                        background: '#00E676',
+                                                        background: 'var(--sa-primary)',
                                                         border: 'none',
-                                                        color: '#000',
+                                                        color: 'var(--sa-on-primary)',
                                                         padding: '4px 12px',
                                                         borderRadius: '6px',
                                                         fontSize: '12px',
@@ -952,9 +952,9 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                 <span
                                                     key={subId}
                                                     style={{
-                                                        background: 'rgba(0, 230, 118, 0.15)',
+                                                        background: 'var(--sa-primary-soft)',
                                                         border: '1px solid rgba(0, 230, 118, 0.35)',
-                                                        color: '#00E676',
+                                                        color: 'var(--sa-primary)',
                                                         borderRadius: '12px',
                                                         padding: '2px 8px',
                                                         fontSize: '11px',
@@ -974,7 +974,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                         style={{
                                                             background: 'transparent',
                                                             border: 'none',
-                                                            color: '#00E676',
+                                                            color: 'var(--sa-primary)',
                                                             cursor: 'pointer',
                                                             padding: 0,
                                                             fontSize: '12px'
@@ -994,7 +994,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                     {/* SECTION 3: RECURSOS Y PLAN (Solo si no es alquiler puro) */}
                     {!isRental && (
                         <div style={{
-                            background: isSport ? 'rgba(0, 230, 118, 0.04)' : 'rgba(99, 102, 241, 0.04)',
+                            background: isSport ? 'var(--sa-primary-soft)' : 'rgba(99, 102, 241, 0.04)',
                             border: `1px solid ${isSport ? 'rgba(0, 230, 118, 0.25)' : 'rgba(99, 102, 241, 0.25)'}`,
                             borderRadius: '16px',
                             padding: '18px',
@@ -1003,14 +1003,14 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             gap: '14px'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: isSport ? '#00E676' : '#818CF8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: isSport ? 'var(--sa-primary)' : '#818CF8', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <span>{isSport ? '🏟️' : '👥'}</span> {isSport ? 'Configuración de Canchas' : 'Configuración de Especialistas / Agendas'}
                                 </div>
                                 <span style={{
                                     fontSize: '11px',
                                     fontWeight: '700',
-                                    color: isSport ? '#00E676' : '#818CF8',
-                                    background: isSport ? 'rgba(0, 230, 118, 0.12)' : 'rgba(99, 102, 241, 0.12)',
+                                    color: isSport ? 'var(--sa-primary)' : '#818CF8',
+                                    background: isSport ? 'var(--sa-primary-soft)' : 'rgba(99, 102, 241, 0.12)',
                                     padding: '3px 8px',
                                     borderRadius: '6px',
                                     border: `1px solid ${isSport ? 'rgba(0, 230, 118, 0.3)' : 'rgba(99, 102, 241, 0.3)'}`
@@ -1021,7 +1021,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
+                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
                                         {isSport ? 'Cantidad de Canchas' : 'Cantidad de Especialistas / Agendas'}
                                     </label>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1032,9 +1032,9 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                 width: '40px',
                                                 height: '40px',
                                                 borderRadius: '10px',
-                                                background: 'rgba(255, 255, 255, 0.08)',
-                                                border: '1px solid rgba(255, 255, 255, 0.15)',
-                                                color: 'white',
+                                                background: 'var(--sa-border)',
+                                                border: '1px solid var(--sa-border-strong)',
+                                                color: 'var(--sa-text)',
                                                 fontSize: '18px',
                                                 fontWeight: '700',
                                                 cursor: 'pointer',
@@ -1055,10 +1055,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                 width: '80px',
                                                 textAlign: 'center',
                                                 padding: '10px',
-                                                background: 'rgba(0, 0, 0, 0.4)',
+                                                background: 'var(--sa-surface-2)',
                                                 border: `1px solid ${isSport ? 'rgba(0, 230, 118, 0.4)' : 'rgba(99, 102, 241, 0.4)'}`,
                                                 borderRadius: '10px',
-                                                color: isSport ? '#00E676' : '#818CF8',
+                                                color: isSport ? 'var(--sa-primary)' : '#818CF8',
                                                 fontWeight: '800',
                                                 fontSize: '17px',
                                                 outline: 'none'
@@ -1071,9 +1071,9 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                 width: '40px',
                                                 height: '40px',
                                                 borderRadius: '10px',
-                                                background: 'rgba(255, 255, 255, 0.08)',
-                                                border: '1px solid rgba(255, 255, 255, 0.15)',
-                                                color: 'white',
+                                                background: 'var(--sa-border)',
+                                                border: '1px solid var(--sa-border-strong)',
+                                                color: 'var(--sa-text)',
                                                 fontSize: '18px',
                                                 fontWeight: '700',
                                                 cursor: 'pointer',
@@ -1086,7 +1086,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                         </button>
                                     </div>
                                 </div>
-                                <div style={{ flex: 2, fontSize: '12px', color: 'rgba(255, 255, 255, 0.55)', lineHeight: 1.5, background: 'rgba(0, 0, 0, 0.25)', padding: '10px 14px', borderRadius: '10px' }}>
+                                <div style={{ flex: 2, fontSize: '12px', color: 'var(--sa-text-muted)', lineHeight: 1.5, background: 'var(--sa-surface-2)', padding: '10px 14px', borderRadius: '10px' }}>
                                     ⚡ Se generarán automáticamente <strong>{count} {isSport ? 'canchas' : 'especialistas'}</strong> y el negocio se sincronizará con el calendario correspondiente.
                                 </div>
                             </div>
@@ -1095,21 +1095,21 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
                     {/* SECTION 4: UBICACIÓN Y CONTACTO */}
                     <div style={{
-                        background: 'rgba(255, 255, 255, 0.025)',
-                        border: '1px solid rgba(255, 255, 255, 0.07)',
+                        background: 'var(--sa-hover)',
+                        border: '1px solid var(--sa-border)',
                         borderRadius: '16px',
                         padding: '18px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '14px'
                     }}>
-                        <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255, 255, 255, 0.45)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--sa-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span>📍</span> Ubicación y Contacto
                         </div>
 
                         <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
-                                Dirección / Ubicación <span style={{ color: '#00E676' }}>*</span>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
+                                Dirección / Ubicación <span style={{ color: 'var(--sa-primary)' }}>*</span>
                             </label>
                             <input
                                 type="text"
@@ -1120,10 +1120,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                 style={{
                                     width: '100%',
                                     padding: '12px 14px',
-                                    background: 'rgba(0, 0, 0, 0.35)',
-                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                    background: 'var(--sa-surface-2)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '10px',
-                                    color: 'white',
+                                    color: 'var(--sa-text)',
                                     fontSize: '14px',
                                     outline: 'none'
                                 }}
@@ -1132,7 +1132,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
+                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
                                     WhatsApp
                                 </label>
                                 <input
@@ -1143,10 +1143,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     style={{
                                         width: '100%',
                                         padding: '11px 12px',
-                                        background: 'rgba(0, 0, 0, 0.35)',
-                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--sa-surface-2)',
+                                        border: '1px solid var(--sa-border-strong)',
                                         borderRadius: '10px',
-                                        color: 'white',
+                                        color: 'var(--sa-text)',
                                         fontSize: '13px',
                                         outline: 'none'
                                     }}
@@ -1154,7 +1154,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
+                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
                                     Instagram
                                 </label>
                                 <input
@@ -1165,10 +1165,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     style={{
                                         width: '100%',
                                         padding: '11px 12px',
-                                        background: 'rgba(0, 0, 0, 0.35)',
-                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--sa-surface-2)',
+                                        border: '1px solid var(--sa-border-strong)',
                                         borderRadius: '10px',
-                                        color: 'white',
+                                        color: 'var(--sa-text)',
                                         fontSize: '13px',
                                         outline: 'none'
                                     }}
@@ -1176,7 +1176,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
+                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
                                     TikTok
                                 </label>
                                 <input
@@ -1187,10 +1187,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     style={{
                                         width: '100%',
                                         padding: '11px 12px',
-                                        background: 'rgba(0, 0, 0, 0.35)',
-                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--sa-surface-2)',
+                                        border: '1px solid var(--sa-border-strong)',
                                         borderRadius: '10px',
-                                        color: 'white',
+                                        color: 'var(--sa-text)',
                                         fontSize: '13px',
                                         outline: 'none'
                                     }}
@@ -1198,7 +1198,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
+                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
                                     Facebook
                                 </label>
                                 <input
@@ -1209,10 +1209,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     style={{
                                         width: '100%',
                                         padding: '11px 12px',
-                                        background: 'rgba(0, 0, 0, 0.35)',
-                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--sa-surface-2)',
+                                        border: '1px solid var(--sa-border-strong)',
                                         borderRadius: '10px',
-                                        color: 'white',
+                                        color: 'var(--sa-text)',
                                         fontSize: '13px',
                                         outline: 'none'
                                     }}
@@ -1223,13 +1223,13 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
                     {/* SECTION 5: VENDEDOR ASIGNADO */}
                     <div style={{
-                        background: 'rgba(255, 255, 255, 0.025)',
-                        border: '1px solid rgba(255, 255, 255, 0.07)',
+                        background: 'var(--sa-hover)',
+                        border: '1px solid var(--sa-border)',
                         borderRadius: '16px',
                         padding: '18px'
                     }}>
                         <div ref={sellerRef} style={{ position: 'relative' }}>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>
                                 Vendedor / Comisionista Asignado
                             </label>
                             <button
@@ -1238,10 +1238,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                 style={{
                                     width: '100%',
                                     padding: '12px 14px',
-                                    background: 'rgba(0, 0, 0, 0.35)',
-                                    border: sellerOpen ? '1px solid #00E676' : '1px solid rgba(255, 255, 255, 0.12)',
+                                    background: 'var(--sa-surface-2)',
+                                    border: sellerOpen ? '1px solid var(--sa-primary)' : '1px solid var(--sa-border-strong)',
                                     borderRadius: '10px',
-                                    color: 'white',
+                                    color: 'var(--sa-text)',
                                     fontSize: '14px',
                                     outline: 'none',
                                     textAlign: 'left',
@@ -1284,8 +1284,8 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                             left: 0,
                                             right: 0,
                                             zIndex: 1000,
-                                            backgroundColor: '#161a24',
-                                            border: '1px solid rgba(255, 255, 255, 0.18)',
+                                            backgroundColor: 'var(--sa-surface)',
+                                            border: '1px solid var(--sa-border-strong)',
                                             borderRadius: '12px',
                                             boxShadow: '0 15px 45px rgba(0,0,0,0.7)',
                                             maxHeight: '220px',
@@ -1303,13 +1303,13 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                backgroundColor: !formData.seller_id ? 'rgba(0, 230, 118, 0.12)' : 'transparent',
-                                                borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                                backgroundColor: !formData.seller_id ? 'var(--sa-primary-soft)' : 'transparent',
+                                                borderBottom: '1px solid var(--sa-hover)'
                                             }}
                                         >
-                                            <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '13px' }}>Sin vendedor</span>
+                                            <span style={{ color: 'var(--sa-text-muted)', fontSize: '13px' }}>Sin vendedor</span>
                                             {!formData.seller_id && (
-                                                <svg width="14" height="14" viewBox="0 0 18 18" fill="#00E676">
+                                                <svg width="14" height="14" viewBox="0 0 18 18" fill="var(--sa-primary)">
                                                     <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
                                                 </svg>
                                             )}
@@ -1330,15 +1330,15 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'space-between',
-                                                        backgroundColor: isSel ? 'rgba(0, 230, 118, 0.12)' : 'transparent',
-                                                        borderBottom: '1px solid rgba(255,255,255,0.05)'
+                                                        backgroundColor: isSel ? 'var(--sa-primary-soft)' : 'transparent',
+                                                        borderBottom: '1px solid var(--sa-hover)'
                                                     }}
                                                 >
-                                                    <span style={{ color: isSel ? '#00E676' : 'white', fontSize: '13px', fontWeight: isSel ? '700' : '400' }}>
+                                                    <span style={{ color: isSel ? 'var(--sa-primary)' : 'white', fontSize: '13px', fontWeight: isSel ? '700' : '400' }}>
                                                         {`${seller.first_name || ''} ${seller.last_name || ''}`.trim() || seller.email}
                                                     </span>
                                                     {isSel && (
-                                                        <svg width="14" height="14" viewBox="0 0 18 18" fill="#00E676">
+                                                        <svg width="14" height="14" viewBox="0 0 18 18" fill="var(--sa-primary)">
                                                             <path d="M6.5 12.5L3 9l1.5-1.5 2 2L13.5 3l1.5 1.5z" />
                                                         </svg>
                                                     )}
@@ -1353,23 +1353,23 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
                     {/* SECTION 6: ESTADO DE SUSCRIPCIÓN */}
                     <div style={{
-                        background: 'rgba(255, 255, 255, 0.025)',
-                        border: '1px solid rgba(255, 255, 255, 0.07)',
+                        background: 'var(--sa-hover)',
+                        border: '1px solid var(--sa-border)',
                         borderRadius: '16px',
                         padding: '18px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '12px'
                     }}>
-                        <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255, 255, 255, 0.45)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--sa-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span>💳</span> Estado de Suscripción Comercial
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                             {[
-                                { id: 'trial', label: '⏱ En Prueba', color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)' },
-                                { id: 'active', label: '✓ Activo / Al día', color: '#00E676', bg: 'rgba(0, 230, 118, 0.15)', border: 'rgba(0, 230, 118, 0.4)' },
-                                { id: 'inactive', label: '✗ Inactivo', color: '#f87171', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)' }
+                                { id: 'trial', label: '⏱ En Prueba', color: 'var(--sa-warning)', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)' },
+                                { id: 'active', label: '✓ Activo / Al día', color: 'var(--sa-primary)', bg: 'var(--sa-primary-soft)', border: 'rgba(0, 230, 118, 0.4)' },
+                                { id: 'inactive', label: '✗ Inactivo', color: 'var(--sa-danger)', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)' }
                             ].map(st => {
                                 const isSel = (formData.subscription_status || 'trial') === st.id;
                                 return (
@@ -1380,7 +1380,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                         style={{
                                             padding: '10px 8px',
                                             borderRadius: '10px',
-                                            border: `1px solid ${isSel ? st.color : 'rgba(255, 255, 255, 0.1)'}`,
+                                            border: `1px solid ${isSel ? st.color : 'var(--sa-border-strong)'}`,
                                             background: isSel ? st.bg : 'rgba(0, 0, 0, 0.3)',
                                             color: isSel ? st.color : 'rgba(255, 255, 255, 0.7)',
                                             fontWeight: isSel ? '700' : '500',
@@ -1403,24 +1403,24 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                         gap: '12px',
                         justifyContent: 'flex-end',
                         paddingTop: '8px',
-                        borderTop: '1px solid rgba(255, 255, 255, 0.08)'
+                        borderTop: '1px solid var(--sa-border)'
                     }}>
                         <button
                             type="button"
                             onClick={onClose}
                             style={{
                                 padding: '12px 22px',
-                                background: 'rgba(255, 255, 255, 0.06)',
-                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                background: 'var(--sa-border)',
+                                border: '1px solid var(--sa-border-strong)',
                                 borderRadius: '12px',
-                                color: 'rgba(255, 255, 255, 0.85)',
+                                color: 'var(--sa-text)',
                                 cursor: 'pointer',
                                 fontWeight: '600',
                                 fontSize: '14px',
                                 transition: 'all 0.2s'
                             }}
-                            onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.12)'}
-                            onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.06)'}
+                            onMouseEnter={(e) => e.target.style.background = 'var(--sa-border-strong)'}
+                            onMouseLeave={(e) => e.target.style.background = 'var(--sa-border)'}
                         >
                             Cancelar
                         </button>
@@ -1429,10 +1429,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             disabled={loading}
                             style={{
                                 padding: '12px 28px',
-                                background: loading ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(135deg, #00E676 0%, #059669 100%)',
+                                background: loading ? 'var(--sa-border-strong)' : 'linear-gradient(135deg, var(--sa-primary) 0%, #059669 100%)',
                                 border: 'none',
                                 borderRadius: '12px',
-                                color: loading ? 'rgba(255, 255, 255, 0.5)' : '#000000',
+                                color: 'var(--sa-on-primary)',
                                 fontWeight: '800',
                                 cursor: loading ? 'not-allowed' : 'pointer',
                                 fontSize: '14px',
@@ -1484,14 +1484,14 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             transition={{ duration: 0.22 }}
                             onClick={(e) => e.stopPropagation()}
                             style={{
-                                background: 'linear-gradient(170deg, #161b26 0%, #0f131a 100%)',
+                                background: 'var(--sa-surface)',
                                 borderRadius: '24px',
                                 padding: '36px',
                                 maxWidth: '520px',
                                 width: '100%',
                                 border: '1px solid rgba(0, 230, 118, 0.35)',
-                                boxShadow: '0 25px 65px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 230, 118, 0.15)',
-                                color: 'white'
+                                boxShadow: '0 25px 65px rgba(0, 0, 0, 0.8), 0 0 30px var(--sa-primary-soft)',
+                                color: 'var(--sa-text)'
                             }}
                         >
                             <div style={{ textAlign: 'center', marginBottom: '24px' }}>
@@ -1500,14 +1500,14 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     height: '64px',
                                     margin: '0 auto 14px',
                                     borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #00E676, #059669)',
+                                    background: 'linear-gradient(135deg, var(--sa-primary), #059669)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     fontSize: '30px',
                                     boxShadow: '0 0 25px rgba(0, 230, 118, 0.4)'
                                 }}>✓</div>
-                                <h2 style={{ fontSize: '24px', fontWeight: '800', margin: 0, color: '#fff' }}>
+                                <h2 style={{ fontSize: '24px', fontWeight: '800', margin: 0, color: 'var(--sa-text)' }}>
                                     ¡Negocio Creado con Éxito!
                                 </h2>
                                 <p style={{ opacity: 0.7, marginTop: '6px', fontSize: '13px' }}>
@@ -1525,7 +1525,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                 background: 'rgba(245, 158, 11, 0.1)',
                                 borderRadius: '10px',
                                 border: '1px solid rgba(245, 158, 11, 0.3)',
-                                color: '#fbbf24',
+                                color: 'var(--sa-warning)',
                                 fontSize: '12px',
                                 textAlign: 'center'
                             }}>
@@ -1542,10 +1542,10 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     style={{
                                         width: '100%',
                                         padding: '12px',
-                                        background: 'linear-gradient(135deg, #00E676, #059669)',
+                                        background: 'linear-gradient(135deg, var(--sa-primary), #059669)',
                                         border: 'none',
                                         borderRadius: '12px',
-                                        color: '#000',
+                                        color: 'var(--sa-on-primary)',
                                         cursor: 'pointer',
                                         fontWeight: '800',
                                         fontSize: '14px',
@@ -1589,8 +1589,8 @@ const CredentialsRow = ({ label, value }) => {
             alignItems: 'center',
             gap: '10px',
             padding: '10px 12px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'var(--sa-hover)',
+            border: '1px solid var(--sa-border-strong)',
             borderRadius: '10px',
             marginBottom: '10px'
         }}>
@@ -1598,7 +1598,7 @@ const CredentialsRow = ({ label, value }) => {
                 <div style={{ fontSize: '10px', opacity: 0.6, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>
                     {label}
                 </div>
-                <div style={{ fontFamily: 'monospace', fontSize: '13px', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--sa-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {value || '(vacío)'}
                 </div>
             </div>
@@ -1606,10 +1606,10 @@ const CredentialsRow = ({ label, value }) => {
                 onClick={handleCopy}
                 style={{
                     padding: '6px 14px',
-                    background: copied ? 'rgba(0, 230, 118, 0.25)' : 'rgba(255, 255, 255, 0.08)',
-                    border: copied ? '1px solid #00E676' : '1px solid rgba(255, 255, 255, 0.12)',
+                    background: copied ? 'rgba(0, 230, 118, 0.25)' : 'var(--sa-border)',
+                    border: copied ? '1px solid var(--sa-primary)' : '1px solid var(--sa-border-strong)',
                     borderRadius: '8px',
-                    color: copied ? '#00E676' : 'white',
+                    color: copied ? 'var(--sa-primary)' : 'white',
                     cursor: 'pointer',
                     fontSize: '12px',
                     fontWeight: '700',

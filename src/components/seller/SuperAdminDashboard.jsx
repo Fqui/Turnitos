@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import supabaseService from '../../services/supabaseService';
 import { useNotification } from '../../contexts/NotificationContext';
+import { Menu, RefreshCw, Search } from 'lucide-react';
 import SuperAdminSidebar from './SuperAdminSidebar';
+import { SUPERADMIN_NAV } from './superAdminNav';
+import './superadmin.css';
 import OverviewTab from './tabs/OverviewTab';
 import BusinessesTab from './tabs/BusinessesTab';
 import SellersTab from './tabs/SellersTab';
@@ -38,6 +41,24 @@ export default function SuperAdminDashboard() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 1024 : false);
     const [isOpenMobile, setIsOpenMobile] = useState(false);
+    const [theme, setTheme] = useState(() => {
+        try {
+            const saved = localStorage.getItem('sa-theme');
+            if (saved === 'light' || saved === 'dark') return saved;
+        } catch { /* storage unavailable */ }
+        return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    });
+    const [admin] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('superAdmin')) || null; } catch { return null; }
+    });
+
+    const toggleTheme = () => {
+        setTheme(prev => {
+            const next = prev === 'dark' ? 'light' : 'dark';
+            try { localStorage.setItem('sa-theme', next); } catch { /* storage unavailable */ }
+            return next;
+        });
+    };
 
     // Modals State
     const [showBusinessModal, setShowBusinessModal] = useState(false);
@@ -133,7 +154,8 @@ export default function SuperAdminDashboard() {
     }, []);
 
     // Actions
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        await supabaseService.logout();
         localStorage.removeItem('superAdmin');
         navigate('/login');
     };
@@ -276,44 +298,22 @@ export default function SuperAdminDashboard() {
 
     const alertCount = businesses.filter(b => b.subscription_status === 'trial' || b.subscription_status === 'inactive').length;
 
+    const activeNavItem = SUPERADMIN_NAV.flatMap(g => g.items).find(i => i.id === activeTab);
+
     // Loading Screen
     if (initialLoading && !businesses.length) {
         return (
-            <div style={{
-                minHeight: '100vh',
-                background: '#0a0f1d',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#f8fafc'
-            }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{
-                        width: '44px',
-                        height: '44px',
-                        border: '3px solid #2563eb',
-                        borderTopColor: 'transparent',
-                        borderRadius: '50%',
-                        animation: 'spin 0.8s linear infinite',
-                        margin: '0 auto 16px'
-                    }} />
-                    <p style={{ fontSize: '14px', fontWeight: '700', color: '#94a3b8' }}>
-                        Cargando Centro de Control SuperAdmin...
-                    </p>
+            <div className="sa-root" data-theme={theme}>
+                <div className="sa-loading">
+                    <RefreshCw size={26} className="sa-spin" />
+                    Cargando panel de administración...
                 </div>
             </div>
         );
     }
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            display: 'flex',
-            backgroundColor: '#0a0f1d',
-            color: '#f8fafc',
-            fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
-        }}>
-            {/* Collapsible Sidebar */}
+        <div className="sa-root" data-theme={theme}>
             <SuperAdminSidebar
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
@@ -323,90 +323,43 @@ export default function SuperAdminDashboard() {
                 isMobile={isMobile}
                 isOpenMobile={isOpenMobile}
                 setIsOpenMobile={setIsOpenMobile}
-                onOpenSearch={() => setShowSearchModal(true)}
+                theme={theme}
+                onToggleTheme={toggleTheme}
+                admin={admin}
                 onLogout={handleLogout}
             />
 
-            {/* Main Content Area */}
-            <div style={{
-                flex: 1,
-                minWidth: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100vh',
-                overflowY: 'auto'
-            }}>
-                {/* Top Control Bar */}
-                <header style={{
-                    padding: '16px 28px',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                    background: 'rgba(10, 15, 29, 0.75)',
-                    backdropFilter: 'blur(10px)',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 50,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '12px'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {isMobile && (
-                            <button
-                                onClick={() => setIsOpenMobile(true)}
-                                style={{
-                                    background: '#1e293b',
-                                    border: '1px solid #334155',
-                                    color: '#f8fafc',
-                                    borderRadius: '8px',
-                                    padding: '6px 10px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                ☰
-                            </button>
-                        )}
-                        <div>
-                            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#f8fafc', textTransform: 'capitalize' }}>
-                                {activeTab === 'overview' && '📊 Dashboard General'}
-                                {activeTab === 'promotions' && '🔥 Publicidades Home'}
-                                {activeTab === 'businesses' && '🏢 Gestión de Negocios'}
-                                {activeTab === 'sellers' && '👥 Red de Vendedores'}
-                                {activeTab === 'bookings' && '🎫 Reservas Globales'}
-                                {activeTab === 'reviews' && '⭐ Reseñas & Feedback'}
-                                {activeTab === 'categories' && '📁 Rubros & Categorías'}
-                            </h2>
-                        </div>
+            <div className="sa-main">
+                <header className="sa-header">
+                    {isMobile && (
+                        <button type="button" className="sa-icon-btn" onClick={() => setIsOpenMobile(true)} title="Abrir menú">
+                            <Menu size={18} />
+                        </button>
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                        <h1 className="sa-header-title">{activeNavItem?.label}</h1>
+                        <p className="sa-header-sub">{activeNavItem?.description}</p>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="sa-header-actions">
+                        <button type="button" className="sa-search-trigger" onClick={() => setShowSearchModal(true)} title="Búsqueda rápida (Ctrl + K)">
+                            <Search size={15} />
+                            <span className="sa-search-text">Buscar negocios, vendedores...</span>
+                            <kbd>Ctrl K</kbd>
+                        </button>
                         <button
+                            type="button"
+                            className="sa-icon-btn"
                             onClick={() => loadData(false)}
                             disabled={isRefreshing}
-                            style={{
-                                background: '#1e293b',
-                                border: '1px solid #334155',
-                                borderRadius: '8px',
-                                padding: '6px 14px',
-                                color: '#cbd5e1',
-                                fontSize: '12px',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                            }}
-                            title="Refrescar métricas en tiempo real"
+                            title="Actualizar datos"
                         >
-                            <span>{isRefreshing ? '⏳' : '🔄'}</span>
-                            <span>{isRefreshing ? 'Actualizando...' : 'Refrescar'}</span>
+                            <RefreshCw size={16} className={isRefreshing ? 'sa-spin' : undefined} />
                         </button>
                     </div>
                 </header>
 
-                {/* Main Views */}
-                <main style={{ padding: '24px 28px', flex: 1 }}>
+                <main className="sa-content">
                     {activeTab === 'overview' && (
                         <OverviewTab
                             analytics={analytics}

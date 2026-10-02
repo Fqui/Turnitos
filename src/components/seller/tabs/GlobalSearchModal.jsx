@@ -45,11 +45,11 @@ export default function GlobalSearchModal({
                 style={{
                     width: '100%',
                     maxWidth: '560px',
-                    background: '#111827',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'var(--sa-surface)',
+                    border: '1px solid var(--sa-border-strong)',
                     borderRadius: '16px',
                     padding: '24px',
-                    color: '#f8fafc',
+                    color: 'var(--sa-text)',
                     boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5)'
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -59,12 +59,12 @@ export default function GlobalSearchModal({
                         <span>🔍</span> Búsqueda Global
                     </h3>
                     <kbd style={{
-                        background: '#1e293b',
-                        border: '1px solid #334155',
+                        background: 'var(--sa-surface-2)',
+                        border: '1px solid var(--sa-border-strong)',
                         borderRadius: '6px',
                         padding: '3px 7px',
                         fontSize: '11px',
-                        color: '#94a3b8'
+                        color: 'var(--sa-text-muted)'
                     }}>
                         ESC para cerrar
                     </kbd>
@@ -79,10 +79,10 @@ export default function GlobalSearchModal({
                     style={{
                         width: '100%',
                         padding: '12px 16px',
-                        background: '#0f172a',
-                        border: '1px solid #3b82f6',
+                        background: 'var(--sa-surface)',
+                        border: '1px solid var(--sa-primary)',
                         borderRadius: '10px',
-                        color: 'white',
+                        color: 'var(--sa-text)',
                         fontSize: '14px',
                         outline: 'none',
                         boxSizing: 'border-box',
@@ -92,20 +92,20 @@ export default function GlobalSearchModal({
 
                 <div style={{ maxHeight: '360px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     {!cleanQuery && (
-                        <div style={{ textAlign: 'center', padding: '30px 20px', color: '#64748b', fontSize: '13px' }}>
+                        <div style={{ textAlign: 'center', padding: '30px 20px', color: 'var(--sa-text-muted)', fontSize: '13px' }}>
                             Escribe una palabra para buscar en toda la plataforma...
                         </div>
                     )}
 
                     {cleanQuery && matchedBusinesses.length === 0 && matchedSellers.length === 0 && matchedCategories.length === 0 && matchedBookings.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: '30px 20px', color: '#94a3b8', fontSize: '13px' }}>
+                        <div style={{ textAlign: 'center', padding: '30px 20px', color: 'var(--sa-text-muted)', fontSize: '13px' }}>
                             No se encontraron coincidencias para "{searchQuery}".
                         </div>
                     )}
 
                     {matchedBusinesses.length > 0 && (
                         <div>
-                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#60a5fa', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--sa-primary-text)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
                                 🏢 Negocios ({matchedBusinesses.length})
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -118,10 +118,10 @@ export default function GlobalSearchModal({
                                         }}
                                         style={{
                                             padding: '10px 12px',
-                                            background: '#1e293b',
+                                            background: 'var(--sa-surface-2)',
                                             borderRadius: '8px',
                                             fontSize: '13px',
-                                            color: '#f8fafc',
+                                            color: 'var(--sa-text)',
                                             display: 'flex',
                                             justifyContent: 'space-between',
                                             alignItems: 'center',
@@ -131,14 +131,14 @@ export default function GlobalSearchModal({
                                         title="Click para ver o editar este negocio"
                                     >
                                         <div>
-                                            <strong>{b.name}</strong> <span style={{ color: '#94a3b8', fontSize: '11px' }}>• {b.location || 'Sin ubicación'}</span>
+                                            <strong>{b.name}</strong> <span style={{ color: 'var(--sa-text-muted)', fontSize: '11px' }}>• {b.location || 'Sin ubicación'}</span>
                                         </div>
                                         <span style={{
                                             fontSize: '10px',
                                             padding: '2px 6px',
                                             borderRadius: '4px',
                                             background: b.subscription_status === 'active' ? '#10b98120' : '#f59e0b20',
-                                            color: b.subscription_status === 'active' ? '#34d399' : '#fbbf24',
+                                            color: b.subscription_status === 'active' ? 'var(--sa-primary-text)' : 'var(--sa-warning)',
                                             fontWeight: '700'
                                         }}>
                                             {b.subscription_status || 'trial'}
@@ -151,7 +151,7 @@ export default function GlobalSearchModal({
 
                     {matchedSellers.length > 0 && (
                         <div>
-                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#34d399', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--sa-primary-text)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
                                 👥 Vendedores ({matchedSellers.length})
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -164,17 +164,17 @@ export default function GlobalSearchModal({
                                         }}
                                         style={{
                                             padding: '10px 12px',
-                                            background: '#1e293b',
+                                            background: 'var(--sa-surface-2)',
                                             borderRadius: '8px',
                                             fontSize: '13px',
-                                            color: '#f8fafc',
+                                            color: 'var(--sa-text)',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             justifyContent: 'space-between'
                                         }}
                                     >
                                         <span><strong>{s.first_name} {s.last_name}</strong></span>
-                                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>{s.email}</span>
+                                        <span style={{ color: 'var(--sa-text-muted)', fontSize: '12px' }}>{s.email}</span>
                                     </div>
                                 ))}
                             </div>
@@ -183,22 +183,22 @@ export default function GlobalSearchModal({
 
                     {matchedBookings.length > 0 && (
                         <div>
-                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#fbbf24', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--sa-warning)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
                                 🎫 Reservas Recientes ({matchedBookings.length})
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 {matchedBookings.map(bk => (
                                     <div key={bk.id} style={{
                                         padding: '10px 12px',
-                                        background: '#1e293b',
+                                        background: 'var(--sa-surface-2)',
                                         borderRadius: '8px',
                                         fontSize: '13px',
-                                        color: '#f8fafc',
+                                        color: 'var(--sa-text)',
                                         display: 'flex',
                                         justifyContent: 'space-between'
                                     }}>
                                         <span><strong>{bk.customer_name}</strong> en {bk.business_name}</span>
-                                        <span style={{ color: '#34d399', fontWeight: '700' }}>${bk.price}</span>
+                                        <span style={{ color: 'var(--sa-primary-text)', fontWeight: '700' }}>${bk.price}</span>
                                     </div>
                                 ))}
                             </div>

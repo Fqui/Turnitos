@@ -35,14 +35,14 @@ const SellerDetailModal = ({ seller, onClose }) => {
         >
             <div
                 style={{
-                    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                    background: 'var(--sa-surface)',
                     borderRadius: '24px',
                     padding: '32px',
                     maxWidth: '900px',
                     width: '100%',
                     maxHeight: '90vh',
                     overflowY: 'auto',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: '1px solid var(--sa-border-strong)',
                     boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -54,7 +54,7 @@ const SellerDetailModal = ({ seller, onClose }) => {
                         height: '72px',
                         borderRadius: '20px',
                         background: seller.seller?.is_active
-                            ? 'linear-gradient(135deg, var(--primary-paddle), #059669)'
+                            ? 'linear-gradient(135deg, var(--sa-primary-text), #059669)'
                             : 'linear-gradient(135deg, #ef4444, #dc2626)',
                         display: 'flex',
                         alignItems: 'center',
@@ -66,20 +66,20 @@ const SellerDetailModal = ({ seller, onClose }) => {
                         {(seller.seller?.first_name?.[0] || 'V')}{(seller.seller?.last_name?.[0] || '')}
                     </div>
                     <div style={{ flex: 1 }}>
-                        <h2 style={{ fontSize: '24px', fontWeight: '800', margin: 0, marginBottom: '4px', color: '#f8fafc' }}>
+                        <h2 style={{ fontSize: '24px', fontWeight: '800', margin: 0, marginBottom: '4px', color: 'var(--sa-text)' }}>
                             {seller.seller?.first_name} {seller.seller?.last_name}
                         </h2>
-                        <div style={{ fontSize: '14px', opacity: 0.7, color: '#94a3b8' }}>
+                        <div style={{ fontSize: '14px', opacity: 0.7, color: 'var(--sa-text-muted)' }}>
                             {seller.seller?.email} {seller.seller?.phone ? `• ${seller.seller?.phone}` : ''}
                         </div>
                     </div>
                     <div style={{
                         padding: '8px 18px',
-                        background: seller.seller?.is_active ? 'rgba(0, 230, 118, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        background: seller.seller?.is_active ? 'var(--sa-primary-soft)' : 'rgba(239, 68, 68, 0.1)',
                         borderRadius: '12px',
                         fontSize: '13px',
                         fontWeight: '700',
-                        color: seller.seller?.is_active ? 'var(--primary-paddle)' : '#ef4444',
+                        color: seller.seller?.is_active ? 'var(--sa-primary-text)' : '#ef4444',
                         border: `1px solid ${seller.seller?.is_active ? 'rgba(0, 230, 118, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                     }}>
                         {seller.seller?.is_active ? '✓ Activo' : '✗ Inactivo'}
@@ -87,12 +87,12 @@ const SellerDetailModal = ({ seller, onClose }) => {
                     <button
                         onClick={onClose}
                         style={{
-                            background: 'rgba(255,255,255,0.06)',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            background: 'var(--sa-border)',
+                            border: '1px solid var(--sa-border-strong)',
                             borderRadius: '10px',
                             width: '36px',
                             height: '36px',
-                            color: '#94a3b8',
+                            color: 'var(--sa-text-muted)',
                             fontSize: '18px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -129,7 +129,7 @@ const SellerDetailModal = ({ seller, onClose }) => {
                         icon="⏱"
                         label="En Prueba"
                         value={seller.trialBusinesses}
-                        gradient="linear-gradient(135deg, #3b82f6, #2563eb)"
+                        gradient="linear-gradient(135deg, var(--sa-primary), var(--sa-primary))"
                     />
                     <StatCard
                         icon="💰"
@@ -155,9 +155,9 @@ const SellerDetailModal = ({ seller, onClose }) => {
                             seller.recentBusinesses.map(business => (
                                 <div key={business.id} style={{
                                     padding: '16px',
-                                    background: 'rgba(255,255,255,0.03)',
+                                    background: 'var(--sa-hover)',
                                     borderRadius: '12px',
-                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    border: '1px solid var(--sa-hover)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '12px'
@@ -170,14 +170,14 @@ const SellerDetailModal = ({ seller, onClose }) => {
                                     </div>
                                     <div style={{
                                         padding: '6px 12px',
-                                        background: business.subscription_status === 'active' ? 'rgba(0, 230, 118, 0.1)' :
-                                            business.subscription_status === 'trial' ? 'rgba(59, 130, 246, 0.1)' :
+                                        background: business.subscription_status === 'active' ? 'var(--sa-primary-soft)' :
+                                            business.subscription_status === 'trial' ? 'var(--sa-primary-soft)' :
                                                 'rgba(239, 68, 68, 0.1)',
                                         borderRadius: '8px',
                                         fontSize: '12px',
                                         fontWeight: '700',
-                                        color: business.subscription_status === 'active' ? 'var(--primary-paddle)' :
-                                            business.subscription_status === 'trial' ? '#60a5fa' :
+                                        color: business.subscription_status === 'active' ? 'var(--sa-primary-text)' :
+                                            business.subscription_status === 'trial' ? 'var(--sa-primary-text)' :
                                                 '#ef4444'
                                     }}>
                                         {business.subscription_status === 'active' ? 'Activo' :
@@ -204,9 +204,9 @@ const SellerDetailModal = ({ seller, onClose }) => {
                             seller.recentCommissions.map((commission, idx) => (
                                 <div key={idx} style={{
                                     padding: '12px 16px',
-                                    background: 'rgba(255,255,255,0.03)',
+                                    background: 'var(--sa-hover)',
                                     borderRadius: '10px',
-                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    border: '1px solid var(--sa-hover)',
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center'
@@ -217,7 +217,7 @@ const SellerDetailModal = ({ seller, onClose }) => {
                                     <div style={{
                                         fontSize: '16px',
                                         fontWeight: '700',
-                                        background: 'linear-gradient(135deg, var(--primary-paddle), #059669)',
+                                        background: 'linear-gradient(135deg, var(--sa-primary-text), #059669)',
                                         WebkitBackgroundClip: 'text',
                                         WebkitTextFillColor: 'transparent'
                                     }}>
@@ -239,7 +239,7 @@ const SellerDetailModal = ({ seller, onClose }) => {
                         onClick={onClose}
                         style={{
                             padding: '14px 32px',
-                            background: 'linear-gradient(135deg, var(--primary-paddle), #059669)',
+                            background: 'linear-gradient(135deg, var(--sa-primary-text), #059669)',
                             border: 'none',
                             borderRadius: '12px',
                             color: '#000',
@@ -263,9 +263,9 @@ const SellerDetailModal = ({ seller, onClose }) => {
 const StatCard = ({ icon, label, value, gradient }) => (
     <div style={{
         padding: '20px',
-        background: 'rgba(255,255,255,0.03)',
+        background: 'var(--sa-hover)',
         borderRadius: '16px',
-        border: '1px solid rgba(255,255,255,0.05)',
+        border: '1px solid var(--sa-hover)',
         position: 'relative',
         overflow: 'hidden'
     }}>

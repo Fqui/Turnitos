@@ -4,14 +4,14 @@ import {
     BarChart, Bar, AreaChart, Area
 } from 'recharts';
 
-export function ModernMetricCard({ icon, title, value, subtitle, colorAccent = '#3b82f6' }) {
+export function ModernMetricCard({ icon, title, value, subtitle, colorAccent = 'var(--sa-primary)' }) {
     return (
         <div
             style={{
-                background: 'linear-gradient(145deg, rgba(17, 24, 39, 0.9), rgba(15, 23, 42, 0.8))',
+                background: 'linear-gradient(145deg, var(--sa-surface), var(--sa-surface))',
                 borderRadius: '14px',
                 padding: '18px 20px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                border: '1px solid var(--sa-border)',
                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
                 display: 'flex',
                 flexDirection: 'column',
@@ -30,15 +30,15 @@ export function ModernMetricCard({ icon, title, value, subtitle, colorAccent = '
             }} />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '600', color: '#94a3b8' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--sa-text-muted)' }}>
                     {title}
                 </span>
                 <div style={{
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    background: `${colorAccent}15`,
-                    border: `1px solid ${colorAccent}30`,
+                    background: `color-mix(in srgb, ${colorAccent} 9%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${colorAccent} 19%, transparent)`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -49,11 +49,11 @@ export function ModernMetricCard({ icon, title, value, subtitle, colorAccent = '
             </div>
 
             <div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#f8fafc', letterSpacing: '-0.5px' }}>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--sa-text)', letterSpacing: '-0.5px' }}>
                     {value}
                 </div>
                 {subtitle && (
-                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', fontWeight: '500' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--sa-text-muted)', marginTop: '4px', fontWeight: '500' }}>
                         {subtitle}
                     </div>
                 )}
@@ -67,20 +67,20 @@ export function ModernChart({ title, data, type = 'commission' }) {
 
     return (
         <div style={{
-            background: 'linear-gradient(145deg, rgba(17, 24, 39, 0.9), rgba(15, 23, 42, 0.8))',
+            background: 'linear-gradient(145deg, var(--sa-surface), var(--sa-surface))',
             borderRadius: '14px',
             padding: '20px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            border: '1px solid var(--sa-border)',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
             display: 'flex',
             flexDirection: 'column'
         }}>
-            <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '700', color: '#f8fafc' }}>
+            <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '700', color: 'var(--sa-text)' }}>
                 {title}
             </h4>
 
             {(!data || data.length === 0) ? (
-                <div style={{ height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '13px' }}>
+                <div style={{ height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sa-text-muted)', fontSize: '13px' }}>
                     Sin datos históricos registrados
                 </div>
             ) : (
@@ -90,26 +90,26 @@ export function ModernChart({ title, data, type = 'commission' }) {
                             <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="commGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
+                                        <stop offset="5%" stopColor="var(--sa-primary)" stopOpacity={0.4} />
+                                        <stop offset="95%" stopColor="var(--sa-primary)" stopOpacity={0.0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                                <XAxis dataKey="month" stroke="#64748b" fontSize={11} />
-                                <YAxis stroke="#64748b" fontSize={11} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--sa-border)" />
+                                <XAxis dataKey="month" stroke="var(--sa-text-muted)" fontSize={11} />
+                                <YAxis stroke="var(--sa-text-muted)" fontSize={11} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', fontSize: '12px' }}
+                                    contentStyle={{ backgroundColor: 'var(--sa-surface)', border: '1px solid var(--sa-border-strong)', borderRadius: '8px', fontSize: '12px' }}
                                     formatter={(val) => [`$${Number(val).toLocaleString('es-AR')}`, 'Comisión']}
                                 />
-                                <Area type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#commGrad)" />
+                                <Area type="monotone" dataKey="amount" stroke="var(--sa-primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#commGrad)" />
                             </AreaChart>
                         ) : (
                             <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                                <XAxis dataKey="month" stroke="#64748b" fontSize={11} />
-                                <YAxis stroke="#64748b" fontSize={11} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--sa-border)" />
+                                <XAxis dataKey="month" stroke="var(--sa-text-muted)" fontSize={11} />
+                                <YAxis stroke="var(--sa-text-muted)" fontSize={11} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', fontSize: '12px' }}
+                                    contentStyle={{ backgroundColor: 'var(--sa-surface)', border: '1px solid var(--sa-border-strong)', borderRadius: '8px', fontSize: '12px' }}
                                     formatter={(val) => [val, 'Nuevos Negocios']}
                                 />
                                 <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
@@ -194,10 +194,10 @@ export default function OverviewTab({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <span style={{ fontSize: '24px' }}>⚠️</span>
                         <div>
-                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#f8fafc' }}>
+                            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--sa-text)' }}>
                                 Alertas de Retención y Seguimiento
                             </div>
-                            <div style={{ fontSize: '12px', color: '#cbd5e1' }}>
+                            <div style={{ fontSize: '12px', color: 'var(--sa-text-2)' }}>
                                 {trialBusinesses.length} negocio(s) en prueba gratuita y {inactiveBusinesses.length} inactivo(s).
                             </div>
                         </div>

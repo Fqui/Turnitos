@@ -8,7 +8,7 @@ function SimpleModal({ title, children, onClose }) {
             style={{
                 position: 'fixed',
                 inset: 0,
-                background: 'rgba(15, 23, 42, 0.8)',
+                background: 'var(--sa-surface)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -20,18 +20,18 @@ function SimpleModal({ title, children, onClose }) {
         >
             <div
                 style={{
-                    background: '#151c2c',
+                    background: 'var(--sa-surface)',
                     borderRadius: '16px',
                     padding: '26px',
                     maxWidth: '480px',
                     width: '100%',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    border: '1px solid var(--sa-border-strong)',
                     boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5)'
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#f1f5f9' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'var(--sa-text)' }}>
                         {title}
                     </h2>
                     <button
@@ -39,7 +39,7 @@ function SimpleModal({ title, children, onClose }) {
                         style={{
                             background: 'transparent',
                             border: 'none',
-                            color: '#94a3b8',
+                            color: 'var(--sa-text-muted)',
                             fontSize: '18px',
                             cursor: 'pointer',
                             padding: '4px 8px',
@@ -114,14 +114,14 @@ export default function CategoriesTab({
         }}>
             {/* Categories Section */}
             <div style={{
-                background: 'linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(15, 23, 42, 0.85))',
+                background: 'linear-gradient(145deg, var(--sa-surface), var(--sa-surface))',
                 borderRadius: '16px',
                 padding: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                border: '1px solid var(--sa-border)',
                 boxShadow: '0 4px 25px rgba(0, 0, 0, 0.3)'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-                    <h3 style={{ fontSize: '17px', fontWeight: '800', margin: 0, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ fontSize: '17px', fontWeight: '800', margin: 0, color: 'var(--sa-text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>📁</span> Categorías Principales ({categories.length})
                     </h3>
                     <button
@@ -132,7 +132,7 @@ export default function CategoriesTab({
                         }}
                         style={{
                             padding: '7px 14px',
-                            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                            background: 'linear-gradient(135deg, var(--sa-primary), var(--sa-primary))',
                             border: 'none',
                             borderRadius: '8px',
                             color: '#ffffff',
@@ -149,9 +149,9 @@ export default function CategoriesTab({
                     {categories.map((cat) => (
                         <div key={cat.id} style={{
                             padding: '12px 14px',
-                            background: '#0f172a',
+                            background: 'var(--sa-surface)',
                             borderRadius: '10px',
-                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                            border: '1px solid var(--sa-border)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px'
@@ -161,8 +161,8 @@ export default function CategoriesTab({
                                 width: '38px',
                                 height: '38px',
                                 borderRadius: '8px',
-                                background: '#1e293b',
-                                border: '1px solid #334155',
+                                background: 'var(--sa-surface-2)',
+                                border: '1px solid var(--sa-border-strong)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center'
@@ -170,10 +170,10 @@ export default function CategoriesTab({
                                 {cat.icon || '📁'}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: '700', fontSize: '14px', color: '#f8fafc' }}>
+                                <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--sa-text)' }}>
                                     {cat.name}
                                 </div>
-                                <div style={{ fontSize: '11px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--sa-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {cat.description || 'Sin descripción'}
                                 </div>
                             </div>
@@ -185,10 +185,10 @@ export default function CategoriesTab({
                                 }}
                                 style={{
                                     padding: '6px 10px',
-                                    background: '#1e293b',
-                                    border: '1px solid #334155',
+                                    background: 'var(--sa-surface-2)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '6px',
-                                    color: '#60a5fa',
+                                    color: 'var(--sa-primary-text)',
                                     cursor: 'pointer',
                                     fontSize: '11px',
                                     fontWeight: '700'
@@ -204,7 +204,7 @@ export default function CategoriesTab({
                                     background: 'rgba(239, 68, 68, 0.1)',
                                     border: '1px solid rgba(239, 68, 68, 0.25)',
                                     borderRadius: '6px',
-                                    color: '#f87171',
+                                    color: 'var(--sa-danger)',
                                     cursor: 'pointer',
                                     fontSize: '11px',
                                     fontWeight: '700'
@@ -220,14 +220,14 @@ export default function CategoriesTab({
 
             {/* Subcategories Section */}
             <div style={{
-                background: 'linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(15, 23, 42, 0.85))',
+                background: 'linear-gradient(145deg, var(--sa-surface), var(--sa-surface))',
                 borderRadius: '16px',
                 padding: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                border: '1px solid var(--sa-border)',
                 boxShadow: '0 4px 25px rgba(0, 0, 0, 0.3)'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-                    <h3 style={{ fontSize: '17px', fontWeight: '800', margin: 0, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ fontSize: '17px', fontWeight: '800', margin: 0, color: 'var(--sa-text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>📂</span> Subcategorías ({subcategories.length})
                     </h3>
                     <button
@@ -238,7 +238,7 @@ export default function CategoriesTab({
                         }}
                         style={{
                             padding: '7px 14px',
-                            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                            background: 'linear-gradient(135deg, var(--sa-primary), var(--sa-primary))',
                             border: 'none',
                             borderRadius: '8px',
                             color: '#ffffff',
@@ -257,18 +257,18 @@ export default function CategoriesTab({
                         return (
                             <div key={sub.id} style={{
                                 padding: '12px 14px',
-                                background: '#0f172a',
+                                background: 'var(--sa-surface)',
                                 borderRadius: '10px',
-                                border: '1px solid rgba(255, 255, 255, 0.06)',
+                                border: '1px solid var(--sa-border)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '12px'
                             }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontWeight: '700', fontSize: '14px', color: '#f8fafc' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--sa-text)' }}>
                                         {sub.name}
                                     </div>
-                                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--sa-text-muted)' }}>
                                         {parentCat ? `${parentCat.icon || ''} ${parentCat.name}` : 'Sin categoría padre'}
                                     </div>
                                 </div>
@@ -280,10 +280,10 @@ export default function CategoriesTab({
                                     }}
                                     style={{
                                         padding: '6px 10px',
-                                        background: '#1e293b',
-                                        border: '1px solid #334155',
+                                        background: 'var(--sa-surface-2)',
+                                        border: '1px solid var(--sa-border-strong)',
                                         borderRadius: '6px',
-                                        color: '#60a5fa',
+                                        color: 'var(--sa-primary-text)',
                                         cursor: 'pointer',
                                         fontSize: '11px',
                                         fontWeight: '700'
@@ -299,7 +299,7 @@ export default function CategoriesTab({
                                         background: 'rgba(239, 68, 68, 0.1)',
                                         border: '1px solid rgba(239, 68, 68, 0.25)',
                                         borderRadius: '6px',
-                                        color: '#f87171',
+                                        color: 'var(--sa-danger)',
                                         cursor: 'pointer',
                                         fontSize: '11px',
                                         fontWeight: '700'
@@ -322,7 +322,7 @@ export default function CategoriesTab({
                 >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: '#cbd5e1' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)' }}>
                                 Nombre
                             </label>
                             <input
@@ -332,17 +332,17 @@ export default function CategoriesTab({
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
-                                    background: '#0f172a',
-                                    border: '1px solid #334155',
+                                    background: 'var(--sa-surface)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
-                                    color: 'white',
+                                    color: 'var(--sa-text)',
                                     fontSize: '13px',
                                     boxSizing: 'border-box'
                                 }}
                             />
                         </div>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: '#cbd5e1' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)' }}>
                                 Icono (Emoji)
                             </label>
                             <input
@@ -353,17 +353,17 @@ export default function CategoriesTab({
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
-                                    background: '#0f172a',
-                                    border: '1px solid #334155',
+                                    background: 'var(--sa-surface)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
-                                    color: 'white',
+                                    color: 'var(--sa-text)',
                                     fontSize: '13px',
                                     boxSizing: 'border-box'
                                 }}
                             />
                         </div>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: '#cbd5e1' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)' }}>
                                 Descripción
                             </label>
                             <textarea
@@ -373,10 +373,10 @@ export default function CategoriesTab({
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
-                                    background: '#0f172a',
-                                    border: '1px solid #334155',
+                                    background: 'var(--sa-surface)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
-                                    color: 'white',
+                                    color: 'var(--sa-text)',
                                     fontSize: '13px',
                                     resize: 'vertical',
                                     boxSizing: 'border-box'
@@ -388,10 +388,10 @@ export default function CategoriesTab({
                                 onClick={() => setShowCategoryModal(false)}
                                 style={{
                                     padding: '10px 16px',
-                                    background: '#1e293b',
-                                    border: '1px solid #334155',
+                                    background: 'var(--sa-surface-2)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
-                                    color: 'white',
+                                    color: 'var(--sa-text)',
                                     cursor: 'pointer',
                                     fontSize: '12px',
                                     fontWeight: '600'
@@ -403,7 +403,7 @@ export default function CategoriesTab({
                                 onClick={handleSaveCategory}
                                 style={{
                                     padding: '10px 20px',
-                                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                                    background: 'linear-gradient(135deg, var(--sa-primary), var(--sa-primary))',
                                     border: 'none',
                                     borderRadius: '8px',
                                     color: '#fff',
@@ -427,7 +427,7 @@ export default function CategoriesTab({
                 >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: '#cbd5e1' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)' }}>
                                 Categoría Padre
                             </label>
                             <select
@@ -436,10 +436,10 @@ export default function CategoriesTab({
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
-                                    background: '#0f172a',
-                                    border: '1px solid #334155',
+                                    background: 'var(--sa-surface)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
-                                    color: 'white',
+                                    color: 'var(--sa-text)',
                                     fontSize: '13px',
                                     boxSizing: 'border-box'
                                 }}
@@ -451,7 +451,7 @@ export default function CategoriesTab({
                             </select>
                         </div>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: '#cbd5e1' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)' }}>
                                 Nombre
                             </label>
                             <input
@@ -461,10 +461,10 @@ export default function CategoriesTab({
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
-                                    background: '#0f172a',
-                                    border: '1px solid #334155',
+                                    background: 'var(--sa-surface)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
-                                    color: 'white',
+                                    color: 'var(--sa-text)',
                                     fontSize: '13px',
                                     boxSizing: 'border-box'
                                 }}
@@ -475,10 +475,10 @@ export default function CategoriesTab({
                                 onClick={() => setShowSubcategoryModal(false)}
                                 style={{
                                     padding: '10px 16px',
-                                    background: '#1e293b',
-                                    border: '1px solid #334155',
+                                    background: 'var(--sa-surface-2)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
-                                    color: 'white',
+                                    color: 'var(--sa-text)',
                                     cursor: 'pointer',
                                     fontSize: '12px',
                                     fontWeight: '600'
@@ -490,7 +490,7 @@ export default function CategoriesTab({
                                 onClick={handleSaveSubcategory}
                                 style={{
                                     padding: '10px 20px',
-                                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                                    background: 'linear-gradient(135deg, var(--sa-primary), var(--sa-primary))',
                                     border: 'none',
                                     borderRadius: '8px',
                                     color: '#fff',

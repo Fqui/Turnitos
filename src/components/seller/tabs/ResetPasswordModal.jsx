@@ -41,11 +41,11 @@ export default function ResetPasswordModal({ credentials, onClose }) {
             <div style={{
                 width: '100%',
                 maxWidth: '460px',
-                background: '#111827',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'var(--sa-surface)',
+                border: '1px solid var(--sa-border-strong)',
                 borderRadius: '16px',
                 padding: '26px',
-                color: '#f8fafc',
+                color: 'var(--sa-text)',
                 boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5)',
                 position: 'relative'
             }}>
@@ -57,7 +57,7 @@ export default function ResetPasswordModal({ credentials, onClose }) {
                         right: '16px',
                         background: 'transparent',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: 'var(--sa-text-muted)',
                         fontSize: '18px',
                         cursor: 'pointer',
                         padding: '4px 8px'
@@ -82,17 +82,17 @@ export default function ResetPasswordModal({ credentials, onClose }) {
                     }}>
                         🔑
                     </div>
-                    <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '800', color: '#f8fafc' }}>
+                    <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '800', color: 'var(--sa-text)' }}>
                         Clave Provisoria Generada
                     </h3>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--sa-text-muted)' }}>
                         Comercio: <strong style={{ color: '#f3f4f6' }}>{credentials.businessName}</strong>
                     </p>
                 </div>
 
                 <div style={{
-                    background: '#0f172a',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'var(--sa-surface)',
+                    border: '1px solid var(--sa-border)',
                     borderRadius: '12px',
                     padding: '16px',
                     marginBottom: '20px',
@@ -102,17 +102,17 @@ export default function ResetPasswordModal({ credentials, onClose }) {
                     fontSize: '13px'
                 }}>
                     <div>
-                        <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '3px' }}>
+                        <span style={{ color: 'var(--sa-text-muted)', fontSize: '11px', display: 'block', marginBottom: '3px' }}>
                             Email de Acceso:
                         </span>
-                        <strong style={{ color: '#60a5fa', wordBreak: 'break-all' }}>{credentials.email}</strong>
+                        <strong style={{ color: 'var(--sa-primary-text)', wordBreak: 'break-all' }}>{credentials.email}</strong>
                     </div>
                     <div>
-                        <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '3px' }}>
+                        <span style={{ color: 'var(--sa-text-muted)', fontSize: '11px', display: 'block', marginBottom: '3px' }}>
                             Nueva Clave Provisoria:
                         </span>
                         <strong style={{
-                            color: '#fbbf24',
+                            color: 'var(--sa-warning)',
                             fontSize: '18px',
                             letterSpacing: '1.5px',
                             fontFamily: 'monospace',
@@ -126,10 +126,10 @@ export default function ResetPasswordModal({ credentials, onClose }) {
                     </div>
                     {credentials.whatsapp && (
                         <div>
-                            <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '3px' }}>
+                            <span style={{ color: 'var(--sa-text-muted)', fontSize: '11px', display: 'block', marginBottom: '3px' }}>
                                 Teléfono / WhatsApp:
                             </span>
-                            <span style={{ color: '#34d399', fontWeight: '600' }}>{credentials.whatsapp}</span>
+                            <span style={{ color: 'var(--sa-primary-text)', fontWeight: '600' }}>{credentials.whatsapp}</span>
                         </div>
                     )}
                 </div>
@@ -185,10 +185,10 @@ export default function ResetPasswordModal({ credentials, onClose }) {
                         onClick={onClose}
                         style={{
                             padding: '10px 18px',
-                            background: '#1e293b',
-                            border: '1px solid #334155',
+                            background: 'var(--sa-surface-2)',
+                            border: '1px solid var(--sa-border-strong)',
                             borderRadius: '10px',
-                            color: '#cbd5e1',
+                            color: 'var(--sa-text-2)',
                             fontWeight: '700',
                             fontSize: '12px',
                             cursor: 'pointer'

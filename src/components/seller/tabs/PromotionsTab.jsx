@@ -10,7 +10,7 @@ function PromoModal({ title, children, onClose }) {
             style={{
                 position: 'fixed',
                 inset: 0,
-                background: 'rgba(15, 23, 42, 0.8)',
+                background: 'var(--sa-surface)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -22,12 +22,12 @@ function PromoModal({ title, children, onClose }) {
         >
             <div
                 style={{
-                    background: '#151c2c',
+                    background: 'var(--sa-surface)',
                     borderRadius: '16px',
                     padding: '26px',
                     maxWidth: '540px',
                     width: '100%',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    border: '1px solid var(--sa-border-strong)',
                     boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5)',
                     maxHeight: '90vh',
                     overflowY: 'auto'
@@ -35,7 +35,7 @@ function PromoModal({ title, children, onClose }) {
                 onClick={(e) => e.stopPropagation()}
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#f1f5f9' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'var(--sa-text)' }}>
                         {title}
                     </h2>
                     <button
@@ -43,7 +43,7 @@ function PromoModal({ title, children, onClose }) {
                         style={{
                             background: 'transparent',
                             border: 'none',
-                            color: '#94a3b8',
+                            color: 'var(--sa-text-muted)',
                             fontSize: '20px',
                             cursor: 'pointer',
                             padding: '4px 8px'
@@ -383,10 +383,10 @@ export default function PromotionsTab({ businesses = [] }) {
                 gap: '12px'
             }}>
                 <div>
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px 0', color: '#f8fafc' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px 0', color: 'var(--sa-text)' }}>
                         🔥 Publicidades & Banners del Home ({promotions.length})
                     </h3>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--sa-text-muted)' }}>
                         Gestioná las tarjetas destacadas que ven todos los usuarios arriba en el inicio de Turnitos.
                     </p>
                 </div>
@@ -414,7 +414,7 @@ export default function PromotionsTab({ businesses = [] }) {
 
             {/* Grid of Promotions */}
             {loading ? (
-                <div style={{ padding: '60px', textAlign: 'center', color: '#94a3b8' }}>
+                <div style={{ padding: '60px', textAlign: 'center', color: 'var(--sa-text-muted)' }}>
                     <div style={{ fontSize: '28px', marginBottom: '8px' }}>⏳</div>
                     Cargando publicidades del Home...
                 </div>
@@ -422,19 +422,19 @@ export default function PromotionsTab({ businesses = [] }) {
                 <div style={{
                     padding: '60px 20px',
                     textAlign: 'center',
-                    background: '#151c2c',
+                    background: 'var(--sa-surface)',
                     borderRadius: '16px',
-                    border: '1px dashed rgba(255, 255, 255, 0.12)'
+                    border: '1px dashed var(--sa-border-strong)'
                 }}>
                     <div style={{ fontSize: '40px', marginBottom: '12px' }}>📢</div>
-                    <h4 style={{ margin: '0 0 8px 0', color: '#f8fafc', fontSize: '16px' }}>No hay publicidades activas</h4>
-                    <p style={{ margin: '0 0 16px 0', color: '#94a3b8', fontSize: '13px' }}>
+                    <h4 style={{ margin: '0 0 8px 0', color: 'var(--sa-text)', fontSize: '16px' }}>No hay publicidades activas</h4>
+                    <p style={{ margin: '0 0 16px 0', color: 'var(--sa-text-muted)', fontSize: '13px' }}>
                         Agregá banners de eventos, promociones o convocatorias para que aparezcan en el carrusel del Home.
                     </p>
                     <button
                         onClick={handleOpenCreate}
                         style={{
-                            background: '#2563eb',
+                            background: 'var(--sa-primary)',
                             color: '#fff',
                             border: 'none',
                             borderRadius: '8px',
@@ -461,17 +461,17 @@ export default function PromotionsTab({ businesses = [] }) {
                             <div
                                 key={promo.id}
                                 style={{
-                                    background: '#151c2c',
+                                    background: 'var(--sa-surface)',
                                     borderRadius: '16px',
                                     overflow: 'hidden',
-                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                    border: '1px solid var(--sa-border)',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     boxShadow: '0 8px 20px rgba(0, 0, 0, 0.25)'
                                 }}
                             >
                                 {/* Image & Badge */}
-                                <div style={{ position: 'relative', width: '100%', height: '170px', background: '#0a0f1d' }}>
+                                <div style={{ position: 'relative', width: '100%', height: '170px', background: 'var(--sa-bg)' }}>
                                     <img
                                         src={promo.image}
                                         alt={promo.title}
@@ -541,7 +541,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                             margin: '0 0 6px 0',
                                             fontSize: '16px',
                                             fontWeight: '700',
-                                            color: '#f8fafc',
+                                            color: 'var(--sa-text)',
                                             lineHeight: 1.3
                                         }}>
                                             {promo.title}
@@ -549,7 +549,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                         <p style={{
                                             margin: '0 0 6px 0',
                                             fontSize: '13px',
-                                            color: linkedBiz ? '#60a5fa' : '#34d399',
+                                            color: linkedBiz ? 'var(--sa-primary-text)' : 'var(--sa-primary-text)',
                                             fontWeight: '600'
                                         }}>
                                             {linkedBiz ? `🏢 ${linkedBiz.name}` : '🌐 General / Campaña Turnitos'}
@@ -559,28 +559,28 @@ export default function PromotionsTab({ businesses = [] }) {
                                             const pt = parsePromotionTarget(promo);
                                             if (pt.target_type === 'service' && pt.target_name) {
                                                 return (
-                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#cbd5e1' }}>
+                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: 'var(--sa-text-2)' }}>
                                                         💆 Servicio: <strong style={{ color: '#10b981' }}>{pt.target_name}</strong>
                                                     </p>
                                                 );
                                             }
                                             if (pt.target_type === 'product' && pt.target_name) {
                                                 return (
-                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#cbd5e1' }}>
+                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: 'var(--sa-text-2)' }}>
                                                         🛍️ Producto: <strong style={{ color: '#38bdf8' }}>{pt.target_name}</strong>
                                                     </p>
                                                 );
                                             }
                                             if (pt.target_type === 'category' && pt.target_name) {
                                                 return (
-                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#cbd5e1' }}>
+                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: 'var(--sa-text-2)' }}>
                                                         🏷️ Categoría: <strong style={{ color: '#f59e0b' }}>{pt.target_name}</strong>
                                                     </p>
                                                 );
                                             }
                                             if (pt.target_type === 'store') {
                                                 return (
-                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: '#cbd5e1' }}>
+                                                    <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: 'var(--sa-text-2)' }}>
                                                         🏬 Alcance: <strong style={{ color: '#a855f7' }}>Toda la Tienda</strong>
                                                     </p>
                                                 );
@@ -589,29 +589,29 @@ export default function PromotionsTab({ businesses = [] }) {
                                         })()}
 
                                         {isExternal && !linkedBiz && (
-                                            <p style={{ margin: '0 0 8px 0', fontSize: '11.5px', color: '#94a3b8', wordBreak: 'break-all' }}>
+                                            <p style={{ margin: '0 0 8px 0', fontSize: '11.5px', color: 'var(--sa-text-muted)', wordBreak: 'break-all' }}>
                                                 🔗 Botón dirige a: <span style={{ color: '#38bdf8' }}>{promo.description}</span>
                                             </p>
                                         )}
 
                                         {(promo.end_date || promo.expires_at) && (
-                                            <p style={{ margin: '0 0 10px 0', fontSize: '11.5px', color: '#94a3b8' }}>
+                                            <p style={{ margin: '0 0 10px 0', fontSize: '11.5px', color: 'var(--sa-text-muted)' }}>
                                                 ⏳ Vence: {new Date(promo.end_date || promo.expires_at).toLocaleDateString('es-AR')}
                                             </p>
                                         )}
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div style={{ display: 'flex', gap: '8px', marginTop: '14px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '12px' }}>
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '14px', borderTop: '1px solid var(--sa-border)', paddingTop: '12px' }}>
                                         <button
                                             onClick={() => handleOpenEdit(promo)}
                                             style={{
                                                 flex: 1,
-                                                background: '#1e293b',
-                                                border: '1px solid #334155',
+                                                background: 'var(--sa-surface-2)',
+                                                border: '1px solid var(--sa-border-strong)',
                                                 borderRadius: '8px',
                                                 padding: '8px',
-                                                color: '#f8fafc',
+                                                color: 'var(--sa-text)',
                                                 fontSize: '12px',
                                                 fontWeight: '700',
                                                 cursor: 'pointer'
@@ -627,7 +627,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                                 border: '1px solid rgba(239, 68, 68, 0.3)',
                                                 borderRadius: '8px',
                                                 padding: '8px',
-                                                color: '#f87171',
+                                                color: 'var(--sa-danger)',
                                                 fontSize: '12px',
                                                 fontWeight: '700',
                                                 cursor: 'pointer'
@@ -651,7 +651,7 @@ export default function PromotionsTab({ businesses = [] }) {
                 >
                     <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                 Título de la Publicidad *
                             </label>
                             <input
@@ -663,10 +663,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                 style={{
                                     width: '100%',
                                     padding: '10px 14px',
-                                    background: '#0a0f1d',
-                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                    background: 'var(--sa-bg)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
-                                    color: '#f8fafc',
+                                    color: 'var(--sa-text)',
                                     fontSize: '13px',
                                     boxSizing: 'border-box'
                                 }}
@@ -675,7 +675,7 @@ export default function PromotionsTab({ businesses = [] }) {
 
                         {/* Image Uploader con Supabase Storage */}
                         <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                 Imagen del Banner *
                             </label>
 
@@ -692,7 +692,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={isUploading}
                                     style={{
-                                        background: isUploading ? '#334155' : '#2563eb',
+                                        background: isUploading ? 'var(--sa-border-strong)' : 'var(--sa-primary)',
                                         color: '#fff',
                                         border: 'none',
                                         borderRadius: '8px',
@@ -707,7 +707,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                 >
                                     <span>{isUploading ? '⏳ Subiendo...' : '📁 Subir Imagen a Supabase'}</span>
                                 </button>
-                                <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>o ingresá la URL directa abajo:</span>
+                                <span style={{ fontSize: '11.5px', color: 'var(--sa-text-muted)' }}>o ingresá la URL directa abajo:</span>
                             </div>
 
                             <input
@@ -719,17 +719,17 @@ export default function PromotionsTab({ businesses = [] }) {
                                 style={{
                                     width: '100%',
                                     padding: '10px 14px',
-                                    background: '#0a0f1d',
-                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                    background: 'var(--sa-bg)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
-                                    color: '#f8fafc',
+                                    color: 'var(--sa-text)',
                                     fontSize: '13px',
                                     boxSizing: 'border-box'
                                 }}
                             />
 
                             {form.image && (
-                                <div style={{ marginTop: '10px', height: '120px', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                                <div style={{ marginTop: '10px', height: '120px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--sa-border-strong)' }}>
                                     <img
                                         src={form.image}
                                         alt="Vista previa"
@@ -742,7 +742,7 @@ export default function PromotionsTab({ businesses = [] }) {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                             <div>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                     Etiqueta / Badge
                                 </label>
                                 <input
@@ -753,10 +753,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                     style={{
                                         width: '100%',
                                         padding: '10px 14px',
-                                        background: '#0a0f1d',
-                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--sa-bg)',
+                                        border: '1px solid var(--sa-border-strong)',
                                         borderRadius: '8px',
-                                        color: '#f8fafc',
+                                        color: 'var(--sa-text)',
                                         fontSize: '13px',
                                         boxSizing: 'border-box'
                                     }}
@@ -764,7 +764,7 @@ export default function PromotionsTab({ businesses = [] }) {
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                     Válido Hasta (Opcional)
                                 </label>
                                 <input
@@ -774,10 +774,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                     style={{
                                         width: '100%',
                                         padding: '10px 14px',
-                                        background: '#0a0f1d',
-                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        background: 'var(--sa-bg)',
+                                        border: '1px solid var(--sa-border-strong)',
                                         borderRadius: '8px',
-                                        color: '#f8fafc',
+                                        color: 'var(--sa-text)',
                                         fontSize: '13px',
                                         boxSizing: 'border-box'
                                     }}
@@ -787,7 +787,7 @@ export default function PromotionsTab({ businesses = [] }) {
 
                         {/* Selector de Negocio Asociado */}
                         <div>
-                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                 Destino de la Publicidad
                             </label>
                             <select
@@ -802,10 +802,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                 style={{
                                     width: '100%',
                                     padding: '10px 14px',
-                                    background: '#0a0f1d',
-                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                    background: 'var(--sa-bg)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
-                                    color: '#f8fafc',
+                                    color: 'var(--sa-text)',
                                     fontSize: '13px',
                                     boxSizing: 'border-box'
                                 }}
@@ -820,15 +820,15 @@ export default function PromotionsTab({ businesses = [] }) {
                                 <div style={{
                                     marginTop: '8px',
                                     padding: '10px 14px',
-                                    background: 'rgba(59, 130, 246, 0.08)',
-                                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                                    background: 'var(--sa-primary-soft)',
+                                    border: '1px solid var(--sa-primary-soft)',
                                     borderRadius: '8px',
                                     fontSize: '12px',
                                     color: '#93c5fd',
                                     lineHeight: 1.45
                                 }}>
                                     📢 <strong>Modo Campaña General:</strong> En el Home la imagen se mostrará como un <strong>banner gráfico completo al 100% de ancho</strong> (sin división en columnas ni textos del sistema superpuestos).
-                                    <div style={{ marginTop: '5px', fontSize: '11.5px', color: '#cbd5e1' }}>
+                                    <div style={{ marginTop: '5px', fontSize: '11.5px', color: 'var(--sa-text-2)' }}>
                                         📐 <strong>Tamaño ideal recomendado para el diseño:</strong> <strong>1200 × 300 px</strong> (o 2400 × 600 px en HD, proporción 4:1) para que el diseño ocupe todo el ancho sin recortar nada.
                                     </div>
                                 </div>
@@ -841,8 +841,8 @@ export default function PromotionsTab({ businesses = [] }) {
 
                             return (
                                 <div style={{
-                                    background: 'rgba(255, 255, 255, 0.03)',
-                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                    background: 'var(--sa-hover)',
+                                    border: '1px solid var(--sa-border)',
                                     borderRadius: '12px',
                                     padding: '14px',
                                     display: 'flex',
@@ -851,7 +851,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                 }}>
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                            <label style={{ fontSize: '12px', fontWeight: '700', color: '#cbd5e1' }}>
+                                            <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)' }}>
                                                 🎯 Alcance del Beneficio
                                             </label>
                                             {loadingBizDetails && (
@@ -875,9 +875,9 @@ export default function PromotionsTab({ businesses = [] }) {
                                                     style={{
                                                         padding: '8px 10px',
                                                         borderRadius: '8px',
-                                                        border: form.target_type === t.id ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
-                                                        background: form.target_type === t.id ? 'rgba(16, 185, 129, 0.15)' : '#0a0f1d',
-                                                        color: form.target_type === t.id ? '#10b981' : '#cbd5e1',
+                                                        border: form.target_type === t.id ? '2px solid #10b981' : '1px solid var(--sa-border-strong)',
+                                                        background: form.target_type === t.id ? 'rgba(16, 185, 129, 0.15)' : 'var(--sa-bg)',
+                                                        color: form.target_type === t.id ? '#10b981' : 'var(--sa-text-2)',
                                                         cursor: 'pointer',
                                                         textAlign: 'center',
                                                         fontSize: '12px',
@@ -886,7 +886,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                                     }}
                                                 >
                                                     <div>{t.label}</div>
-                                                    <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px', fontWeight: '400' }}>{t.desc}</div>
+                                                    <div style={{ fontSize: '10px', color: 'var(--sa-text-muted)', marginTop: '2px', fontWeight: '400' }}>{t.desc}</div>
                                                 </button>
                                             ))}
                                         </div>
@@ -895,11 +895,11 @@ export default function PromotionsTab({ businesses = [] }) {
                                     {/* Si el objetivo es servicio específico */}
                                     {form.target_type === 'service' && (
                                         <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                                 Seleccionar Servicio en Promoción (de la BD) *
                                             </label>
                                             {loadingBizDetails ? (
-                                                <div style={{ padding: '10px', fontSize: '12px', color: '#94a3b8' }}>
+                                                <div style={{ padding: '10px', fontSize: '12px', color: 'var(--sa-text-muted)' }}>
                                                     ⏳ Cargando servicios de la base de datos...
                                                 </div>
                                             ) : bizServices.length > 0 ? (
@@ -918,10 +918,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                                     style={{
                                                         width: '100%',
                                                         padding: '10px 14px',
-                                                        background: '#0a0f1d',
-                                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                        background: 'var(--sa-bg)',
+                                                        border: '1px solid var(--sa-border-strong)',
                                                         borderRadius: '8px',
-                                                        color: '#f8fafc',
+                                                        color: 'var(--sa-text)',
                                                         fontSize: '13px'
                                                     }}
                                                 >
@@ -934,7 +934,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                                 </select>
                                             ) : (
                                                 <div>
-                                                    <div style={{ fontSize: '12px', color: '#f87171', marginBottom: '6px' }}>
+                                                    <div style={{ fontSize: '12px', color: 'var(--sa-danger)', marginBottom: '6px' }}>
                                                         ⚠️ Este negocio no tiene servicios registrados en la base de datos.
                                                     </div>
                                                     <input
@@ -945,10 +945,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                                         style={{
                                                             width: '100%',
                                                             padding: '10px 14px',
-                                                            background: '#0a0f1d',
-                                                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                            background: 'var(--sa-bg)',
+                                                            border: '1px solid var(--sa-border-strong)',
                                                             borderRadius: '8px',
-                                                            color: '#f8fafc',
+                                                            color: 'var(--sa-text)',
                                                             fontSize: '13px'
                                                         }}
                                                     />
@@ -960,11 +960,11 @@ export default function PromotionsTab({ businesses = [] }) {
                                     {/* Si el objetivo es categoría */}
                                     {form.target_type === 'category' && (
                                         <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                                 Categoría a la que aplica el descuento (de la BD) *
                                             </label>
                                             {loadingBizDetails ? (
-                                                <div style={{ padding: '10px', fontSize: '12px', color: '#94a3b8' }}>
+                                                <div style={{ padding: '10px', fontSize: '12px', color: 'var(--sa-text-muted)' }}>
                                                     ⏳ Cargando categorías de la base de datos...
                                                 </div>
                                             ) : bizCategories.length > 0 ? (
@@ -975,10 +975,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                                     style={{
                                                         width: '100%',
                                                         padding: '10px 14px',
-                                                        background: '#0a0f1d',
-                                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                        background: 'var(--sa-bg)',
+                                                        border: '1px solid var(--sa-border-strong)',
                                                         borderRadius: '8px',
-                                                        color: '#f8fafc',
+                                                        color: 'var(--sa-text)',
                                                         fontSize: '13px'
                                                     }}
                                                 >
@@ -991,7 +991,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                                 </select>
                                             ) : (
                                                 <div>
-                                                    <div style={{ fontSize: '12px', color: '#f87171', marginBottom: '6px' }}>
+                                                    <div style={{ fontSize: '12px', color: 'var(--sa-danger)', marginBottom: '6px' }}>
                                                         ⚠️ No se encontraron categorías cargadas para este negocio.
                                                     </div>
                                                     <input
@@ -1002,10 +1002,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                                         style={{
                                                             width: '100%',
                                                             padding: '10px 14px',
-                                                            background: '#0a0f1d',
-                                                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                            background: 'var(--sa-bg)',
+                                                            border: '1px solid var(--sa-border-strong)',
                                                             borderRadius: '8px',
-                                                            color: '#f8fafc',
+                                                            color: 'var(--sa-text)',
                                                             fontSize: '13px'
                                                         }}
                                                     />
@@ -1017,11 +1017,11 @@ export default function PromotionsTab({ businesses = [] }) {
                                     {/* Si el objetivo es producto específico de tienda */}
                                     {form.target_type === 'product' && (
                                         <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                                 Seleccionar Producto de la Tienda (de la BD) *
                                             </label>
                                             {loadingBizDetails ? (
-                                                <div style={{ padding: '10px', fontSize: '12px', color: '#94a3b8' }}>
+                                                <div style={{ padding: '10px', fontSize: '12px', color: 'var(--sa-text-muted)' }}>
                                                     ⏳ Cargando productos de la tienda desde la BD...
                                                 </div>
                                             ) : bizProducts.length > 0 ? (
@@ -1040,10 +1040,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                                     style={{
                                                         width: '100%',
                                                         padding: '10px 14px',
-                                                        background: '#0a0f1d',
-                                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                        background: 'var(--sa-bg)',
+                                                        border: '1px solid var(--sa-border-strong)',
                                                         borderRadius: '8px',
-                                                        color: '#f8fafc',
+                                                        color: 'var(--sa-text)',
                                                         fontSize: '13px'
                                                     }}
                                                 >
@@ -1056,7 +1056,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                                 </select>
                                             ) : (
                                                 <div>
-                                                    <div style={{ fontSize: '12px', color: '#f87171', marginBottom: '6px' }}>
+                                                    <div style={{ fontSize: '12px', color: 'var(--sa-danger)', marginBottom: '6px' }}>
                                                         ⚠️ Este negocio aún no tiene productos cargados en su tienda online.
                                                     </div>
                                                     <input
@@ -1067,10 +1067,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                                         style={{
                                                             width: '100%',
                                                             padding: '10px 14px',
-                                                            background: '#0a0f1d',
-                                                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                            background: 'var(--sa-bg)',
+                                                            border: '1px solid var(--sa-border-strong)',
                                                             borderRadius: '8px',
-                                                            color: '#f8fafc',
+                                                            color: 'var(--sa-text)',
                                                             fontSize: '13px'
                                                         }}
                                                     />
@@ -1096,7 +1096,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                     {/* Descuentos y Código */}
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                         <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                                 Tipo de Descuento
                                             </label>
                                             <select
@@ -1105,10 +1105,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                                 style={{
                                                     width: '100%',
                                                     padding: '10px 14px',
-                                                    background: '#0a0f1d',
-                                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                    background: 'var(--sa-bg)',
+                                                    border: '1px solid var(--sa-border-strong)',
                                                     borderRadius: '8px',
-                                                    color: '#f8fafc',
+                                                    color: 'var(--sa-text)',
                                                     fontSize: '13px'
                                                 }}
                                             >
@@ -1118,7 +1118,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                         </div>
 
                                         <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                                 Valor {form.discount_type === 'percentage' ? '(%)' : '($)'}
                                             </label>
                                             <input
@@ -1140,10 +1140,10 @@ export default function PromotionsTab({ businesses = [] }) {
                                                 style={{
                                                     width: '100%',
                                                     padding: '10px 14px',
-                                                    background: '#0a0f1d',
-                                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                    background: 'var(--sa-bg)',
+                                                    border: '1px solid var(--sa-border-strong)',
                                                     borderRadius: '8px',
-                                                    color: '#f8fafc',
+                                                    color: 'var(--sa-text)',
                                                     fontSize: '13px'
                                                 }}
                                             />
@@ -1151,7 +1151,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                     </div>
 
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                             Código de Cupón (Opcional)
                                         </label>
                                         <input
@@ -1162,8 +1162,8 @@ export default function PromotionsTab({ businesses = [] }) {
                                             style={{
                                                 width: '100%',
                                                 padding: '10px 14px',
-                                                background: '#0a0f1d',
-                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                background: 'var(--sa-bg)',
+                                                border: '1px solid var(--sa-border-strong)',
                                                 borderRadius: '8px',
                                                 color: '#10b981',
                                                 fontWeight: '800',
@@ -1174,7 +1174,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                     </div>
 
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                             Descripción / Condiciones (Para el Modal de la Promo)
                                         </label>
                                         <textarea
@@ -1185,21 +1185,21 @@ export default function PromotionsTab({ businesses = [] }) {
                                             style={{
                                                 width: '100%',
                                                 padding: '10px 14px',
-                                                background: '#0a0f1d',
-                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                background: 'var(--sa-bg)',
+                                                border: '1px solid var(--sa-border-strong)',
                                                 borderRadius: '8px',
-                                                color: '#f8fafc',
+                                                color: 'var(--sa-text)',
                                                 fontSize: '13px',
                                                 resize: 'vertical'
                                             }}
                                         />
-                                        <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                                        <span style={{ display: 'block', fontSize: '11px', color: 'var(--sa-text-muted)', marginTop: '4px' }}>
                                             💡 Opcional. Si lo dejás vacío, el modal no mostrará ningún texto secundario.
                                         </span>
                                     </div>
 
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                             Texto del Botón de Acción (Opcional)
                                         </label>
                                         <input
@@ -1210,15 +1210,15 @@ export default function PromotionsTab({ businesses = [] }) {
                                             style={{
                                                 width: '100%',
                                                 padding: '10px 14px',
-                                                background: '#0a0f1d',
-                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                background: 'var(--sa-bg)',
+                                                border: '1px solid var(--sa-border-strong)',
                                                 borderRadius: '8px',
-                                                color: '#f8fafc',
+                                                color: 'var(--sa-text)',
                                                 fontSize: '13px',
                                                 boxSizing: 'border-box'
                                             }}
                                         />
-                                        <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                                        <span style={{ display: 'block', fontSize: '11px', color: 'var(--sa-text-muted)', marginTop: '4px' }}>
                                             💡 Si lo dejás vacío, el botón se adaptará automáticamente según la acción.
                                         </span>
                                     </div>
@@ -1229,12 +1229,12 @@ export default function PromotionsTab({ businesses = [] }) {
                         {/* Campo condicional: Si es General, botón de acción / URL de destino */}
                         {!form.business_id && (
                             <div style={{
-                                background: 'rgba(37, 99, 235, 0.08)',
-                                border: '1px solid rgba(37, 99, 235, 0.25)',
+                                background: 'var(--sa-primary-soft)',
+                                border: '1px solid var(--sa-primary-soft)',
                                 borderRadius: '10px',
                                 padding: '12px 14px'
                             }}>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#60a5fa', marginBottom: '6px' }}>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-primary-text)', marginBottom: '6px' }}>
                                     🔗 URL de Destino al hacer Clic en la Publicidad
                                 </label>
                                 <input
@@ -1245,15 +1245,15 @@ export default function PromotionsTab({ businesses = [] }) {
                                     style={{
                                         width: '100%',
                                         padding: '9px 12px',
-                                        background: '#0a0f1d',
-                                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                                        background: 'var(--sa-bg)',
+                                        border: '1px solid var(--sa-border-strong)',
                                         borderRadius: '8px',
-                                        color: '#f8fafc',
+                                        color: 'var(--sa-text)',
                                         fontSize: '13px',
                                         boxSizing: 'border-box'
                                     }}
                                 />
-                                <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
+                                <span style={{ display: 'block', fontSize: '11px', color: 'var(--sa-text-muted)', marginTop: '6px' }}>
                                     Tip: Podés poner <code>/negocios</code>, un link de WhatsApp, o un formulario para registrar nuevos comercios.
                                 </span>
                             </div>
@@ -1264,11 +1264,11 @@ export default function PromotionsTab({ businesses = [] }) {
                                 type="button"
                                 onClick={() => setShowModal(false)}
                                 style={{
-                                    background: '#1e293b',
-                                    border: '1px solid #334155',
+                                    background: 'var(--sa-surface-2)',
+                                    border: '1px solid var(--sa-border-strong)',
                                     borderRadius: '8px',
                                     padding: '10px 18px',
-                                    color: '#94a3b8',
+                                    color: 'var(--sa-text-muted)',
                                     fontSize: '13px',
                                     fontWeight: '700',
                                     cursor: 'pointer'
