@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
-import { getPlanDetails, isFreePlan } from '../../utils/subscriptionUtils';
+import { getPlanDetails, isFreePlan, calculateSubscriptionPrice } from '../../utils/subscriptionUtils';
 
 export default function BusinessSubscriptionView({ business, isMobile }) {
     const [stats, setStats] = useState(null);
@@ -37,22 +37,12 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
     const courtsCount = Math.max(1, subscription?.spaces_included || business?.courts?.length || business?.capacity || 1);
 
     // Escala de precios por cancha
-    let unitPrice = 20000;
-    if (courtsCount >= 4 && courtsCount <= 5) {
-        unitPrice = 17000;
-    } else if (courtsCount >= 6) {
-        unitPrice = 15000;
-    }
-
-    const totalCourtsPrice = courtsCount * unitPrice;
+    const unitPrice = calculateSubscriptionPrice('sport', courtsCount) / courtsCount;
+    const totalCourtsPrice = calculateSubscriptionPrice('sport', courtsCount);
 
     // Servicios / Profesionales
     const specialistsCount = Math.max(1, subscription?.spaces_included || business?.specialists?.length || 1);
-    let totalServicesPrice = 18000;
-    if (specialistsCount > 1) {
-        const extra = Math.max(0, specialistsCount - 3);
-        totalServicesPrice = 36000 + (extra * 10000);
-    }
+    const totalServicesPrice = calculateSubscriptionPrice('service', specialistsCount);
 
     // Quinchos / Salones
     const totalRentalPrice = 15000;

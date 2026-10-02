@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 import { useNotification } from '../../contexts/NotificationContext';
+import { calculateSubscriptionPrice } from '../../utils/subscriptionUtils';
 
 const BusinessFormModal = ({ business, categories = [], subcategories = [], sellers = [], onClose, onSave }) => {
     const { showToast } = useNotification();
@@ -273,29 +274,14 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
     let planLabel = '';
     let priceLabel = '';
 
+    const formatPrice = (n) => `$${n.toLocaleString('es-AR')}/mes`;
     if (isService) {
-        if (count === 1) {
-            planLabel = 'Plan Individual (1 Agenda)';
-            priceLabel = '$18.000/mes';
-        } else if (count <= 3) {
-            planLabel = 'Plan Equipos (Hasta 3 Agendas)';
-            priceLabel = '$36.000/mes';
-        } else {
-            const extra = count - 3;
-            planLabel = `Plan Equipos (${count} Agendas)`;
-            priceLabel = `$${(36000 + extra * 10000).toLocaleString('es-AR')}/mes`;
-        }
+        planLabel = count === 1 ? 'Plan Individual (1 Agenda)' : `Plan Equipos (${count} Agendas)`;
+        priceLabel = formatPrice(calculateSubscriptionPrice('service', count));
     } else if (isSport) {
-        if (count <= 3) {
-            planLabel = `Plan Canchas (${count} Canchas)`;
-            priceLabel = `$${(count * 20000).toLocaleString('es-AR')}/mes ($20k/cancha)`;
-        } else if (count <= 5) {
-            planLabel = `Plan Canchas (${count} Canchas)`;
-            priceLabel = `$${(count * 17000).toLocaleString('es-AR')}/mes ($17k/cancha)`;
-        } else {
-            planLabel = `Plan Canchas (${count} Canchas)`;
-            priceLabel = `$${(count * 15000).toLocaleString('es-AR')}/mes ($15k/cancha)`;
-        }
+        const total = calculateSubscriptionPrice('sport', count);
+        planLabel = `Plan Canchas (${count} Canchas)`;
+        priceLabel = `${formatPrice(total)} ($${Math.round(total / count / 1000)}k/cancha)`;
     } else {
         planLabel = 'Plan Alquileres / Quinchos';
         priceLabel = '$15.000/mes';

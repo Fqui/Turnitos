@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import supabaseService from "../services/supabaseService";
 import "./SubscriptionManager.css";
+import { calculateSubscriptionPrice } from "../utils/subscriptionUtils";
 
 const SubscriptionManager = ({ businessId, businessType, business, formData, onResourcesChange, onSave, saving, serviceAdapter, showToast }) => {
     const [subscription, setSubscription] = useState(null);
@@ -60,14 +61,11 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
     let computedPlanName = subscription?.plan_name || "Plan Personalizado";
     if (!isSport) {
         const specCount = Math.max(spacesIncluded, countFromData, 1);
-        if (specCount === 1) { calculatedMonthlyPrice = 18000; computedPlanName = "Servicios - Individual"; }
-        else { calculatedMonthlyPrice = 36000 + (Math.max(0, specCount - 3) * 10000); computedPlanName = "Servicios - Equipo"; }
+        calculatedMonthlyPrice = calculateSubscriptionPrice('service', specCount);
+        computedPlanName = specCount === 1 ? "Servicios - Individual" : "Servicios - Equipo";
     } else {
         const courtCount = Math.max(spacesIncluded, countFromData, 1);
-        let unit = 20000;
-        if (courtCount >= 4 && courtCount <= 5) unit = 17000;
-        else if (courtCount >= 6) unit = 15000;
-        calculatedMonthlyPrice = courtCount * unit;
+        calculatedMonthlyPrice = calculateSubscriptionPrice('sport', courtCount);
         computedPlanName = `Canchas (${courtCount} ${courtCount === 1 ? "Cancha" : "Canchas"})`;
     }
 

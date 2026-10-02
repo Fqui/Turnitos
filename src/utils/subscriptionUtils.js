@@ -33,7 +33,7 @@ export const PLANS_CATALOG = [
         name: 'Servicios - Individual',
         business_type: 'services',
         category_label: '1 Agenda / Profesional',
-        monthly_price: 18000,
+        monthly_price: 17000,
         monthly_bookings_limit: null,
         has_subdomain: true,
         has_linkbio: true,
@@ -44,10 +44,10 @@ export const PLANS_CATALOG = [
     },
     {
         id: PLAN_IDS.SERVICES_TEAM,
-        name: 'Servicios - Equipo (Hasta 3 Agendas)',
+        name: 'Servicios - Equipo',
         business_type: 'services',
-        category_label: 'Hasta 3 Agendas',
-        monthly_price: 36000,
+        category_label: '2 o más Agendas',
+        monthly_price: 32000,
         monthly_bookings_limit: null,
         has_subdomain: true,
         has_linkbio: true,
@@ -55,7 +55,7 @@ export const PLANS_CATALOG = [
         direct_commission_fixed: 0,
         marketplace_commission_fixed: 500,
         extra_specialist_price: 10000,
-        description: 'Hasta 3 profesionales ($10.000 por agenda extra a partir de la 4ta). $500 por turno marketplace.'
+        description: '2 profesionales $25.000, 3 profesionales $32.000 ($10.000 por agenda extra a partir de la 4ta). $500 por turno marketplace.'
     },
     {
         id: PLAN_IDS.COURTS_1_3,
@@ -117,6 +117,30 @@ export const PLANS_CATALOG = [
 ];
 
 /**
+ * Monthly subscription price by business type and number of agendas/courts.
+ * Must match public.calculate_subscription_price() in the database.
+ *   Services: 1 → $17.000 · 2 → $25.000 · 3 → $32.000 · +$10.000 per extra after the 3rd
+ *   Sports:   1-3 courts → $20.000 c/u · 4-5 → $17.000 c/u · 6+ → $15.000 c/u
+ *   Rentals:  $15.000
+ */
+export function calculateSubscriptionPrice(businessType, unitsCount = 1) {
+    const type = String(businessType || '').toLowerCase();
+    const count = Math.max(1, Number(unitsCount) || 1);
+
+    if (type === 'sport' || type === 'courts') {
+        if (count <= 3) return count * 20000;
+        if (count <= 5) return count * 17000;
+        return count * 15000;
+    }
+    if (type === 'venue' || type === 'rental' || type === 'alquiler') {
+        return 15000;
+    }
+    if (count === 1) return 17000;
+    if (count === 2) return 25000;
+    return 32000 + (count - 3) * 10000;
+}
+
+/**
  * Checks if a plan name or id corresponds to the free plan
  */
 export function isFreePlan(planIdOrName) {
@@ -163,20 +187,8 @@ export function calculateMonthlyFee(planIdOrName, unitsCount = 1, businessType =
 
     const count = Math.max(1, Number(unitsCount) || 1);
     const plan = getPlanDetails(planIdOrName, businessType, count);
-
-    if (!plan) return 18000;
-
-    if (plan.id === PLAN_IDS.COURTS_1_3) return 20000 * count;
-    if (plan.id === PLAN_IDS.COURTS_4_5) return 17000 * count;
-    if (plan.id === PLAN_IDS.COURTS_6_PLUS) return 15000 * count;
-    if (plan.id === PLAN_IDS.RENTAL) return 15000;
-    if (plan.id === PLAN_IDS.SERVICES_INDIVIDUAL) return 18000;
-    if (plan.id === PLAN_IDS.SERVICES_TEAM) {
-        const extraUnits = Math.max(0, count - 3);
-        return 36000 + (extraUnits * 10000);
-    }
-
-    return plan.monthly_price || 18000;
+    const type = plan?.business_type === 'services' ? 'service' : (plan?.business_type || businessType);
+    return calculateSubscriptionPrice(type, count);
 }
 
 /**

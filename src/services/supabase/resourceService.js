@@ -1,3 +1,4 @@
+import { calculateSubscriptionPrice } from '../../utils/subscriptionUtils';
 import { supabase } from '../supabaseClient';
 
 export async function getResources(businessId, type = null) {
@@ -88,37 +89,27 @@ export async function syncBusinessResources(businessId, businessType, requestedC
     if (!businessId || requestedCount <= 0) return;
 
     // --- STEP 1: CALCULATE PRICING AND PLAN ---
-    let calculatedPrice = 18000;
+    const calculatedPrice = calculateSubscriptionPrice(businessType, requestedCount);
     let planId = 'services_individual';
     let planName = 'Servicios - Individual';
 
     if (businessType === 'service') {
-        if (requestedCount === 1) {
-            calculatedPrice = 18000;
-            planId = 'services_individual';
-            planName = 'Servicios - Individual';
-        } else {
-            const extra = Math.max(0, requestedCount - 3);
-            calculatedPrice = 36000 + (extra * 10000);
+        if (requestedCount > 1) {
             planId = 'services_team';
             planName = 'Servicios - Equipo';
         }
     } else if (businessType === 'sport' || businessType === 'courts') {
         if (requestedCount <= 3) {
-            calculatedPrice = requestedCount * 20000;
             planId = 'courts_1_3';
             planName = 'Canchas (1 a 3)';
         } else if (requestedCount <= 5) {
-            calculatedPrice = requestedCount * 17000;
             planId = 'courts_4_5';
             planName = 'Canchas (4 a 5)';
         } else {
-            calculatedPrice = requestedCount * 15000;
             planId = 'courts_6_plus';
             planName = 'Canchas (Más de 5)';
         }
     } else if (businessType === 'venue' || businessType === 'alquiler') {
-        calculatedPrice = 15000;
         planId = 'rental';
         planName = 'Plan Espacios';
     }
