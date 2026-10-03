@@ -10,6 +10,7 @@ const SellerBusinessForm = () => {
     const [categories, setCategories] = useState([]);
     const [subcategories, setSubcategories] = useState([]);
     const [error, setError] = useState('');
+    const [createdCredentials, setCreatedCredentials] = useState(null);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -104,7 +105,10 @@ const SellerBusinessForm = () => {
                 await supabaseService.updateBusinessBySeller(seller.id, id, dataToSubmit);
             } else {
                 // Create new business
-                await supabaseService.createBusinessBySeller(seller.id, dataToSubmit);
+                const created = await supabaseService.createBusinessBySeller(seller.id, dataToSubmit);
+                // Show the generated access once before leaving the form
+                setCreatedCredentials(created?.credentials || null);
+                return;
             }
 
             navigate('/admin/businesses');
@@ -122,6 +126,38 @@ const SellerBusinessForm = () => {
             [name]: value
         }));
     };
+
+    if (createdCredentials) {
+        return (
+            <div style={{ minHeight: '100vh', background: '#0f0f0f', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+                <div style={{ maxWidth: '440px', width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '16px', padding: '28px' }}>
+                    <h2 style={{ margin: '0 0 8px', fontSize: '22px' }}>✅ Negocio creado</h2>
+                    <p style={{ margin: '0 0 20px', color: '#a3a3a3', fontSize: '14px', lineHeight: 1.5 }}>
+                        Pasale estos datos al dueño. La contraseña es provisoria: se le pedirá cambiarla al entrar por primera vez. No se vuelve a mostrar.
+                    </p>
+                    <div style={{ background: '#0f0f0f', borderRadius: '10px', padding: '14px 16px', fontFamily: 'monospace', fontSize: '14px', lineHeight: 1.8, marginBottom: '20px' }}>
+                        <div>Email: {createdCredentials.email}</div>
+                        <div>Contraseña: {createdCredentials.password}</div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => navigator.clipboard?.writeText(`Email: ${createdCredentials.email}
+Contraseña: ${createdCredentials.password}`)}
+                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #3a3a3a', background: 'transparent', color: 'white', fontWeight: 600, cursor: 'pointer', marginBottom: '10px' }}
+                    >
+                        Copiar datos
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/admin/businesses')}
+                        style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: 'var(--primary-paddle, #3ECF8E)', color: '#000', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                        Ir a Mis Negocios
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={{
@@ -430,9 +466,9 @@ const SellerBusinessForm = () => {
                             ? `${formData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}@turnitoslr.com`
                             : '[nombre-del-negocio]@turnitoslr.com'}
                         <br />
-                        🔑 <strong>Contraseña temporal:</strong> admin123 (deberá cambiarla en el primer login)
+                        🔑 <strong>Contraseña temporal:</strong> se genera al crear el negocio (deberá cambiarla en el primer login)
                         <br />
-                        ⏱️ <strong>Período de prueba:</strong> 15 días
+                        ⏱️ <strong>Período de prueba:</strong> 14 días
                         <br />
                         <br />
                         🎨 El negocio se creará con <strong>logo y banner predeterminados</strong>. El dueño podrá completar toda la configuración (horarios, servicios, imágenes, etc.) desde su Portal de Negocio.

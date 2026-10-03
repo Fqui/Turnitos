@@ -1,244 +1,188 @@
-import React from 'react';
-import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    BarChart, Bar, AreaChart, Area
-} from 'recharts';
+import React, { useMemo } from 'react';
+import { Wallet, CalendarClock, AlertTriangle, TrendingUp, Plus } from 'lucide-react';
+import { getBillingInfo, formatMoney, formatDueText } from '../../../utils/billingUtils';
 
-export function ModernMetricCard({ icon, title, value, subtitle, colorAccent = 'var(--sa-primary)' }) {
+const PAYING_STATUSES = new Set(['active', 'due_soon', 'grace', 'overdue']);
+const ATTENTION_ORDER = { overdue: 0, trial_expired: 1, grace: 2, due_soon: 3, trial: 4 };
+
+const METHOD_LABELS = {
+    transferencia: 'Transferencia',
+    efectivo: 'Efectivo',
+    mercadopago: 'Mercado Pago',
+    otro: 'Otro'
+};
+
+function Kpi({ icon, label, value, foot, variant }) {
+    const IconComponent = icon;
     return (
-        <div
-            style={{
-                background: 'linear-gradient(145deg, var(--sa-surface), var(--sa-surface))',
-                borderRadius: '14px',
-                padding: '18px 20px',
-                border: '1px solid var(--sa-border)',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                position: 'relative',
-                overflow: 'hidden'
-            }}
-        >
-            <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: `linear-gradient(90deg, ${colorAccent}, transparent)`
-            }} />
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--sa-text-muted)' }}>
-                    {title}
-                </span>
-                <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    background: `color-mix(in srgb, ${colorAccent} 9%, transparent)`,
-                    border: `1px solid color-mix(in srgb, ${colorAccent} 19%, transparent)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px'
-                }}>
-                    {icon}
-                </div>
-            </div>
-
-            <div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--sa-text)', letterSpacing: '-0.5px' }}>
-                    {value}
-                </div>
-                {subtitle && (
-                    <div style={{ fontSize: '12px', color: 'var(--sa-text-muted)', marginTop: '4px', fontWeight: '500' }}>
-                        {subtitle}
-                    </div>
-                )}
-            </div>
+        <div className={`sa-card sa-kpi${variant ? ` is-${variant}` : ''}`}>
+            <div className="sa-kpi-label"><IconComponent size={15} />{label}</div>
+            <div className="sa-kpi-value">{value}</div>
+            {foot && <div className="sa-kpi-foot">{foot}</div>}
         </div>
     );
 }
 
-export function ModernChart({ title, data, type = 'commission' }) {
-    const isCommission = type === 'commission';
+export default function OverviewTab({ businesses = [], billing, onRegisterPayment }) {
+    const payments = billing?.payments || [];
+
+    const rows = useMemo(() => {
+        const subByBusiness = new Map((billing?.subscriptions || []).map(s => [String(s.business_id), s]));
+        return businesses.map(b => ({
+            business: b,
+            info: getBillingInfo(b, subByBusiness.get(String(b.id)))
+        }));
+    }, [businesses, billing]);
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const paying = rows.filter(r => PAYING_STATUSES.has(r.info.status));
+    const expectedMonthly = paying.reduce((sum, r) => sum + r.info.monthlyPrice, 0);
+
+    const paymentsThisMonth = payments.filter(p => {
+        const d = new Date(p.payment_date);
+        return d >= monthStart && d <= new Date(monthEnd.getTime() + 86399999);
+    });
+    const collectedThisMonth = paymentsThisMonth.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    const dueThisMonth = paying.filter(r => r.info.dueDate && r.info.dueDate <= monthEnd);
+    const pendingThisMonth = dueThisMonth.reduce((sum, r) => sum + r.info.monthlyPrice, 0);
+
+    const overdue = rows.filter(r => r.info.status === 'overdue' || r.info.status === 'trial_expired');
+    const overdueAmount = overdue.reduce((sum, r) => sum + r.info.monthlyPrice, 0);
+
+    const attention = rows
+        .filter(r => {
+            if (r.info.status in ATTENTION_ORDER && r.info.status !== 'trial') return true;
+            return r.info.status === 'trial' && r.info.daysToDue !== null && r.info.daysToDue <= 7;
+        })
+        .sort((a, b) => (ATTENTION_ORDER[a.info.status] - ATTENTION_ORDER[b.info.status])
+            || ((a.info.daysToDue ?? 0) - (b.info.daysToDue ?? 0)));
+
+    const counts = rows.reduce((acc, r) => {
+        acc[r.info.status] = (acc[r.info.status] || 0) + 1;
+        return acc;
+    }, {});
 
     return (
-        <div style={{
-            background: 'linear-gradient(145deg, var(--sa-surface), var(--sa-surface))',
-            borderRadius: '14px',
-            padding: '20px',
-            border: '1px solid var(--sa-border)',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-            display: 'flex',
-            flexDirection: 'column'
-        }}>
-            <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '700', color: 'var(--sa-text)' }}>
-                {title}
-            </h4>
-
-            {(!data || data.length === 0) ? (
-                <div style={{ height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sa-text-muted)', fontSize: '13px' }}>
-                    Sin datos históricos registrados
-                </div>
-            ) : (
-                <div style={{ height: '220px', width: '100%' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        {isCommission ? (
-                            <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="commGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--sa-primary)" stopOpacity={0.4} />
-                                        <stop offset="95%" stopColor="var(--sa-primary)" stopOpacity={0.0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--sa-border)" />
-                                <XAxis dataKey="month" stroke="var(--sa-text-muted)" fontSize={11} />
-                                <YAxis stroke="var(--sa-text-muted)" fontSize={11} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'var(--sa-surface)', border: '1px solid var(--sa-border-strong)', borderRadius: '8px', fontSize: '12px' }}
-                                    formatter={(val) => [`$${Number(val).toLocaleString('es-AR')}`, 'Comisión']}
-                                />
-                                <Area type="monotone" dataKey="amount" stroke="var(--sa-primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#commGrad)" />
-                            </AreaChart>
-                        ) : (
-                            <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--sa-border)" />
-                                <XAxis dataKey="month" stroke="var(--sa-text-muted)" fontSize={11} />
-                                <YAxis stroke="var(--sa-text-muted)" fontSize={11} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'var(--sa-surface)', border: '1px solid var(--sa-border-strong)', borderRadius: '8px', fontSize: '12px' }}
-                                    formatter={(val) => [val, 'Nuevos Negocios']}
-                                />
-                                <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        )}
-                    </ResponsiveContainer>
-                </div>
-            )}
-        </div>
-    );
-}
-
-export default function OverviewTab({
-    analytics,
-    sellers = [],
-    commissionTrends = [],
-    businessGrowthTrends = [],
-    businesses = [],
-    onNavigateToBusinesses
-}) {
-    const trialBusinesses = businesses.filter(b => b.subscription_status === 'trial');
-    const inactiveBusinesses = businesses.filter(b => b.subscription_status === 'inactive');
-
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Key Metrics Grid */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-                gap: '14px'
-            }}>
-                <ModernMetricCard
-                    icon="🏢"
-                    title="Total Negocios"
-                    value={analytics?.totalBusinesses || businesses.length || 0}
-                    subtitle={`${analytics?.activeBusinesses || businesses.filter(b => b.subscription_status === 'active').length} activos`}
-                    colorAccent="#10b981"
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="sa-kpis">
+                <Kpi
+                    icon={TrendingUp}
+                    label="Ingreso mensual esperado"
+                    value={formatMoney(expectedMonthly)}
+                    foot={`${paying.length} negocio${paying.length === 1 ? '' : 's'} pagando`}
                 />
-                <ModernMetricCard
-                    icon="👥"
-                    title="Red Comercial"
-                    value={analytics?.totalSellers || sellers.length || 0}
-                    subtitle={`${sellers.filter(s => s.status === 'active').length} vendedores activos`}
-                    colorAccent="#6366f1"
+                <Kpi
+                    icon={Wallet}
+                    label="Cobrado este mes"
+                    value={formatMoney(collectedThisMonth)}
+                    foot={`${paymentsThisMonth.length} pago${paymentsThisMonth.length === 1 ? '' : 's'} registrado${paymentsThisMonth.length === 1 ? '' : 's'}`}
+                    variant="primary"
                 />
-                <ModernMetricCard
-                    icon="💰"
-                    title="Comisiones Mes"
-                    value={`$${(analytics?.totalCommissions || 0).toLocaleString('es-AR')}`}
-                    subtitle="Acumulado periodo"
-                    colorAccent="#f59e0b"
+                <Kpi
+                    icon={CalendarClock}
+                    label="Por cobrar este mes"
+                    value={formatMoney(pendingThisMonth)}
+                    foot={`${dueThisMonth.length} vencimiento${dueThisMonth.length === 1 ? '' : 's'} hasta fin de mes`}
                 />
-                <ModernMetricCard
-                    icon="📈"
-                    title="Tasa de Conversión"
-                    value={`${analytics?.conversionRate || 0}%`}
-                    subtitle="Activos vs Registrados"
-                    colorAccent="#ec4899"
-                />
-                <ModernMetricCard
-                    icon="💵"
-                    title="Ingresos Registrados"
-                    value={`$${(analytics?.totalRevenue || 0).toLocaleString('es-AR')}`}
-                    subtitle={`${analytics?.totalBookings || 0} reservas procesadas`}
-                    colorAccent="#8b5cf6"
+                <Kpi
+                    icon={AlertTriangle}
+                    label="Vencidos"
+                    value={overdue.length}
+                    foot={overdue.length ? `${formatMoney(overdueAmount)}/mes en riesgo` : 'Nadie atrasado'}
+                    variant={overdue.length ? 'danger' : undefined}
                 />
             </div>
 
-            {/* Churn Prevention & Attention Banner */}
-            {(trialBusinesses.length > 0 || inactiveBusinesses.length > 0) && (
-                <div style={{
-                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(239, 68, 68, 0.08))',
-                    border: '1px solid rgba(245, 158, 11, 0.25)',
-                    borderRadius: '12px',
-                    padding: '16px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '12px'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '24px' }}>⚠️</span>
+            <div className="sa-grid-2">
+                <div className="sa-card">
+                    <div className="sa-card-header">
                         <div>
-                            <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--sa-text)' }}>
-                                Alertas de Retención y Seguimiento
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'var(--sa-text-2)' }}>
-                                {trialBusinesses.length} negocio(s) en prueba gratuita y {inactiveBusinesses.length} inactivo(s).
-                            </div>
+                            <h2 className="sa-card-title">Requieren atención</h2>
+                            <p className="sa-card-sub">Vencidos, por vencer y pruebas que terminan en 7 días</p>
+                        </div>
+                    </div>
+                    {attention.length === 0 ? (
+                        <div className="sa-empty">Todo al día. No hay cobros pendientes.</div>
+                    ) : (
+                        <div className="sa-table-wrap">
+                            <table className="sa-table">
+                                <thead>
+                                    <tr>
+                                        <th>Negocio</th>
+                                        <th>Estado</th>
+                                        <th className="is-num">Abono</th>
+                                        <th />
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {attention.map(({ business, info }) => (
+                                        <tr key={business.id}>
+                                            <td>
+                                                <div className="is-strong">{business.name}</div>
+                                                <div style={{ fontSize: '12px', color: 'var(--sa-text-muted)' }}>{formatDueText(info)}</div>
+                                            </td>
+                                            <td><span className={`sa-badge tone-${info.tone}`}>{info.label}</span></td>
+                                            <td className="is-num">{info.monthlyPrice ? formatMoney(info.monthlyPrice) : '—'}</td>
+                                            <td style={{ textAlign: 'right' }}>
+                                                <button type="button" className="sa-btn is-primary" onClick={() => onRegisterPayment(business, info.monthlyPrice)}>
+                                                    <Plus size={14} /> Registrar pago
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="sa-card">
+                        <div className="sa-card-header">
+                            <h2 className="sa-card-title">Cartera</h2>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '0 18px 16px' }}>
+                            <span className="sa-badge tone-success">{(counts.active || 0) + (counts.due_soon || 0)} al día</span>
+                            <span className="sa-badge tone-warning">{counts.grace || 0} atrasados</span>
+                            <span className="sa-badge tone-danger">{(counts.overdue || 0) + (counts.trial_expired || 0)} vencidos</span>
+                            <span className="sa-badge tone-info">{counts.trial || 0} en prueba</span>
+                            <span className="sa-badge tone-neutral">{counts.paused || 0} pausados</span>
                         </div>
                     </div>
 
-                    {onNavigateToBusinesses && (
-                        <button
-                            onClick={() => onNavigateToBusinesses('attention')}
-                            style={{
-                                background: '#f59e0b',
-                                color: '#000',
-                                border: 'none',
-                                borderRadius: '8px',
-                                padding: '8px 14px',
-                                fontSize: '12px',
-                                fontWeight: '700',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Ver Negocios que Requieren Atención →
-                        </button>
-                    )}
+                    <div className="sa-card">
+                        <div className="sa-card-header">
+                            <h2 className="sa-card-title">Últimos pagos</h2>
+                        </div>
+                        {payments.length === 0 ? (
+                            <div className="sa-empty">Todavía no registraste pagos.</div>
+                        ) : (
+                            <div className="sa-table-wrap">
+                                <table className="sa-table">
+                                    <tbody>
+                                        {payments.slice(0, 8).map(p => (
+                                            <tr key={p.id}>
+                                                <td>
+                                                    <div className="is-strong">{p.businesses?.name || 'Negocio'}</div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--sa-text-muted)' }}>
+                                                        {new Date(p.payment_date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                                        {' · '}{METHOD_LABELS[p.method] || p.method || 'Sin medio'}
+                                                        {p.months_covered > 1 ? ` · ${p.months_covered} meses` : ''}
+                                                    </div>
+                                                </td>
+                                                <td className="is-num is-strong">{formatMoney(p.amount)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            )}
-
-            {/* Charts Section */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-                gap: '16px'
-            }}>
-                <ModernChart
-                    title="📊 Evolución de Comisiones"
-                    data={commissionTrends}
-                    type="commission"
-                />
-                <ModernChart
-                    title="📈 Crecimiento de Negocios"
-                    data={businessGrowthTrends}
-                    type="growth"
-                />
             </div>
         </div>
     );

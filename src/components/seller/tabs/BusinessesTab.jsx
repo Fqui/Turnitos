@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { getBillingInfo, formatDueText, formatMoney } from '../../../utils/billingUtils';
 import { useNotification } from '../../../contexts/NotificationContext';
 
 export default function BusinessesTab({
@@ -10,7 +11,9 @@ export default function BusinessesTab({
     filter = 'all',
     setFilter,
     onResetPassword,
-    onUpdateSubscriptionStatus
+    onUpdateSubscriptionStatus,
+    billing,
+    onRegisterPayment
 }) {
     const { showToast } = useNotification();
     const [search, setSearch] = useState('');
@@ -207,17 +210,8 @@ export default function BusinessesTab({
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {filteredBusinesses.map((biz) => {
-                        const statusColor = biz.subscription_status === 'active'
-                            ? '#10b981'
-                            : biz.subscription_status === 'trial'
-                                ? '#f59e0b'
-                                : '#ef4444';
-
-                        const statusText = biz.subscription_status === 'active'
-                            ? 'Activo'
-                            : biz.subscription_status === 'trial'
-                                ? 'En Prueba'
-                                : 'Inactivo';
+                        const subscription = (billing?.subscriptions || []).find(sub => String(sub.business_id) === String(biz.id));
+                        const billingInfo = getBillingInfo(biz, subscription);
 
                         return (
                             <div
@@ -263,19 +257,12 @@ export default function BusinessesTab({
                                             <span style={{ fontSize: '15px', fontWeight: '800', color: 'var(--sa-text)' }}>
                                                 {biz.name}
                                             </span>
-                                            <span style={{
-                                                fontSize: '10px',
-                                                padding: '2px 8px',
-                                                borderRadius: '10px',
-                                                background: `${statusColor}18`,
-                                                color: statusColor,
-                                                fontWeight: '800',
-                                                border: `1px solid ${statusColor}40`
-                                            }}>
-                                                {statusText}
+                                            <span className={`sa-badge tone-${billingInfo.tone}`}>
+                                                {billingInfo.label}
                                             </span>
                                         </div>
                                         <div style={{ fontSize: '12px', color: 'var(--sa-text-muted)', marginTop: '2px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                            <span>{formatDueText(billingInfo)}{billingInfo.monthlyPrice ? ` · ${formatMoney(billingInfo.monthlyPrice)}/mes` : ''}</span>
                                             <span>📍 {biz.location || 'Sin ubicación'}</span>
                                             <span>📁 {biz.categories?.name || biz.category || 'General'}</span>
                                             {biz.sellers && (
@@ -311,6 +298,18 @@ export default function BusinessesTab({
 
                                 {/* Actions Toolbar */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {onRegisterPayment && (
+                                        <button
+                                            type="button"
+                                            className="sa-btn is-primary"
+                                            style={{ padding: '6px 10px', fontSize: '11px' }}
+                                            onClick={() => onRegisterPayment(biz, billingInfo.monthlyPrice)}
+                                            title="Registrar un pago de la suscripción"
+                                        >
+                                            + Pago
+                                        </button>
+                                    )}
+
                                     {/* Login As / Ver Portal Button */}
                                     <button
                                         onClick={() => handleLoginAs(biz)}

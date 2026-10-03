@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
+import RegisterPaymentModal from './RegisterPaymentModal';
+import { getBillingInfo, formatDueText, formatMoney } from '../../utils/billingUtils';
 
 const SellerBusinessList = () => {
     const [businesses, setBusinesses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, trial, active, inactive
     const [searchTerm, setSearchTerm] = useState('');
+    const [subscriptions, setSubscriptions] = useState([]);
+    const [paymentTarget, setPaymentTarget] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -17,8 +21,12 @@ const SellerBusinessList = () => {
     const loadBusinesses = async () => {
         try {
             const sellerData = JSON.parse(localStorage.getItem('seller'));
-            const data = await supabaseService.getSellerBusinesses(sellerData.id);
+            const [data, billing] = await Promise.all([
+                supabaseService.getSellerBusinesses(sellerData.id),
+                supabaseService.getBillingData().catch(() => ({ subscriptions: [] }))
+            ]);
             setBusinesses(data);
+            setSubscriptions(billing.subscriptions || []);
         } catch (error) {
             console.error('Error loading businesses:', error);
         } finally {
@@ -207,7 +215,9 @@ const SellerBusinessList = () => {
                     display: 'grid',
                     gap: '16px'
                 }}>
-                    {filteredBusinesses.map((business) => (
+                    {filteredBusinesses.map((business) => {
+                        const billingInfo = getBillingInfo(business, subscriptions.find(sub => String(sub.business_id) === String(business.id)));
+                        return (
                         <motion.div
                             key={business.id}
                             whileHover={{ y: -2 }}
@@ -236,15 +246,42 @@ const SellerBusinessList = () => {
                                     <div style={{ fontSize: '13px', opacity: 0.5 }}>
                                         {business.totalBookings} reservas • Mes {business.subscriptionMonth || 0} de suscripción
                                     </div>
+                                    <div style={{ fontSize: '13px', marginTop: '4px', color: billingInfo.tone === 'danger' ? '#f87171' : 'rgba(255,255,255,0.7)' }}>
+                                        {billingInfo.label} · {formatDueText(billingInfo)}
+                                        {billingInfo.monthlyPrice ? ` · ${formatMoney(billingInfo.monthlyPrice)}/mes` : ''}
+                                    </div>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPaymentTarget({ business, monthlyPrice: billingInfo.monthlyPrice });
+                                    }}
+                                    style={{ padding: '8px 12px', borderRadius: '10px', border: 'none', background: 'var(--primary-paddle, #3ECF8E)', color: '#000', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                                >
+                                    + Registrar pago
+                                </button>
                                 {getStatusBadge(business.subscription_status)}
                                 <div style={{ fontSize: '24px', opacity: 0.5 }}>→</div>
                             </div>
                         </motion.div>
-                    ))}
+                        );
+                    })}
                 </div>
+            )}
+
+            {paymentTarget && (
+                <RegisterPaymentModal
+                    business={paymentTarget.business}
+                    monthlyPrice={paymentTarget.monthlyPrice}
+                    onClose={() => setPaymentTarget(null)}
+                    onRegistered={() => {
+                        setPaymentTarget(null);
+                        loadBusinesses();
+                    }}
+                />
             )}
         </div>
     );

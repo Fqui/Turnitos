@@ -17,21 +17,21 @@ import BookingsTab from './BookingsTab';
 import ReviewsTab from './ReviewsTab';
 import BusinessFormModal from './BusinessFormModal';
 import SellerDetailModal from './SellerDetailModal';
+import RegisterPaymentModal from './RegisterPaymentModal';
 
 export default function SuperAdminDashboard() {
     const navigate = useNavigate();
     const { showToast, showConfirm } = useNotification();
 
     // Data State
-    const [analytics, setAnalytics] = useState(null);
     const [sellers, setSellers] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [categories, setCategories] = useState([]);
     const [subcategories, setSubcategories] = useState([]);
     const [bookingsData, setBookingsData] = useState(null);
-    const [commissionTrends, setCommissionTrends] = useState([]);
-    const [businessGrowthTrends, setBusinessGrowthTrends] = useState([]);
     const [settledSellers, setSettledSellers] = useState({});
+    const [billing, setBilling] = useState({ subscriptions: [], payments: [] });
+    const [paymentTarget, setPaymentTarget] = useState(null);
 
     // UI & Navigation State
     const [activeTab, setActiveTab] = useState('overview');
@@ -109,16 +109,13 @@ export default function SuperAdminDashboard() {
             };
 
             const [
-                analyticsData,
                 sellersData,
                 businessesData,
                 categoriesData,
                 subcategoriesData,
                 bookingsRes,
-                commissionData,
-                growthData
+                billingData
             ] = await Promise.all([
-                safe(() => supabaseService.getGlobalAnalytics(), null),
                 safe(() => supabaseService.getAllSellers(), []),
                 safe(async () => {
                     const biz = await supabaseService.getAllBusinesses();
@@ -128,18 +125,15 @@ export default function SuperAdminDashboard() {
                 safe(() => supabaseService.getCategories(), []),
                 safe(() => supabaseService.getSubcategories(), []),
                 safe(() => supabaseService.getBookingsAnalytics(), null),
-                safe(() => supabaseService.getCommissionTrends(), []),
-                safe(() => supabaseService.getBusinessGrowthTrends(), [])
+                safe(() => supabaseService.getBillingData(), null)
             ]);
 
-            if (analyticsData) setAnalytics(analyticsData);
             if (sellersData) setSellers(sellersData);
             if (businessesData) setBusinesses(businessesData);
             if (categoriesData) setCategories(categoriesData);
             if (subcategoriesData) setSubcategories(subcategoriesData);
             if (bookingsRes) setBookingsData(bookingsRes);
-            if (commissionData) setCommissionTrends(commissionData);
-            if (growthData) setBusinessGrowthTrends(growthData);
+            if (billingData) setBilling(billingData);
         } catch (error) {
             console.error('Error loading SuperAdmin data:', error);
             showToast('Error cargando métricas del sistema', 'error');
@@ -362,15 +356,9 @@ export default function SuperAdminDashboard() {
                 <main className="sa-content">
                     {activeTab === 'overview' && (
                         <OverviewTab
-                            analytics={analytics}
-                            sellers={sellers}
-                            commissionTrends={commissionTrends}
-                            businessGrowthTrends={businessGrowthTrends}
                             businesses={businesses}
-                            onNavigateToBusinesses={(filter) => {
-                                setBusinessFilter(filter);
-                                setActiveTab('businesses');
-                            }}
+                            billing={billing}
+                            onRegisterPayment={(business, monthlyPrice) => setPaymentTarget({ business, monthlyPrice })}
                         />
                     )}
 
@@ -394,6 +382,8 @@ export default function SuperAdminDashboard() {
                             filter={businessFilter}
                             setFilter={setBusinessFilter}
                             onResetPassword={handleResetBusinessPassword}
+                            billing={billing}
+                            onRegisterPayment={(business, monthlyPrice) => setPaymentTarget({ business, monthlyPrice })}
                             onUpdateSubscriptionStatus={handleUpdateSubscriptionStatus}
                         />
                     )}
@@ -463,6 +453,22 @@ export default function SuperAdminDashboard() {
                     onSelectBusiness={(biz) => {
                         setEditingBusiness(biz);
                         setShowBusinessModal(true);
+                    }}
+                />
+            )}
+
+            {paymentTarget && (
+                <RegisterPaymentModal
+                    business={paymentTarget.business}
+                    monthlyPrice={paymentTarget.monthlyPrice}
+                    onClose={() => setPaymentTarget(null)}
+                    onRegistered={(result) => {
+                        setPaymentTarget(null);
+                        const until = result?.period_end
+                            ? new Date(`${result.period_end}T00:00:00`).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })
+                            : null;
+                        showToast(`Pago registrado${until ? `. Al día hasta el ${until}` : ''}`, 'success');
+                        loadData();
                     }}
                 />
             )}

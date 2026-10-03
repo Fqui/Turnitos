@@ -1,6 +1,12 @@
 import { supabase } from '../supabaseClient';
 import { syncBusinessResources } from './resourceService';
 
+function generateTempPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    const values = crypto.getRandomValues(new Uint32Array(10));
+    return Array.from(values, v => chars[v % chars.length]).join('');
+}
+
 /**
  * Seller Login
  */
@@ -123,11 +129,7 @@ export async function createBusinessBySeller(sellerId, businessData, createBusin
         .replace(/[^a-z0-9-]/g, '');
 
     const email = `${sanitizedName}@turnitoslr.com`;
-    const password = 'admin123';
-
-    const trialStartDate = new Date();
-    const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 15);
+    const password = generateTempPassword();
 
     const businessWithSellerData = {
         ...businessData,
@@ -136,12 +138,11 @@ export async function createBusinessBySeller(sellerId, businessData, createBusin
         email,
         password,
         password_changed: false,
-        trial_start_date: trialStartDate.toISOString(),
-        trial_end_date: trialEndDate.toISOString(),
         subscription_status: 'trial'
     };
 
-    return await createBusinessFn(businessWithSellerData);
+    const business = await createBusinessFn(businessWithSellerData);
+    return { ...business, credentials: { email, password } };
 }
 
 /**
@@ -164,152 +165,38 @@ export async function updateBusinessBySeller(sellerId, businessId, businessData,
 }
 
 /**
- * Process subscription payment and calculate commission
+ * Register a manual subscription payment. The database moves the due date,
+ * activates the business and creates the seller commission.
  */
-export async function processSubscriptionPayment(businessId, planId, paymentCycle = 'monthly') {
-    const { data: business, error: businessError } = await supabase
-        .from('businesses')
-        .select('seller_id, subscription_start_date')
-        .eq('id', businessId)
-        .single();
-
-    if (businessError) throw businessError;
-
-    const { data: plan, error: planError } = await supabase
-        .from('subscription_plans')
-        .select('*')
-        .eq('id', planId)
-        .single();
-
-    if (planError) throw planError;
-
-    const monthsCovered = paymentCycle === 'quarterly' ? 3 : 1;
-    const originalAmount = plan.price_monthly * monthsCovered;
-    const discountPercentage = paymentCycle === 'quarterly' ? 20 : 0;
-    const discountAmount = originalAmount * (discountPercentage / 100);
-    const finalAmount = originalAmount - discountAmount;
-
-    const periodStart = new Date();
-    const periodEnd = new Date();
-    periodEnd.setMonth(periodEnd.getMonth() + monthsCovered);
-
-    const { data: payment, error: paymentError } = await supabase
-        .from('subscription_payments')
-        .insert([{
-            business_id: businessId,
-            subscription_plan_id: planId,
-            amount: finalAmount,
-            original_amount: originalAmount,
-            discount_percentage: discountPercentage,
-            payment_cycle: paymentCycle,
-            months_covered: monthsCovered,
-            period_start: periodStart.toISOString(),
-            period_end: periodEnd.toISOString(),
-            status: 'completed'
-        }])
-        .select()
-        .single();
-
-    if (paymentError) throw paymentError;
-
-    const updateData = {
-        subscription_status: 'active',
-        payment_cycle: paymentCycle
-    };
-
-    if (!business.subscription_start_date) {
-        updateData.subscription_start_date = periodStart.toISOString();
-    }
-
-    await supabase
-        .from('businesses')
-        .update(updateData)
-        .eq('id', businessId);
-
-    const commission = await calculateCommission(businessId, payment.id);
-
-    return {
-        payment,
-        commission
-    };
+export async function registerSubscriptionPayment(businessId, { months = 1, amount = null, method = 'transferencia', paymentDate = null, notes = null } = {}) {
+    const { data, error } = await supabase.rpc('register_subscription_payment', {
+        p_business_id: businessId,
+        p_months: months,
+        p_amount: amount,
+        p_method: method,
+        p_payment_date: paymentDate || new Date().toISOString().slice(0, 10),
+        p_notes: notes
+    });
+    if (error) throw new Error(error.message);
+    return data;
 }
 
 /**
- * Calculate commission for a payment
+ * Subscriptions and payments visible to the current user (all for super admin,
+ * the seller's own businesses for a seller).
  */
-export async function calculateCommission(businessId, paymentId) {
-    const { data: business, error: businessError } = await supabase
-        .from('businesses')
-        .select('seller_id, subscription_start_date')
-        .eq('id', businessId)
-        .single();
-
-    if (businessError) throw businessError;
-
-    if (!business.seller_id) {
-        return null;
-    }
-
-    const { data: payment, error: paymentError } = await supabase
-        .from('subscription_payments')
-        .select('amount')
-        .eq('id', paymentId)
-        .single();
-
-    if (paymentError) throw paymentError;
-
-    const startDate = new Date(business.subscription_start_date);
-    const now = new Date();
-    const monthsDiff = (now.getFullYear() - startDate.getFullYear()) * 12 +
-        (now.getMonth() - startDate.getMonth()) + 1;
-    const subscriptionMonth = Math.max(1, monthsDiff);
-
-    const getCommissionRate = (month) => {
-        if (month === 1) return 40;
-        if (month === 2) return 30;
-        if (month === 3) return 20;
-        if (month >= 4 && month <= 6) return 10;
-        return 0;
-    };
-
-    const baseRate = getCommissionRate(subscriptionMonth);
-    if (baseRate === 0) {
-        return null;
-    }
-
-    const { count: activeClientsCount } = await supabase
-        .from('businesses')
-        .select('*', { count: 'exact', head: true })
-        .eq('seller_id', business.seller_id)
-        .eq('subscription_status', 'active');
-
-    const volumeBonus = (activeClientsCount || 0) >= 50 ? 5 : 0;
-    const totalRate = baseRate + volumeBonus;
-    const commissionAmount = payment.amount * (totalRate / 100);
-
-    const currentDate = new Date();
-    const { data: commission, error: commissionError } = await supabase
-        .from('seller_commissions')
-        .insert([{
-            seller_id: business.seller_id,
-            business_id: businessId,
-            payment_id: paymentId,
-            subscription_month: subscriptionMonth,
-            base_commission_rate: baseRate,
-            volume_bonus: volumeBonus,
-            total_commission_rate: totalRate,
-            commission_amount: commissionAmount,
-            payment_amount: payment.amount,
-            period_month: currentDate.getMonth() + 1,
-            period_year: currentDate.getFullYear(),
-            active_clients_count: activeClientsCount || 0
-        }])
-        .select()
-        .single();
-
-    if (commissionError) throw commissionError;
-
-    return commission;
+export async function getBillingData() {
+    const [subsRes, paymentsRes] = await Promise.all([
+        supabase.from('subscriptions').select('*'),
+        supabase
+            .from('subscription_payments')
+            .select('*, businesses (name)')
+            .order('payment_date', { ascending: false })
+            .limit(200)
+    ]);
+    if (subsRes.error) throw subsRes.error;
+    if (paymentsRes.error) throw paymentsRes.error;
+    return { subscriptions: subsRes.data || [], payments: paymentsRes.data || [] };
 }
 
 /**

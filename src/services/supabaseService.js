@@ -307,12 +307,12 @@ class SupabaseService {
         return sellerService.updateBusinessBySeller(sellerId, businessId, businessData, (id, b) => this.updateBusiness(id, b));
     }
 
-    async processSubscriptionPayment(businessId, planId, paymentCycle = 'monthly') {
-        return sellerService.processSubscriptionPayment(businessId, planId, paymentCycle);
+    async registerSubscriptionPayment(businessId, options) {
+        return sellerService.registerSubscriptionPayment(businessId, options);
     }
 
-    async calculateCommission(businessId, paymentId) {
-        return sellerService.calculateCommission(businessId, paymentId);
+    async getBillingData() {
+        return sellerService.getBillingData();
     }
 
     async getSellerCommissions(sellerId, month, year) {

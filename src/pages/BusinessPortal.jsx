@@ -21,6 +21,7 @@ import UpcomingRemindersCard from '../components/business/UpcomingRemindersCard'
 import PortalAnalyticsView from '../components/business/portal/PortalAnalyticsView';
 import PortalListView from '../components/business/portal/PortalListView';
 import PortalNewBookingAlert from '../components/business/portal/PortalNewBookingAlert';
+import PortalBillingBanner from '../components/business/portal/PortalBillingBanner';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuthStore, useBookingsStore, usePortalUIStore } from '../stores';
 
@@ -1104,6 +1105,12 @@ export default function BusinessPortal() {
                     </div>
                 ) : (
                     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                        {viewMode !== 'subscription' && (
+                            <PortalBillingBanner
+                                business={currentBusiness}
+                                onOpenSubscription={() => setViewMode('subscription')}
+                            />
+                        )}
                         {viewMode === 'analytics' ? (
                             <PortalAnalyticsView
                                 metrics={metrics}
