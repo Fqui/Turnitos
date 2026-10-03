@@ -341,6 +341,8 @@ export default function Home() {
 
     // State for suggestions
     const [showSuggestions, setShowSuggestions] = useState(false);
+    // Logos that failed to load fall back to the business initial
+    const [failedLogos, setFailedLogos] = useState(() => new Set());
 
     // Memoize suggestions based on search term
     const suggestions = useMemo(() => {
@@ -577,17 +579,12 @@ export default function Home() {
                                             justifyContent: 'center',
                                             flexShrink: 0
                                         }}>
-                                            {item.logo ? (
+                                            {item.logo && !failedLogos.has(item.logo) ? (
                                                 <img
                                                     src={item.logo}
                                                     alt={item.title}
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        if (e.target.parentElement) {
-                                                            e.target.parentElement.innerHTML = `<span style="font-weight: 800; font-size: 16px; color: var(--primary-paddle);">${(item.title || 'N').charAt(0).toUpperCase()}</span>`;
-                                                        }
-                                                    }}
+                                                    onError={() => setFailedLogos(prev => new Set(prev).add(item.logo))}
                                                 />
                                             ) : (
                                                 <span style={{ fontWeight: '800', fontSize: '16px', color: 'var(--primary-paddle)' }}>
@@ -934,15 +931,16 @@ export default function Home() {
                             ) : (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                                     {paginatedBusinesses.map(business => (
-                                        <div
+                                        <Link
                                             key={business.id}
+                                            to={`/${generateSlug(business.name)}`}
+                                            state={{ business, fromMarketplace: true }}
                                             onClick={() => {
                                                 try {
                                                     sessionStorage.setItem('turnitos_booking_source', 'marketplace');
                                                 } catch (e) {}
-                                                navigate(`/${generateSlug(business.name)}`, { state: { business, fromMarketplace: true } });
                                             }}
-                                            style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                                            style={{ display: 'block', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                                         >
                                             <motion.div
                                                 className="business-card"
@@ -1016,7 +1014,7 @@ export default function Home() {
                                                     </div>
                                                 </div>
                                             </motion.div>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
