@@ -160,7 +160,7 @@ export default function Home() {
     const filteredBusinesses = useMemo(() => {
         const termNorm = normalizeText(searchTerm);
 
-        return businesses.filter(b => {
+        const list = businesses.filter(b => {
             // 1. Search Filter
             let matchesSearch = true;
             if (termNorm.length >= 1) {

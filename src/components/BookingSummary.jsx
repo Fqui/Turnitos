@@ -5,12 +5,12 @@ import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotion
 import CouponInput from './common/CouponInput';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
-let globalCachedPaymentData = {
+const globalCachedPaymentData = {
     businessId: null,
     data: null
 };
 
-export default function BookingSummary({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting, activePromotion, availableExtras }) {
+function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting, activePromotion, availableExtras }) {
     const incomingBusiness = bookingDetails?.business || {};
     const selectedServiceId = bookingDetails?.service?.id || bookingDetails?.item?.id;
 
@@ -77,10 +77,11 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             paymentDataRef.current = newData;
 
             if (businessId) {
-                globalCachedPaymentData = {
-                    businessId: businessId,
-                    data: newData
-                };
+                // Caché a nivel módulo a propósito: sobrevive a remontajes del modal
+                // eslint-disable-next-line react-hooks/immutability
+                globalCachedPaymentData.businessId = businessId;
+                // eslint-disable-next-line react-hooks/immutability
+                globalCachedPaymentData.data = newData;
             }
         }
     }
@@ -94,8 +95,6 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             document.body.style.overflow = 'unset';
         };
     }, []);
-
-    if (!bookingDetails) return null;
 
     const bookingRules = useMemo(() => {
         let r = business?.booking_rules || bookingDetails?.business?.booking_rules;
@@ -1384,4 +1383,10 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             `}</style>
         </div>
     );
+}
+
+// Mount the content only with booking details so its hooks always run in the same order
+export default function BookingSummary(props) {
+    if (!props.bookingDetails) return null;
+    return <BookingSummaryContent {...props} />;
 }
