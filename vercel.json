@@ -48,7 +48,7 @@
     ],
     "headers": [
         {
-            "source": "/:path(login|portal|business-portal|admin|admin/.*|calificar/.*|review/.*|colaboradores)",
+            "source": "/:path(login|portal|business-portal|admin|admin/.*|calificar/.*|review/.*)",
             "headers": [
                 {
                     "key": "X-Robots-Tag",

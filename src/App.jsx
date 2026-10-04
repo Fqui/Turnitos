@@ -41,7 +41,6 @@ const Admin = lazyWithRetry(() => import('./pages/Admin'));
 const BusinessPortal = lazyWithRetry(() => import('./pages/BusinessPortal'));
 const Ayuda = lazyWithRetry(() => import('./pages/Ayuda'));
 const Negocios = lazyWithRetry(() => import('./pages/Negocios'));
-const Colaboradores = lazyWithRetry(() => import('./pages/Colaboradores'));
 const Terminos = lazyWithRetry(() => import('./pages/Terminos'));
 const Privacidad = lazyWithRetry(() => import('./pages/Privacidad'));
 const BusinessStore = lazyWithRetry(() => import('./pages/BusinessStore'));
@@ -295,7 +294,6 @@ function AppContent() {
                 <Route path="/" element={<Home />} />
                 <Route path="/ayuda" element={<Ayuda />} />
                 <Route path="/negocios" element={<Negocios />} />
-                <Route path="/colaboradores" element={<Colaboradores />} />
                 <Route path="/terminos" element={<Terminos />} />
                 <Route path="/privacidad" element={<Privacidad />} />
                 {/* Static routes must come BEFORE /:businessSlug to take precedence */}
