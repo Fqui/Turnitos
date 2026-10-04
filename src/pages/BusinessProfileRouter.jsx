@@ -23,25 +23,20 @@ export default function BusinessProfileRouter({ overrideSlug }) {
     const businessSlug = overrideSlug || routeSlug;
     const location = useLocation();
 
+    // Instant first paint from navigation state or this tab's cache. The database
+    // is always the source of truth: cached lists never replace fresh data.
+    // (localStorage 'business' belongs to the portal session and is not touched here.)
     const getInitialBusiness = () => {
         const navBiz = location.state?.business;
+        if (navBiz) return { ...navBiz, metadata: cleanBusinessMeta(navBiz.metadata) };
         try {
-            const raw = localStorage.getItem('business');
+            const raw = businessSlug ? sessionStorage.getItem(`turnitos_biz_${businessSlug}`) : null;
             if (raw) {
-                const storedBiz = JSON.parse(raw);
-                if (navBiz && (String(navBiz.id) === String(storedBiz.id) || navBiz.slug === storedBiz.slug)) {
-                    const merged = { ...navBiz, ...storedBiz };
-                    merged.metadata = cleanBusinessMeta(merged.metadata);
-                    return merged;
-                }
-                const cleanSub = businessSlug?.replace(/[-_]/g, '');
-                if (storedBiz.slug === businessSlug || storedBiz.id === businessSlug || (cleanSub && storedBiz.slug === cleanSub)) {
-                    storedBiz.metadata = cleanBusinessMeta(storedBiz.metadata);
-                    return storedBiz;
-                }
+                const cached = JSON.parse(raw);
+                return { ...cached, metadata: cleanBusinessMeta(cached.metadata) };
             }
         } catch (e) { }
-        return navBiz || null;
+        return null;
     };
 
     const initialBiz = getInitialBusiness();
@@ -52,71 +47,23 @@ export default function BusinessProfileRouter({ overrideSlug }) {
         let isMounted = true;
         const fetchBusiness = async () => {
             try {
-                if (!initialBiz) {
-                    setLoading(true);
-                }
                 const data = await serviceAdapter.getBusinessBySlug(businessSlug);
-
-                let storedBiz = null;
-                try {
-                    const raw = localStorage.getItem('business');
-                    if (raw) storedBiz = JSON.parse(raw);
-                } catch (e) { }
-
-                let finalBiz = data;
-                if (storedBiz) {
-                    const cleanSub = businessSlug?.replace(/[-_]/g, '');
-                    // ONLY merge if storedBiz actually matches this business!
-                    const isMatch = (data && (String(data.id) === String(storedBiz.id) || data.slug === storedBiz.slug))
-                        || (!data && (storedBiz.slug === businessSlug || storedBiz.id === businessSlug || (cleanSub && storedBiz.slug === cleanSub)));
-
-                    if (isMatch) {
-                        const storedMeta = cleanBusinessMeta(storedBiz?.metadata);
-                        const dataMeta = cleanBusinessMeta(data?.metadata);
-                        const resolvedProducts = (dataMeta?.store_products && dataMeta.store_products.length > 0)
-                            ? dataMeta.store_products
-                            : (storedMeta?.store_products || []);
-
-                        finalBiz = {
-                            ...(storedBiz || {}),
-                            ...(data || {}),
-                            // Explicitly keep relational lists from backend if available
-                            services: (data?.services && data.services.length > 0) ? data.services : (storedBiz?.services || []),
-                            specialists: (data?.specialists && data.specialists.length > 0) ? data.specialists : (storedBiz?.specialists || []),
-                            store_enabled: (data?.store_enabled !== undefined) ? data.store_enabled : (storedBiz?.store_enabled !== undefined ? storedBiz.store_enabled : true),
-                            metadata: {
-                                ...storedMeta,
-                                ...dataMeta,
-                                store_products: resolvedProducts
-                            }
-                        };
-                        if (storedBiz.metadata?.venue_gallery) {
-                            finalBiz.metadata.venue_gallery = storedBiz.metadata.venue_gallery;
-                        }
-                        if (storedBiz.gallery_images && (!data?.gallery_images || data.gallery_images.length === 0)) {
-                            finalBiz.gallery_images = storedBiz.gallery_images;
-                        }
-                    }
-                } else if (data) {
-                    const dataMeta = cleanBusinessMeta(data?.metadata);
-                    finalBiz = {
+                if (!isMounted) return;
+                if (data) {
+                    const dataMeta = cleanBusinessMeta(data.metadata);
+                    setBusiness({
                         ...data,
                         metadata: {
                             ...dataMeta,
                             store_products: dataMeta?.store_products || []
                         }
-                    };
-                }
-
-                if (finalBiz && isMounted) {
-                    setBusiness(finalBiz);
-                    try {
-                        localStorage.setItem('business', JSON.stringify(finalBiz));
-                    } catch (e) { }
+                    });
+                } else {
+                    // Slug no longer exists: drop any cached copy
+                    setBusiness(null);
                 }
             } catch (error) {
                 console.error('Error fetching business:', error);
-                if (isMounted) setLoading(false);
             } finally {
                 if (isMounted) setLoading(false);
             }

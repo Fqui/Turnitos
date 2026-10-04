@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatDisplayDate, formatFriendlyDate, calculateEndTime } from '../utils/dateUtils';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 import CouponInput from './common/CouponInput';
+import { buildWhatsAppUrl } from '../utils/whatsapp';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
 const globalCachedPaymentData = {
@@ -230,13 +231,9 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
             
         const message = `Hola, mi nombre es ${customerName}. Reservé ${displayServiceName}${specialistText}, el día ${formattedDate} a las ${time}.${extrasText}${couponText}\n\nA continuación le envío una captura del comprobante.`;
 
-        const businessPhone = bookingDetails.businessPhone || '5493804123456';
+        // WhatsApp opens only after the booking is saved (from the success modal)
+        const whatsappUrl = buildWhatsAppUrl(bookingDetails.businessPhone, message);
 
-        // Open WhatsApp
-        const whatsappUrl = `https://wa.me/${businessPhone}?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
-
-        // Call parent confirm
         onConfirm({
             ...bookingDetails,
             customerName,
@@ -245,7 +242,8 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
             price: finalPrice,
             coupon: appliedCoupon?.coupon || null,
             coupon_code: appliedCoupon?.coupon?.code || null,
-            discount: totalDiscount
+            discount: totalDiscount,
+            whatsappUrl
         });
     };
 
