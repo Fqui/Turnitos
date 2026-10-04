@@ -27,6 +27,7 @@ import { buildWhatsAppUrl } from '../utils/whatsapp';
 import PromotionModal from '../components/promotions/PromotionModal';
 import ShareButton from '../components/common/ShareButton';
 import { buildBusinessShareUrl } from '../utils/share';
+import { ProductCardImage, ProductDetailImage } from '../components/store/ProductImage';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 
 export default function BusinessStore({ overrideSlug }) {
@@ -1016,19 +1017,7 @@ export default function BusinessStore({ overrideSlug }) {
                                         whileHover={{ y: -4, boxShadow: '0 12px 28px rgba(0,0,0,0.08)' }}
                                     >
                                         {/* Top Image Container with Studio Background */}
-                                        <div className="store-card-img-box">
-                                            <img
-                                                src={img}
-                                                alt={prod.name}
-                                                className="store-card-img"
-                                                style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    objectFit: 'contain',
-                                                    transition: 'transform 0.3s ease'
-                                                }}
-                                            />
-
+                                        <ProductCardImage src={img} alt={prod.name}>
                                             {/* Stock / Quality Tag */}
                                             <div style={{
                                                 position: 'absolute',
@@ -1050,7 +1039,7 @@ export default function BusinessStore({ overrideSlug }) {
                                                 <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
                                                 En stock
                                             </div>
-                                        </div>
+                                        </ProductCardImage>
 
                                         {/* Product Details */}
                                         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -1282,13 +1271,13 @@ export default function BusinessStore({ overrideSlug }) {
                                                         width: '100%',
                                                         height: '270px',
                                                         borderRadius: '20px',
-                                                        background: 'radial-gradient(circle at 50% 50%, #ffffff 0%, #f8fafc 100%)',
+                                                        background: 'radial-gradient(circle at 50% 50%, var(--bg-card) 0%, var(--bg-main) 100%)',
                                                         border: '1px solid var(--border)',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         overflow: 'hidden',
-                                                        padding: '16px',
+                                                        padding: 0,
                                                         boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.02)'
                                                     }}>
                                                         {/* Stock pill */}
@@ -1314,19 +1303,10 @@ export default function BusinessStore({ overrideSlug }) {
                                                             En stock
                                                         </div>
 
-                                                        <motion.img
-                                                            key={activeImageIndex}
-                                                            initial={{ opacity: 0.5, scale: 0.96 }}
-                                                            animate={{ opacity: 1, scale: 1 }}
-                                                            transition={{ duration: 0.22 }}
+                                                        <ProductDetailImage
                                                             src={currentImg}
                                                             alt={selectedProductModal.name}
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '100%',
-                                                                objectFit: 'contain',
-                                                                filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.06))'
-                                                            }}
+                                                            animationKey={activeImageIndex}
                                                         />
                                                     </div>
 

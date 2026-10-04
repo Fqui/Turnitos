@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, Sparkles, Tag } from 'lucide-react';
 import { getSubdomain } from '../../utils/utils';
+import { PRODUCT_IMAGE_FALLBACK, getSizedImageUrl, useImageKind } from '../../utils/productImage';
 
 export const getSafeStoreProducts = (biz) => {
     if (!biz) return [];
@@ -64,6 +65,14 @@ export default function ProfileStorePromoCard({
         };
     }, [products?.length, isHovered]);
 
+    // Preload every product photo so the carousel never shows an empty card while switching
+    const productImageKey = (products || []).map(p => p?.image || p?.images?.[0] || '').join('|');
+    useEffect(() => {
+        productImageKey.split('|').filter(Boolean).forEach(src => {
+            new Image().src = getSizedImageUrl(src, 400);
+        });
+    }, [productImageKey]);
+
 
 
     const currentProduct = (products && products.length > 0) ? (products[currentIndex] || products[0]) : null;
@@ -89,7 +98,9 @@ export default function ProfileStorePromoCard({
         return `$${Number(price).toLocaleString('es-AR')}`;
     };
 
-    const productImage = currentProduct?.image || currentProduct?.images?.[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=300&q=80';
+    const productImage = getSizedImageUrl(currentProduct?.image || currentProduct?.images?.[0] || PRODUCT_IMAGE_FALLBACK, 400);
+    // Cut-out PNGs float with a shadow; photos with background fill the side of the card
+    const isCutout = useImageKind(productImage) === 'transparent';
 
     // ─────────────────────────────────────────────────────────────
     // FULL WIDTH BANNER MODE (When business has NO highlights)
@@ -239,7 +250,7 @@ export default function ProfileStorePromoCard({
                                     borderRadius: '12px',
                                     overflow: 'hidden',
                                     flexShrink: 0,
-                                    background: '#ffffff',
+                                    background: 'var(--bg-card)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center'
@@ -247,7 +258,11 @@ export default function ProfileStorePromoCard({
                                     <img
                                         src={productImage}
                                         alt={currentProduct.name}
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        style={{
+                                            width: isCutout ? '88%' : '100%',
+                                            height: isCutout ? '88%' : '100%',
+                                            objectFit: isCutout ? 'contain' : 'cover'
+                                        }}
                                     />
                                 </div>
 
@@ -420,9 +435,9 @@ export default function ProfileStorePromoCard({
                         onClick={goToStore}
                         style={{
                             position: 'relative',
-                            background: `linear-gradient(135deg, #ffffff 45%, #ffffff 75%, ${primaryColor}12 100%)`,
+                            background: `linear-gradient(135deg, var(--bg-card) 45%, var(--bg-card) 75%, ${primaryColor}12 100%)`,
                             borderRadius: '20px',
-                            border: '1px solid rgba(0,0,0,0.06)',
+                            border: '1px solid var(--border)',
                             padding: '13px 14px',
                             cursor: 'pointer',
                             overflow: 'hidden',
@@ -484,7 +499,7 @@ export default function ProfileStorePromoCard({
                                     flexDirection: 'column',
                                     justifyContent: 'center',
                                     zIndex: 2,
-                                    maxWidth: '65%',
+                                    maxWidth: isCutout ? '65%' : '56%',
                                     minWidth: 0,
                                     gap: '2px'
                                 }}>
@@ -494,7 +509,7 @@ export default function ProfileStorePromoCard({
                                             fontSize: '9.5px',
                                             fontWeight: '800',
                                             letterSpacing: '0.6px',
-                                            color: '#64748b',
+                                            color: 'var(--text-secondary)',
                                             textTransform: 'uppercase',
                                             display: 'inline-flex',
                                             alignItems: 'center',
@@ -516,7 +531,7 @@ export default function ProfileStorePromoCard({
                                         style={{
                                             fontSize: '15px',
                                             fontWeight: '800',
-                                            color: '#0f172a',
+                                            color: 'var(--text-primary)',
                                             margin: '1px 0 0 0',
                                             lineHeight: '1.25',
                                             height: '2.5em',
@@ -537,7 +552,7 @@ export default function ProfileStorePromoCard({
                                         <span style={{
                                             fontSize: '15px',
                                             fontWeight: '800',
-                                            color: '#0f172a',
+                                            color: 'var(--text-primary)',
                                             letterSpacing: '-0.3px'
                                         }}>
                                             {formatPrice(currentProduct?.price)}
@@ -545,8 +560,29 @@ export default function ProfileStorePromoCard({
                                     </div>
                                 </div>
 
-                                {/* Right: Product Showcase with 3D Pedestal Lighting */}
-                                <div style={{
+                                {/* Right: photo with background fills the side and fades into the card */}
+                                {!isCutout && (
+                                    <img
+                                        src={productImage}
+                                        alt={currentProduct?.name || 'Producto'}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '-13px',
+                                            bottom: '-13px',
+                                            right: '-14px',
+                                            width: '48%',
+                                            height: 'calc(100% + 26px)',
+                                            objectFit: 'cover',
+                                            pointerEvents: 'none',
+                                            zIndex: 1,
+                                            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, #000 38%)',
+                                            maskImage: 'linear-gradient(to right, transparent 0%, #000 38%)'
+                                        }}
+                                    />
+                                )}
+
+                                {/* Right: cut-out product with 3D Pedestal Lighting */}
+                                {isCutout && <div style={{
                                     position: 'absolute',
                                     right: '-4px',
                                     bottom: '-2px',
@@ -587,7 +623,7 @@ export default function ProfileStorePromoCard({
                                             transition: 'transform 0.25s ease'
                                         }}
                                     />
-                                </div>
+                                </div>}
                             </motion.div>
                         </AnimatePresence>
 
@@ -601,7 +637,15 @@ export default function ProfileStorePromoCard({
                                     display: 'flex',
                                     gap: '4px',
                                     alignItems: 'center',
-                                    zIndex: 3
+                                    zIndex: 3,
+                                    // Dark pill keeps the dots readable over a photo
+                                    ...(isCutout ? {} : {
+                                        background: 'rgba(0,0,0,0.32)',
+                                        padding: '4px 6px',
+                                        borderRadius: '8px',
+                                        top: '8px',
+                                        right: '10px'
+                                    })
                                 }}
                             >
                                 {products.map((_, idx) => (
@@ -617,7 +661,7 @@ export default function ProfileStorePromoCard({
                                             borderRadius: '2px',
                                             background: idx === currentIndex
                                                 ? primaryColor
-                                                : 'rgba(0,0,0,0.15)',
+                                                : (isCutout ? 'var(--border)' : 'rgba(255,255,255,0.5)'),
                                             transition: 'all 0.25s ease',
                                             cursor: 'pointer'
                                         }}
