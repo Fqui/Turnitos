@@ -19,6 +19,7 @@ import VenueCalendarSection from '../components/venue/profile/VenueCalendarSecti
 import VenueBookingPanel from '../components/venue/profile/VenueBookingPanel';
 import VenueBookingWizardModal from '../components/venue/profile/VenueBookingWizardModal';
 import VenueLightboxModal from '../components/venue/profile/VenueLightboxModal';
+import { buildBusinessShareUrl } from '../utils/share';
 
 // Fix Leaflet default icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -567,6 +568,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                 business={business}
                 galleryImages={galleryImages}
                 windowWidth={windowWidth}
+                shareUrl={buildBusinessShareUrl(business.slug, '/turnos')}
             />
 
             {/* 2. Main Content Grid */}

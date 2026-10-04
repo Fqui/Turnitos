@@ -20,6 +20,7 @@ import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import SEOHead from '../components/SEOHead';
 import PromotionModal from '../components/promotions/PromotionModal';
 import { parsePromotionTarget } from '../utils/promotionUtils';
+import { buildBusinessShareUrl } from '../utils/share';
 
 import ProfileHeroBanner from '../components/profile/ProfileHeroBanner';
 import ProfileHighlightsAndStore from '../components/profile/ProfileHighlightsAndStore';
@@ -402,6 +403,22 @@ export default function BusinessProfile({ business: initialBusiness }) {
             fetchPromotion();
         }
     }, [searchParams, business]);
+
+    // Shared service link (?servicio=<id>): open the page with that service already chosen
+    const sharedServiceHandled = useRef(null);
+    useEffect(() => {
+        const serviceId = searchParams.get('servicio');
+        if (!serviceId || !business?.services || sharedServiceHandled.current === serviceId) return;
+        const sharedService = business.services.find(s => String(s.id) === String(serviceId));
+        if (!sharedService) return;
+        sharedServiceHandled.current = serviceId;
+        setSelectedItem(sharedService);
+        setTimeout(() => {
+            calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 600);
+    }, [searchParams, business]);
+
+    const getServiceShareUrl = (service) => buildBusinessShareUrl(business.slug, '/turnos', { servicio: service.id });
 
     const handlePromoSelectService = (service) => {
         setSelectedItem(service);
@@ -812,6 +829,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     selectedItem={selectedItem}
                     activeStories={activeStories}
                     openNow={getOpenNowStatus()}
+                    shareUrl={buildBusinessShareUrl(business.slug, '/turnos')}
                     onStoryClick={() => {
                         if (activeStories && activeStories.length > 0) {
                             setStoryViewerList(activeStories);
@@ -880,6 +898,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     }, 100);
                                 }}
                                 color={primaryColor}
+                                businessName={business.name}
+                                getShareUrl={business.slug ? getServiceShareUrl : null}
                             />
                         </section>
                     )}

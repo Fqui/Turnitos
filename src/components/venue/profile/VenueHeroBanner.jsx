@@ -1,10 +1,12 @@
 import React from 'react';
 import { buildWhatsAppUrl } from '../../../utils/whatsapp';
+import ShareButton from '../../common/ShareButton';
 
 export default function VenueHeroBanner({
     business,
     galleryImages,
-    windowWidth
+    windowWidth,
+    shareUrl = ''
 }) {
     const fullAddress = [business.address, business.city || business.location].filter(Boolean).join(', ');
 
@@ -39,6 +41,15 @@ export default function VenueHeroBanner({
                 bottom: 0,
                 background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 100%)'
             }} />
+            <ShareButton
+                variant="icon"
+                label="Compartir"
+                url={shareUrl}
+                title={business.name}
+                text={`Mirá ${business.name} y reservá tu fecha online:`}
+                style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}
+            />
+
             {/* Content Container */}
             <div style={{
                 position: 'relative',
