@@ -397,9 +397,11 @@ const TimeSlotPicker = ({
 
                         const bStart = timeToMinutes(b.time);
                         const bDur = b.duration || 60;
-                        const bEnd = bStart + bDur;
+                        const buffer = bufferMinutes || 0;
+                        const bEnd = bStart + bDur + buffer;
 
-                        return slotStart < bEnd && slotEnd > bStart;
+                        // Same rule as the specialist assignment in BusinessProfile
+                        return slotStart < bEnd && (slotEnd + buffer) > bStart;
                     });
 
                     let isAvailable = false;
@@ -451,7 +453,7 @@ const TimeSlotPicker = ({
             <div style={{ maxWidth: '800px', margin: '20px auto 0', animation: 'slideUp 0.5s ease' }}>
                 <div className="card" style={{ padding: '20px', textAlign: 'left' }}>
                     <h4 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '16px' }}>
-                        Horarios Disponibles
+                        Horarios disponibles
                     </h4>
 
                     {/* Time slots grid */}
