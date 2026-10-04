@@ -7,6 +7,9 @@ import SEOHead from '../components/SEOHead';
 import { generateSlug } from '../utils/utils';
 import { isProfileReady } from '../utils/profileChecklist';
 
+// Orden por reputación (rating + reseñas) en la home: apagado hasta definir el criterio
+const SORT_BY_REPUTATION = false;
+
 const DEFAULT_CATEGORIES = [
     { id: 'deportes', slug: 'deportes', name: 'Deportes', icon: '⚽' },
     { id: 'belleza', slug: 'belleza', name: 'Belleza', icon: '💇' },
@@ -161,7 +164,7 @@ export default function Home() {
     const filteredBusinesses = useMemo(() => {
         const termNorm = normalizeText(searchTerm);
 
-        return businesses.filter(b => {
+        const list = businesses.filter(b => {
             // 0. Only businesses with a complete profile are listed (the direct link still works).
             // "Cerca mío" results don't carry services/courts, so they skip this check.
             if (!isNearMeActive && !isProfileReady(b)) return false;
@@ -247,8 +250,9 @@ export default function Home() {
             return hasSubcategory;
         });
 
-        // If Near Me is active, respect geographic proximity sorting from RPC
-        if (isNearMeActive) {
+        // If Near Me is active, respect geographic proximity sorting from RPC.
+        // El orden por reputación queda apagado hasta definir el orden de la home.
+        if (isNearMeActive || !SORT_BY_REPUTATION) {
             return list;
         }
 
