@@ -177,13 +177,17 @@ const BookingDetailsModalContent = ({
     const [editableNotes, setEditableNotes] = useState('');
     const [editableServices, setEditableServices] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
+    const isSlotBlock = !isRental && !String(booking.id || '').startsWith('blocked-') && Boolean(booking.time);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
     // Initial duration detection
+    // metadata.duration is minutes on manual bookings and hours on some older ones: trust it only when it looks like hours
+    const metaDuration = Number(booking.metadata?.duration);
     const initialDurationHours = Number(booking.durationHours) ||
+        Number(booking.metadata?.duration_hours) ||
         Number(booking.metadata?.durationHours) ||
-        Number(booking.metadata?.duration) ||
         (booking.duration ? Math.round(Number(booking.duration) / 60) : null) ||
+        (metaDuration > 0 && metaDuration <= 48 ? metaDuration : null) ||
         (durationOptions.length > 0 ? durationOptions[0] : 8);
     const [editableDuration, setEditableDuration] = useState(initialDurationHours);
 
@@ -494,7 +498,8 @@ const BookingDetailsModalContent = ({
                     depositAmount: activeDeposit,
                     guestCount: isRental && editableGuests ? parseInt(editableGuests, 10) : null,
                     guest_count: isRental && editableGuests ? parseInt(editableGuests, 10) : null,
-                    duration: isRental && editableDuration ? Number(editableDuration) : (booking.metadata?.duration || null),
+                    duration: isRental && editableDuration ? Number(editableDuration) * 60 : (booking.metadata?.duration || null),
+                    duration_hours: isRental && editableDuration ? Number(editableDuration) : (booking.metadata?.duration_hours || null),
                     durationHours: isRental && editableDuration ? Number(editableDuration) : (booking.metadata?.durationHours || null),
                     event_type: editableEventType || null,
                     eventType: editableEventType || null,
@@ -580,7 +585,7 @@ const BookingDetailsModalContent = ({
                         fontWeight: '800',
                         color: 'var(--text-primary)'
                     }}>
-                        Fecha Bloqueada
+                        {isSlotBlock ? 'Horario Bloqueado' : 'Fecha Bloqueada'}
                     </h3>
 
                     <div style={{
@@ -590,7 +595,7 @@ const BookingDetailsModalContent = ({
                         lineHeight: '1.4'
                     }}>
                         <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
-                            📅 {formatDisplayDate(booking.date)}
+                            📅 {formatDisplayDate(booking.date)}{isSlotBlock ? ` · ${booking.time} hs` : ''}
                         </div>
                         {booking.customer_name && booking.customer_name !== 'BLOQUEADO' && (
                             <div style={{ fontSize: '13px', marginTop: '4px', opacity: 0.85 }}>
@@ -604,7 +609,9 @@ const BookingDetailsModalContent = ({
                         color: 'var(--text-muted, #9CA3AF)',
                         margin: '0 0 24px 0'
                     }}>
-                        ¿Deseas desbloquear esta fecha para que vuelva a estar disponible para reservas?
+                        {isSlotBlock
+                            ? '¿Querés desbloquear este horario para que vuelva a estar disponible?'
+                            : '¿Deseas desbloquear esta fecha para que vuelva a estar disponible para reservas?'}
                     </p>
 
                     <div style={{

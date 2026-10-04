@@ -178,6 +178,24 @@ export async function createBooking(bookingData) {
         }
     }
 
+    // The database trigger skips the business owner, so check the specialist here too
+    const specialistToCheck = bookingData.specialistId || bookingData.specialist_id;
+    if (isSpecialistBooking && /^[0-9a-f-]{36}$/i.test(String(specialistToCheck))) {
+        const { data: spConflicts, error: spConflictError } = await supabase
+            .from('bookings_public')
+            .select('id')
+            .eq('specialist_id', specialistToCheck)
+            .neq('status', 'cancelled')
+            .neq('status', 'rejected')
+            .lt('start_time', endTime)
+            .gt('end_time', startTime);
+
+        if (spConflictError) throw spConflictError;
+        if (spConflicts && spConflicts.length > 0) {
+            throw new Error('Ese profesional ya tiene un turno en ese horario.');
+        }
+    }
+
     try {
         const availability = await validateBookingAvailability(
             bookingData.businessId || bookingData.business_id,

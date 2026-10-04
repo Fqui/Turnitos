@@ -71,6 +71,7 @@ const NewBookingModal = ({
         (currentBusiness?.category || '').toLowerCase().includes('barber') ||
         (currentBusiness?.category || '').toLowerCase().includes('estetica')
     );
+    const hasSpecialists = !isRental && !(currentBusiness?.courts?.length) && (currentBusiness?.specialists?.length || 0) > 0;
 
     // Capacity limit for rentals
     const maxCapacity = Number(currentBusiness?.capacity_limit || currentBusiness?.capacity || 100);
@@ -408,7 +409,9 @@ const NewBookingModal = ({
                 }
                 return true;
             }
-            return true;
+            // Courts and services book by time slot: a day with other bookings is still available
+            // (overlaps on the same court/specialist are checked when the booking is saved)
+            return false;
         });
 
         if (dayBookings.length > 0) {
@@ -816,7 +819,7 @@ const NewBookingModal = ({
                             )}
 
                             {/* Warning if selected date is occupied/blocked */}
-                            {newBookingData.date && selectedDateAvailability.status !== 'available' && selectedDateAvailability.status !== 'past' && (
+                            {newBookingData.date && !['available', 'past'].includes(selectedDateAvailability.status) && selectedDateAvailability.status !== 'past' && (
                                 <div style={{
                                     marginTop: '6px',
                                     padding: '6px 10px',
@@ -834,7 +837,7 @@ const NewBookingModal = ({
 
                         <div>
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                {isRental ? '🏡 Espacio / Salón Asignado' : isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '🎯 Espacio / Cancha'}
+                                {isRental ? '🏡 Espacio / Salón Asignado' : isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : hasSpecialists ? '✂️ Servicio' : '🎯 Espacio / Cancha'}
                             </label>
                             {((currentBusiness?.courts?.length || 0) + (currentBusiness?.services?.length || 0)) > 1 ? (
                                 <CustomDropdown
@@ -882,6 +885,20 @@ const NewBookingModal = ({
                             )}
                         </div>
                     </div>
+
+                    {/* Specialist (service businesses) */}
+                    {hasSpecialists && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                👤 Profesional
+                            </label>
+                            <CustomDropdown
+                                value={newBookingData.specialistId || ''}
+                                options={currentBusiness.specialists.map(sp => ({ value: sp.id, label: sp.name }))}
+                                onChange={(id) => setNewBookingData(prev => ({ ...prev, specialistId: id }))}
+                            />
+                        </div>
+                    )}
 
                     {/* Duration Controls based on Business Type */}
                     {isPadel && (
@@ -1461,33 +1478,33 @@ const NewBookingModal = ({
                     {/* Submit Button */}
                     <button
                         type="submit"
-                        disabled={!newBookingData.date || selectedDateAvailability.status !== 'available'}
+                        disabled={!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status)}
                         style={{
                             width: '100%',
                             padding: '12px',
-                            background: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                            background: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'var(--border)'
                                 : 'var(--primary-paddle)',
-                            color: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                            color: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'var(--text-muted)'
                                 : '#000000',
                             border: 'none',
                             borderRadius: '10px',
                             fontWeight: '800',
                             fontSize: '14px',
-                            cursor: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                            cursor: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'not-allowed'
                                 : 'pointer',
                             marginTop: '6px',
                             transition: 'all 0.2s',
-                            boxShadow: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                            boxShadow: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'none'
                                 : '0 4px 14px rgba(0, 230, 118, 0.25)'
                         }}
                     >
                         {!newBookingData.date 
                             ? 'Selecciona una Fecha Disponible'
-                            : selectedDateAvailability.status !== 'available'
+                            : !['available', 'past'].includes(selectedDateAvailability.status)
                                 ? `Fecha No Disponible (${selectedDateAvailability.label})`
                                 : 'Crear Reserva'
                         }

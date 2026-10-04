@@ -372,14 +372,15 @@ export default function BusinessPortal() {
                 time = arg3 || (isRental ? '00:00' : '');
                 passedResource = arg4;
             } else {
-                const dateStr = listFilters.date || new Date().toISOString().split('T')[0];
+                const nowLocal = new Date();
+                const dateStr = listFilters.date || `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
                 const [y, m, d] = dateStr.split('-');
                 date = new Date(y, m - 1, d);
                 if (isRental) {
                     time = '00:00';
                 } else {
                     const now = new Date();
-                    const nextHour = now.getHours() + 1;
+                    const nextHour = Math.min(now.getHours() + 1, 23);
                     time = `${String(nextHour).padStart(2, '0')}:00`;
                 }
             }
@@ -444,6 +445,22 @@ export default function BusinessPortal() {
             }
         }
 
+        // Service businesses: the calendar columns are specialists, not services
+        const clickedSpecialist = (currentBusiness?.specialists || []).find(sp => String(sp.id) === String(selectedResId));
+        let selectedSpecialistId = null;
+        if (clickedSpecialist) {
+            selectedSpecialistId = clickedSpecialist.id;
+            const specialistServices = (currentBusiness?.services || []).filter(sv =>
+                !sv.specialist_ids?.length || sv.specialist_ids.some(id => String(id) === String(clickedSpecialist.id))
+            );
+            const firstService = specialistServices[0];
+            selectedResId = firstService?.id || '';
+            selectedResName = firstService?.name || '';
+            selectedPrice = firstService?.price || 0;
+        } else if (!isRental && (currentBusiness?.specialists || []).length === 1) {
+            selectedSpecialistId = currentBusiness.specialists[0].id;
+        }
+
         const defaultDurationMinutes = isRental
             ? 240
             : Number(currentBusiness?.slot_duration || currentBusiness?.court_duration || 60);
@@ -477,6 +494,7 @@ export default function BusinessPortal() {
             customerEmail: '',
             serviceId: selectedResId,
             courtId: selectedResId,
+            specialistId: selectedSpecialistId,
             resourceName: selectedResName || (isRental ? (currentBusiness?.name || 'Espacio / Salón') : ''),
             price: initialBasePrice,
             basePrice: initialBasePrice,
@@ -561,7 +579,8 @@ export default function BusinessPortal() {
             }
         }
 
-        const isCourt = currentBusiness?.courts?.some(c => c.id === newBookingData.serviceId);
+        const isCourt = currentBusiness?.courts?.some(c => String(c.id) === String(newBookingData.serviceId));
+        const isService = currentBusiness?.services?.some(sv => String(sv.id) === String(newBookingData.serviceId));
 
         const defaultDurationMin = isRentalBusiness
             ? 240
@@ -584,7 +603,7 @@ export default function BusinessPortal() {
             businessId: selectedBusinessId,
             business_id: selectedBusinessId,
             bookingSource: 'manual',
-            serviceId: isCourt ? null : newBookingData.serviceId || null,
+            serviceId: isService ? newBookingData.serviceId : null,
             courtId: isCourt ? newBookingData.serviceId : null,
             specialistId: newBookingData.specialistId || null,
             date: newBookingData.date,
@@ -720,10 +739,8 @@ export default function BusinessPortal() {
 
     const handleBlockDate = async (dateStr, reason = 'Bloqueado por el negocio') => {
         try {
-            const currentBlocked = [
-                ...(currentBusiness?.blocked_dates || []),
-                ...(currentBusiness?.metadata?.blocked_dates || [])
-            ];
+            // blocked_dates is already normalized from metadata/column when the business loads
+            const currentBlocked = [...(currentBusiness?.blocked_dates || [])];
             const exists = currentBlocked.some(b => {
                 const bStr = typeof b === 'string' ? b : b?.date;
                 return bStr === dateStr;
@@ -731,13 +748,7 @@ export default function BusinessPortal() {
 
             if (!exists) {
                 const newBlocked = [...currentBlocked, { date: dateStr, reason: reason || 'Bloqueado por el negocio' }];
-                await serviceAdapter.patchBusiness(selectedBusinessId, {
-                    blocked_dates: newBlocked,
-                    metadata: {
-                        ...(currentBusiness?.metadata || {}),
-                        blocked_dates: newBlocked
-                    }
-                });
+                await serviceAdapter.patchBusiness(selectedBusinessId, { blocked_dates: newBlocked });
                 setBusinesses(prev => prev.map(b => String(b.id) === String(selectedBusinessId) ? {
                     ...b,
                     blocked_dates: newBlocked,
@@ -920,18 +931,21 @@ export default function BusinessPortal() {
 
                 const targetDate = selectedBooking.date;
 
+                // Courts and services: unblock only the slot that was clicked
+                const isWholeDayBlock = isRentalBusiness || String(selectedBooking.id).startsWith('blocked-');
+                if (!isWholeDayBlock) {
+                    await serviceAdapter.deleteBooking(selectedBooking.id);
+                    await fetchBookings();
+                    setShowBookingModal(false);
+                    return;
+                }
+
                 const currentBlocked = (currentBusiness?.blocked_dates || currentBusiness?.metadata?.blocked_dates || []).filter(b => {
                     const d = typeof b === 'string' ? b : b?.date;
                     return d !== targetDate;
                 });
 
-                await serviceAdapter.patchBusiness(selectedBusinessId, {
-                    blocked_dates: currentBlocked,
-                    metadata: {
-                        ...(currentBusiness?.metadata || {}),
-                        blocked_dates: currentBlocked
-                    }
-                });
+                await serviceAdapter.patchBusiness(selectedBusinessId, { blocked_dates: currentBlocked });
 
                 setBusinesses(prev => prev.map(b => String(b.id) === String(selectedBusinessId) ? {
                     ...b,
@@ -961,7 +975,9 @@ export default function BusinessPortal() {
             }
         } catch (error) {
             console.error('Error in booking action:', error);
-            alert('Error al procesar la acción');
+            // The details modal shows its own error for edits
+            if (action === 'update_booking') throw error;
+            alert(error?.message ? `No se pudo completar la acción: ${error.message}` : 'Error al procesar la acción');
         }
     };
 
