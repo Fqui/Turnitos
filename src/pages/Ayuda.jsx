@@ -59,7 +59,7 @@ const FAQS_NEGOCIOS = [
     },
     {
         question: "¿Cómo funciona el Link in Bio para mi Instagram?",
-        answer: "Te damos un enlace propio (por ejemplo turnitoslr.com/tu-negocio) para poner en la biografía de Instagram o en tus estados de WhatsApp. Ahí tus clientes ven tus turnos, tu tienda, tus fotos y tus redes."
+        answer: "Te damos un enlace propio (por ejemplo tu-negocio.turnitoslr.com) para poner en la biografía de Instagram o en tus estados de WhatsApp. Ahí tus clientes ven tus turnos, tu tienda, tus fotos y tus redes."
     },
     {
         question: "¿Puedo bloquear horarios por lluvia, feriados o mantenimiento?",
