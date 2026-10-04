@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import SEOHead from '../components/SEOHead';
 
 export default function Terminos() {
-    const lastUpdated = "15 de Agosto de 2026";
+    const lastUpdated = "4 de Octubre de 2026";
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', paddingBottom: '80px' }}>
@@ -87,7 +87,7 @@ export default function Terminos() {
                             3. Registro y Uso de la Cuenta
                         </h2>
                         <ul style={{ color: 'var(--text-secondary)', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <li>El usuario se compromete a proporcionar información verídica, exacta y actualizada al momento de realizar una reserva (nombre completo, teléfono de WhatsApp y correo electrónico).</li>
+                            <li>El usuario se compromete a proporcionar información verídica, exacta y actualizada al momento de realizar una reserva (nombre completo y teléfono de WhatsApp).</li>
                             <li>Los comercios y administradores son responsables exclusivos de la confidencialidad de sus credenciales de acceso y de toda actividad realizada desde su panel.</li>
                             <li>Queda terminantemente prohibido el uso de la Plataforma para fines ilícitos, fraudulentos o que perjudiquen la normal operatividad del servicio.</li>
                         </ul>
@@ -125,31 +125,57 @@ export default function Terminos() {
                             6. Reseñas y Calificaciones de Usuarios
                         </h2>
                         <p style={{ color: 'var(--text-secondary)' }}>
-                            Para garantizar la transparencia y autenticidad del sistema de opiniones, únicamente los usuarios que hayan completado una reserva efectiva recibirán un enlace seguro con token de un solo uso para calificar al establecimiento. Queda prohibida la manipulación o publicación de comentarios ofensivos, difamatorios o falsos.
+                            Para garantizar la transparencia del sistema de opiniones, solo pueden calificar a un establecimiento los Clientes que hayan realizado una reserva en él. Cada Cliente recibe un enlace personal, de un solo uso, para dejar su calificación y un comentario opcional. Queda prohibida la publicación de comentarios ofensivos, difamatorios o falsos, y TurnitosLR puede ocultar los que no cumplan estas reglas.
                         </p>
                     </section>
 
                     {/* Section 7 */}
                     <section style={{ marginBottom: '32px' }}>
                         <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                            7. Propiedad Intelectual
+                            7. Abono de los Negocios
+                        </h2>
+                        <ul style={{ color: 'var(--text-secondary)', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <li>El alta de cada Negocio la realiza TurnitosLR o un vendedor autorizado, previa verificación de que el Negocio existe.</li>
+                            <li>Los Negocios abonan un cargo mensual según su rubro y la cantidad de canchas, profesionales o espacios. Los precios vigentes se publican en la sección Para Negocios. TurnitosLR no cobra comisión por turno.</li>
+                            <li>Los Negocios nuevos cuentan con 14 días de prueba gratuita.</li>
+                            <li>El abono se paga por transferencia bancaria, Mercado Pago o en efectivo.</li>
+                            <li>Si transcurren 10 días desde el vencimiento sin que se registre el pago, la página del Negocio se oculta hasta que regularice su situación.</li>
+                            <li>El Negocio puede solicitar la baja en cualquier momento, sin permanencia mínima, escribiendo por WhatsApp o correo.</li>
+                            <li>TurnitosLR puede modificar los precios avisando a los Negocios con al menos 30 días de anticipación.</li>
+                        </ul>
+                    </section>
+
+                    {/* Section 8 */}
+                    <section style={{ marginBottom: '32px' }}>
+                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
+                            8. Propiedad Intelectual
                         </h2>
                         <p style={{ color: 'var(--text-secondary)' }}>
                             El diseño de la plataforma, código fuente, marcas, isotipos, logotipos y contenidos pertenecientes a TurnitosLR se encuentran protegidos por las leyes de propiedad intelectual de la República Argentina. Queda prohibida su reproducción o explotación no autorizada.
                         </p>
                     </section>
 
-                    {/* Section 8 */}
+                    {/* Section 9 */}
                     <section style={{ marginBottom: '32px' }}>
                         <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                            8. Jurisdicción y Ley Aplicable
+                            9. Modificaciones de estos Términos
+                        </h2>
+                        <p style={{ color: 'var(--text-secondary)' }}>
+                            TurnitosLR puede actualizar estos Términos. La fecha de la última actualización figura al comienzo de esta página, y los cambios importantes se comunican a los Negocios por WhatsApp o correo. Seguir usando la Plataforma después de un cambio implica aceptar la nueva versión.
+                        </p>
+                    </section>
+
+                    {/* Section 10 */}
+                    <section style={{ marginBottom: '32px' }}>
+                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
+                            10. Jurisdicción y Ley Aplicable
                         </h2>
                         <p style={{ color: 'var(--text-secondary)' }}>
                             Los presentes Términos se rigen por las leyes vigentes de la República Argentina. Cualquier controversia derivada del uso del servicio será sometida a la competencia de los Tribunales Ordinarios de la Ciudad de La Rioja, Provincia de La Rioja.
                         </p>
                     </section>
 
-                    {/* Section 9 */}
+                    {/* Contacto */}
                     <section style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border)' }}>
                         <h3 style={{ fontSize: '17px', fontWeight: '700', marginBottom: '8px' }}>
                             ¿Tenés dudas sobre los términos?

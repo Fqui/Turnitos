@@ -6,42 +6,66 @@ import SEOHead from '../components/SEOHead';
 const FAQS_CLIENTES = [
     {
         question: "¿Cómo reservo un turno en TurnitosLR?",
-        answer: "Es muy fácil y no requiere registro previo. Desde la página de inicio, elegí el negocio, cancha o servicio deseado. Seleccioná la fecha y el horario disponible que prefieras, completá tus datos de contacto (nombre y WhatsApp) y confirmá tu reserva. ¡Recibirás una confirmación inmediata!"
+        answer: "No necesitás registrarte. Desde la página de inicio elegí el negocio, la cancha o el servicio, seleccioná la fecha y el horario libre, completá tu nombre y tu WhatsApp y confirmá. Vas a ver la confirmación de tu reserva en pantalla al instante."
     },
     {
         question: "¿Tengo que pagar por adelantado para reservar?",
-        answer: "Depende de las condiciones de cada negocio. Algunos establecimientos solicitan una seña previa para congelar el turno, mientras que otros permiten abonar el total al momento de asistir. Las condiciones de pago y datos de transferencia se muestran claramente antes de confirmar."
+        answer: "Depende de cada negocio. Algunos piden una seña para asegurar el turno y otros te cobran todo al momento de asistir. Antes de confirmar vas a ver las condiciones de pago y, si hay seña, los datos para transferir."
     },
     {
-        question: "¿Cómo cancelo o modifico mi turno reservado?",
-        answer: "Para cancelar o reprogramar un turno, comunicate directamente con el negocio a través del botón de WhatsApp que encontrarás en la confirmación de tu turno o en el perfil del comercio."
+        question: "¿Cómo cancelo o modifico mi turno?",
+        answer: "Escribile directamente al negocio con el botón de WhatsApp que aparece en tu confirmación o en su perfil. Cada negocio tiene su propia política de cancelación y devolución de señas, que podés ver antes de reservar."
     },
     {
         question: "¿Es gratis usar TurnitosLR para reservar?",
-        answer: "¡Sí, totalmente! Para los clientes y deportistas, buscar, consultar disponibilidad y reservar turnos en TurnitosLR es 100% gratuito. Solo pagás el valor oficial del servicio al negocio."
+        answer: "Sí. Buscar, ver disponibilidad y reservar es 100% gratis para los clientes. Solo pagás el servicio al negocio."
     },
     {
-        question: "¿Cómo puedo calificar un negocio o dejar una reseña?",
-        answer: "Para garantizar que todas las opiniones sean 100% reales y verificadas, una vez concretada tu reserva recibirás un enlace seguro exclusivo con un token único para dejar tu puntuación en estrellas y comentario."
+        question: "¿Cómo compro en la tienda de un negocio?",
+        answer: "Agregá los productos al carrito desde la tienda del negocio y enviá el pedido. El pedido le llega al negocio por WhatsApp y con él coordinás el pago y la entrega."
+    },
+    {
+        question: "¿Cómo dejo una reseña?",
+        answer: "Para que todas las opiniones sean reales, solo pueden calificar los clientes que reservaron. Después de tu turno te enviamos un enlace personal por WhatsApp para dejar tus estrellas y, si querés, un comentario."
     }
 ];
 
 const FAQS_NEGOCIOS = [
     {
-        question: "¿Cómo puedo sumar mi cancha, salón o negocio a TurnitosLR?",
-        answer: "Podés registrarte en minutos desde nuestra sección 'Para Negocios' o escribirnos a nuestro WhatsApp de soporte (+54 9 380 500-2706). Te configuramos el perfil, canchas, servicios y medios de cobro al instante."
+        question: "¿Cómo sumo mi negocio a TurnitosLR?",
+        answer: "Completá el formulario en la sección 'Para Negocios' o escribinos por WhatsApp al +54 9 380 500-2706. Te contactamos, verificamos tu negocio y te armamos el perfil con tus canchas, servicios, horarios y medios de cobro."
     },
     {
-        question: "¿Puedo cobrar señas o pagos por transferencia automáticamente?",
-        answer: "Sí. Podés configurar el porcentaje de seña requerido (ej. 30%, 50% o 100%), tu Alias bancario o CBU, y los clientes te enviarán el comprobante de pago validado."
+        question: "¿Cuánto cuesta?",
+        answer: "Es un abono mensual según tu rubro: servicios desde $17.000, canchas $20.000 por cancha (más barato desde 4 canchas) y alquileres $15.000. No cobramos comisión por turno."
     },
     {
-        question: "¿Cómo funciona el Link in Bio para el Instagram de mi negocio?",
-        answer: "TurnitosLR te genera un enlace personalizado (ej: turnitoslr.com/tu-negocio o tu-negocio.turnitoslr.com) optimizado para poner en la biografía de Instagram o estados de WhatsApp, con acceso a turnos, tienda online, fotos y redes sociales."
+        question: "¿Hay prueba gratis?",
+        answer: "Sí. Los primeros 14 días son gratis para que pruebes la plataforma con tus clientes reales."
     },
     {
-        question: "¿Puedo bloquear horarios, días de lluvia o feriados?",
-        answer: "Sí. Desde tu Panel de Control podés bloquear canchas por mantenimiento, lluvia o días no laborables con un solo clic, evitando reservas superpuestas."
+        question: "¿Cómo pago el abono y qué pasa si me atraso?",
+        answer: "Podés pagar por transferencia, Mercado Pago o en efectivo. Si pasan 10 días del vencimiento sin pago, tu página se oculta hasta que regularices."
+    },
+    {
+        question: "¿Puedo dar de baja mi negocio?",
+        answer: "Sí, cuando quieras y sin permanencia mínima. Avisanos por WhatsApp o correo y damos de baja tu página al terminar el mes que ya pagaste."
+    },
+    {
+        question: "¿Puedo cobrar señas por transferencia?",
+        answer: "Sí. Configurás el porcentaje de seña (por ejemplo 30%, 50% o 100%) y tu Alias o CBU. El cliente ve esos datos al reservar y te envía el comprobante."
+    },
+    {
+        question: "¿Cómo funciona el Link in Bio para mi Instagram?",
+        answer: "Te damos un enlace propio (por ejemplo turnitoslr.com/tu-negocio) para poner en la biografía de Instagram o en tus estados de WhatsApp. Ahí tus clientes ven tus turnos, tu tienda, tus fotos y tus redes."
+    },
+    {
+        question: "¿Puedo bloquear horarios por lluvia, feriados o mantenimiento?",
+        answer: "Sí. Desde tu panel bloqueás una cancha, un horario o un día entero con un clic y nadie puede reservar ahí."
+    },
+    {
+        question: "¿Se envían recordatorios automáticos a mis clientes?",
+        answer: "Estamos trabajando en recordatorios y pedidos de reseña automáticos desde un número central de TurnitosLR, sin que tengas que configurar nada. Mientras tanto, desde tu panel le mandás el recordatorio a cada cliente con un clic."
     }
 ];
 

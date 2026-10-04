@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import SEOHead from '../components/SEOHead';
 
 export default function Privacidad() {
-    const lastUpdated = "15 de Agosto de 2026";
+    const lastUpdated = "4 de Octubre de 2026";
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', paddingBottom: '80px' }}>
@@ -76,9 +76,12 @@ export default function Privacidad() {
                             Para garantizar la gestión eficiente de turnos y la comunicación con los negocios, recopilamos:
                         </p>
                         <ul style={{ color: 'var(--text-secondary)', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <li><strong>Datos de contacto para reservas</strong>: Nombre y apellido, número de teléfono (WhatsApp) y correo electrónico.</li>
+                            <li><strong>Datos de contacto para reservas</strong>: Nombre y apellido y número de teléfono (WhatsApp).</li>
                             <li><strong>Detalles de la reserva</strong>: Fecha, horario, servicio o cancha solicitada, estado del pago de seña y notas adicionales.</li>
                             <li><strong>Datos de comercios</strong>: Nombre del establecimiento, CUIT/identificación comercial, ubicación geográfica, horarios y canales de atención.</li>
+                            <li><strong>Pedidos de alta de negocios</strong>: Nombre del negocio, rubro, nombre de contacto, WhatsApp y ciudad, cuando completás el formulario de la sección Para Negocios.</li>
+                            <li><strong>Ubicación</strong>: Solo si usás el botón "Cerca mío" y lo permitís en tu navegador. Se usa en el momento para ordenar los negocios por cercanía y no se guarda.</li>
+                            <li><strong>Notificaciones</strong>: Si un negocio activa las notificaciones de su panel, guardamos el identificador de su dispositivo para avisarle de nuevas reservas.</li>
                             <li><strong>Información técnica de navegación</strong>: Dirección IP, tipo de navegador y dispositivo con fines estadísticos y de seguridad.</li>
                         </ul>
                     </section>
@@ -89,9 +92,10 @@ export default function Privacidad() {
                             3. Finalidad del Tratamiento de los Datos
                         </h2>
                         <ul style={{ color: 'var(--text-secondary)', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <li>Confirmar y notificar el estado de las reservas solicitadas a través de WhatsApp o correo electrónico.</li>
+                            <li>Confirmar y notificar el estado de las reservas a través de WhatsApp.</li>
                             <li>Permitir a los comercios gestionar su agenda diaria de turnos y coordinar la atención del cliente.</li>
-                            <li>Enviar invitaciones seguras con token de un solo uso para calificar la experiencia del servicio contratado.</li>
+                            <li>Enviar, después del turno, un enlace personal de un solo uso para calificar el servicio.</li>
+                            <li>Contactar a quienes completan el formulario de alta para sumar su negocio.</li>
                             <li>Prevenir fraudes, optimizar el rendimiento técnico de la plataforma y brindar soporte al usuario.</li>
                         </ul>
                     </section>
@@ -109,10 +113,16 @@ export default function Privacidad() {
                     {/* Section 5 */}
                     <section style={{ marginBottom: '32px' }}>
                         <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                            5. Seguridad y Almacenamiento en la Nube
+                            5. Seguridad, Proveedores y Conservación
                         </h2>
                         <p style={{ color: 'var(--text-secondary)' }}>
-                            Toda la información se transmite mediante protocolos cifrados HTTPS / SSL y se almacena en infraestructuras de bases de datos seguras con control de acceso restringido y políticas de seguridad avanzadas (RLS).
+                            Toda la información se transmite cifrada (HTTPS) y se guarda en bases de datos con acceso restringido: cada negocio solo puede ver los datos de sus propias reservas.
+                        </p>
+                        <p style={{ color: 'var(--text-secondary)', marginTop: '10px' }}>
+                            Para funcionar usamos estos proveedores, que procesan datos solo por cuenta de TurnitosLR: Supabase (base de datos), Vercel (alojamiento del sitio) y Google Firebase (notificaciones).
+                        </p>
+                        <p style={{ color: 'var(--text-secondary)', marginTop: '10px' }}>
+                            Conservamos los datos de las reservas mientras el negocio use la plataforma, para su historial y estadísticas. Podés pedir que eliminemos tus datos en cualquier momento.
                         </p>
                     </section>
 
@@ -124,9 +134,12 @@ export default function Privacidad() {
                         <p style={{ color: 'var(--text-secondary)' }}>
                             De acuerdo con la Ley N° 25.326, usted tiene derecho a acceder a sus datos personales almacenados, solicitar su actualización, rectificación o la eliminación total de sus registros de nuestras bases de datos en cualquier momento.
                         </p>
+                        <p style={{ color: 'var(--text-secondary)', marginTop: '10px' }}>
+                            El titular de los datos personales tiene la facultad de ejercer el derecho de acceso a los mismos en forma gratuita a intervalos no inferiores a seis meses, salvo que se acredite un interés legítimo al efecto conforme lo establecido en el artículo 14, inciso 3 de la Ley N° 25.326. La AGENCIA DE ACCESO A LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que interpongan quienes resulten afectados en sus derechos por incumplimiento de las normas vigentes en materia de protección de datos personales.
+                        </p>
                     </section>
 
-                    {/* Section 7 */}
+                    {/* Contacto */}
                     <section style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border)' }}>
                         <h3 style={{ fontSize: '17px', fontWeight: '700', marginBottom: '8px' }}>
                             Canal de Privacidad y Ejercicio de Derechos
