@@ -78,8 +78,17 @@ export function bookingOccupiesSlot(booking, slotTime, slotSize = 30) {
     const bookingDuration = booking.duration || 60;
     const bookingEndMinutes = bookingStartMinutes + bookingDuration;
 
-    // El slot está ocupado si cae dentro del rango [start, end)
-    return slotMinutes >= bookingStartMinutes && slotMinutes < bookingEndMinutes;
+    // El slot está ocupado si se superpone con [start, end) (también reservas que empiezan a mitad de slot)
+    return slotMinutes < bookingEndMinutes && slotMinutes + slotSize > bookingStartMinutes;
+}
+
+/**
+ * True si la reserva empieza dentro de este slot (ahí se dibuja la tarjeta)
+ */
+export function bookingStartsInSlot(booking, slotTime, slotSize = 30) {
+    const slotMinutes = timeToMinutes(slotTime);
+    const bookingStartMinutes = timeToMinutes(booking.time);
+    return bookingStartMinutes >= slotMinutes && bookingStartMinutes < slotMinutes + slotSize;
 }
 
 /**

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
-import { generateTimeSlots, formatDateKey, getBookingsForSlot, timeToMinutes } from '../shared/utils';
+import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot, timeToMinutes } from '../shared/utils';
 import ConfirmModal from '../../common/ConfirmModal';
 
 export default function DayView({
@@ -161,7 +161,7 @@ export default function DayView({
 
     // Verificar si este es el primer slot de una reserva (para renderizar la tarjeta)
     const isFirstSlotOfBooking = (booking, currentTime) => {
-        return booking.time === currentTime;
+        return bookingStartsInSlot(booking, currentTime, config.slotSize);
     };
 
     return (

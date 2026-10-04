@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
-import { generateTimeSlots, formatDateKey, getBookingsForSlot } from '../shared/utils';
+import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot } from '../shared/utils';
 import ConfirmModal from '../../common/ConfirmModal';
 
 export default function WeekView({
@@ -83,7 +83,7 @@ export default function WeekView({
 
     // Verificar si este es el primer slot de una reserva
     const isFirstSlotOfBooking = (booking, currentTime) => {
-        return booking.time === currentTime;
+        return bookingStartsInSlot(booking, currentTime, config.slotSize);
     };
 
     const COURT_COLORS = [
