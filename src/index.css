@@ -1732,6 +1732,15 @@ textarea {
 
 .store-modal-footer-price {
   text-align: left;
+  /* Takes the free space but never pushes the bar taller when the total changes */
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.store-modal-footer-cta {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 auto;
 }
 
 @media (min-width: 641px) {
