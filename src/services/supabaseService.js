@@ -368,6 +368,10 @@ class SupabaseService {
         return sellerService.updateSellerStatus(sellerId, isActive);
     }
 
+    async createSellerAsSuperAdmin(seller) {
+        return sellerService.createSellerAsSuperAdmin(seller);
+    }
+
     async getSellerDetailedReport(sellerId) {
         return sellerService.getSellerDetailedReport(sellerId);
     }
