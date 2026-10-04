@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
-import { isFreePlan } from '../utils/subscriptionUtils';
 import PromotionModal from '../components/promotions/PromotionModal';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 
@@ -124,10 +123,6 @@ export default function BusinessStore({ overrideSlug }) {
                 const allBusinesses = await serviceAdapter.getBusinesses();
                 const foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
                 if (foundBusiness) {
-                    if (isFreePlan(foundBusiness.subscription_plan_id || foundBusiness.subscription_plan_name)) {
-                        navigate(`/${foundBusiness.slug || businessSlug}`, { replace: true });
-                        return;
-                    }
                     setBusiness(foundBusiness);
                     try {
                         sessionStorage.setItem(`turnitos_biz_${foundBusiness.slug || businessSlug}`, JSON.stringify(foundBusiness));
