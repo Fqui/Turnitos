@@ -299,12 +299,13 @@ class SupabaseService {
         return sellerService.getSellerBusinesses(sellerId);
     }
 
-    async createBusinessBySeller(sellerId, businessData) {
-        return sellerService.createBusinessBySeller(sellerId, businessData, (b) => this.createBusiness(b));
+    async createBusinessBySeller(businessData) {
+        return sellerService.createBusinessBySeller(businessData);
     }
 
     async updateBusinessBySeller(sellerId, businessId, businessData) {
-        return sellerService.updateBusinessBySeller(sellerId, businessId, businessData, (id, b) => this.updateBusiness(id, b));
+        // Same update as the SuperAdmin form (subcategories, plan and courts/professionals), after the ownership check
+        return sellerService.updateBusinessBySeller(sellerId, businessId, businessData, (id, b) => this.updateBusinessAsSuperAdmin(id, b));
     }
 
     async registerSubscriptionPayment(businessId, options) {
@@ -372,7 +373,7 @@ class SupabaseService {
     }
 
     async createBusinessAsSuperAdmin(businessData) {
-        return this.createBusiness(businessData);
+        return sellerService.createBusinessWithAccount(businessData);
     }
 
     async updateBusinessAsSuperAdmin(businessId, businessData) {

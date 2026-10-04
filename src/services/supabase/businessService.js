@@ -172,7 +172,8 @@ export async function getBusinesses() {
                 )
             ),
             courts (*),
-            specialists (*)
+            specialists (*),
+            bookable_resources:resources (id, name, type, base_price, active)
         `);
 
     if (error) throw error;
@@ -253,7 +254,8 @@ export async function getBusinessById(id) {
                     specialists (*)
                 )
             ),
-            courts (*)
+            courts (*),
+            bookable_resources:resources (id, name, type, base_price, active)
         `)
         .eq('id', id)
         .single();
@@ -356,7 +358,8 @@ export async function getBusinessBySlug(slug) {
                 )
             ),
             courts (*),
-            specialists (*)
+            specialists (*),
+            bookable_resources:resources (id, name, type, base_price, active)
         `);
 
     if (cleanSlug === cleanNoHyphens) {

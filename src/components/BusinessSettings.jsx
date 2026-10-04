@@ -17,7 +17,7 @@ import SpecialDaysTab from './business/settings/SpecialDaysTab';
 import GalleryTab from './business/settings/GalleryTab';
 import StoreTab from './business/settings/StoreTab';
 
-export default function BusinessSettings({ business, onUpdate, isMobile }) {
+export default function BusinessSettings({ business, onUpdate, isMobile, initialTab }) {
     const { showToast, showConfirm, showAlert } = useNotification();
     
     // Check business type for initial tab selection
@@ -26,7 +26,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const initType = (business?.type || '').toLowerCase();
     const initIsSport = initType === 'sport' || initCategory.includes('deporte') || initSubcat.includes('futbol') || initSubcat.includes('padel') || ((business?.courts?.length || 0) > 0);
 
-    const [activeTab, setActiveTab] = useState('general');
+    const [activeTab, setActiveTab] = useState(initialTab || 'general');
 
     // Scroll to top of settings page whenever changing active settings tab
     useEffect(() => {
@@ -195,19 +195,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     try {
                         const currentSub = await serviceAdapter.getSubscription(targetId);
 
-                        const allowedSpaces = Math.max(
-                            currentSub?.spaces_included || 0,
-                            business?.capacity || 0,
-                            business?.resources_count || 0,
-                            business?.courts?.length || 0,
-                            business?.specialists?.length || 0,
-                            formData?.courts?.length || 0,
-                            formData?.specialists?.length || 0,
-                            resourceCount,
-                            2
-                        );
-
-                        if (currentSub && resourceCount > allowedSpaces) {
+                        // Only the plan decides how many courts/professionals fit
+                        if (currentSub && resourceCount > (Number(currentSub.spaces_included) || 0)) {
                             const plans = await serviceAdapter.getSubscriptionPlans(businessType);
                             const nextPlan = plans.find(p => p.spaces >= resourceCount);
 
@@ -310,7 +299,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
             showToast('Configuración guardada correctamente en la nube', 'success');
         } catch (error) {
             console.error('Error saving settings:', error);
-            showToast(`Error al guardar: ${error.message || 'Verifica la conexión con la base de datos'}`, 'error');
+            const limitReached = /limit exceeded/i.test(error.message || '');
+            showToast(limitReached
+                ? 'Llegaste al máximo de canchas o profesionales de tu plan. Escribinos para ampliarlo.'
+                : `Error al guardar: ${error.message || 'Verifica la conexión con la base de datos'}`, 'error', 6000);
         } finally {
             setSaving(false);
         }

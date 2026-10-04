@@ -5,6 +5,7 @@ import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
 import SEOHead from '../components/SEOHead';
 import { generateSlug } from '../utils/utils';
+import { isProfileReady } from '../utils/profileChecklist';
 
 // Orden por reputación (rating + reseñas) en la home: apagado hasta definir el criterio
 const SORT_BY_REPUTATION = false;
@@ -164,6 +165,10 @@ export default function Home() {
         const termNorm = normalizeText(searchTerm);
 
         const list = businesses.filter(b => {
+            // 0. Only businesses with a complete profile are listed (the direct link still works).
+            // "Cerca mío" results don't carry services/courts, so they skip this check.
+            if (!isNearMeActive && !isProfileReady(b)) return false;
+
             // 1. Search Filter
             let matchesSearch = true;
             if (termNorm.length >= 1) {
