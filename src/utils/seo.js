@@ -21,10 +21,6 @@ export const STATIC_PAGES = {
         title: 'TurnitosLR para Negocios | Turnos online para tu negocio',
         description: 'Sumá tu cancha, peluquería, consultorio o quincho a TurnitosLR. Turnos online 24/7, cobro de señas y Link in Bio. Probalo 14 días gratis.'
     },
-    colaboradores: {
-        title: 'Sumate como Colaborador | TurnitosLR',
-        description: 'Sumate como colaborador de TurnitosLR: ayudá a los negocios de La Rioja a tomar turnos online y generá ingresos recurrentes.'
-    },
     terminos: {
         title: 'Términos y Condiciones de Uso | TurnitosLR',
         description: 'Conocé los términos y condiciones de uso de TurnitosLR, la plataforma de reserva de turnos en La Rioja.'

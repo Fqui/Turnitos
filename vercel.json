@@ -30,7 +30,7 @@
             "destination": "/api/page?slug=:sub&view=:view"
         },
         {
-            "source": "/:page(ayuda|negocios|colaboradores|terminos|privacidad)",
+            "source": "/:page(ayuda|negocios|terminos|privacidad)",
             "destination": "/api/page?page=:page"
         },
         {
@@ -48,7 +48,7 @@
     ],
     "headers": [
         {
-            "source": "/:path(login|portal|business-portal|admin|admin/.*|calificar/.*|review/.*)",
+            "source": "/:path(login|portal|business-portal|admin|admin/.*|calificar/.*|review/.*|colaboradores)",
             "headers": [
                 {
                     "key": "X-Robots-Tag",
