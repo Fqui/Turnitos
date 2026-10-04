@@ -39,7 +39,7 @@ const FAQS_NEGOCIOS = [
     },
     {
         question: "¿Cuánto cuesta?",
-        answer: "Es un abono mensual según tu rubro: servicios desde $17.000, canchas $20.000 por cancha (más barato desde 4 canchas) y alquileres $15.000. No cobramos comisión por turno."
+        answer: "Es un abono mensual según tu rubro: servicios desde $17.000, canchas $20.000 por cancha (más barato desde 4 canchas) y alquileres $15.000. Las reservas que te llegan por tu link no pagan comisión. Las que llegan desde el buscador de TurnitosLR pagan $500 por turno en canchas y servicios, y 3% en alquileres."
     },
     {
         question: "¿Hay prueba gratis?",
