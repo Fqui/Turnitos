@@ -13,7 +13,7 @@ const WHATSAPP_URL = 'https://wa.me/5493805002706?text=Hola,%20quiero%20sumar%20
 const PLANS = [
     { icon: Scissors, title: 'Servicios', detail: 'Peluquería, estética, salud, mascotas', price: 'Desde $17.000', unit: 'por mes', note: 'Con 1 profesional. Sumás más a medida que crecés.' },
     { icon: Trophy, title: 'Canchas', detail: 'Pádel, fútbol, tenis y más', price: '$20.000', unit: 'por cancha, por mes', note: 'Precio más bajo desde 4 canchas.' },
-    { icon: HomeIcon, title: 'Alquileres', detail: 'Quinchos, salones y espacios', price: '$15.000', unit: 'por mes', note: 'Precio fijo.' }
+    { icon: HomeIcon, title: 'Alquileres', detail: 'Quinchos, salones y espacios', price: '$15.000', unit: 'por mes', note: 'Sin comisión por reserva.' }
 ];
 
 const FEATURES = [
