@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { Search, X, ChevronDown, User, Store, MessageCircle, Mail } from 'lucide-react';
 import SEOHead from '../components/SEOHead';
+import '../styles/support.css';
 
 const FAQS_CLIENTES = [
     {
@@ -69,6 +71,8 @@ const FAQS_NEGOCIOS = [
     }
 ];
 
+const WHATSAPP_URL = 'https://wa.me/5493805002706?text=Hola,%20tengo%20una%20consulta%20sobre%20Turnitos';
+
 export default function HelpCenter() {
     const [activeTab, setActiveTab] = useState('clientes'); // 'clientes' | 'negocios'
     const [searchQuery, setSearchQuery] = useState('');
@@ -84,29 +88,24 @@ export default function HelpCenter() {
         );
     }, [currentFaqs, searchQuery]);
 
-    const toggleExact = (index) => {
-        setOpenIndex(openIndex === index ? null : index);
+    const selectTab = (tab) => {
+        setActiveTab(tab);
+        setOpenIndex(null);
     };
 
     // Schema.org FAQPage for Google Rich Snippets
-    const faqSchema = useMemo(() => {
-        const allFaqs = [...FAQS_CLIENTES, ...FAQS_NEGOCIOS];
-        return {
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
-            'mainEntity': allFaqs.map(faq => ({
-                '@type': 'Question',
-                'name': faq.question,
-                'acceptedAnswer': {
-                    '@type': 'Answer',
-                    'text': faq.answer
-                }
-            }))
-        };
-    }, []);
+    const faqSchema = useMemo(() => ({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        'mainEntity': [...FAQS_CLIENTES, ...FAQS_NEGOCIOS].map(faq => ({
+            '@type': 'Question',
+            'name': faq.question,
+            'acceptedAnswer': { '@type': 'Answer', 'text': faq.answer }
+        }))
+    }), []);
 
     return (
-        <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', paddingBottom: '80px' }}>
+        <div className="sp-page">
             <SEOHead
                 title="Centro de Ayuda y Preguntas Frecuentes | TurnitosLR"
                 description="¿Tenés dudas sobre cómo reservar canchas, quinchos o turnos en La Rioja? Encontrá todas las respuestas en el Centro de Ayuda de TurnitosLR."
@@ -114,273 +113,98 @@ export default function HelpCenter() {
                 schema={faqSchema}
             />
 
-            {/* Hero Section */}
-            <div style={{
-                background: 'linear-gradient(135deg, #00E676 0%, #2979FF 100%)',
-                padding: '70px 20px 50px',
-                textAlign: 'center',
-                color: '#fff',
-                marginBottom: '30px'
-            }}>
-                <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                    <motion.h1
-                        initial={{ y: -20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        style={{ fontSize: 'clamp(30px, 6vw, 44px)', fontWeight: '900', marginBottom: '14px', letterSpacing: '-0.5px' }}
-                    >
-                        Centro de Ayuda
-                    </motion.h1>
-                    <motion.p
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.1 }}
-                        style={{ fontSize: 'clamp(16px, 3.5vw, 18px)', opacity: 0.95, marginBottom: '28px' }}
-                    >
-                        Resolvemos tus dudas para que tu única preocupación sea disfrutar de tu turno.
-                    </motion.p>
+            <header className="sp-hero sp-hero--center">
+                <div className="sp-wrap sp-wrap--narrow">
+                    <span className="sp-eyebrow">Soporte</span>
+                    <h1 className="sp-title">Centro de Ayuda</h1>
+                    <p className="sp-lead">Respuestas rápidas sobre reservas, pagos y cómo sumar tu negocio.</p>
 
-                    {/* Live Search Input */}
-                    <div style={{ position: 'relative', maxWidth: '520px', margin: '0 auto' }}>
+                    <div className="sp-search">
+                        <Search size={18} aria-hidden="true" />
                         <input
-                            type="text"
-                            placeholder="Buscar preguntas (ej. seña, cancelar, negocio...)"
+                            type="search"
+                            aria-label="Buscar preguntas"
+                            placeholder="Buscar: seña, cancelar, precios..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '16px 20px 16px 46px',
-                                borderRadius: '50px',
-                                border: 'none',
-                                outline: 'none',
-                                fontSize: '15px',
-                                color: '#1A1A1A',
-                                backgroundColor: '#FFFFFF',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
-                            }}
                         />
-                        <span style={{
-                            position: 'absolute',
-                            left: '18px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            fontSize: '18px',
-                            opacity: 0.6
-                        }}>
-                            🔍
-                        </span>
                         {searchQuery && (
-                            <button
-                                onClick={() => setSearchQuery('')}
-                                style={{
-                                    position: 'absolute',
-                                    right: '16px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: '#666',
-                                    fontWeight: 'bold'
-                                }}
-                            >
-                                ✕
+                            <button type="button" className="sp-search-clear" onClick={() => setSearchQuery('')} aria-label="Borrar búsqueda">
+                                <X size={18} />
                             </button>
                         )}
                     </div>
                 </div>
-            </div>
+            </header>
 
-            {/* Container */}
-            <div className="container" style={{ maxWidth: '820px', margin: '0 auto', padding: '0 20px' }}>
-                {/* Tabs Selector */}
-                <div style={{
-                    display: 'flex',
-                    gap: '10px',
-                    justifyContent: 'center',
-                    marginBottom: '30px'
-                }}>
-                    <button
-                        onClick={() => { setActiveTab('clientes'); setOpenIndex(null); }}
-                        style={{
-                            padding: '10px 22px',
-                            borderRadius: '30px',
-                            border: '1px solid var(--border)',
-                            backgroundColor: activeTab === 'clientes' ? 'var(--primary, #00E676)' : 'var(--bg-card)',
-                            color: activeTab === 'clientes' ? '#000' : 'var(--text-primary)',
-                            fontWeight: '700',
-                            fontSize: '14px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        👤 Para Clientes y Jugadores
+            <main className="sp-wrap sp-wrap--narrow">
+                <div className="sp-tabs" role="tablist">
+                    <button type="button" role="tab" aria-selected={activeTab === 'clientes'} className={`sp-tab${activeTab === 'clientes' ? ' is-active' : ''}`} onClick={() => selectTab('clientes')}>
+                        <User size={16} aria-hidden="true" /> Para clientes
                     </button>
-                    <button
-                        onClick={() => { setActiveTab('negocios'); setOpenIndex(null); }}
-                        style={{
-                            padding: '10px 22px',
-                            borderRadius: '30px',
-                            border: '1px solid var(--border)',
-                            backgroundColor: activeTab === 'negocios' ? '#2979FF' : 'var(--bg-card)',
-                            color: activeTab === 'negocios' ? '#fff' : 'var(--text-primary)',
-                            fontWeight: '700',
-                            fontSize: '14px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        🏢 Para Comercios y Clubes
+                    <button type="button" role="tab" aria-selected={activeTab === 'negocios'} className={`sp-tab${activeTab === 'negocios' ? ' is-active' : ''}`} onClick={() => selectTab('negocios')}>
+                        <Store size={16} aria-hidden="true" /> Para negocios
                     </button>
                 </div>
 
-                {/* FAQ Accordion List */}
-                <div style={{ display: 'grid', gap: '14px' }}>
-                    {filteredFaqs.length === 0 ? (
-                        <div style={{
-                            textAlign: 'center',
-                            padding: '40px 20px',
-                            backgroundColor: 'var(--bg-card)',
-                            borderRadius: '16px',
-                            border: '1px solid var(--border)',
-                            color: 'var(--text-secondary)'
-                        }}>
-                            <p style={{ fontSize: '16px', marginBottom: '10px' }}>No encontramos preguntas que coincidan con "<strong>{searchQuery}</strong>".</p>
-                            <p style={{ fontSize: '14px' }}>¿Necesitás ayuda personalizada? Escribinos por WhatsApp.</p>
-                        </div>
-                    ) : (
-                        filteredFaqs.map((faq, index) => {
+                {filteredFaqs.length === 0 ? (
+                    <div className="sp-empty">
+                        <p>No encontramos preguntas que coincidan con "<strong>{searchQuery}</strong>".</p>
+                        <p>Escribinos y te ayudamos.</p>
+                    </div>
+                ) : (
+                    <div className="sp-faq">
+                        {filteredFaqs.map((faq, index) => {
                             const isOpen = openIndex === index;
                             return (
-                                <motion.div
-                                    key={index}
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    style={{
-                                        backgroundColor: 'var(--bg-card)',
-                                        borderRadius: '14px',
-                                        border: `1px solid ${isOpen ? 'var(--primary, #00E676)' : 'var(--border)'}`,
-                                        overflow: 'hidden',
-                                        transition: 'border-color 0.2s'
-                                    }}
-                                >
+                                <div key={faq.question} className={`sp-faq-item${isOpen ? ' is-open' : ''}`}>
                                     <button
-                                        onClick={() => toggleExact(index)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '20px 22px',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            background: 'none',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            textAlign: 'left',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '16px',
-                                            fontWeight: '700',
-                                            gap: '12px'
-                                        }}
+                                        type="button"
+                                        className="sp-faq-q"
+                                        aria-expanded={isOpen}
+                                        onClick={() => setOpenIndex(isOpen ? null : index)}
                                     >
                                         <span>{faq.question}</span>
-                                        <span style={{
-                                            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                                            transition: 'transform 0.25s ease',
-                                            fontSize: '14px',
-                                            opacity: 0.7,
-                                            flexShrink: 0
-                                        }}>
-                                            ▼
-                                        </span>
+                                        <ChevronDown size={20} aria-hidden="true" />
                                     </button>
-
-                                    <AnimatePresence>
+                                    <AnimatePresence initial={false}>
                                         {isOpen && (
                                             <motion.div
                                                 initial={{ height: 0, opacity: 0 }}
                                                 animate={{ height: 'auto', opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.25 }}
+                                                transition={{ duration: 0.2 }}
                                                 style={{ overflow: 'hidden' }}
                                             >
-                                                <div style={{
-                                                    padding: '0 22px 20px',
-                                                    color: 'var(--text-secondary)',
-                                                    lineHeight: '1.6',
-                                                    fontSize: '15px',
-                                                    borderTop: '1px solid var(--border)',
-                                                    paddingTop: '14px'
-                                                }}>
-                                                    {faq.answer}
-                                                </div>
+                                                <div className="sp-faq-a">{faq.answer}</div>
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
-                                </motion.div>
+                                </div>
                             );
-                        })
-                    )}
-                </div>
+                        })}
+                    </div>
+                )}
 
-                {/* Contact Support CTA Box */}
-                <div style={{
-                    marginTop: '50px',
-                    textAlign: 'center',
-                    padding: 'clamp(28px, 4vw, 40px)',
-                    backgroundColor: 'var(--bg-card)',
-                    borderRadius: '20px',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 8px 30px rgba(0,0,0,0.04)'
-                }}>
-                    <h3 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '10px' }}>
-                        ¿No encontraste lo que buscabas?
-                    </h3>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '15px', maxWidth: '550px', margin: '0 auto 24px' }}>
-                        Estamos en La Rioja listos para ayudarte. Comunicate con nuestro equipo por WhatsApp o por correo electrónico.
+                {activeTab === 'negocios' && (
+                    <p className="sp-meta" style={{ marginTop: '20px' }}>
+                        ¿Querés sumar tu negocio? <Link to="/negocios#sumate" style={{ color: 'var(--sp-accent-text)', fontWeight: 700 }}>Dejanos tus datos</Link>.
                     </p>
-                    <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <a
-                            href="https://wa.me/5493805002706?text=Hola,%20tengo%20una%20consulta%20sobre%20Turnitos"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                backgroundColor: '#25D366',
-                                color: '#fff',
-                                padding: '14px 30px',
-                                borderRadius: '50px',
-                                textDecoration: 'none',
-                                fontWeight: '700',
-                                fontSize: '15px',
-                                boxShadow: '0 6px 18px rgba(37, 211, 102, 0.35)',
-                                transition: 'transform 0.2s'
-                            }}
-                        >
-                            <span>💬 WhatsApp (+54 9 380 500-2706)</span>
+                )}
+
+                <section className="sp-contact">
+                    <h2>¿No encontraste lo que buscabas?</h2>
+                    <p>Estamos en La Rioja y te respondemos por WhatsApp o por correo.</p>
+                    <div className="sp-actions">
+                        <a className="sp-btn sp-btn--primary" href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
+                            <MessageCircle size={18} aria-hidden="true" /> Escribinos por WhatsApp
                         </a>
-                        <a
-                            href="mailto:consultas@turnitoslr.com"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                backgroundColor: 'var(--bg-main)',
-                                color: 'var(--text-primary)',
-                                border: '1px solid var(--border)',
-                                padding: '14px 28px',
-                                borderRadius: '50px',
-                                textDecoration: 'none',
-                                fontWeight: '700',
-                                fontSize: '15px'
-                            }}
-                        >
-                            <span>📧 consultas@turnitoslr.com</span>
+                        <a className="sp-btn" href="mailto:consultas@turnitoslr.com">
+                            <Mail size={18} aria-hidden="true" /> consultas@turnitoslr.com
                         </a>
                     </div>
-                </div>
-            </div>
+                </section>
+            </main>
         </div>
     );
 }

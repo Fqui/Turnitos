@@ -1,171 +1,109 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import SEOHead from '../components/SEOHead';
+import LegalPage from '../components/legal/LegalPage';
+
+const LAST_UPDATED = '4 de Octubre de 2026';
+
+const SECTIONS = [
+    {
+        id: 'compromiso',
+        title: 'Compromiso de Privacidad',
+        content: (
+            <p>
+                En <strong>TurnitosLR</strong> nos tomamos con absoluta seriedad la seguridad y confidencialidad de la información de nuestros usuarios y comercios. Esta Política de Privacidad describe cómo recopilamos, utilizamos, almacenamos y resguardamos sus datos de conformidad con la <strong>Ley de Protección de Datos Personales N° 25.326 de la República Argentina</strong>.
+            </p>
+        )
+    },
+    {
+        id: 'datos',
+        title: 'Información que Recopilamos',
+        content: (
+            <>
+                <p>Para gestionar los turnos y la comunicación con los negocios, recopilamos:</p>
+                <ul>
+                    <li><strong>Datos de contacto para reservas</strong>: nombre y apellido y número de teléfono (WhatsApp).</li>
+                    <li><strong>Detalles de la reserva</strong>: fecha, horario, servicio o cancha solicitada, estado del pago de seña y notas adicionales.</li>
+                    <li><strong>Datos de comercios</strong>: nombre del establecimiento, identificación comercial, ubicación, horarios y canales de atención.</li>
+                    <li><strong>Pedidos de alta de negocios</strong>: nombre del negocio, rubro, nombre de contacto, WhatsApp y ciudad, cuando completás el formulario de la sección Para Negocios.</li>
+                    <li><strong>Ubicación</strong>: solo si usás el botón "Cerca mío" y lo permitís en tu navegador. Se usa en el momento para ordenar los negocios por cercanía y no se guarda.</li>
+                    <li><strong>Notificaciones</strong>: si un negocio activa las notificaciones de su panel, guardamos el identificador de su dispositivo para avisarle de nuevas reservas.</li>
+                    <li><strong>Información técnica de navegación</strong>: dirección IP, tipo de navegador y dispositivo, con fines estadísticos y de seguridad.</li>
+                </ul>
+            </>
+        )
+    },
+    {
+        id: 'finalidad',
+        title: 'Para Qué Usamos los Datos',
+        content: (
+            <ul>
+                <li>Confirmar y notificar el estado de las reservas a través de WhatsApp.</li>
+                <li>Permitir a los comercios gestionar su agenda de turnos y coordinar la atención del cliente.</li>
+                <li>Enviar, después del turno, un enlace personal de un solo uso para calificar el servicio.</li>
+                <li>Contactar a quienes completan el formulario de alta para sumar su negocio.</li>
+                <li>Prevenir fraudes, mejorar el funcionamiento de la plataforma y brindar soporte.</li>
+            </ul>
+        )
+    },
+    {
+        id: 'no-venta',
+        title: 'No Vendemos tus Datos',
+        content: (
+            <p>
+                <strong>TurnitosLR no vende, alquila ni comercializa bajo ninguna circunstancia los datos personales de sus usuarios a terceros.</strong> La información compartida se limita estrictamente a la necesaria para que el negocio seleccionado pueda procesar la reserva del cliente.
+            </p>
+        )
+    },
+    {
+        id: 'seguridad',
+        title: 'Seguridad, Proveedores y Conservación',
+        content: (
+            <>
+                <p>
+                    Toda la información se transmite cifrada (HTTPS) y se guarda en bases de datos con acceso restringido: cada negocio solo puede ver los datos de sus propias reservas.
+                </p>
+                <p>
+                    Para funcionar usamos estos proveedores, que procesan datos solo por cuenta de TurnitosLR: Supabase (base de datos), Vercel (alojamiento del sitio) y Google Firebase (notificaciones).
+                </p>
+                <p>
+                    Conservamos los datos de las reservas mientras el negocio use la plataforma, para su historial y estadísticas. Podés pedir que eliminemos tus datos en cualquier momento.
+                </p>
+            </>
+        )
+    },
+    {
+        id: 'derechos',
+        title: 'Tus Derechos (Acceso, Rectificación y Supresión)',
+        content: (
+            <>
+                <p>
+                    De acuerdo con la Ley N° 25.326, tenés derecho a acceder a tus datos personales, pedir que se actualicen o corrijan, o que se eliminen de nuestras bases de datos en cualquier momento.
+                </p>
+                <p>
+                    El titular de los datos personales tiene la facultad de ejercer el derecho de acceso a los mismos en forma gratuita a intervalos no inferiores a seis meses, salvo que se acredite un interés legítimo al efecto conforme lo establecido en el artículo 14, inciso 3 de la Ley N° 25.326. La AGENCIA DE ACCESO A LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que interpongan quienes resulten afectados en sus derechos por incumplimiento de las normas vigentes en materia de protección de datos personales.
+                </p>
+            </>
+        )
+    }
+];
 
 export default function Privacidad() {
-    const lastUpdated = "4 de Octubre de 2026";
-
     return (
-        <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', paddingBottom: '80px' }}>
-            <SEOHead
-                title="Política de Privacidad | TurnitosLR"
-                description="Conocé cómo protegemos tus datos personales, reservas y privacidad en TurnitosLR según la normativa argentina."
-                url="https://www.turnitoslr.com/privacidad"
-            />
-
-            {/* Header / Hero */}
-            <div style={{
-                background: 'linear-gradient(135deg, rgba(41, 121, 255, 0.15) 0%, rgba(0, 230, 118, 0.15) 100%)',
-                borderBottom: '1px solid var(--border)',
-                padding: '60px 20px',
-                textAlign: 'center'
-            }}>
-                <div style={{ maxWidth: '850px', margin: '0 auto' }}>
-                    <span style={{
-                        display: 'inline-block',
-                        padding: '6px 14px',
-                        borderRadius: '20px',
-                        backgroundColor: 'rgba(41, 121, 255, 0.12)',
-                        color: '#2979FF',
-                        fontSize: '13px',
-                        fontWeight: '700',
-                        marginBottom: '16px'
-                    }}>
-                        Seguridad y Privacidad
-                    </span>
-                    <h1 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: '800', marginBottom: '14px' }}>
-                        Política de Privacidad y Protección de Datos
-                    </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
-                        Última actualización: {lastUpdated}
-                    </p>
-                </div>
-            </div>
-
-            {/* Content Container */}
-            <div className="container" style={{ maxWidth: '850px', margin: '40px auto 0', padding: '0 20px' }}>
-                <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{
-                        backgroundColor: 'var(--bg-card)',
-                        borderRadius: '16px',
-                        border: '1px solid var(--border)',
-                        padding: 'clamp(24px, 4vw, 44px)',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-                        lineHeight: '1.7',
-                        fontSize: '15px'
-                    }}
-                >
-                    {/* Section 1 */}
-                    <section style={{ marginBottom: '32px' }}>
-                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                            1. Compromiso de Privacidad
-                        </h2>
-                        <p style={{ color: 'var(--text-secondary)' }}>
-                            En <strong>TurnitosLR</strong> nos tomamos con absoluta seriedad la seguridad y confidencialidad de la información de nuestros usuarios y comercios. Esta Política de Privacidad describe cómo recopilamos, utilizamos, almacenamos y resguardamos sus datos de conformidad con la <strong>Ley de Protección de Datos Personales N° 25.326 de la República Argentina</strong>.
-                        </p>
-                    </section>
-
-                    {/* Section 2 */}
-                    <section style={{ marginBottom: '32px' }}>
-                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                            2. Información que Recopilamos
-                        </h2>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '10px' }}>
-                            Para garantizar la gestión eficiente de turnos y la comunicación con los negocios, recopilamos:
-                        </p>
-                        <ul style={{ color: 'var(--text-secondary)', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <li><strong>Datos de contacto para reservas</strong>: Nombre y apellido y número de teléfono (WhatsApp).</li>
-                            <li><strong>Detalles de la reserva</strong>: Fecha, horario, servicio o cancha solicitada, estado del pago de seña y notas adicionales.</li>
-                            <li><strong>Datos de comercios</strong>: Nombre del establecimiento, CUIT/identificación comercial, ubicación geográfica, horarios y canales de atención.</li>
-                            <li><strong>Pedidos de alta de negocios</strong>: Nombre del negocio, rubro, nombre de contacto, WhatsApp y ciudad, cuando completás el formulario de la sección Para Negocios.</li>
-                            <li><strong>Ubicación</strong>: Solo si usás el botón "Cerca mío" y lo permitís en tu navegador. Se usa en el momento para ordenar los negocios por cercanía y no se guarda.</li>
-                            <li><strong>Notificaciones</strong>: Si un negocio activa las notificaciones de su panel, guardamos el identificador de su dispositivo para avisarle de nuevas reservas.</li>
-                            <li><strong>Información técnica de navegación</strong>: Dirección IP, tipo de navegador y dispositivo con fines estadísticos y de seguridad.</li>
-                        </ul>
-                    </section>
-
-                    {/* Section 3 */}
-                    <section style={{ marginBottom: '32px' }}>
-                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                            3. Finalidad del Tratamiento de los Datos
-                        </h2>
-                        <ul style={{ color: 'var(--text-secondary)', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <li>Confirmar y notificar el estado de las reservas a través de WhatsApp.</li>
-                            <li>Permitir a los comercios gestionar su agenda diaria de turnos y coordinar la atención del cliente.</li>
-                            <li>Enviar, después del turno, un enlace personal de un solo uso para calificar el servicio.</li>
-                            <li>Contactar a quienes completan el formulario de alta para sumar su negocio.</li>
-                            <li>Prevenir fraudes, optimizar el rendimiento técnico de la plataforma y brindar soporte al usuario.</li>
-                        </ul>
-                    </section>
-
-                    {/* Section 4 */}
-                    <section style={{ marginBottom: '32px' }}>
-                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                            4. No Comercialización de Datos Personales
-                        </h2>
-                        <p style={{ color: 'var(--text-secondary)' }}>
-                            <strong>TurnitosLR no vende, alquila ni comercializa bajo ninguna circunstancia los datos personales de sus usuarios a terceros.</strong> La información compartida se limita estrictamente a la necesaria para que el negocio seleccionado pueda procesar la reserva del cliente.
-                        </p>
-                    </section>
-
-                    {/* Section 5 */}
-                    <section style={{ marginBottom: '32px' }}>
-                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                            5. Seguridad, Proveedores y Conservación
-                        </h2>
-                        <p style={{ color: 'var(--text-secondary)' }}>
-                            Toda la información se transmite cifrada (HTTPS) y se guarda en bases de datos con acceso restringido: cada negocio solo puede ver los datos de sus propias reservas.
-                        </p>
-                        <p style={{ color: 'var(--text-secondary)', marginTop: '10px' }}>
-                            Para funcionar usamos estos proveedores, que procesan datos solo por cuenta de TurnitosLR: Supabase (base de datos), Vercel (alojamiento del sitio) y Google Firebase (notificaciones).
-                        </p>
-                        <p style={{ color: 'var(--text-secondary)', marginTop: '10px' }}>
-                            Conservamos los datos de las reservas mientras el negocio use la plataforma, para su historial y estadísticas. Podés pedir que eliminemos tus datos en cualquier momento.
-                        </p>
-                    </section>
-
-                    {/* Section 6 */}
-                    <section style={{ marginBottom: '32px' }}>
-                        <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
-                            6. Derechos del Titular de los Datos (Acceso, Rectificación y Supresión)
-                        </h2>
-                        <p style={{ color: 'var(--text-secondary)' }}>
-                            De acuerdo con la Ley N° 25.326, usted tiene derecho a acceder a sus datos personales almacenados, solicitar su actualización, rectificación o la eliminación total de sus registros de nuestras bases de datos en cualquier momento.
-                        </p>
-                        <p style={{ color: 'var(--text-secondary)', marginTop: '10px' }}>
-                            El titular de los datos personales tiene la facultad de ejercer el derecho de acceso a los mismos en forma gratuita a intervalos no inferiores a seis meses, salvo que se acredite un interés legítimo al efecto conforme lo establecido en el artículo 14, inciso 3 de la Ley N° 25.326. La AGENCIA DE ACCESO A LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que interpongan quienes resulten afectados en sus derechos por incumplimiento de las normas vigentes en materia de protección de datos personales.
-                        </p>
-                    </section>
-
-                    {/* Contacto */}
-                    <section style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'var(--bg-main)', border: '1px solid var(--border)' }}>
-                        <h3 style={{ fontSize: '17px', fontWeight: '700', marginBottom: '8px' }}>
-                            Canal de Privacidad y Ejercicio de Derechos
-                        </h3>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '14px' }}>
-                            Para ejercer cualquiera de sus derechos o realizar consultas sobre el manejo de su información personal, comuníquese con nosotros:
-                        </p>
-                        <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
-                            <a
-                                href="mailto:consultas@turnitoslr.com?subject=Consulta sobre Privacidad de Datos"
-                                style={{ color: 'var(--primary, #00E676)', textDecoration: 'none', fontWeight: '600' }}
-                            >
-                                📧 consultas@turnitoslr.com
-                            </a>
-                            <a
-                                href="https://wa.me/5493805002706?text=Hola,%20tengo%20una%20consulta%20sobre%20la%20privacidad%20de%20mis%20datos"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: '#25D366', textDecoration: 'none', fontWeight: '600' }}
-                            >
-                                📱 WhatsApp: +54 9 380 500-2706
-                            </a>
-                        </div>
-                    </section>
-                </motion.div>
-            </div>
-        </div>
+        <LegalPage
+            seo={{
+                title: 'Política de Privacidad | TurnitosLR',
+                description: 'Conocé cómo protegemos tus datos personales, reservas y privacidad en TurnitosLR según la normativa argentina.',
+                url: 'https://www.turnitoslr.com/privacidad'
+            }}
+            eyebrow="Legal"
+            title="Política de Privacidad"
+            lastUpdated={LAST_UPDATED}
+            sections={SECTIONS}
+            contact={{
+                title: 'Ejercé tus derechos o consultanos',
+                text: 'Para pedir acceso, corrección o eliminación de tus datos, escribinos por correo o WhatsApp.',
+                mailto: 'mailto:consultas@turnitoslr.com?subject=Consulta%20sobre%20Privacidad%20de%20Datos',
+                whatsapp: 'https://wa.me/5493805002706?text=Hola,%20tengo%20una%20consulta%20sobre%20la%20privacidad%20de%20mis%20datos'
+            }}
+        />
     );
 }
