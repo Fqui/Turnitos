@@ -3,7 +3,6 @@
  */
 
 export const PLAN_IDS = {
-    FREE: 'free',
     SERVICES_INDIVIDUAL: 'services_individual',
     SERVICES_TEAM: 'services_team',
     COURTS_1_3: 'courts_1_3',
@@ -13,21 +12,6 @@ export const PLAN_IDS = {
 };
 
 export const PLANS_CATALOG = [
-    {
-        id: PLAN_IDS.FREE,
-        name: 'Plan Gratis',
-        business_type: 'all',
-        category_label: 'Todos los rubros',
-        monthly_price: 0,
-        monthly_bookings_limit: 100,
-        has_subdomain: false,
-        has_linkbio: false,
-        has_store: false,
-        direct_commission_percent: 0.05,
-        marketplace_commission_percent: 0.05,
-        marketplace_commission_fixed: null,
-        description: 'Hasta 100 turnos/mes. 5% de comisión por turno. Solo link directo turnitoslr.com/:negocio'
-    },
     {
         id: PLAN_IDS.SERVICES_INDIVIDUAL,
         name: 'Servicios - Individual',
@@ -141,22 +125,9 @@ export function calculateSubscriptionPrice(businessType, unitsCount = 1) {
 }
 
 /**
- * Checks if a plan name or id corresponds to the free plan
- */
-export function isFreePlan(planIdOrName) {
-    if (!planIdOrName) return false;
-    const lower = String(planIdOrName).toLowerCase().trim();
-    return lower === 'free' || lower === 'gratis' || lower === 'plan gratis' || lower === 'plan_gratis';
-}
-
-/**
  * Resolves full plan definition from id, name or fallback
  */
 export function getPlanDetails(planIdOrName, businessType = null, unitsCount = 1) {
-    if (isFreePlan(planIdOrName)) {
-        return PLANS_CATALOG.find(p => p.id === PLAN_IDS.FREE);
-    }
-
     const found = PLANS_CATALOG.find(p => p.id === planIdOrName || p.name.toLowerCase() === String(planIdOrName).toLowerCase());
     if (found) return found;
 
@@ -183,8 +154,6 @@ export function getPlanDetails(planIdOrName, businessType = null, unitsCount = 1
  * Calculates monthly subscription fee based on plan and capacity
  */
 export function calculateMonthlyFee(planIdOrName, unitsCount = 1, businessType = null) {
-    if (isFreePlan(planIdOrName)) return 0;
-
     const count = Math.max(1, Number(unitsCount) || 1);
     const plan = getPlanDetails(planIdOrName, businessType, count);
     const type = plan?.business_type === 'services' ? 'service' : (plan?.business_type || businessType);
@@ -195,9 +164,6 @@ export function calculateMonthlyFee(planIdOrName, unitsCount = 1, businessType =
  * Calculates commission for a booking
  */
 export function calculateBookingCommission({ planId, price = 0, isMarketplace = false, businessType = null }) {
-    if (isFreePlan(planId)) {
-        return Math.round(Number(price || 0) * 0.05);
-    }
     if (isMarketplace) {
         const type = String(businessType || '').toLowerCase();
         const pId = String(planId || '').toLowerCase();
