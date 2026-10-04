@@ -441,7 +441,7 @@ export default function Home() {
     // Handle Nav to Business from Suggestion
     const handleSelectSuggestion = (business) => {
         try {
-            sessionStorage.setItem('turnitos_booking_source', 'marketplace');
+            sessionStorage.setItem('turnitos_booking_source', JSON.stringify({ businessId: business.id, at: Date.now() }));
         } catch (e) {}
         navigate(`/${generateSlug(business.name)}`, { state: { business, fromMarketplace: true } });
         setShowSuggestions(false);
@@ -967,7 +967,7 @@ export default function Home() {
                                             state={{ business, fromMarketplace: true }}
                                             onClick={() => {
                                                 try {
-                                                    sessionStorage.setItem('turnitos_booking_source', 'marketplace');
+                                                    sessionStorage.setItem('turnitos_booking_source', JSON.stringify({ businessId: business.id, at: Date.now() }));
                                                 } catch (e) {}
                                             }}
                                             style={{ display: 'block', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}

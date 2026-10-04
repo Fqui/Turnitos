@@ -583,6 +583,7 @@ export default function BusinessPortal() {
         const bookingData = {
             businessId: selectedBusinessId,
             business_id: selectedBusinessId,
+            bookingSource: 'manual',
             serviceId: isCourt ? null : newBookingData.serviceId || null,
             courtId: isCourt ? newBookingData.serviceId : null,
             specialistId: newBookingData.specialistId || null,
@@ -645,7 +646,7 @@ export default function BusinessPortal() {
             });
         } catch (error) {
             console.error('Error creating booking:', error);
-            alert('Error al crear la reserva');
+            alert(error?.message ? `No se pudo crear la reserva: ${error.message}` : 'Error al crear la reserva');
         }
     };
 

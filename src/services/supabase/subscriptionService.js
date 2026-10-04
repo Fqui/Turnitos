@@ -21,41 +21,39 @@ export async function getMonthlyBookingsStats(businessId, monthDate = new Date()
         const monthNum = monthDate.getMonth() + 1;
         const month = String(monthNum).padStart(2, '0');
         const startOfMonth = `${year}-${month}-01`;
-        const lastDayNum = new Date(year, monthNum, 0).getDate();
-        const endOfMonth = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`;
-        const startOfMonthIso = `${startOfMonth}T00:00:00.000Z`;
-        const endOfMonthIso = `${endOfMonth}T23:59:59.999Z`;
-
-        const filter = `and(created_at.gte.${startOfMonthIso},created_at.lte.${endOfMonthIso}),and(date.gte.${startOfMonth},date.lte.${endOfMonth})`;
+        // A booking is billed in the month it was CREATED (Argentina time), never twice
+        const nextMonth = new Date(year, monthNum, 1);
+        const startOfMonthIso = `${startOfMonth}T00:00:00-03:00`;
+        const startOfNextMonthIso = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01T00:00:00-03:00`;
 
         const { data: bookings, error } = await supabase
             .from('bookings')
             .select('id, date, time, customer_name, customer_phone, price, status, metadata, created_at')
             .eq('business_id', businessId)
-            .or(filter)
+            .gte('created_at', startOfMonthIso)
+            .lt('created_at', startOfNextMonthIso)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
         // Fetch business info to check plan and type
-        const { data: bizData } = await supabase
+        const { data: bizData, error: bizError } = await supabase
             .from('businesses')
-            .select('type, category, subscription_plan_id')
+            .select('type, subscription_plan_id')
             .eq('id', businessId)
             .maybeSingle();
+        if (bizError) throw bizError;
 
         const isRentalBiz = bizData?.type === 'alquiler' ||
             bizData?.type === 'rental' ||
-            bizData?.type === 'venue' ||
-            (bizData?.category || '').toLowerCase().includes('alquiler') ||
-            (bizData?.category || '').toLowerCase().includes('quincho');
+            bizData?.type === 'venue';
 
         const nonBlockedBookings = (bookings || []).filter(b => 
             b.status !== 'cancelled' && 
             b.status !== 'rejected' &&
             b.status !== 'blocked' &&
             !b.customer_name?.toUpperCase().includes('BLOQUEADO') &&
-            !b.notes?.toUpperCase().includes('BLOQUEO')
+            !b.metadata?.notes?.toUpperCase?.().includes('BLOQUEO')
         );
 
         const isItemMarketplace = (b) => {
@@ -85,21 +83,18 @@ export async function getMonthlyBookingsStats(businessId, monthDate = new Date()
             marketplaceBookings: marketplaceBookings.length,
             directBookings: directBookings.length,
             totalMarketplaceCommission,
-            marketplaceList: marketplaceBookings,
-            limit: 100,
-            isLimitReached: nonBlockedBookings.length >= 100
+            marketplaceList: marketplaceBookings
         };
     } catch (e) {
         console.error('Error in getMonthlyBookingsStats:', e);
         return {
+            error: true,
             month: '',
             totalBookings: 0,
             marketplaceBookings: 0,
             directBookings: 0,
             totalMarketplaceCommission: 0,
-            marketplaceList: [],
-            limit: 100,
-            isLimitReached: false
+            marketplaceList: []
         };
     }
 }

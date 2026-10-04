@@ -364,6 +364,10 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                         <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                             Cargando desglose...
                         </div>
+                    ) : stats?.error ? (
+                        <div style={{ padding: '24px', textAlign: 'center', color: '#EF4444', fontSize: '14px' }}>
+                            No pudimos cargar tus reservas del mes. Recargá la página para ver la comisión.
+                        </div>
                     ) : filteredMarketplaceList.length === 0 ? (
                         <div style={{
                             padding: '32px 20px',

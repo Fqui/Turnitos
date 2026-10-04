@@ -202,8 +202,11 @@ export async function createBooking(bookingData) {
 
     let bookingSource = bookingData.bookingSource || bookingData.booking_source || bookingData.metadata?.booking_source;
     if (!bookingSource && typeof window !== 'undefined') {
+        // Marketplace only when the customer reached THIS business from the TurnitosLR search in the last 24 h
         try {
-            bookingSource = sessionStorage.getItem('turnitos_booking_source') || 'direct';
+            const mark = JSON.parse(sessionStorage.getItem('turnitos_booking_source') || 'null');
+            const isRecent = mark?.at && Date.now() - mark.at < 24 * 60 * 60 * 1000;
+            bookingSource = isRecent && String(mark.businessId) === String(targetBusinessId) ? 'marketplace' : 'direct';
         } catch (e) {
             bookingSource = 'direct';
         }
