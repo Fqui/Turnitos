@@ -121,6 +121,12 @@ export function processBusinessData(data) {
     business.banner_image = business.banner_url || business.banner_image || null;
     business.banner_url = business.banner_image;
     if (Array.isArray(business.courts) && business.courts.length > 0) {
+        // "Disabled" lives on the court's resources row
+        const courtResources = (business.bookable_resources || []).filter(r => r.type === 'court');
+        business.courts = business.courts.map(c => {
+            const res = courtResources.find(r => String(r.metadata?.court_id) === String(c.id));
+            return res && c.active === undefined ? { ...c, active: res.active !== false } : c;
+        });
         business.courts = [...business.courts].sort((a, b) => 
             (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
         );
@@ -164,7 +170,7 @@ export async function getBusinesses() {
             ),
             courts (*),
             specialists (*),
-            bookable_resources:resources (id, name, type, base_price, active)
+            bookable_resources:resources (id, name, type, base_price, active, metadata)
         `);
 
     if (error) throw error;
@@ -246,7 +252,7 @@ export async function getBusinessById(id) {
                 )
             ),
             courts (*),
-            bookable_resources:resources (id, name, type, base_price, active)
+            bookable_resources:resources (id, name, type, base_price, active, metadata)
         `)
         .eq('id', id)
         .single();
@@ -350,7 +356,7 @@ export async function getBusinessBySlug(slug) {
             ),
             courts (*),
             specialists (*),
-            bookable_resources:resources (id, name, type, base_price, active)
+            bookable_resources:resources (id, name, type, base_price, active, metadata)
         `);
 
     if (cleanSlug === cleanNoHyphens) {
@@ -866,8 +872,10 @@ export async function updateBusiness(businessId, businessData) {
             const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
 
             if (idsToDelete.length > 0) {
+                await assertDeletable('services', 'service_id', idsToDelete, 'el servicio');
                 await supabase.from('service_specialists').delete().in('service_id', idsToDelete);
-                await supabase.from('services').delete().in('id', idsToDelete);
+                const { error: delServiceErr } = await supabase.from('services').delete().in('id', idsToDelete);
+                if (delServiceErr) throw delServiceErr;
             }
         }
 
@@ -1044,6 +1052,23 @@ export async function updateBusiness(businessId, businessData) {
     }
 
     return business;
+}
+
+// Courts and services with bookings can't be deleted (the bookings point to them).
+// Fail with a clear message instead of reporting a save that didn't happen.
+async function assertDeletable(table, column, ids, label) {
+    if (!ids.length) return;
+    const { data: used, error } = await supabase
+        .from('bookings')
+        .select(column)
+        .in(column, ids)
+        .limit(1000);
+    if (error) throw error;
+    const usedIds = [...new Set((used || []).map(b => b[column]))];
+    if (usedIds.length === 0) return;
+    const { data: rows } = await supabase.from(table).select('id, name').in('id', usedIds);
+    const names = (rows || []).map(r => r.name).join(', ');
+    throw new Error(`No se puede eliminar ${label} ${names} porque tiene reservas cargadas. Podés cambiarle el nombre o el precio.`);
 }
 
 export async function patchBusiness(businessId, updates) {
@@ -1224,11 +1249,12 @@ export async function patchBusiness(businessId, updates) {
 
         const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
         if (idsToDelete.length > 0) {
-            try {
-                await supabase.from('courts').delete().in('id', idsToDelete);
-                await supabase.from('resources').delete().in('id', idsToDelete);
-            } catch (e) {
-                console.warn('Error deleting removed courts:', e);
+            await assertDeletable('courts', 'court_id', idsToDelete, 'la cancha');
+            const { error: delCourtErr } = await supabase.from('courts').delete().in('id', idsToDelete);
+            if (delCourtErr) throw delCourtErr;
+            // Each court has a resources row created by trigger_sync_court (linked by metadata.court_id)
+            for (const courtId of idsToDelete) {
+                await supabase.from('resources').delete().eq('type', 'court').eq('metadata->>court_id', courtId);
             }
         }
 
@@ -1274,20 +1300,17 @@ export async function patchBusiness(businessId, updates) {
                 }
             }
 
-            try {
-                const resourcesToUpsert = courtsToUpsert.map((c, idx) => ({
-                    id: c.id,
-                    business_id: businessId,
-                    name: c.name,
-                    type: 'court',
-                    sport: c.sport || defaultSport,
-                    base_price: c.price,
-                    consumes_space: true,
-                    active: updates.courts[idx]?.active !== false
-                }));
-                await supabase.from('resources').upsert(resourcesToUpsert, { onConflict: 'id' });
-            } catch (resErr) {
-                console.warn('Error syncing courts to resources:', resErr);
+            // New courts get their resources row from trigger_sync_court; keep existing ones in sync
+            // (inserting rows here would duplicate them)
+            for (const [idx, c] of courtsToUpsert.entries()) {
+                const resourceFields = { name: c.name, sport: c.sport || defaultSport, base_price: c.price };
+                if (updates.courts[idx]?.active !== undefined) resourceFields.active = updates.courts[idx].active !== false;
+                const { error: resErr } = await supabase
+                    .from('resources')
+                    .update(resourceFields)
+                    .eq('type', 'court')
+                    .eq('metadata->>court_id', c.id);
+                if (resErr) console.warn('Error syncing court to resources:', resErr);
             }
         }
     }
@@ -1317,8 +1340,10 @@ export async function patchBusiness(businessId, updates) {
         if (currentIds.length > 0) {
             const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
             if (idsToDelete.length > 0) {
+                await assertDeletable('services', 'service_id', idsToDelete, 'el servicio');
                 await supabase.from('service_specialists').delete().in('service_id', idsToDelete);
-                await supabase.from('services').delete().in('id', idsToDelete);
+                const { error: delServiceErr } = await supabase.from('services').delete().in('id', idsToDelete);
+                if (delServiceErr) throw delServiceErr;
             }
         }
 
@@ -1334,7 +1359,8 @@ export async function patchBusiness(businessId, updates) {
                 image_url: s.image_url || s.image || null
             }));
 
-            await supabase.from('services').upsert(servicesToUpsert);
+            const { error: upsertServicesErr } = await supabase.from('services').upsert(servicesToUpsert);
+            if (upsertServicesErr) throw upsertServicesErr;
 
             for (const s of updates.services) {
                 const specIds = Array.isArray(s.specialist_ids)

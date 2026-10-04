@@ -278,10 +278,7 @@ export default function VenueSettings({ business, onUpdate, isMobile, initialTab
             showToast('Cambios guardados correctamente', 'success');
         } catch (error) {
             console.error('Error saving venue settings:', error);
-            if (onUpdate && typeof onUpdate === 'function') {
-                onUpdate({ ...business, ...formData });
-            }
-            showToast('Error al guardar en el servidor', 'error');
+            showToast(`Error al guardar: ${error?.message || 'revisá tu conexión'}`, 'error');
         } finally {
             setSaving(false);
         }

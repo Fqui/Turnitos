@@ -132,7 +132,7 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
 
         if (onResourcesChange) onResourcesChange(resourceKey, newResources);
         if (onSave) {
-            await onSave({ [resourceKey]: newResources });
+            if (onSave && !(await onSave({ [resourceKey]: newResources }))) return;
         }
     };
 
@@ -144,7 +144,7 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
         applyOverride(index, { active: newActive });
         const newResources = resources.map((r, i) => i === index ? { ...r, active: newActive } : r);
         if (onResourcesChange) onResourcesChange(resourceKey, newResources);
-        if (onSave) await onSave({ [resourceKey]: newResources });
+        if (onSave && !(await onSave({ [resourceKey]: newResources }))) return;
         if (showToast) showToast(`${resourceLabel} ${resources[index].name} ${newActive ? "habilitado" : "deshabilitado"}`, newActive ? "success" : "info");
     };
 
@@ -156,7 +156,7 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
             applyOverride(index, { avatar_url: url });
             const newResources = resources.map((r, i) => i === index ? { ...r, avatar_url: url } : r);
             if (onResourcesChange) onResourcesChange(resourceKey, newResources);
-            if (onSave) await onSave({ [resourceKey]: newResources });
+            if (onSave && !(await onSave({ [resourceKey]: newResources }))) return;
             if (showToast) showToast("Foto guardada correctamente", "success");
         } catch (err) {
             console.error(err);

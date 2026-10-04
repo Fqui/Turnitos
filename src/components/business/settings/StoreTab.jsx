@@ -50,7 +50,7 @@ export default function StoreTab({
         const updated = [...storeCategories, trimmed];
         handleMetadataChange('store_categories', updated);
         setNewCategoryInput('');
-        await handleSave({ metadata: { ...formData.metadata, store_categories: updated } });
+        if (!(await handleSave({ metadata: { ...formData.metadata, store_categories: updated } }))) return;
         if (showToast) showToast(`Categoría "${trimmed}" creada`, 'success');
     };
 
@@ -58,14 +58,14 @@ export default function StoreTab({
     const handleRemoveStoreCategory = async (catToRemove) => {
         const updated = storeCategories.filter(c => c !== catToRemove);
         handleMetadataChange('store_categories', updated);
-        await handleSave({ metadata: { ...formData.metadata, store_categories: updated } });
+        if (!(await handleSave({ metadata: { ...formData.metadata, store_categories: updated } }))) return;
         if (showToast) showToast(`Categoría "${catToRemove}" eliminada`, 'info');
     };
 
     // Auto-save toggle for store enabled
     const handleToggleStoreEnabled = async (enabled) => {
         handleInputChange('store_enabled', enabled);
-        await handleSave({ store_enabled: enabled, metadata: formData.metadata });
+        if (!(await handleSave({ store_enabled: enabled, metadata: formData.metadata }))) return;
         if (showToast) {
             showToast(enabled ? 'Tienda online habilitada' : 'Tienda online deshabilitada', 'success');
         }
@@ -494,7 +494,7 @@ export default function StoreTab({
                                                     i === idx ? { ...p, is_active: e.target.checked } : p
                                                 );
                                                 handleMetadataChange('store_products', updated);
-                                                await handleSave({ metadata: { ...formData.metadata, store_products: updated } });
+                                                if (!(await handleSave({ metadata: { ...formData.metadata, store_products: updated } }))) return;
                                                 if (showToast) showToast(e.target.checked ? 'Producto visible' : 'Producto oculto', 'info');
                                             }}
                                             style={{ width: '16px', height: '16px', cursor: 'pointer' }}
@@ -520,7 +520,7 @@ export default function StoreTab({
                                             onClick={async () => {
                                                 const updated = (formData.metadata.store_products || []).filter((_, i) => i !== idx);
                                                 handleMetadataChange('store_products', updated);
-                                                await handleSave({ metadata: { ...formData.metadata, store_products: updated } });
+                                                if (!(await handleSave({ metadata: { ...formData.metadata, store_products: updated } }))) return;
                                                 if (showToast) showToast('Producto eliminado', 'info');
                                             }}
                                             style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '14px', cursor: 'pointer' }}
@@ -700,7 +700,7 @@ export default function StoreTab({
                                                         i === idx ? { ...ex, is_active: e.target.checked } : ex
                                                     );
                                                     handleInputChange('additional_services', updated);
-                                                    await handleSave({ additional_services: updated });
+                                                    if (!(await handleSave({ additional_services: updated }))) return;
                                                     if (showToast) showToast(e.target.checked ? 'Adicional activado' : 'Adicional pausado', 'info');
                                                 }}
                                                 style={{ width: '16px', height: '16px', cursor: 'pointer' }}
@@ -730,7 +730,7 @@ export default function StoreTab({
                                                 onClick={async () => {
                                                     const updated = (formData.additional_services || []).filter((_, i) => i !== idx);
                                                     handleInputChange('additional_services', updated);
-                                                    await handleSave({ additional_services: updated });
+                                                    if (!(await handleSave({ additional_services: updated }))) return;
                                                     if (showToast) showToast('Adicional eliminado', 'info');
                                                 }}
                                                 style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '14px', cursor: 'pointer' }}
@@ -1400,7 +1400,7 @@ export default function StoreTab({
 
                                     handleInputChange('additional_services', updated);
                                     setIsExtraModalOpen(false);
-                                    await handleSave({ additional_services: updated });
+                                    if (!(await handleSave({ additional_services: updated }))) return;
                                     if (showToast) showToast('Adicional guardado correctamente', 'success');
                                 }}
                                 style={{ flex: 2, ...saveButtonStyle, marginTop: 0 }}

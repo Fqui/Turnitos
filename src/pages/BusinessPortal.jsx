@@ -342,7 +342,7 @@ export default function BusinessPortal() {
             setReschedulingBooking(null);
         } catch (error) {
             console.error('Error moving booking:', error);
-            alert('No se pudo mover la reserva. Revisa la disponibilidad.');
+            alert(error?.message ? `No se pudo mover la reserva: ${error.message}` : 'No se pudo mover la reserva. Revisa la disponibilidad.');
         } finally {
             setLoading(false);
         }

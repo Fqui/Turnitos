@@ -343,11 +343,12 @@ export default function WeekView({
                                                         : resources[0];
 
                                                     if (isRescheduling) {
+                                                        // In "all" mode keep the booking on its own court/professional
                                                         onMoveBooking && onMoveBooking(
                                                             reschedulingBooking.id,
                                                             formatDateKey(day),
                                                             time,
-                                                            targetResource?.id
+                                                            selectedResourceId !== 'all' ? targetResource?.id : null
                                                         );
                                                     } else {
                                                         handleSlotClick(e, day, time, targetResource);

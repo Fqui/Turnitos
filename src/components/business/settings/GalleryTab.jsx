@@ -123,7 +123,7 @@ export default function GalleryTab({
         }
 
         handleInputChange('gallery_highlights', updatedHighlights);
-        await handleSave({ gallery_highlights: updatedHighlights });
+        if (!(await handleSave({ gallery_highlights: updatedHighlights }))) return;
         setEditingHighlight(null);
         showToast('Destacada guardada con éxito', 'success');
     };
@@ -137,7 +137,7 @@ export default function GalleryTab({
 
         const updatedHighlights = highlights.filter(h => h.id !== highlightId);
         handleInputChange('gallery_highlights', updatedHighlights);
-        await handleSave({ gallery_highlights: updatedHighlights });
+        if (!(await handleSave({ gallery_highlights: updatedHighlights }))) return;
         showToast('Destacada eliminada', 'success');
     };
 
@@ -189,7 +189,7 @@ export default function GalleryTab({
         }
 
         handleInputChange('gallery_highlights', updatedHighlights);
-        await handleSave({ gallery_highlights: updatedHighlights });
+        if (!(await handleSave({ gallery_highlights: updatedHighlights }))) return;
         setEditingStory(null);
         showToast('¡Historia publicada! Estará activa 24 horas', 'success');
     };
@@ -206,7 +206,7 @@ export default function GalleryTab({
 
         const updatedHighlights = highlights.map(h => h.id === story.id ? renewedStory : h);
         handleInputChange('gallery_highlights', updatedHighlights);
-        await handleSave({ gallery_highlights: updatedHighlights });
+        if (!(await handleSave({ gallery_highlights: updatedHighlights }))) return;
         showToast('¡Historia renovada y activa en el perfil por 24 horas!', 'success');
     };
 
@@ -224,7 +224,7 @@ export default function GalleryTab({
 
         const updatedHighlights = highlights.map(h => h.id === story.id ? endedStory : h);
         handleInputChange('gallery_highlights', updatedHighlights);
-        await handleSave({ gallery_highlights: updatedHighlights });
+        if (!(await handleSave({ gallery_highlights: updatedHighlights }))) return;
         showToast('Historia guardada en el historial', 'info');
     };
 
@@ -237,7 +237,7 @@ export default function GalleryTab({
 
         const updatedHighlights = highlights.filter(h => h.id !== storyId);
         handleInputChange('gallery_highlights', updatedHighlights);
-        await handleSave({ gallery_highlights: updatedHighlights });
+        if (!(await handleSave({ gallery_highlights: updatedHighlights }))) return;
         showToast('Historia eliminada', 'success');
     };
 

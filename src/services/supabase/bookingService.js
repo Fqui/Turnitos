@@ -465,6 +465,32 @@ export async function moveBooking(id, newDate, newTime, newItemId) {
         updated_at: new Date().toISOString()
     };
 
+    const { data: current, error: currentError } = await supabase
+        .from('bookings')
+        .select('id, duration, resource_id, court_id, specialist_id')
+        .eq('id', id)
+        .single();
+    if (currentError) throw currentError;
+
+    let targetSpecialistId = current.specialist_id;
+    let targetResourceId = current.resource_id || current.court_id;
+
+    if (newItemId) {
+        try {
+            const { data: specialist } = await supabase
+                .from('specialists')
+                .select('id')
+                .eq('id', newItemId)
+                .maybeSingle();
+            if (specialist) {
+                // Service calendars: the column is the professional
+                updateData.specialist_id = newItemId;
+                targetSpecialistId = newItemId;
+                newItemId = null;
+            }
+        } catch (err) { }
+    }
+
     if (newItemId) {
         try {
             const { data: court } = await supabase
@@ -491,6 +517,28 @@ export async function moveBooking(id, newDate, newTime, newItemId) {
                 }
             }
         } catch (err) { }
+        if (updateData.resource_id) targetResourceId = updateData.resource_id;
+    }
+
+    // The database guard skips the owner, so check the new slot here
+    const startTime = `${formatDateLocal(newDate)}T${newTime}:00-03:00`;
+    const endTime = new Date(new Date(startTime).getTime() + (Number(current.duration) || 60) * 60000).toISOString();
+    const column = targetSpecialistId ? 'specialist_id' : 'resource_id';
+    const columnValue = targetSpecialistId || targetResourceId;
+    if (columnValue) {
+        const { data: conflicts, error: conflictError } = await supabase
+            .from('bookings_public')
+            .select('id')
+            .eq(column, columnValue)
+            .neq('id', id)
+            .neq('status', 'cancelled')
+            .neq('status', 'rejected')
+            .lt('start_time', endTime)
+            .gt('end_time', startTime);
+        if (conflictError) throw conflictError;
+        if (conflicts && conflicts.length > 0) {
+            throw new Error('Ese horario ya está ocupado.');
+        }
     }
 
     const { data, error } = await supabase
