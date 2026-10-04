@@ -1,8 +1,18 @@
-import React from 'react';
-import HorizontalScroller from './HorizontalScroller';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { CalendarDays, X } from 'lucide-react';
+import MonthCalendar from './MonthCalendar';
+
+const VISIBLE_DAYS = 7;
 
 export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00E676', maxDays = 30, specialDays = [], isDateClosed }) {
-    const count = Math.min(Math.max(Number(maxDays) || 7, 1), 90);
+    const [isMonthOpen, setIsMonthOpen] = useState(false);
+    const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
+
+    // Total bookable days (today included), as configured by the business
+    const totalDays = Math.min(Math.max(Number(maxDays) || 7, 1), 90);
+    const count = Math.min(totalDays, VISIBLE_DAYS);
+    const hasMore = totalDays > VISIBLE_DAYS;
     const dates = Array.from({ length: count }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() + i);
@@ -10,9 +20,35 @@ export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00
     });
 
     const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const isScrollable = count > 7;
+    const isSelectedOutsideStrip = Boolean(selectedDate) && !dates.some(d => d.toDateString() === selectedDate.toDateString());
 
-    const renderDays = () => dates.map((date) => {
+    useEffect(() => {
+        const onResize = () => setIsNarrow(window.innerWidth < 640);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+
+    useEffect(() => {
+        if (!isMonthOpen) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') setIsMonthOpen(false); };
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', onKey);
+        return () => {
+            document.body.style.overflow = prevOverflow;
+            window.removeEventListener('keydown', onKey);
+        };
+    }, [isMonthOpen]);
+
+    return (
+        <div>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${count + (hasMore ? 1 : 0)}, minmax(0, 1fr))`,
+                gap: isNarrow ? '5px' : '8px',
+                textAlign: 'center'
+            }}>
+                {dates.map((date) => {
                     const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
                     const dayName = days[date.getDay()];
                     const dayNumber = date.getDate();
@@ -32,10 +68,9 @@ export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00
                                 flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                padding: '10px 4px 8px 4px',
-                                minWidth: isScrollable ? '56px' : 'auto',
-                                flex: isScrollable ? '0 0 auto' : '1',
-                                borderRadius: '16px',
+                                padding: isNarrow ? '10px 2px 8px 2px' : '10px 4px 8px 4px',
+                                minWidth: 0,
+                                borderRadius: isNarrow ? '14px' : '16px',
                                 border: isSelected ? 'none' : '1px solid var(--border, transparent)',
                                 backgroundColor: isSelected ? sportColor : 'transparent',
                                 color: isSelected ? '#fff' : 'var(--text-primary)',
@@ -115,24 +150,133 @@ export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00
                             )}
                         </button>
                     );
-                });
+                })}
 
-    if (isScrollable) {
-        return (
-            <HorizontalScroller gap="8px" innerStyle={{ paddingBottom: '6px', textAlign: 'center' }}>
-                {renderDays()}
-            </HorizontalScroller>
-        );
-    }
+                {/* Opens the full month calendar (only when the business allows more than 7 days ahead) */}
+                {hasMore && (
+                    <button
+                        type="button"
+                        onClick={() => setIsMonthOpen(true)}
+                        aria-label={isSelectedOutsideStrip
+                            ? `Fecha elegida: ${days[selectedDate.getDay()]} ${selectedDate.getDate()}. Abrir calendario`
+                            : 'Ver más fechas en el calendario'}
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: isNarrow ? '10px 2px 8px 2px' : '10px 4px 8px 4px',
+                            minWidth: 0,
+                            borderRadius: isNarrow ? '14px' : '16px',
+                            border: isSelectedOutsideStrip ? 'none' : `1.5px dashed ${sportColor}`,
+                            backgroundColor: isSelectedOutsideStrip ? sportColor : `${sportColor}12`,
+                            color: isSelectedOutsideStrip ? '#fff' : sportColor,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            boxShadow: isSelectedOutsideStrip ? `0 8px 16px ${sportColor}40` : 'none'
+                        }}
+                    >
+                        {isSelectedOutsideStrip ? (
+                            <>
+                                <span style={{ fontSize: '11px', fontWeight: '500', opacity: 0.9, marginBottom: '2px' }}>
+                                    {days[selectedDate.getDay()]}
+                                </span>
+                                <span style={{ fontSize: '18px', fontWeight: 'bold' }}>
+                                    {selectedDate.getDate()}
+                                </span>
+                                <CalendarDays size={12} style={{ marginTop: '3px', opacity: 0.9 }} />
+                            </>
+                        ) : (
+                            <>
+                                <CalendarDays size={isNarrow ? 18 : 20} strokeWidth={2.2} />
+                                <span style={{ fontSize: '11px', fontWeight: '700', marginTop: '4px' }}>
+                                    Más
+                                </span>
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
 
-    return (
-        <div style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${count}, 1fr)`,
-            gap: '8px',
-            textAlign: 'center'
-        }}>
-            {renderDays()}
+            {isMonthOpen && createPortal(
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Elegí una fecha"
+                    onClick={() => setIsMonthOpen(false)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1000,
+                        background: 'rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        alignItems: isNarrow ? 'flex-end' : 'center',
+                        justifyContent: 'center',
+                        padding: isNarrow ? 0 : '16px',
+                        animation: 'fadeIn 0.2s ease'
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            width: '100%',
+                            maxWidth: isNarrow ? '100%' : '420px',
+                            maxHeight: '90vh',
+                            overflowY: 'auto',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-primary)',
+                            borderRadius: isNarrow ? '24px 24px 0 0' : '24px',
+                            padding: isNarrow ? '16px 16px calc(20px + env(safe-area-inset-bottom))' : '20px 24px 24px',
+                            boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
+                            border: '1px solid var(--border)',
+                            animation: 'slideUp 0.25s ease'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                Elegí una fecha
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setIsMonthOpen(false)}
+                                aria-label="Cerrar"
+                                style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '50%',
+                                    border: 'none',
+                                    background: 'var(--bg-input)',
+                                    color: 'var(--text-primary)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <MonthCalendar
+                            selectedDate={selectedDate}
+                            onDateSelect={(date) => {
+                                onDateSelect(date);
+                                setIsMonthOpen(false);
+                            }}
+                            sportColor={sportColor}
+                            maxDays={totalDays - 1}
+                            isDateClosed={isDateClosed}
+                            specialDays={specialDays}
+                            limitNavigation
+                        />
+
+                        <p style={{ margin: '14px 0 0', fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                            Podés reservar hasta {totalDays} días por adelantado
+                        </p>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 }
