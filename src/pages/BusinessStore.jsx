@@ -23,6 +23,8 @@ import {
 import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import PageLoader from '../components/common/PageLoader';
+import SEOHead from '../components/SEOHead';
+import { buildBusinessSeo } from '../utils/seo';
 import { getActiveStoreProducts, isStoreAvailable } from '../utils/storeUtils';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
 import PromotionModal from '../components/promotions/PromotionModal';
@@ -487,9 +489,22 @@ export default function BusinessStore({ overrideSlug }) {
         return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
     }
 
+    const storeSeo = buildBusinessSeo(business, 'tienda');
+    const storeHead = (
+        <SEOHead
+            title={storeSeo.title}
+            description={storeSeo.description}
+            image={storeSeo.image}
+            canonical={storeSeo.canonical}
+            robots={storeSeo.robots}
+            brandTitle={false}
+        />
+    );
+
     if (!isStoreAvailable(business)) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', gap: '16px', padding: '20px', textAlign: 'center' }}>
+                {storeHead}
                 <div style={{ fontSize: '54px' }}>🏪</div>
                 <h2 style={{ fontSize: '22px', fontWeight: '800', margin: 0 }}>Tienda no disponible</h2>
                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0, maxWidth: '320px', lineHeight: 1.4 }}>
@@ -529,6 +544,7 @@ export default function BusinessStore({ overrideSlug }) {
             boxSizing: 'border-box',
             overflowX: 'hidden'
         }}>
+            {storeHead}
             {/* Centered Mobile/Desktop Shell */}
             <div className="business-store-shell">
 

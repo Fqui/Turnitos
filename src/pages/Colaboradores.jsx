@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import SEOHead from '../components/SEOHead';
+import { STATIC_PAGES, staticPageUrl } from '../utils/seo';
 
 export default function Colaboradores() {
     const navigate = useNavigate();
@@ -57,6 +59,7 @@ export default function Colaboradores() {
             background: 'var(--bg-main)',
             paddingBottom: '80px'
         }}>
+            <SEOHead {...STATIC_PAGES.colaboradores} url={staticPageUrl('colaboradores')} />
             {/* Hero Section */}
             <div style={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',

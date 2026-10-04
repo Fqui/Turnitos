@@ -18,6 +18,7 @@ import BookingSummary from '../components/BookingSummary';
 import BookingSuccessModal from '../components/BookingSuccessModal';
 import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import SEOHead from '../components/SEOHead';
+import { buildBusinessSeo } from '../utils/seo';
 import PromotionModal from '../components/promotions/PromotionModal';
 import { parsePromotionTarget } from '../utils/promotionUtils';
 import { buildBusinessShareUrl } from '../utils/share';
@@ -711,60 +712,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
         }
     };
 
-    // Schema.org JSON-LD Structured Data
-    const businessSchema = useMemo(() => {
-        if (!business) return null;
-
-        const catName = (business.categories?.name || business.category || '').toLowerCase();
-        let schemaType = 'LocalBusiness';
-        if (business.type === 'sport' || catName.includes('deporte') || catName.includes('padel') || catName.includes('futbol')) {
-            schemaType = 'SportsActivityLocation';
-        } else if (business.type === 'service' || catName.includes('belleza') || catName.includes('peluqueria') || catName.includes('barberia')) {
-            schemaType = 'HealthAndBeautyBusiness';
-        } else if (business.type === 'venue' || catName.includes('quincho')) {
-            schemaType = 'EventVenue';
-        }
-
-        const ratingVal = Number(business.rating_avg || business.rating || business.metadata?.rating_avg || 0);
-        const reviewsNum = Number(business.reviews_count || business.metadata?.reviews_count || 0);
-
-        const schemaObj = {
-            '@context': 'https://schema.org',
-            '@type': schemaType,
-            'name': business.name,
-            'image': business.banner_image || business.logo || 'https://www.turnitoslr.com/logo-turnitos.png',
-            'url': `https://www.turnitoslr.com/${business.slug || ''}`,
-            'telephone': business.whatsapp ? `+54${business.whatsapp}` : undefined,
-            'priceRange': '$$',
-            'address': {
-                '@type': 'PostalAddress',
-                'addressLocality': business.location || 'La Rioja',
-                'addressRegion': 'La Rioja',
-                'addressCountry': 'AR'
-            }
-        };
-
-        if (business.latitude && business.longitude) {
-            schemaObj.geo = {
-                '@type': 'GeoCoordinates',
-                'latitude': Number(business.latitude),
-                'longitude': Number(business.longitude)
-            };
-        }
-
-        if (ratingVal && reviewsNum > 0) {
-            schemaObj.aggregateRating = {
-                '@type': 'AggregateRating',
-                'ratingValue': ratingVal.toFixed(1),
-                'reviewCount': reviewsNum,
-                'bestRating': '5',
-                'worstRating': '1'
-            };
-        }
-
-        return schemaObj;
-    }, [business]);
-
     if (loading) return <PageLoader label="Cargando negocio..." />;
     if (!business) return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
 
@@ -800,9 +747,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
         (business.specialists || []).length > 0 &&
         availableSpecialists.filter(s => s.id !== 'auto-assigned').length === 0;
 
-    const pageTitle = `${business.name} - Turnos Online en ${business.location || 'La Rioja'}`;
-    const pageDescription = `Reservá tu turno online en ${business.name} (${business.location || 'La Rioja'}). Turnos de canchas y servicios disponibles en tiempo real.`;
-    const pageImage = business?.banner_image || business?.logo || 'https://www.turnitoslr.com/logo-turnitos.png';
+    const seo = buildBusinessSeo(business, 'turnos');
 
     return (
         <div
@@ -810,12 +755,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
             style={{ paddingBottom: '80px', width: '100%', overflowX: 'clip' }}
         >
             <SEOHead
-                title={pageTitle}
-                description={pageDescription}
-                keywords={`${business?.name}, turnos ${business?.name}, ${business?.category || 'deportes'}, turnos online la rioja, turnitos`}
-                image={pageImage}
-                url={`https://www.turnitoslr.com/${business?.slug || ''}`}
-                schema={businessSchema}
+                title={seo.title}
+                description={seo.description}
+                image={seo.image}
+                canonical={seo.canonical}
+                robots={seo.robots}
+                schema={seo.schema}
+                brandTitle={false}
             />
 
             <div className="business-profile-card-shell" style={{ maxWidth: containerWidth }}>

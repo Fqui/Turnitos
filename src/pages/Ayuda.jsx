@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Search, X, ChevronDown, User, Store, MessageCircle, Mail } from 'lucide-react';
 import SEOHead from '../components/SEOHead';
+import { STATIC_PAGES, staticPageUrl } from '../utils/seo';
 import '../styles/support.css';
 
 const FAQS_CLIENTES = [
@@ -107,9 +108,8 @@ export default function HelpCenter() {
     return (
         <div className="sp-page">
             <SEOHead
-                title="Centro de Ayuda y Preguntas Frecuentes | TurnitosLR"
-                description="¿Tenés dudas sobre cómo reservar canchas, quinchos o turnos en La Rioja? Encontrá todas las respuestas en el Centro de Ayuda de TurnitosLR."
-                url="https://www.turnitoslr.com/ayuda"
+                {...STATIC_PAGES.ayuda}
+                url={staticPageUrl('ayuda')}
                 schema={faqSchema}
             />
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import LegalPage from '../components/legal/LegalPage';
+import { STATIC_PAGES, staticPageUrl } from '../utils/seo';
 
 const LAST_UPDATED = '4 de Octubre de 2026';
 
@@ -89,11 +90,7 @@ const SECTIONS = [
 export default function Privacidad() {
     return (
         <LegalPage
-            seo={{
-                title: 'Política de Privacidad | TurnitosLR',
-                description: 'Conocé cómo protegemos tus datos personales, reservas y privacidad en TurnitosLR según la normativa argentina.',
-                url: 'https://www.turnitoslr.com/privacidad'
-            }}
+            seo={{ ...STATIC_PAGES.privacidad, url: staticPageUrl('privacidad') }}
             eyebrow="Legal"
             title="Política de Privacidad"
             lastUpdated={LAST_UPDATED}

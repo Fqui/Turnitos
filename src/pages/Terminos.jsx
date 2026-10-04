@@ -1,5 +1,6 @@
 import React from 'react';
 import LegalPage from '../components/legal/LegalPage';
+import { STATIC_PAGES, staticPageUrl } from '../utils/seo';
 
 const LAST_UPDATED = '4 de Octubre de 2026';
 
@@ -122,11 +123,7 @@ const SECTIONS = [
 export default function Terminos() {
     return (
         <LegalPage
-            seo={{
-                title: 'Términos y Condiciones de Uso | TurnitosLR',
-                description: 'Conocé los términos y condiciones de uso de TurnitosLR, la plataforma de reserva de turnos en La Rioja.',
-                url: 'https://www.turnitoslr.com/terminos'
-            }}
+            seo={{ ...STATIC_PAGES.terminos, url: staticPageUrl('terminos') }}
             eyebrow="Legal"
             title="Términos y Condiciones de Uso"
             lastUpdated={LAST_UPDATED}

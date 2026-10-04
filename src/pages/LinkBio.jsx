@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
 import SEOHead from '../components/SEOHead';
+import { buildBusinessSeo } from '../utils/seo';
 import { findBusinessBySlug } from '../utils/utils';
 import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerModal';
 import ProfileHighlightsBar from '../components/profile/ProfileHighlightsBar';
@@ -265,14 +266,18 @@ const LinkBio = ({ overrideSlug = null }) => {
     const linkTitleFontSize = isCompact ? '14.5px' : '15.5px';
     const linkSubtitleFontSize = isCompact ? '11.5px' : '12px';
 
+    const bioSeo = buildBusinessSeo(business, 'bio');
+
     return (
         <div className="linkbio-main-container">
             <SEOHead
-                title={business ? `${business.name} | Enlaces y Turnos` : 'TurnitosLR'}
-                description={business?.description || `Accedé a los enlaces oficiales, redes sociales, turnos y tienda de ${business?.name || 'este negocio'}.`}
-                keywords={`${business?.name}, link in bio, turnos ${business?.name}, turnitos`}
-                image={bannerUrl || business?.logo || business?.image || 'https://www.turnitoslr.com/logo-turnitos.png'}
-                url={window.location.href}
+                title={bioSeo.title}
+                description={bioSeo.description}
+                image={bannerUrl || bioSeo.image}
+                url={bioSeo.url}
+                canonical={bioSeo.canonical}
+                robots={bioSeo.robots}
+                brandTitle={false}
             />
 
             {/* Top Cover Banner */}

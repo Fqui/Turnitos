@@ -1,36 +1,36 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
+import { SITE_URL, DEFAULT_TITLE, DEFAULT_DESCRIPTION, DEFAULT_IMAGE } from '../utils/seo';
 
 /**
- * SEOHead: Injects and synchronizes SEO meta tags, OpenGraph, Twitter Cards,
- * canonical links, and Schema.org JSON-LD structured data in the document head.
+ * SEOHead: keeps title, meta description, robots, OpenGraph, Twitter Cards,
+ * canonical and Schema.org JSON-LD in sync while navigating inside the app.
+ * The first load already comes with these tags from the server (api/page.js).
  */
 export default function SEOHead({
     title,
     description,
-    keywords,
     image,
     url,
+    canonical,
     type = 'website',
     schema = null,
-    noIndex = false
+    noIndex = false,
+    robots,
+    brandTitle = true
 }) {
     useEffect(() => {
-        const defaultTitle = 'TurnitosLR | Reserva de Turnos Online en La Rioja';
-        const defaultDescription = 'Reservá canchas de pádel, fútbol, turnos de peluquería, estética y quinchos en La Rioja de forma fácil, rápida y directa.';
-        const defaultKeywords = 'turnos online, reservas la rioja, canchas de padel la rioja, futbol la rioja, quinchos la rioja, peluquerias la rioja, turnitos';
-        const defaultImage = 'https://www.turnitoslr.com/logo-turnitos.png';
-        const siteUrl = 'https://www.turnitoslr.com';
+        const finalTitle = title
+            ? (!brandTitle || title.includes('Turnitos') ? title : `${title} | TurnitosLR`)
+            : DEFAULT_TITLE;
+        const finalDescription = description || DEFAULT_DESCRIPTION;
+        const finalImage = image || DEFAULT_IMAGE;
+        const finalUrl = url ? (url.startsWith('http') ? url : `${SITE_URL}${url.startsWith('/') ? '' : '/'}${url}`) : window.location.href;
+        const finalCanonical = canonical || finalUrl.split('?')[0];
+        const finalRobots = robots || (noIndex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large');
 
-        const finalTitle = title ? (title.includes('Turnitos') ? title : `${title} | TurnitosLR`) : defaultTitle;
-        const finalDescription = description || defaultDescription;
-        const finalKeywords = keywords || defaultKeywords;
-        const finalImage = image || defaultImage;
-        const finalUrl = url ? (url.startsWith('http') ? url : `${siteUrl}${url.startsWith('/') ? '' : '/'}${url}`) : window.location.href;
-
-        // 1. Update Title
         document.title = finalTitle;
 
-        // Helper to set or update meta tag by name or property
+        // Set or update a meta tag by name or property
         const setMetaTag = (attrName, attrValue, content) => {
             if (!content) return;
             let el = document.querySelector(`meta[${attrName}="${attrValue}"]`);
@@ -42,36 +42,38 @@ export default function SEOHead({
             el.setAttribute('content', content);
         };
 
-        // 2. Standard Meta Tags
         setMetaTag('name', 'description', finalDescription);
-        setMetaTag('name', 'keywords', finalKeywords);
-        setMetaTag('name', 'robots', noIndex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large');
+        setMetaTag('name', 'robots', finalRobots);
 
-        // 3. Open Graph / Facebook / WhatsApp
+        // Open Graph / Facebook / WhatsApp
         setMetaTag('property', 'og:title', finalTitle);
         setMetaTag('property', 'og:description', finalDescription);
         setMetaTag('property', 'og:image', finalImage);
-        setMetaTag('property', 'og:url', finalUrl);
+        setMetaTag('property', 'og:url', finalCanonical);
         setMetaTag('property', 'og:type', type);
         setMetaTag('property', 'og:site_name', 'TurnitosLR');
         setMetaTag('property', 'og:locale', 'es_AR');
 
-        // 4. Twitter Card
+        // Twitter Card
         setMetaTag('name', 'twitter:card', 'summary_large_image');
         setMetaTag('name', 'twitter:title', finalTitle);
         setMetaTag('name', 'twitter:description', finalDescription);
         setMetaTag('name', 'twitter:image', finalImage);
 
-        // 5. Canonical Link
+        // A noindex page has no canonical: the pair reads as mixed signals
         let canonicalEl = document.querySelector('link[rel="canonical"]');
-        if (!canonicalEl) {
-            canonicalEl = document.createElement('link');
-            canonicalEl.setAttribute('rel', 'canonical');
-            document.head.appendChild(canonicalEl);
+        if (finalRobots.startsWith('noindex')) {
+            canonicalEl?.remove();
+        } else {
+            if (!canonicalEl) {
+                canonicalEl = document.createElement('link');
+                canonicalEl.setAttribute('rel', 'canonical');
+                document.head.appendChild(canonicalEl);
+            }
+            canonicalEl.setAttribute('href', finalCanonical);
         }
-        canonicalEl.setAttribute('href', finalUrl.split('?')[0]);
 
-        // 6. Schema.org JSON-LD
+        // Schema.org JSON-LD
         let schemaEl = document.getElementById('turnitos-schema-jsonld');
         if (schema) {
             if (!schemaEl) {
@@ -84,11 +86,7 @@ export default function SEOHead({
         } else if (schemaEl) {
             schemaEl.remove();
         }
-
-        return () => {
-            // Optional cleanup on unmount
-        };
-    }, [title, description, keywords, image, url, type, schema, noIndex]);
+    }, [title, description, image, url, canonical, type, schema, noIndex, robots, brandTitle]);
 
     return null;
 }

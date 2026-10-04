@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
 import SEOHead from '../components/SEOHead';
+import { SITE_URL, DEFAULT_TITLE, DEFAULT_DESCRIPTION } from '../utils/seo';
 import { generateSlug } from '../utils/utils';
 import { isProfileReady } from '../utils/profileChecklist';
 
@@ -490,13 +491,13 @@ export default function Home() {
     return (
         <div>
             <SEOHead
-                title="TurnitosLR | Reserva de Turnos Online en La Rioja"
-                description="Reservá canchas de pádel, fútbol, turnos de peluquería, estética y quinchos en La Rioja. Rápido, fácil y sin esperas."
-                keywords="turnos online la rioja, canchas de padel la rioja, futbol la rioja, peluquerias la rioja, quinchos la rioja, turnitos"
-                url="https://www.turnitoslr.com"
+                title={DEFAULT_TITLE}
+                description={DEFAULT_DESCRIPTION}
+                url={`${SITE_URL}/`}
                 schema={homeSchema}
             />
             <div className="container" style={{ padding: '20px 20px 80px' }}>
+                <h1 className="sr-only">Reservá turnos online en La Rioja: canchas, barberías, estética y quinchos</h1>
 
                 {/* 1. Hero / Promotions */}
                 <PromotionsHero promotions={promotions} businesses={businesses} />

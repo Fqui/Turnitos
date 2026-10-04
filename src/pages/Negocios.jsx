@@ -5,6 +5,7 @@ import {
     Scissors, Trophy, Home as HomeIcon, Gift, MessageCircle, ArrowRight
 } from 'lucide-react';
 import SEOHead from '../components/SEOHead';
+import { STATIC_PAGES, staticPageUrl } from '../utils/seo';
 import BusinessLeadForm from '../components/business/BusinessLeadForm';
 import '../styles/support.css';
 
@@ -37,9 +38,8 @@ export default function ForBusinesses() {
     return (
         <div className="sp-page">
             <SEOHead
-                title="TurnitosLR para Empresas | Digitalizá las Reservas de tu Negocio"
-                description="Sumá tu cancha, peluquería, consultorio o quincho a TurnitosLR. Turnos online 24/7, cobro de señas y Link in Bio. Probalo 14 días gratis."
-                url="https://www.turnitoslr.com/negocios"
+                {...STATIC_PAGES.negocios}
+                url={staticPageUrl('negocios')}
             />
 
             <header className="sp-hero sp-hero--center">

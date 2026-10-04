@@ -1,21 +1,14 @@
-# robots.txt for TurnitosLR
+# robots.txt for TurnitosLR (served on www and on every business subdomain)
 User-agent: *
 Allow: /
-Allow: /cancha-*
-Allow: /padel-*
-Allow: /quincho-*
-Allow: /barberia-*
-Allow: /peluqueria-*
-Allow: /estetica-*
-Allow: /*/tienda
-Allow: /calificar/*
 
-# Disallow internal & admin areas from indexing
-Disallow: /seller/
-Disallow: /admin/
-Disallow: /superadmin/
+# Private areas: business portal, admin and review links (they carry a private token)
 Disallow: /login
-Disallow: /registro
+Disallow: /portal
+Disallow: /business-portal
+Disallow: /admin
+Disallow: /calificar/
+Disallow: /review/
+Disallow: /api/
 
-# Sitemap location
 Sitemap: https://www.turnitoslr.com/sitemap.xml

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, Marker } from 'react-leaflet';
 import L from 'leaflet';
@@ -6,6 +6,7 @@ import { TurnitosTileLayer, createTurnitosMarkerIcon } from '../components/commo
 import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
 import SEOHead from '../components/SEOHead';
+import { buildBusinessSeo } from '../utils/seo';
 import { parseAmenity } from '../components/common/AmenityIcon';
 import { pushService } from '../services/pushService';
 import { supabase } from '../services/supabaseClient';
@@ -503,65 +504,21 @@ export default function VenueProfile({ business: initialBusiness }) {
     const daysInMonth = getDaysInMonth(currentMonth);
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 
-    const venueSchema = useMemo(() => {
-        if (!business) return null;
-        const ratingVal = Number(business.rating_avg || business.rating || business.metadata?.rating_avg || 5.0);
-        const reviewsNum = Number(business.reviews_count || business.metadata?.reviews_count || 1);
-
-        const schemaObj = {
-            '@context': 'https://schema.org',
-            '@type': 'EventVenue',
-            'name': business.name,
-            'image': business.banner_image || business.banner_url || business.logo || 'https://www.turnitoslr.com/logo-turnitos.png',
-            'url': `https://www.turnitoslr.com/${business.slug || ''}`,
-            'telephone': business.whatsapp ? `+54${business.whatsapp}` : undefined,
-            'priceRange': '$$',
-            'maximumAttendeeCapacity': business.max_capacity || business.capacity || 100,
-            'address': {
-                '@type': 'PostalAddress',
-                'addressLocality': business.location || 'La Rioja',
-                'addressRegion': 'La Rioja',
-                'addressCountry': 'AR'
-            }
-        };
-
-        if (business.latitude && business.longitude) {
-            schemaObj.geo = {
-                '@type': 'GeoCoordinates',
-                'latitude': Number(business.latitude),
-                'longitude': Number(business.longitude)
-            };
-        }
-
-        if (ratingVal && reviewsNum > 0) {
-            schemaObj.aggregateRating = {
-                '@type': 'AggregateRating',
-                'ratingValue': ratingVal.toFixed(1),
-                'reviewCount': reviewsNum,
-                'bestRating': '5',
-                'worstRating': '1'
-            };
-        }
-
-        return schemaObj;
-    }, [business]);
-
     if (loading) return <PageLoader label="Cargando espacio..." />;
     if (!business) return <div style={{ padding: 40, textAlign: 'center' }}>Espacio no encontrado</div>;
 
-    const pageTitle = `${business.name} - Alquiler de Quincho y Eventos en ${business.location || 'La Rioja'}`;
-    const pageDescription = `Alquilá ${business.name} en ${business.location || 'La Rioja'}. Consultá disponibilidad, precios por hora o por día y reservá online.`;
-    const pageImage = business?.banner_image || business?.banner_url || business?.logo || 'https://www.turnitoslr.com/logo-turnitos.png';
+    const seo = buildBusinessSeo(business, 'turnos');
 
     return (
         <div style={{ background: pageBg, color: textColor, minHeight: '100vh', width: '100%', overflowX: 'clip', transition: 'background 0.3s' }}>
             <SEOHead
-                title={pageTitle}
-                description={pageDescription}
-                keywords={`${business?.name}, alquiler quincho ${business?.name}, eventos la rioja, quinchos la rioja, turnitos`}
-                image={pageImage}
-                url={`https://www.turnitoslr.com/${business?.slug || ''}`}
-                schema={venueSchema}
+                title={seo.title}
+                description={seo.description}
+                image={seo.image}
+                canonical={seo.canonical}
+                robots={seo.robots}
+                schema={seo.schema}
+                brandTitle={false}
             />
 
             {/* 1. Hero Section */}
