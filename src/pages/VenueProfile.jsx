@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, Marker } from 'react-leaflet';
+import L from 'leaflet';
 import { TurnitosTileLayer, createTurnitosMarkerIcon } from '../components/common/TurnitosMap';
 import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
@@ -443,16 +444,7 @@ export default function VenueProfile({ business: initialBusiness }) {
             navigate('/');
         } catch (error) {
             console.error('Error creating booking:', error);
-            if (error.message && error.message.includes('cupo mensual')) {
-                showAlert(
-                    'Cupo Mensual Completado',
-                    'Este negocio ha completado su cupo mensual de turnos online. Por favor, contactalo directamente por WhatsApp para coordinar tu lugar.',
-                    'warning',
-                    'Entendido'
-                );
-            } else {
-                showAlert('Error', error.message || 'No pudimos procesar tu reserva. Por favor intenta nuevamente.', 'error', 'Reintentar');
-            }
+            showAlert('Error', error.message || 'No pudimos procesar tu reserva. Por favor intenta nuevamente.', 'error', 'Reintentar');
         }
     };
 
