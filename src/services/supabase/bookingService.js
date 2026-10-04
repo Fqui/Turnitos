@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient';
-import { calculateBookingCommission, isFreePlan } from '../../utils/subscriptionUtils';
+import { calculateBookingCommission } from '../../utils/subscriptionUtils';
 
 // Helper function to convert Date to YYYY-MM-DD in local timezone (not UTC)
 export const formatDateLocal = (date) => {
@@ -224,33 +224,6 @@ export async function createBooking(bookingData) {
                 targetBusinessType = bData.type;
             }
         } catch (e) { }
-    }
-
-    if (isFreePlan(businessPlanId)) {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const startOfMonth = `${year}-${month}-01`;
-        const lastDayNum = new Date(year, now.getMonth() + 1, 0).getDate();
-        const endOfMonth = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`;
-
-        try {
-            const { count: monthlyBookingsCount } = await supabase
-                .from('bookings_public')
-                .select('id', { count: 'exact', head: true })
-                .eq('business_id', targetBusinessId)
-                .neq('status', 'cancelled')
-                .gte('date', startOfMonth)
-                .lte('date', endOfMonth);
-
-            if (monthlyBookingsCount !== null && monthlyBookingsCount >= 100) {
-                throw new Error('Este negocio ha alcanzado su cupo mensual de 100 reservas online.');
-            }
-        } catch (err) {
-            if (err.message && err.message.includes('cupo mensual')) {
-                throw err;
-            }
-        }
     }
 
     const bookingPrice = Number(bookingData.price || bookingData.total_price || bookingData.totalPrice || 0);
