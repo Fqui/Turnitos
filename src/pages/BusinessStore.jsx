@@ -1546,23 +1546,28 @@ export default function BusinessStore({ overrideSlug }) {
                                         display: 'block',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.4px',
-                                        marginBottom: '2px'
+                                        marginBottom: '2px',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
                                     }}>
-                                        Precio Total {modalQty > 1 ? `(${modalQty} un.)` : ''}
+                                        Total {modalQty > 1 ? `(${modalQty} un.)` : ''}
                                     </span>
                                     <div style={{
-                                        fontSize: '30px',
+                                        fontSize: 'clamp(22px, 6.4vw, 30px)',
                                         fontWeight: '900',
                                         color: 'var(--text-primary)',
                                         letterSpacing: '-0.6px',
-                                        lineHeight: 1.1
+                                        lineHeight: 1.1,
+                                        whiteSpace: 'nowrap',
+                                        fontVariantNumeric: 'tabular-nums'
                                     }}>
                                         ${(Number(selectedProductModal.price || 0) * modalQty).toLocaleString('es-AR')}
                                     </div>
                                 </div>
 
                                 {/* Botón del carrito a la derecha */}
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+                                <div className="store-modal-footer-cta">
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -1584,6 +1589,7 @@ export default function BusinessStore({ overrideSlug }) {
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             gap: '8px',
+                                            whiteSpace: 'nowrap',
                                             boxShadow: `0 6px 20px ${primaryColor}45`,
                                             transition: 'all 0.15s ease'
                                         }}
