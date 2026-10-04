@@ -10,7 +10,6 @@ import SEOHead from '../components/SEOHead';
 import { buildBusinessSeo } from '../utils/seo';
 import { findBusinessBySlug } from '../utils/utils';
 import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerModal';
-import ProfileHighlightsBar from '../components/profile/ProfileHighlightsBar';
 import { isStoreAvailable } from '../utils/storeUtils';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
 import PageLoader from '../components/common/PageLoader';
@@ -182,7 +181,6 @@ const LinkBio = ({ overrideSlug = null }) => {
         return true;
     });
 
-    const permanentHighlights = (highlights || []).filter(item => !item.is_story && ((item.images && item.images.length > 0) || !!item.cover_image));
 
     // Parse custom buttons created by the business
     const customLinks = (business.custom_links || business.metadata?.custom_links || [])
@@ -456,27 +454,6 @@ const LinkBio = ({ overrideSlug = null }) => {
                 setStoryViewerList={setStoryViewerList}
                 activeStories={activeStories}
             />
-
-            {/* Permanent Highlights (Destacadas) */}
-            {permanentHighlights && permanentHighlights.length > 0 && (
-                <div style={{
-                    width: '100%',
-                    maxWidth: isDesktop ? '420px' : '480px',
-                    marginBottom: '16px',
-                    padding: '0 8px',
-                    flexShrink: 0
-                }}>
-                    <ProfileHighlightsBar
-                        permanentHighlights={permanentHighlights}
-                        onSelectHighlight={(index) => {
-                            setStoryViewerList(permanentHighlights);
-                            setSelectedHighlight(index);
-                            setSelectedPhotoIndex(0);
-                        }}
-                        noBorder={true}
-                    />
-                </div>
-            )}
 
             {/* Main Links Section */}
             <div className="linkbio-links-section" style={{ width: '100%', maxWidth: isDesktop ? '420px' : '480px', display: 'flex', flexDirection: 'column', gap: linkGap, marginBottom: '6px', padding: '0 16px', flexShrink: 0 }}>
