@@ -106,6 +106,14 @@ export default function CategoriesTab({
         }
     };
 
+    // Grouped by parent category, then by display order
+    const categoryName = (sub) => categories.find(c => c.id === sub.category_id)?.name || '';
+    const sortedSubcategories = [...subcategories].sort((a, b) =>
+        categoryName(a).localeCompare(categoryName(b), 'es')
+        || (a.display_order || 0) - (b.display_order || 0)
+        || (a.name || '').localeCompare(b.name || '', 'es')
+    );
+
     return (
         <div style={{
             display: 'grid',
@@ -252,7 +260,7 @@ export default function CategoriesTab({
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {subcategories.map((sub) => {
+                    {sortedSubcategories.map((sub) => {
                         const parentCat = categories.find(c => c.id === sub.category_id);
                         return (
                             <div key={sub.id} style={{

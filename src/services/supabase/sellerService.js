@@ -830,6 +830,39 @@ export async function deleteBusinessAsSuperAdmin(businessId) {
 }
 
 /**
+ * Create a seller as super admin: the login account is created server-side
+ * (admin-accounts function) and the seller row is linked to it.
+ * Returns the temporary password so it can be shared with the seller.
+ */
+export async function createSellerAsSuperAdmin({ firstName, lastName, email, phone }) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!firstName?.trim() || !lastName?.trim() || !cleanEmail) {
+        throw new Error('Nombre, apellido y email son obligatorios.');
+    }
+
+    const tempPassword = generateTempPassword();
+    const { data: account, error: accountError } = await supabase.functions.invoke('admin-accounts', {
+        body: { action: 'create_account', email: cleanEmail, password: tempPassword }
+    });
+    if (accountError) {
+        const detail = await accountError.context?.json?.().catch(() => null);
+        throw new Error(detail?.error || 'No se pudo crear la cuenta del vendedor');
+    }
+
+    const { error } = await supabase.from('sellers').insert({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: cleanEmail,
+        phone: phone?.trim() || null,
+        auth_id: account.user_id,
+        is_active: true
+    });
+    if (error) throw error;
+
+    return { email: cleanEmail, tempPassword };
+}
+
+/**
  * Get global bookings analytics
  */
 export async function getBookingsAnalytics() {
@@ -838,55 +871,58 @@ export async function getBookingsAnalytics() {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    const { data: allBookings } = await supabase
+    // Slots blocked by the business are not customer bookings: leave them out of every metric
+    const { data: rawBookings } = await supabase
         .from('bookings')
         .select('*, businesses(name, categories(name, icon))')
         .order('created_at', { ascending: false });
+    const allBookings = (rawBookings || []).filter(b => b.status !== 'blocked');
 
-    const { data: thisMonthBookings } = await supabase
-        .from('bookings')
-        .select('*')
-        .gte('created_at', startOfMonth.toISOString());
+    const thisMonthBookings = allBookings.filter(b => new Date(b.created_at) >= startOfMonth);
+    const lastMonthBookings = allBookings.filter(b => {
+        const created = new Date(b.created_at);
+        return created >= startOfLastMonth && created <= new Date(endOfLastMonth.getTime() + 86399999);
+    });
 
-    const { data: lastMonthBookings } = await supabase
-        .from('bookings')
-        .select('*')
-        .gte('created_at', startOfLastMonth.toISOString())
-        .lte('created_at', endOfLastMonth.toISOString());
-
-    const totalBookings = allBookings?.length || 0;
-    const thisMonthCount = thisMonthBookings?.length || 0;
-    const lastMonthCount = lastMonthBookings?.length || 0;
+    const totalBookings = allBookings.length;
+    const thisMonthCount = thisMonthBookings.length;
+    const lastMonthCount = lastMonthBookings.length;
     const growthRate = lastMonthCount > 0
         ? (((thisMonthCount - lastMonthCount) / lastMonthCount) * 100).toFixed(1)
         : 0;
 
-    const totalRevenue = allBookings?.reduce((sum, b) => sum + parseFloat(b.price || 0), 0) || 0;
-    const thisMonthRevenue = thisMonthBookings?.reduce((sum, b) => sum + parseFloat(b.price || 0), 0) || 0;
-    const lastMonthRevenue = lastMonthBookings?.reduce((sum, b) => sum + parseFloat(b.price || 0), 0) || 0;
+    // Revenue counts only completed bookings; pending/cancelled ones were never collected
+    const revenueOf = (list) => list
+        .filter(b => b.status === 'completed')
+        .reduce((sum, b) => sum + parseFloat(b.price || 0), 0);
+    const completedCount = allBookings.filter(b => b.status === 'completed').length;
+
+    const totalRevenue = revenueOf(allBookings);
+    const thisMonthRevenue = revenueOf(thisMonthBookings);
+    const lastMonthRevenue = revenueOf(lastMonthBookings);
     const revenueGrowth = lastMonthRevenue > 0
         ? (((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100).toFixed(1)
         : 0;
 
-    const avgBookingValue = totalBookings > 0 ? (totalRevenue / totalBookings).toFixed(2) : 0;
+    const avgBookingValue = completedCount > 0 ? (totalRevenue / completedCount).toFixed(2) : 0;
 
     const statusBreakdown = {};
-    allBookings?.forEach(b => {
+    allBookings.forEach(b => {
         statusBreakdown[b.status] = (statusBreakdown[b.status] || 0) + 1;
     });
 
     const businessBookings = {};
-    allBookings?.forEach(b => {
+    allBookings.forEach(b => {
         if (!businessBookings[b.business_id]) {
             businessBookings[b.business_id] = {
                 count: 0,
                 revenue: 0,
-                name: b.businesses?.name || 'Unknown',
-                category: b.businesses?.categories?.name || 'Unknown'
+                business_name: b.businesses?.name || 'Negocio',
+                category: b.businesses?.categories?.name || 'General'
             };
         }
         businessBookings[b.business_id].count++;
-        businessBookings[b.business_id].revenue += parseFloat(b.price || 0);
+        if (b.status === 'completed') businessBookings[b.business_id].revenue += parseFloat(b.price || 0);
     });
 
     const topBusinesses = Object.values(businessBookings)
