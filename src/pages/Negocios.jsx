@@ -19,7 +19,7 @@ const PLANS = [
 const FEATURES = [
     { icon: CalendarCheck, title: 'Agenda online 24/7', description: 'Tus clientes ven los horarios libres y reservan solos, sin llamadas ni mensajes a deshoras.' },
     { icon: Wallet, title: 'Cobro de señas', description: 'Configurá señas parciales o totales con tu Alias o CBU y reducí el ausentismo.' },
-    { icon: Link2, title: 'Link in Bio', description: 'Tu enlace propio (turnitoslr.com/tu-negocio) para Instagram y los estados de WhatsApp.' },
+    { icon: Link2, title: 'Link in Bio', description: 'Tu enlace propio (tu-negocio.turnitoslr.com) para Instagram y los estados de WhatsApp.' },
     { icon: ShoppingBag, title: 'Tienda de productos', description: 'Mostrá pelotas, indumentaria, bebidas o productos y recibí los pedidos por WhatsApp.' },
     { icon: Star, title: 'Reseñas reales', description: 'Solo califican clientes que reservaron en tu local. Las estrellas se ven en tu perfil.' },
     { icon: BarChart3, title: 'Reportes y caja', description: 'Ingresos del día, turnos completados, horas pico y clientes recurrentes en tu panel.' },
