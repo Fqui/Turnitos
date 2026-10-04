@@ -1616,16 +1616,21 @@ textarea {
 .store-card-img-box {
   position: relative;
   width: 100%;
-  height: 148px;
+  aspect-ratio: 1 / 1;
   border-radius: 18px;
   background: radial-gradient(circle at center, #ffffff 30%, #f8fafc 100%);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  padding: 0;
   margin-bottom: 10px;
   border: 1px solid rgba(0,0,0,0.03);
+}
+
+/* Cut-out PNGs keep breathing room on the studio background; photos fill the box */
+.store-card-img-box.is-cutout {
+  padding: 12px;
 }
 
 [data-theme="dark"] .store-card-img-box {
@@ -1635,12 +1640,6 @@ textarea {
 
 .store-product-card:hover .store-card-img {
   transform: scale(1.05);
-}
-
-@media (min-width: 769px) {
-  .store-card-img-box {
-    height: 180px !important;
-  }
 }
 
 @media (max-width: 480px) {
@@ -1654,15 +1653,8 @@ textarea {
     height: 30px !important;
     justify-content: center !important;
   }
-  .store-card-img-box {
-    height: 130px !important;
-    padding: 8px !important;
-  }
-}
-
-@media (max-width: 360px) {
-  .store-card-img-box {
-    height: 115px !important;
+  .store-card-img-box.is-cutout {
+    padding: 8px;
   }
 }
 
