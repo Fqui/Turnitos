@@ -37,6 +37,7 @@ export default function Home() {
     const loadMoreRef = useRef(null);
     const resultsRef = useRef(null);
     const searchTimeoutRef = useRef(null);
+    const syncedSearchRef = useRef(null);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -99,16 +100,30 @@ export default function Home() {
         );
     };
 
-    // Handle URL query params for initial category selection
+    // Handle URL query params (?q= search, ?category= filter)
     useEffect(() => {
+        // Skip URL changes written by the search sync below
+        if (syncedSearchRef.current === location.search) {
+            syncedSearchRef.current = null;
+            return;
+        }
+
         const params = new URLSearchParams(location.search);
         const categoryParam = params.get('category');
+        const queryParam = params.get('q') || '';
 
-        // Always reset search triggering when navigating via footer/URL to avoid filtering conflict
-        setSearchTerm('');
+        // Search comes from the URL (?q=), otherwise reset it to avoid filtering conflicts
+        setSearchTerm(queryParam);
         setSelectedSubCategory('all');
 
-        if (categoryParam) {
+        if (queryParam) {
+            setSelectedCategory('all');
+            if (resultsRef.current) {
+                setTimeout(() => {
+                    resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        } else if (categoryParam) {
             setSelectedCategory(categoryParam);
             // Scroll to results to show the filtered category
             if (resultsRef.current) {
@@ -122,6 +137,27 @@ export default function Home() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [location.search]);
+
+    // Keep ?q= in the URL in sync with the search box so searches can be shared
+    useEffect(() => {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = setTimeout(() => {
+            const params = new URLSearchParams(location.search);
+            const term = searchTerm.trim();
+            if ((params.get('q') || '') === term) return;
+
+            if (term) {
+                params.set('q', term);
+                params.delete('category');
+            } else {
+                params.delete('q');
+            }
+            const search = params.toString() ? `?${params.toString()}` : '';
+            syncedSearchRef.current = search;
+            navigate({ search }, { replace: true });
+        }, 400);
+        return () => clearTimeout(searchTimeoutRef.current);
+    }, [searchTerm, location.search, navigate]);
 
     useEffect(() => {
         const loadData = async () => {
