@@ -22,6 +22,7 @@ import PortalAnalyticsView from '../components/business/portal/PortalAnalyticsVi
 import PortalListView from '../components/business/portal/PortalListView';
 import PortalNewBookingAlert from '../components/business/portal/PortalNewBookingAlert';
 import PortalBillingBanner from '../components/business/portal/PortalBillingBanner';
+import PortalProfileChecklist from '../components/business/portal/PortalProfileChecklist';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuthStore, useBookingsStore, usePortalUIStore } from '../stores';
 
@@ -69,6 +70,12 @@ export default function BusinessPortal() {
         closeBlockModal,
         pendingBlockData
     } = usePortalUIStore();
+
+    // Settings tab to open from the "Completá tu perfil" card; cleared when leaving settings
+    const [settingsTab, setSettingsTab] = useState(null);
+    useEffect(() => {
+        if (viewMode !== 'settings') setSettingsTab(null);
+    }, [viewMode]);
 
     const loading = authLoading || bookingsLoading;
     const setLoading = (val) => {
@@ -1111,6 +1118,16 @@ export default function BusinessPortal() {
                                 onOpenSubscription={() => setViewMode('subscription')}
                             />
                         )}
+                        {viewMode !== 'settings' && viewMode !== 'subscription' && (
+                            <PortalProfileChecklist
+                                business={currentBusiness}
+                                isMobile={isMobile}
+                                onOpenSettings={(tab) => {
+                                    setSettingsTab(tab);
+                                    setViewMode('settings');
+                                }}
+                            />
+                        )}
                         {viewMode === 'analytics' ? (
                             <PortalAnalyticsView
                                 metrics={metrics}
@@ -1211,6 +1228,7 @@ export default function BusinessPortal() {
                                 <VenueSettings
                                     business={currentBusiness}
                                     isMobile={isMobile}
+                                    initialTab={settingsTab}
                                     onUpdate={(updated) => {
                                         setBusinesses(prev => {
                                             const exists = prev.some(b => String(b.id) === String(updated.id));
@@ -1229,6 +1247,7 @@ export default function BusinessPortal() {
                                 <BusinessSettings
                                     business={currentBusiness}
                                     isMobile={isMobile}
+                                    initialTab={settingsTab}
                                     onUpdate={(updated) => {
                                         setBusinesses(prev => {
                                             const exists = prev.some(b => String(b.id) === String(updated.id));

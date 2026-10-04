@@ -14,9 +14,9 @@ import VenueAmenitiesTab from './settings/VenueAmenitiesTab';
 import VenueStoreTab from './settings/VenueStoreTab';
 import VenueWhatsappTab from './settings/VenueWhatsappTab';
 
-export default function VenueSettings({ business, onUpdate, isMobile }) {
+export default function VenueSettings({ business, onUpdate, isMobile, initialTab }) {
     const { showToast } = useNotification();
-    const [activeTab, setActiveTab] = useState('general');
+    const [activeTab, setActiveTab] = useState(initialTab || 'general');
     const [saving, setSaving] = useState(false);
 
     const [formData, setFormData] = useState({

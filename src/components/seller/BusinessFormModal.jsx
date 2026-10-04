@@ -3,9 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 import { useNotification } from '../../contexts/NotificationContext';
 import { calculateSubscriptionPrice } from '../../utils/subscriptionUtils';
+import { buildWhatsAppUrl } from '../../utils/whatsapp';
 
-const BusinessFormModal = ({ business, categories = [], subcategories = [], sellers = [], onClose, onSave }) => {
-    const { showToast } = useNotification();
+// mode 'seller': a seller creates or edits their own businesses (no seller assignment,
+// no subscription status, no new subcategories). The server enforces the same rules.
+const BusinessFormModal = ({ business, categories = [], subcategories = [], sellers = [], onClose, onSave, mode = 'superadmin', sellerId = null }) => {
+    const { showToast, showConfirm } = useNotification();
+    const isSellerMode = mode === 'seller';
     const formatSlug = (text) => {
         return (text || '')
             .toLowerCase()
@@ -31,6 +35,9 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
     };
 
     const resolveBusinessType = (catName = '', fallbackType = null) => {
+        // Each category stores its business type; the name heuristics below are only a fallback
+        const storedType = (categories || []).find(c => c.name === catName)?.business_type;
+        if (storedType) return storedType === 'venue' ? 'alquiler' : storedType;
         const lower = (catName || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         if (lower.includes('deport') || lower.includes('cancha') || lower.includes('padel') || lower.includes('futbol') || lower.includes('tenis') || lower.includes('gym')) {
             return 'sport';
@@ -62,7 +69,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
     const initialCat = (categories || []).find(c => String(c.id) === String(business?.category_id || business?.categories?.id));
     const initialType = business?.type || (initialCat ? resolveBusinessType(initialCat.name) : 'sport');
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormDataRaw] = useState({
         name: business?.name || '',
         slug: business?.slug || '',
         category_id: business?.category_id || business?.categories?.id || (categories[0]?.id) || '',
@@ -82,10 +89,17 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
     const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(Boolean(business?.slug));
 
+    // Any change made by the user marks the form as edited, so closing asks first
+    const [touched, setTouched] = useState(false);
+    const setFormData = (value) => {
+        setTouched(true);
+        setFormDataRaw(value);
+    };
+
     useEffect(() => {
         if (business) {
             const bCat = (categories || []).find(c => String(c.id) === String(business.category_id || business.categories?.id));
-            setFormData({
+            setFormDataRaw({
                 name: business.name || '',
                 slug: business.slug || '',
                 category_id: business.category_id || business.categories?.id || '',
@@ -174,22 +188,38 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
         return () => document.removeEventListener('mousedown', handle);
     }, []);
 
-    // Close on Escape
+    // Closing with unsaved changes asks first, so a stray click doesn't lose the form
+    const requestClose = async () => {
+        if (loading || showCredentials) return;
+        if (touched) {
+            const confirmed = await showConfirm(
+                'Descartar cambios',
+                'Tenés datos sin guardar. ¿Querés cerrar igual?',
+                'Cerrar sin guardar',
+                'Seguir editando'
+            );
+            if (!confirmed) return;
+        }
+        onClose();
+    };
+
+    // Close on Escape (never while the new credentials are on screen)
     useEffect(() => {
         const handle = (e) => {
             if (e.key === 'Escape') {
+                if (showCredentials) return;
                 if (categoryOpen || subcategoryOpen || sellerOpen) {
                     setCategoryOpen(false);
                     setSubcategoryOpen(false);
                     setSellerOpen(false);
                 } else {
-                    onClose();
+                    requestClose();
                 }
             }
         };
         document.addEventListener('keydown', handle);
         return () => document.removeEventListener('keydown', handle);
-    }, [categoryOpen, subcategoryOpen, sellerOpen, onClose]);
+    });
 
     // Find current category object
     const currentCategory = (categories || []).find(
@@ -246,17 +276,8 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 setSubSearch('');
             }
         } catch (err) {
-            console.warn('Could not persist subcategory to DB, using local entry:', err);
-            const fakeId = 'sub_' + Math.random().toString(36).substring(2, 9);
-            const fallbackSub = {
-                id: fakeId,
-                category_id: formData.category_id,
-                name: trimmed,
-                slug: formatSlug(trimmed)
-            };
-            setLocalSubcategories(prev => [...prev, fallbackSub]);
-            handleToggleSubcategory(fakeId);
-            setSubSearch('');
+            console.error('Could not create subcategory:', err);
+            showToast(`No se pudo crear la subcategoría: ${err.message}`, 'error', 6000);
         } finally {
             setCreatingSub(false);
         }
@@ -301,60 +322,45 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 slug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
             }
 
-            let ownerEmail = formData.email || '';
-            let ownerPassword = formData.password || '';
-            if (!business) {
-                if (!ownerEmail) {
-                    const slugBase = (formData.name || 'business')
-                        .toLowerCase()
-                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                        .replace(/[^a-z0-9]/g, '')
-                        .substring(0, 20);
-                    ownerEmail = `${slugBase || 'business'}-${Math.random().toString(36).substring(2, 6)}@turnitoslr.com`;
-                }
-                if (!ownerPassword) {
-                    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-                    const lower = 'abcdefghijkmnpqrstuvwxyz';
-                    const nums = '23456789';
-                    const all = upper + lower + nums;
-                    let pwd = '';
-                    pwd += upper[Math.floor(Math.random() * upper.length)];
-                    pwd += nums[Math.floor(Math.random() * nums.length)];
-                    pwd += lower[Math.floor(Math.random() * lower.length)];
-                    for (let i = 0; i < 5; i++) pwd += all[Math.floor(Math.random() * all.length)];
-                    ownerPassword = pwd.split('').sort(() => Math.random() - 0.5).join('');
-                }
-            }
-
             const dataToSave = {
                 ...formData,
                 slug,
-                email: ownerEmail,
-                password: ownerPassword,
                 type: derivedType,
                 subscription_status: formData.subscription_status || 'trial',
-                seller_id: formData.seller_id || null,
+                seller_id: isSellerMode ? sellerId : (formData.seller_id || null),
                 subcategories: (formData.subcategory_ids && formData.subcategory_ids.length > 0)
                     ? formData.subcategory_ids
                     : (formData.subcategory_id ? [formData.subcategory_id] : []),
                 subcategory_id: (formData.subcategory_ids && formData.subcategory_ids[0]) || formData.subcategory_id || null
             };
+            if (isSellerMode) {
+                // Billing fields stay as they are: only the platform changes them
+                delete dataToSave.subscription_status;
+            }
 
             if (business) {
-                await supabaseService.updateBusinessAsSuperAdmin(business.id, dataToSave);
+                if (isSellerMode) {
+                    await supabaseService.updateBusinessBySeller(sellerId, business.id, dataToSave);
+                } else {
+                    await supabaseService.updateBusinessAsSuperAdmin(business.id, dataToSave);
+                }
                 showToast(`✓ Negocio "${dataToSave.name}" actualizado correctamente`, 'success');
                 onSave();
                 onClose();
             } else {
-                const result = await supabaseService.createBusinessAsSuperAdmin(dataToSave);
+                // The server creates the login, picks a free slug/email and the plan, all or nothing
+                const result = isSellerMode
+                    ? await supabaseService.createBusinessBySeller(dataToSave)
+                    : await supabaseService.createBusinessAsSuperAdmin(dataToSave);
                 showToast(`🎉 ¡Negocio "${dataToSave.name}" creado con éxito!`, 'success');
                 onSave();
                 setCreatedCredentials({
                     name: dataToSave.name,
-                    email: dataToSave.email,
-                    password: dataToSave.password,
-                    businessId: result?.id,
-                    slug: result?.slug || dataToSave.slug,
+                    email: result?.credentials?.email,
+                    password: result?.credentials?.password,
+                    whatsapp: dataToSave.whatsapp,
+                    businessId: result?.business?.id,
+                    slug: result?.business?.slug || dataToSave.slug,
                 });
                 setShowCredentials(true);
             }
@@ -380,7 +386,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                 WebkitBackdropFilter: 'blur(12px)',
                 padding: '20px'
             }}
-            onClick={onClose}
+            onClick={requestClose}
         >
             <motion.div
                 initial={{ opacity: 0, scale: 0.94, y: 15 }}
@@ -456,7 +462,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
 
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={requestClose}
                         style={{
                             width: '36px',
                             height: '36px',
@@ -837,7 +843,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                             </div>
 
                                             {/* Quick Create Button */}
-                                            {subSearch.trim() && !hasExactMatch && (
+                                            {!isSellerMode && subSearch.trim() && !hasExactMatch && (
                                                 <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--sa-border)' }}>
                                                     <button
                                                         type="button"
@@ -1207,6 +1213,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                         </div>
                     </div>
 
+                    {!isSellerMode && (<>
                     {/* SECTION 5: VENDEDOR ASIGNADO */}
                     <div style={{
                         background: 'var(--sa-hover)',
@@ -1382,6 +1389,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             })}
                         </div>
                     </div>
+                    </>)}
 
                     {/* Footer Actions */}
                     <div style={{
@@ -1393,7 +1401,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                     }}>
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={requestClose}
                             style={{
                                 padding: '12px 22px',
                                 background: 'var(--sa-border)',
@@ -1457,11 +1465,6 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             backdropFilter: 'blur(10px)',
                             padding: '20px'
                         }}
-                        onClick={() => {
-                            setShowCredentials(false);
-                            setCreatedCredentials(null);
-                            onClose();
-                        }}
                     >
                         <motion.div
                             initial={{ scale: 0.92, opacity: 0 }}
@@ -1518,7 +1521,26 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                 ⚠️ Guardá estas credenciales ahora. Por seguridad, no se vuelven a mostrar.
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '22px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '22px' }}>
+                                <a
+                                    href={buildWhatsAppUrl(createdCredentials.whatsapp, buildAccessMessage(createdCredentials)) || `https://wa.me/?text=${encodeURIComponent(buildAccessMessage(createdCredentials))}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        background: '#25D366',
+                                        borderRadius: '12px',
+                                        color: '#fff',
+                                        fontWeight: '800',
+                                        fontSize: '14px',
+                                        textAlign: 'center',
+                                        textDecoration: 'none',
+                                        boxSizing: 'border-box'
+                                    }}
+                                >
+                                    {createdCredentials.whatsapp ? 'Enviar accesos por WhatsApp al dueño' : 'Enviar accesos por WhatsApp'}
+                                </a>
                                 <button
                                     onClick={() => {
                                         setShowCredentials(false);
@@ -1548,6 +1570,18 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
         </div>
     );
 };
+
+const buildAccessMessage = ({ name, email, password, slug }) => [
+    `¡Hola! Ya está creado *${name}* en TurnitosLR.`,
+    '',
+    'Para entrar a tu panel:',
+    'https://www.turnitoslr.com/login',
+    `Email: ${email}`,
+    `Contraseña provisoria: ${password}`,
+    '',
+    'Al entrar te vamos a pedir que elijas una contraseña nueva. Después completá tu perfil (logo, horarios y servicios o precios) para que aparezca en la página.',
+    slug ? `Tu página: https://www.turnitoslr.com/${slug}` : ''
+].filter((line, i, arr) => line !== '' || arr[i - 1] !== '').join('\n').trim();
 
 const CredentialsRow = ({ label, value }) => {
     const [copied, setCopied] = useState(false);
