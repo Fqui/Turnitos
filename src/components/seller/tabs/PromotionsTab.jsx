@@ -728,14 +728,41 @@ export default function PromotionsTab({ businesses = [] }) {
                                 }}
                             />
 
+                            <div style={{ marginTop: '6px', fontSize: '11.5px', color: 'var(--sa-text-muted)', lineHeight: 1.45 }}>
+                                📐 {form.business_id
+                                    ? <>Medida recomendada: <strong>1200 × 800 px</strong> (3:2), sin texto y con lo importante al centro.</>
+                                    : <>Medida recomendada: <strong>1500 × 500 px</strong> (3:1). En celular se muestra completa con bordes difuminados, así que el texto tiene que leerse bien en chico.</>}
+                            </div>
+
                             {form.image && (
-                                <div style={{ marginTop: '10px', height: '120px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--sa-border-strong)' }}>
-                                    <img
-                                        src={form.image}
-                                        alt="Vista previa"
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                        onError={(e) => { e.target.style.display = 'none'; }}
-                                    />
+                                <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px', alignItems: 'start' }}>
+                                    {[
+                                        // Same proportions the Home banner uses (see index.css .promotions-hero-card)
+                                        { label: 'Compu', ratio: form.business_id ? '9 / 5' : '3 / 1' },
+                                        { label: 'Celular', ratio: '3 / 2' }
+                                    ].map(preview => (
+                                        <div key={preview.label}>
+                                            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '4px' }}>
+                                                {preview.label}
+                                            </div>
+                                            <div style={{ position: 'relative', aspectRatio: preview.ratio, borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--sa-border-strong)', background: 'var(--sa-bg)' }}>
+                                                {!form.business_id && (
+                                                    <img
+                                                        src={form.image}
+                                                        alt=""
+                                                        aria-hidden="true"
+                                                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(12px)', transform: 'scale(1.15)', opacity: 0.85 }}
+                                                    />
+                                                )}
+                                                <img
+                                                    src={form.image}
+                                                    alt={`Vista previa en ${preview.label.toLowerCase()}`}
+                                                    style={{ position: 'relative', width: '100%', height: '100%', objectFit: form.business_id ? 'cover' : 'contain', display: 'block' }}
+                                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -829,7 +856,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                 }}>
                                     📢 <strong>Modo Campaña General:</strong> En el Home la imagen se mostrará como un <strong>banner gráfico completo al 100% de ancho</strong> (sin división en columnas ni textos del sistema superpuestos).
                                     <div style={{ marginTop: '5px', fontSize: '11.5px', color: 'var(--sa-text-2)' }}>
-                                        📐 <strong>Tamaño ideal recomendado para el diseño:</strong> <strong>1200 × 300 px</strong> (o 2400 × 600 px en HD, proporción 4:1) para que el diseño ocupe todo el ancho sin recortar nada.
+                                        📐 <strong>Tamaño ideal recomendado para el diseño:</strong> <strong>1500 × 500 px</strong> (proporción 3:1) para que ocupe todo el ancho en compu sin recortar nada.
                                     </div>
                                 </div>
                             )}
