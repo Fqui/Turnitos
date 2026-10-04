@@ -488,12 +488,7 @@ export default function Home() {
     }), []);
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-        >
+        <div>
             <SEOHead
                 title="TurnitosLR | Reserva de Turnos Online en La Rioja"
                 description="Reservá canchas de pádel, fútbol, turnos de peluquería, estética y quinchos en La Rioja. Rápido, fácil y sin esperas."
@@ -944,12 +939,6 @@ export default function Home() {
                                 borderRadius: '50%',
                                 animation: 'spin 1s linear infinite'
                             }}></div>
-                            <style>{`
-                                @keyframes spin {
-                                    0% { transform: rotate(0deg); }
-                                    100% { transform: rotate(360deg); }
-                                }
-                            `}</style>
                         </div>
                     ) : (
                         <>
@@ -1090,6 +1079,6 @@ export default function Home() {
                     )}
                 </section>
             </div>
-        </motion.div >
+        </div>
     );
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import 'leaflet/dist/leaflet.css';
+import PageLoader from '../components/common/PageLoader';
 import L from 'leaflet';
 
 import serviceAdapter from '../services/serviceAdapter';
@@ -765,7 +765,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
         return schemaObj;
     }, [business]);
 
-    if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando negocio...</div>;
+    if (loading) return <PageLoader label="Cargando negocio..." />;
     if (!business) return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
 
     const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
@@ -805,11 +805,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const pageImage = business?.banner_image || business?.logo || 'https://www.turnitoslr.com/logo-turnitos.png';
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
+        <div
             className="business-profile-page"
             style={{ paddingBottom: '80px', width: '100%', overflowX: 'clip' }}
         >
@@ -1482,6 +1478,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 setStoryViewerList={setStoryViewerList}
                 activeStories={activeStories}
             />
-        </motion.div>
+        </div>
     );
 }

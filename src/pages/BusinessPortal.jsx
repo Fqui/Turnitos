@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import supabaseService from '../services/supabaseService';
 import serviceAdapter from '../services/serviceAdapter';
 import analyticsService from '../services/analyticsService';
@@ -95,9 +95,12 @@ export default function BusinessPortal() {
         checkAutoLogin();
     }, [checkAutoLogin]);
 
-    // Scroll to top of page whenever switching view modes
+    // Scroll to top whenever switching view modes. On desktop the content
+    // scrolls inside its own container, so reset that one too.
+    const contentRef = useRef(null);
     useEffect(() => {
         window.scrollTo(0, 0);
+        if (contentRef.current) contentRef.current.scrollTop = 0;
     }, [viewMode]);
 
     // Analytics state
@@ -1088,7 +1091,7 @@ export default function BusinessPortal() {
             />
 
             {/* Main Content Area */}
-            <div style={{
+            <div ref={contentRef} style={{
                 flex: 1,
                 padding: isMobile ? '16px' : '24px 40px',
                 maxWidth: '1600px',

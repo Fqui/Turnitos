@@ -1330,14 +1330,6 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
             </motion.div>
 
             <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-
                 /* Mobile First Styles */
                 .responsive-modal-container {
                     max-height: 90vh;

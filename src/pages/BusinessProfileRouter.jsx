@@ -3,6 +3,7 @@ import { useParams, Navigate, useLocation } from 'react-router-dom';
 import serviceAdapter from '../services/serviceAdapter';
 import BusinessProfile from './BusinessProfile';
 import VenueProfile from './VenueProfile';
+import PageLoader from '../components/common/PageLoader';
 
 const cleanBusinessMeta = (m) => {
     if (!m) return {};
@@ -79,29 +80,7 @@ export default function BusinessProfileRouter({ overrideSlug }) {
     }, [businessSlug]);
 
     if (loading) {
-        return (
-            <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                flex: 1,
-                minHeight: '60vh',
-                background: 'var(--bg-main)',
-                color: 'var(--text-primary)'
-            }}>
-                <div style={{
-                    width: '40px',
-                    height: '40px',
-                    border: '3px solid var(--primary-paddle)',
-                    borderTopColor: 'transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite',
-                    marginBottom: '12px'
-                }} />
-                <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-secondary)' }}>Cargando negocio...</div>
-            </div>
-        );
+        return <PageLoader label="Cargando negocio..." />;
     }
 
     if (!business) {
