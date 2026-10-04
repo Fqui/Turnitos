@@ -1,0 +1,143 @@
+{
+  "simulacion": true,
+  "negocios": [
+    {
+      "nombre": "Punto Pádel La Rioja",
+      "rubro": "canchas",
+      "subcategorias": ["Pádel"],
+      "whatsapp": "3804111001",
+      "direccion": "Av. San Francisco 1850, La Rioja",
+      "latitud": -29.4262,
+      "longitud": -66.8722,
+      "descripcion": "Tres canchas de pádel techadas con iluminación LED y vestuarios.",
+      "logo": "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&h=400&fit=crop",
+      "portada": "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=1200&h=400&fit=crop",
+      "canchas": [
+        { "nombre": "Cancha 1 (techada)", "precio": 14000, "deporte": "padel" },
+        { "nombre": "Cancha 2 (techada)", "precio": 14000, "deporte": "padel" },
+        { "nombre": "Cancha 3 (descubierta)", "precio": 11000, "deporte": "padel" }
+      ]
+    },
+    {
+      "nombre": "La Redonda Fútbol 5",
+      "rubro": "canchas",
+      "subcategorias": ["Fútbol"],
+      "whatsapp": "3804111002",
+      "direccion": "Av. Juan Facundo Quiroga 2300, La Rioja",
+      "latitud": -29.4389,
+      "longitud": -66.8541,
+      "descripcion": "Canchas de fútbol 5 de césped sintético, buffet y estacionamiento.",
+      "logo": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&h=400&fit=crop",
+      "portada": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&h=400&fit=crop",
+      "canchas": [
+        { "nombre": "Cancha A", "precio": 30000, "deporte": "futbol" },
+        { "nombre": "Cancha B", "precio": 30000, "deporte": "futbol" }
+      ]
+    },
+    {
+      "nombre": "Barbería Don Ramón",
+      "rubro": "belleza",
+      "subcategorias": ["Barbería"],
+      "whatsapp": "3804111003",
+      "direccion": "Pelagio B. Luna 650, La Rioja",
+      "latitud": -29.4128,
+      "longitud": -66.8559,
+      "descripcion": "Cortes clásicos, fade y arreglo de barba con navaja.",
+      "logo": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&h=400&fit=crop",
+      "portada": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1200&h=400&fit=crop",
+      "profesionales": [
+        { "nombre": "Ramón Herrera", "rol": "Barbero" },
+        { "nombre": "Nicolás Brizuela", "rol": "Fade y diseños" }
+      ],
+      "servicios": [
+        { "nombre": "Corte de pelo", "duracion": 30, "precio": 9000, "categoria": "Cortes" },
+        { "nombre": "Corte y barba", "duracion": 45, "precio": 13000, "categoria": "Cortes" },
+        { "nombre": "Perfilado de barba", "duracion": 20, "precio": 6000, "categoria": "Barba" }
+      ]
+    },
+    {
+      "nombre": "Estudio Bella Uñas",
+      "rubro": "belleza",
+      "subcategorias": ["Salón de Uñas", "Manicura"],
+      "whatsapp": "3804111004",
+      "direccion": "San Nicolás de Bari 480, La Rioja",
+      "latitud": -29.4135,
+      "longitud": -66.8530,
+      "descripcion": "Esculpidas, semipermanente y kapping en un espacio tranquilo.",
+      "logo": "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&h=400&fit=crop",
+      "portada": "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=1200&h=400&fit=crop",
+      "profesionales": [{ "nombre": "Valentina Ocampo", "rol": "Manicura" }],
+      "servicios": [
+        { "nombre": "Semipermanente", "duracion": 60, "precio": 12000, "categoria": "Manicura" },
+        { "nombre": "Kapping", "duracion": 75, "precio": 15000, "categoria": "Manicura" },
+        { "nombre": "Esculpidas", "duracion": 120, "precio": 22000, "categoria": "Uñas" }
+      ]
+    },
+    {
+      "nombre": "Kinesio Movimiento",
+      "rubro": "salud",
+      "subcategorias": ["Kinesiología"],
+      "whatsapp": "3804111005",
+      "direccion": "Av. Rivadavia 920, La Rioja",
+      "latitud": -29.4160,
+      "longitud": -66.8475,
+      "descripcion": "Rehabilitación, kinesiología deportiva y masoterapia.",
+      "logo": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400&h=400&fit=crop",
+      "portada": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&h=400&fit=crop",
+      "profesionales": [{ "nombre": "Lic. Martín Quinteros", "rol": "Kinesiólogo" }],
+      "servicios": [
+        { "nombre": "Sesión de kinesiología", "duracion": 45, "precio": 14000, "categoria": "Kinesiología" },
+        { "nombre": "Masaje descontracturante", "duracion": 50, "precio": 16000, "categoria": "Masajes" }
+      ]
+    },
+    {
+      "nombre": "Consultorio Sonrisas",
+      "rubro": "salud",
+      "subcategorias": ["Odontología"],
+      "whatsapp": "3804111006",
+      "direccion": "Hipólito Yrigoyen 310, La Rioja",
+      "latitud": -29.4110,
+      "longitud": -66.8590,
+      "descripcion": "Odontología general, limpiezas y estética dental.",
+      "logo": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=400&h=400&fit=crop",
+      "portada": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=1200&h=400&fit=crop",
+      "profesionales": [
+        { "nombre": "Dra. Lucía Fernández", "rol": "Odontóloga" },
+        { "nombre": "Dr. Pablo Romero", "rol": "Ortodoncista" }
+      ],
+      "servicios": [
+        { "nombre": "Consulta y diagnóstico", "duracion": 30, "precio": 15000, "categoria": "Consultas" },
+        { "nombre": "Limpieza dental", "duracion": 45, "precio": 25000, "categoria": "Prevención" },
+        { "nombre": "Blanqueamiento", "duracion": 60, "precio": 60000, "categoria": "Estética" }
+      ]
+    },
+    {
+      "nombre": "Quincho Los Algarrobos",
+      "rubro": "alquileres",
+      "subcategorias": ["Quinchos"],
+      "whatsapp": "3804111007",
+      "direccion": "Ruta 75 Km 4, Las Higueras, La Rioja",
+      "latitud": -29.3870,
+      "longitud": -66.8650,
+      "descripcion": "Quincho con pileta, parrilla y parque para 60 personas.",
+      "logo": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=400&fit=crop",
+      "portada": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=400&fit=crop",
+      "precio_hora": 18000,
+      "capacidad": 60
+    },
+    {
+      "nombre": "Salón Eventos del Sol",
+      "rubro": "alquileres",
+      "subcategorias": ["Salones de eventos"],
+      "whatsapp": "3804111008",
+      "direccion": "Av. Ortiz de Ocampo 3100, La Rioja",
+      "latitud": -29.4480,
+      "longitud": -66.8820,
+      "descripcion": "Salón climatizado para cumpleaños y fiestas, con cocina y sonido.",
+      "logo": "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&h=400&fit=crop",
+      "portada": "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=1200&h=400&fit=crop",
+      "precio_dia": 250000,
+      "capacidad": 150
+    }
+  ]
+}
