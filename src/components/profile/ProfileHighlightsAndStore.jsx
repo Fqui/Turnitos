@@ -1,6 +1,7 @@
 import React from 'react';
 import ProfileHighlightsBar from './ProfileHighlightsBar';
 import ProfileStorePromoCard, { getSafeStoreProducts } from './ProfileStorePromoCard';
+import { isStoreAvailable } from '../../utils/storeUtils';
 
 export default function ProfileHighlightsAndStore({
     business,
@@ -10,6 +11,18 @@ export default function ProfileHighlightsAndStore({
 }) {
     const products = getSafeStoreProducts(business);
     const hasHighlights = Boolean(permanentHighlights && permanentHighlights.length > 0);
+    const hasStore = isStoreAvailable(business);
+
+    // No store: show only the highlights (or nothing)
+    if (!hasStore) {
+        if (!hasHighlights) return null;
+        return (
+            <ProfileHighlightsBar
+                permanentHighlights={permanentHighlights}
+                onSelectHighlight={onSelectHighlight}
+            />
+        );
+    }
 
     // Case 1: No highlights at all -> render full-width store banner
     if (!hasHighlights) {
