@@ -149,17 +149,17 @@ export async function createBooking(bookingData) {
     }
 
     const dateStr = formatDateLocal(bookingData.date);
-    const startTime = `${dateStr}T${bookingData.time}:00`;
+    // Business hours are Argentina time; the database stores start_time/end_time with that offset
+    const AR_OFFSET = '-03:00';
+    const startTime = `${dateStr}T${bookingData.time}:00${AR_OFFSET}`;
 
     const duration = bookingData.duration || 60;
-    const [hours, minutes] = bookingData.time.split(':').map(Number);
-    const endMinutes = hours * 60 + minutes + duration;
-    const endHours = Math.floor(endMinutes / 60) % 24;
-    const endMins = endMinutes % 60;
-    const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
-    const endTime = `${dateStr}T${endTimeStr}:00`;
+    const endTime = new Date(new Date(startTime).getTime() + duration * 60000).toISOString();
 
-    if (finalResourceId) {
+    // Services are checked per specialist (the same service can be booked with
+    // different specialists at once); the database trigger does that check.
+    const isSpecialistBooking = Boolean(bookingData.specialistId || bookingData.specialist_id);
+    if (finalResourceId && !isSpecialistBooking) {
         const { data: conflicts, error: conflictError } = await supabase
             .from('bookings_public')
             .select('id')
@@ -341,7 +341,12 @@ export async function createBooking(bookingData) {
         guest_count: bookingData.guestCount || bookingData.guest_count || null,
         selected_services: bookingData.selectedServices || bookingData.selected_services || [],
         services_total: bookingData.servicesTotal || bookingData.services_total || 0,
-        base_price: bookingData.basePrice || bookingData.base_price || null
+        base_price: bookingData.basePrice || bookingData.base_price || null,
+        promo_id: /^[0-9a-f-]{36}$/i.test(String(bookingData.promo_id || bookingData.promoId || ''))
+            ? (bookingData.promo_id || bookingData.promoId)
+            : null,
+        discount_applied: Number(bookingData.discount_applied || bookingData.discountApplied || 0),
+        history: Array.isArray(bookingData.history) ? bookingData.history : []
     };
 
     const { error } = await supabase

@@ -44,7 +44,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const [searchParams] = useSearchParams();
     const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
     const [loading, setLoading] = useState(!business);
-    const isMobile = window.innerWidth <= 768;
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
 
     useEffect(() => {
         if (initialBusiness) {
@@ -60,6 +66,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const [loadingBookings, setLoadingBookings] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successWhatsappUrl, setSuccessWhatsappUrl] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Specialist selection state
@@ -571,27 +578,33 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 }
             }
 
-            let finalSpecialistId = selectedSpecialist?.id;
-            if (business.type === 'service' && !finalSpecialistId && availableSpecialists.length > 0) {
-                finalSpecialistId = availableSpecialists[0].id;
+            let finalSpecialistId = null;
+            if (business.type === 'service') {
+                const realSpecialists = availableSpecialists.filter(s => s.id && s.id !== 'auto-assigned');
+                if (selectedSpecialist?.id && selectedSpecialist.id !== 'auto-assigned') {
+                    finalSpecialistId = selectedSpecialist.id;
+                } else if (realSpecialists.length > 0) {
+                    // "Sin preferencia": the free specialist with the fewest bookings that day
+                    const loadOf = (specId) => existingBookings.filter(b =>
+                        String(b.specialist_id || b.metadata?.specialist_id || b.metadata?.specialist_id_raw || '') === String(specId)
+                    ).length;
+                    finalSpecialistId = realSpecialists
+                        .map(s => ({ id: s.id, load: loadOf(s.id) }))
+                        .sort((a, b) => a.load - b.load)[0].id;
+                } else if ((business.specialists || []).length > 0) {
+                    throw new Error('Ese horario ya no tiene profesionales libres. Elegí otro horario.');
+                }
             }
 
-            let finalPrice = finalDetails.price;
-            let discountApplied = finalDetails.discount || 0;
-            if (activePromotion && activePromotion.discount_value > 0 && discountApplied === 0) {
-                if (activePromotion.discount_type === 'fixed') {
-                    discountApplied = Math.min(activePromotion.discount_value, finalPrice);
-                } else {
-                    discountApplied = Math.round(finalPrice * (activePromotion.discount_value / 100));
-                }
-                finalPrice = finalPrice - discountApplied;
-            }
+            // BookingSummary already applied the promo (only when it matches the service)
+            const finalPrice = finalDetails.price;
+            const discountApplied = finalDetails.discount || 0;
 
             const selectedExtrasList = finalDetails.extras || [];
 
             const bookingData = {
                 businessId: business.id,
-                serviceId: business.type === 'service' ? selectedItem.id : null,
+                serviceId: business.type === 'service' ? selectedItem?.id : null,
                 courtId: business.type === 'sport' ? (finalDetails.courtId || selectedTime?.courtId) : null,
                 specialistId: business.type === 'service' ? finalSpecialistId : null,
                 date: finalDetails.date,
@@ -639,7 +652,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     pushService.notifyBusinessNewBooking(business.id, {
                         customerName: finalDetails.customerName,
                         date: formatDisplayDate(selectedDate),
-                        time: selectedTime,
+                        time: finalDetails.time,
                         businessName: business.name
                     });
                 }
@@ -648,6 +661,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
             }
 
             setShowModal(false);
+            setSuccessWhatsappUrl(finalDetails.whatsappUrl || '');
             setShowSuccessModal(true);
             refreshBookings();
             setSelectedTime(null);
@@ -678,8 +692,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
             schemaType = 'EventVenue';
         }
 
-        const ratingVal = Number(business.rating_avg || business.rating || business.metadata?.rating_avg || 5.0);
-        const reviewsNum = Number(business.reviews_count || business.metadata?.reviews_count || 1);
+        const ratingVal = Number(business.rating_avg || business.rating || business.metadata?.rating_avg || 0);
+        const reviewsNum = Number(business.reviews_count || business.metadata?.reviews_count || 0);
 
         const schemaObj = {
             '@context': 'https://schema.org',
@@ -746,6 +760,12 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
     const activeStories = validHighlights.filter(h => h.is_story);
     const permanentHighlights = validHighlights.filter(h => !h.is_story);
+
+    const noFreeSpecialist = business.type === 'service' &&
+        Boolean(selectedTime) &&
+        !loadingSpecialists &&
+        (business.specialists || []).length > 0 &&
+        availableSpecialists.filter(s => s.id !== 'auto-assigned').length === 0;
 
     const pageTitle = `${business.name} - Turnos Online en ${business.location || 'La Rioja'}`;
     const pageDescription = `Reservá tu turno online en ${business.name} (${business.location || 'La Rioja'}). Turnos de canchas y servicios disponibles en tiempo real.`;
@@ -856,7 +876,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}
                         >
                             <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                                {business.type === 'service' ? 'Selecciona una fecha' : '1. Selecciona una fecha'}
+                                {business.type === 'service' ? 'Elegí una fecha' : '1. Elegí una fecha'}
                             </h3>
                             <div style={{
                                 backgroundColor: 'var(--bg-card)',
@@ -889,6 +909,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                         sportColor={primaryColor}
                                         maxDays={bookingRules?.advance_booking?.max_days || 30}
                                         specialDays={business?.special_days || []}
+                                        isDateClosed={(date) => Boolean(getBusinessHours(date).isClosed)}
                                     />
                                 )}
                             </div>
@@ -967,7 +988,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 </span>
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#047857', marginTop: '3px', fontWeight: '500' }}>
-                                                Precio especial aplicado a todos los turnos de hoy
+                                                Precio especial en todos los turnos de este día
                                             </div>
                                         </div>
                                     </div>
@@ -1013,7 +1034,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                     Cerrado
                                                 </h4>
                                                 <p style={{ fontSize: '14px' }}>Este negocio no abre el día {formatDisplayDate(selectedDate)}.</p>
-                                                <p style={{ fontSize: '14px', marginTop: '8px' }}>Por favor, selecciona otro día.</p>
+                                                <p style={{ fontSize: '14px', marginTop: '8px' }}>Elegí otro día.</p>
                                             </div>
                                         );
                                     }
@@ -1299,22 +1320,22 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             <button
                                 className="btn-primary"
                                 style={{
-                                    background: primaryColor,
+                                    background: noFreeSpecialist ? '#9E9E9E' : primaryColor,
                                     color: '#fff',
                                     fontSize: '16px',
                                     fontWeight: 'bold',
                                     padding: '16px 40px',
                                     borderRadius: '50px',
                                     border: 'none',
-                                    cursor: 'pointer',
+                                    cursor: noFreeSpecialist ? 'not-allowed' : 'pointer',
                                     boxShadow: `0 10px 30px ${primaryColor}60`,
                                     width: '100%',
                                     maxWidth: '400px'
                                 }}
                                 onClick={() => setShowModal(true)}
-                                disabled={loadingSpecialists}
+                                disabled={loadingSpecialists || noFreeSpecialist}
                             >
-                                {loadingSpecialists ? 'Cargando...' : 'Continuar'}
+                                {loadingSpecialists ? 'Cargando...' : (noFreeSpecialist ? 'Elegí otro horario' : 'Continuar')}
                             </button>
                         </div>
                     )}
@@ -1352,6 +1373,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             <BookingSummary
                                 bookingDetails={{
                                     businessName: business.name,
+                                    serviceId: business.type === 'service' ? selectedItem?.id : null,
                                     serviceName: business.type === 'venue' ? `Alquiler ${selectedDuration}hs` : (business.type === 'service' ? selectedItem?.name : selectedItem),
                                     specialistName: selectedSpecialist?.name,
                                     date: selectedDate instanceof Date
@@ -1397,9 +1419,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     {/* Booking Success Modal */}
                     {showSuccessModal && (
                         <BookingSuccessModal
+                            whatsappUrl={successWhatsappUrl}
                             onClose={() => {
                                 setShowSuccessModal(false);
-                                navigate('/');
+                                setSuccessWhatsappUrl('');
+                                setSelectedTime(null);
+                                setSelectedSpecialist(null);
+                                setAvailableSpecialists([]);
                             }}
                         />
                     )}

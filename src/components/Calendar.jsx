@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00E676', maxDays = 30, specialDays = [] }) {
+export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00E676', maxDays = 30, specialDays = [], isDateClosed }) {
     const count = Math.min(Math.max(Number(maxDays) || 7, 1), 90);
     const dates = Array.from({ length: count }, (_, i) => {
         const d = new Date();
@@ -30,11 +30,14 @@ export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00
 
                     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                     const special = (specialDays || []).find(sd => sd.date === dateStr);
+                    const isClosed = typeof isDateClosed === 'function' && isDateClosed(date);
 
                     return (
                         <button
                             key={date.toISOString()}
-                            onClick={() => onDateSelect(date)}
+                            onClick={() => { if (!isClosed) onDateSelect(date); }}
+                            disabled={isClosed}
+                            aria-label={isClosed ? `${dayName} ${dayNumber}: cerrado` : undefined}
                             style={{
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -47,13 +50,14 @@ export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00
                                 border: isSelected ? 'none' : '1px solid var(--border, transparent)',
                                 backgroundColor: isSelected ? sportColor : 'transparent',
                                 color: isSelected ? '#fff' : 'var(--text-primary)',
-                                cursor: 'pointer',
+                                cursor: isClosed ? 'not-allowed' : 'pointer',
+                                opacity: isClosed ? 0.4 : 1,
                                 transition: 'all 0.2s ease',
                                 boxShadow: isSelected ? `0 8px 16px ${sportColor}40` : 'none',
                                 position: 'relative'
                             }}
                             onMouseEnter={(e) => {
-                                if (!isSelected) {
+                                if (!isSelected && !isClosed) {
                                     e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)';
                                 }
                             }}
@@ -94,6 +98,19 @@ export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00
                             )}
 
                             {/* Badge for Closed / Holiday */}
+                            {isClosed && !(special && (special.type === 'closed' || special.type === 'holiday')) && (
+                                <span style={{
+                                    fontSize: '8px',
+                                    fontWeight: '700',
+                                    color: 'var(--text-secondary)',
+                                    marginTop: '3px',
+                                    lineHeight: '1.2',
+                                    textTransform: 'uppercase'
+                                }}>
+                                    Cerrado
+                                </span>
+                            )}
+
                             {special && (special.type === 'closed' || special.type === 'holiday') && (
                                 <span style={{
                                     fontSize: '8px',
