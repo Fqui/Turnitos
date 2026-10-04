@@ -96,10 +96,17 @@ class AnalyticsService {
         });
 
         // 3. Métricas Principales
+        // Money only counts once the booking is confirmed; volume, customers and
+        // peak hours also include pending bookings (most bookings start as pending)
         const ACTIVE_STATES = ['confirmed', 'attended', 'completed', 'deposit_paid'];
+        const COUNTED_STATES = [...ACTIVE_STATES, 'pending'];
         const activeBookings = filteredBookings.filter(b => ACTIVE_STATES.includes(b.status));
+        const countedBookings = filteredBookings.filter(b => COUNTED_STATES.includes(b.status));
+        const priceIfActive = (b) => ACTIVE_STATES.includes(b.status)
+            ? (Number(b.price ?? b.total_price ?? b.totalPrice ?? 0) || 0)
+            : 0;
 
-        const totalBookings = activeBookings.length;
+        const totalBookings = countedBookings.length;
         const completedBookings = filteredBookings.filter(b => b.status === 'completed' || b.status === 'attended').length;
         const confirmedBookings = filteredBookings.filter(b => b.status === 'confirmed' || b.status === 'deposit_paid').length;
         const pendingBookings = filteredBookings.filter(b => b.status === 'pending').length;
@@ -136,7 +143,7 @@ class AnalyticsService {
             }, 0);
 
         // Ticket promedio
-        const avgBookingValue = totalBookings > 0 ? Math.round(totalRevenue / totalBookings) : 0;
+        const avgBookingValue = activeBookings.length > 0 ? Math.round(totalRevenue / activeBookings.length) : 0;
 
         // Tasa de efectividad / concreción
         const totalAttempts = totalBookings + cancelledBookings;
@@ -295,8 +302,8 @@ class AnalyticsService {
             ? Math.round((totalExtrasRevenue / totalRevenue) * 100)
             : 0;
 
-        const extrasAdoptionRate = totalBookings > 0
-            ? Math.round((eventsWithExtras / totalBookings) * 100)
+        const extrasAdoptionRate = activeBookings.length > 0
+            ? Math.round((eventsWithExtras / activeBookings.length) * 100)
             : 0;
 
         const baseRentalRevenue = Math.max(0, totalRevenue - totalExtrasRevenue);
@@ -335,13 +342,13 @@ class AnalyticsService {
 
         // 4. Rendimiento por Cancha / Espacio
         const courtMap = {};
-        activeBookings.forEach(b => {
-            const name = b.courts?.name || b.court_name || b.resource_name || b.resourceName || b.services?.name || b.service_name || (isRental ? 'Espacio Principal' : 'Cancha Principal');
+        countedBookings.forEach(b => {
+            const name = b.courts?.name || b.court_name || b.resource_name || b.resourceName || b.services?.name || b.service_name || (isRental ? 'Espacio Principal' : 'Principal');
             if (!courtMap[name]) {
                 courtMap[name] = { name, count: 0, revenue: 0 };
             }
             courtMap[name].count += 1;
-            courtMap[name].revenue += Number(b.price ?? b.total_price ?? b.totalPrice ?? 0) || 0;
+            courtMap[name].revenue += priceIfActive(b);
         });
 
         const courtsBreakdown = Object.values(courtMap)
@@ -384,13 +391,13 @@ class AnalyticsService {
         const additionalsBreakdown = Object.values(additionalsMap)
             .map(item => ({
                 ...item,
-                penetration: totalBookings > 0 ? Math.round((item.bookingCount / totalBookings) * 100) : 0
+                penetration: activeBookings.length > 0 ? Math.round((item.bookingCount / activeBookings.length) * 100) : 0
             }))
             .sort((a, b) => b.quantity - a.quantity);
 
         // 6. Top Clientes
         const customerMap = {};
-        activeBookings.forEach(b => {
+        countedBookings.forEach(b => {
             const phone = b.customer_phone || b.customerPhone || '';
             const name = b.customer_name || b.customerName || 'Cliente';
             const key = phone || name;
@@ -406,7 +413,7 @@ class AnalyticsService {
                     };
                 }
                 customerMap[key].bookingsCount += 1;
-                customerMap[key].totalSpent += Number(b.price ?? b.total_price ?? b.totalPrice ?? 0) || 0;
+                customerMap[key].totalSpent += priceIfActive(b);
                 if (b._normalizedDate > customerMap[key].lastDate) {
                     customerMap[key].lastDate = b._normalizedDate;
                 }
@@ -420,7 +427,7 @@ class AnalyticsService {
         // 7. Gráficos de Tendencias Continuos (Timeline)
         // Mapeamos reservas por fecha normalizada
         const dateTrendsMap = {};
-        activeBookings.forEach(b => {
+        countedBookings.forEach(b => {
             const d = b._normalizedDate;
             if (!d) return;
 
@@ -428,7 +435,7 @@ class AnalyticsService {
                 dateTrendsMap[d] = { count: 0, revenue: 0 };
             }
             dateTrendsMap[d].count += 1;
-            dateTrendsMap[d].revenue += Number(b.price ?? b.total_price ?? b.totalPrice ?? 0) || 0;
+            dateTrendsMap[d].revenue += priceIfActive(b);
         });
 
         // Generar rango de días continuo para que la gráfica siempre sea fluida
@@ -478,7 +485,7 @@ class AnalyticsService {
 
         // 8. Mapa de Calor de Horas Pico (7 días x 24 hs)
         const heatmap = Array(7).fill(null).map(() => Array(24).fill(0));
-        activeBookings.forEach(booking => {
+        countedBookings.forEach(booking => {
             if (!booking._normalizedDate || !booking.time) return;
 
             const parts = booking._normalizedDate.split('-');

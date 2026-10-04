@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 import { getPlanDetails, isFreePlan, calculateSubscriptionPrice } from '../../utils/subscriptionUtils';
+import { getBillingInfo, formatDueText } from '../../utils/billingUtils';
 
 export default function BusinessSubscriptionView({ business, isMobile }) {
     const [stats, setStats] = useState(null);
@@ -59,20 +60,12 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
 
-    // Próximo mes de vencimiento
-    const nextMonthIndex = (currentMonthIndex + 1) % 12;
-    const nextMonthYear = currentMonthIndex === 11 ? currentYear + 1 : currentYear;
-    let nextDueDate = `10 de ${monthNames[nextMonthIndex]} de ${nextMonthYear}`;
-    if (subscription?.next_billing_date) {
-        try {
-            const nd = new Date(subscription.next_billing_date);
-            if (!isNaN(nd.getTime())) {
-                nextDueDate = `${String(nd.getDate()).padStart(2, '0')} de ${monthNames[nd.getMonth()]} de ${nd.getFullYear()}`;
-            }
-        } catch (e) {
-            // fallback
-        }
-    }
+    // Same due date as the portal banner and the SuperAdmin (trial end or next billing date)
+    const billingInfo = getBillingInfo(business, subscription);
+    const nd = billingInfo.dueDate;
+    const nextDueDate = nd
+        ? `${String(nd.getDate()).padStart(2, '0')} de ${monthNames[nd.getMonth()]} de ${nd.getFullYear()}`
+        : 'Sin vencimiento';
 
     // Fecha de inicio de facturación
     let startDateFormatted = `01 de ${monthNames[currentMonthIndex]} de ${currentYear}`;
@@ -277,13 +270,13 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                     border: '1px solid var(--border)'
                 }}>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>
-                        Período de Facturación
+                        Ciclo de Facturación
                     </div>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                        Mes corriente ({monthNames[currentMonthIndex]})
+                        Mensual
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                        1 al último día de cada mes
+                        Se renueva cada mes en la fecha de vencimiento
                     </div>
                 </div>
 
@@ -294,13 +287,13 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                     border: '1px solid rgba(0, 230, 118, 0.25)'
                 }}>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>
-                        Fecha de Pago
+                        Próximo Vencimiento
                     </div>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--primary-paddle)' }}>
-                        1 al 10 de cada mes
+                        {nextDueDate}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                        Próx. vencimiento: {nextDueDate}
+                        {formatDueText(billingInfo)}
                     </div>
                 </div>
             </div>
@@ -514,7 +507,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                         <span>+ Comisiones Marketplace ({marketplaceCount} {marketplaceCount === 1 ? 'reserva' : 'reservas'}): <strong style={{ color: 'var(--text-primary)' }}>${totalMarketplaceCommission.toLocaleString('es-AR')}</strong></span>
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                        Próximo vencimiento de pago: <strong style={{ color: 'var(--text-primary)' }}>{nextDueDate}</strong> (del 1 al 10)
+                        Próximo vencimiento de pago: <strong style={{ color: 'var(--text-primary)' }}>{nextDueDate}</strong>
                     </div>
                 </div>
                 <div style={{ textAlign: isMobile ? 'left' : 'right' }}>

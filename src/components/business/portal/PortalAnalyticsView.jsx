@@ -32,6 +32,10 @@ export default function PortalAnalyticsView({
         (currentBusiness?.categories?.name || '').toLowerCase().includes('quincho') ||
         (currentBusiness?.slug || '').toLowerCase().includes('quincho')
     );
+    // Sports venues talk about courts; every other business about services
+    const isSport = currentBusiness?.type === 'sport' ||
+        (currentBusiness?.categories?.slug || currentBusiness?.categories?.name || '').toLowerCase().includes('deporte');
+    const resourceLabel = isSport ? 'Cancha' : 'Servicio';
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
@@ -44,7 +48,7 @@ export default function PortalAnalyticsView({
                     <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
                         {isRental
                             ? 'Ocupación de fechas, balance financiero, adicionales y proyección de eventos'
-                            : 'Rendimiento, ocupación de canchas, facturación y clientes'}
+                            : `Rendimiento, ${isSport ? 'ocupación de canchas' : 'servicios más pedidos'}, facturación y clientes`}
                     </p>
                 </div>
                 <DateRangePicker onRangeChange={setDateRange} />
@@ -180,7 +184,7 @@ export default function PortalAnalyticsView({
                                         ${metrics.avgBookingValue?.toLocaleString('es-AR') || '0'}
                                     </div>
                                     <div style={{ fontSize: '11px', opacity: 0.9 }}>
-                                        {isRental ? 'Promedio generado por festejo / jornada' : 'Promedio por turno alquilado'}
+                                        {isRental ? 'Promedio generado por festejo / jornada' : (isSport ? 'Promedio por turno alquilado' : 'Promedio por turno')}
                                     </div>
                                 </div>
                             </div>
@@ -451,7 +455,7 @@ export default function PortalAnalyticsView({
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                         <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span>🏟️</span> Rendimiento por Cancha
+                                            <span>{isSport ? '🏟️' : '💼'}</span> Rendimiento por {resourceLabel}
                                         </h3>
                                         <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
                                             Turnos & Recaudación

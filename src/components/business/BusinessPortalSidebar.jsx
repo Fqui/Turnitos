@@ -310,6 +310,8 @@ const BusinessPortalSidebar = ({
                             key={item.id}
                             onClick={() => handleNavigation(item.id)}
                             title={!isVisible ? item.label : ''}
+                            aria-label={item.badge ? `${item.label} (${item.badge} pendientes)` : item.label}
+                            aria-current={isActive ? 'page' : undefined}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
