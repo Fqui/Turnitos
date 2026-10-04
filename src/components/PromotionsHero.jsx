@@ -51,8 +51,7 @@ export default function PromotionsHero({ promotions, businesses }) {
 
     if (!promotions || promotions.length === 0) {
         return (
-            <div style={{
-                height: '220px',
+            <div className="promotions-hero-card" style={{
                 marginBottom: '40px',
                 borderRadius: '24px',
                 background: 'var(--bg-card)',
@@ -140,6 +139,14 @@ export default function PromotionsHero({ promotions, businesses }) {
                                 /* 🌐 Campaña General: Banner total sin división */
                                 <div className="promo-card promo-card--general">
                                     <div className="promo-image-container promo-image-container--general" style={{ overflow: 'hidden' }}>
+                                        {currentPromo.image && !imgError && (
+                                            <img
+                                                className="promo-general-backdrop"
+                                                src={currentPromo.image}
+                                                alt=""
+                                                aria-hidden="true"
+                                            />
+                                        )}
                                         {currentPromo.image && !imgError ? (
                                             <img
                                                 src={currentPromo.image}
