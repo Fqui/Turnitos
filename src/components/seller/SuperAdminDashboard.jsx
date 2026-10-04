@@ -9,6 +9,7 @@ import './superadmin.css';
 import OverviewTab from './tabs/OverviewTab';
 import BusinessesTab from './tabs/BusinessesTab';
 import SellersTab from './tabs/SellersTab';
+import LeadsTab from './tabs/LeadsTab';
 import CategoriesTab from './tabs/CategoriesTab';
 import PromotionsTab from './tabs/PromotionsTab';
 import GlobalSearchModal from './tabs/GlobalSearchModal';
@@ -387,6 +388,8 @@ export default function SuperAdminDashboard() {
                             onUpdateSubscriptionStatus={handleUpdateSubscriptionStatus}
                         />
                     )}
+
+                    {activeTab === 'leads' && <LeadsTab />}
 
                     {activeTab === 'sellers' && (
                         <SellersTab
