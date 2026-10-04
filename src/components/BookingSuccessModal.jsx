@@ -1,16 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 
-export default function BookingSuccessModal({ onClose }) {
-    useEffect(() => {
-        // Auto-close and redirect after 3 seconds
-        const timer = setTimeout(() => {
-            onClose();
-        }, 3000);
-
-        return () => clearTimeout(timer);
-    }, [onClose]);
-
+export default function BookingSuccessModal({ onClose, whatsappUrl }) {
     return (
         <div
             style={{
@@ -88,7 +79,7 @@ export default function BookingSuccessModal({ onClose }) {
                         marginBottom: '12px'
                     }}
                 >
-                    ¡Reserva Confirmada!
+                    ¡Turno reservado!
                 </h2>
 
                 {/* Message */}
@@ -100,48 +91,53 @@ export default function BookingSuccessModal({ onClose }) {
                         lineHeight: '1.5'
                     }}
                 >
-                    Tu reserva ha sido registrada con éxito. Recibirás la confirmación por WhatsApp.
+                    {whatsappUrl
+                        ? 'Tu turno quedó registrado. Mandale el mensaje al negocio por WhatsApp (con el comprobante si pagaste seña) para que lo confirme.'
+                        : 'Tu turno quedó registrado. El negocio se va a comunicar con vos para confirmarlo.'}
                 </p>
 
-                {/* Button */}
+                {whatsappUrl && (
+                    <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '100%',
+                            padding: '14px 24px',
+                            borderRadius: '12px',
+                            background: '#25D366',
+                            color: 'white',
+                            fontSize: '15px',
+                            fontWeight: '700',
+                            textDecoration: 'none',
+                            marginBottom: '10px',
+                            boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)',
+                            boxSizing: 'border-box'
+                        }}
+                    >
+                        Enviar por WhatsApp
+                    </a>
+                )}
+
                 <button
                     onClick={onClose}
                     style={{
                         width: '100%',
                         padding: '14px 24px',
                         borderRadius: '12px',
-                        border: 'none',
-                        background: 'var(--primary-paddle)',
-                        color: 'white',
+                        border: whatsappUrl ? '1px solid var(--border)' : 'none',
+                        background: whatsappUrl ? 'transparent' : 'var(--primary-paddle)',
+                        color: whatsappUrl ? 'var(--text-primary)' : 'white',
                         fontSize: '15px',
                         fontWeight: '700',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                        cursor: 'pointer'
                     }}
                 >
-                    Aceptar
+                    Listo
                 </button>
-
-                {/* Auto-close indicator */}
-                <p
-                    style={{
-                        fontSize: '12px',
-                        color: 'var(--text-secondary)',
-                        marginTop: '16px',
-                        opacity: 0.7
-                    }}
-                >
-                    Redirigiendo al inicio en 3 segundos...
-                </p>
             </motion.div>
         </div>
     );

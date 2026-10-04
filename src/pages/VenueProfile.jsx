@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, Marker } from 'react-leaflet';
+import L from 'leaflet';
 import { TurnitosTileLayer, createTurnitosMarkerIcon } from '../components/common/TurnitosMap';
 import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';

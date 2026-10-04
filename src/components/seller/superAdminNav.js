@@ -1,4 +1,4 @@
-import { LayoutDashboard, Store, Users, CalendarCheck, Star, Megaphone, FolderTree } from 'lucide-react';
+import { LayoutDashboard, Store, Inbox, Users, CalendarCheck, Star, Megaphone, FolderTree } from 'lucide-react';
 
 export const SUPERADMIN_NAV = [
     {
@@ -11,6 +11,7 @@ export const SUPERADMIN_NAV = [
         label: 'Clientes',
         items: [
             { id: 'businesses', label: 'Negocios', icon: Store, description: 'Negocios, suscripciones y accesos' },
+            { id: 'leads', label: 'Pedidos de alta', icon: Inbox, description: 'Negocios que quieren sumarse' },
             { id: 'sellers', label: 'Vendedores', icon: Users, description: 'Red comercial y comisiones' }
         ]
     },

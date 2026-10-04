@@ -1,4 +1,5 @@
 import React from 'react';
+import { buildWhatsAppUrl } from '../../../utils/whatsapp';
 
 export default function VenueHeroBanner({
     business,
@@ -73,7 +74,7 @@ export default function VenueHeroBanner({
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '14px', flexWrap: 'wrap' }}>
                     {(business.whatsapp || business.phone) && (
                         <a
-                            href={`https://wa.me/${(business.whatsapp || business.phone).replace(/\D/g, '')}`}
+                            href={buildWhatsAppUrl(business.whatsapp || business.phone)}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
