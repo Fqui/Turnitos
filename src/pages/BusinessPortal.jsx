@@ -22,7 +22,11 @@ import PortalAnalyticsView from '../components/business/portal/PortalAnalyticsVi
 import PortalListView from '../components/business/portal/PortalListView';
 import PortalNewBookingAlert from '../components/business/portal/PortalNewBookingAlert';
 import PortalBillingBanner from '../components/business/portal/PortalBillingBanner';
+<<<<<<< HEAD
 import PortalProfileChecklist from '../components/business/portal/PortalProfileChecklist';
+=======
+import PortalPastBookingsCard from '../components/business/portal/PortalPastBookingsCard';
+>>>>>>> origin/claude/portal-mejoras
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuthStore, useBookingsStore, usePortalUIStore } from '../stores';
 
@@ -1153,6 +1157,11 @@ export default function BusinessPortal() {
                             />
                         ) : viewMode === 'calendar' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                <PortalPastBookingsCard
+                                    bookings={bookings}
+                                    onResolved={() => fetchBookings(true)}
+                                    isMobile={isMobile}
+                                />
                                 <UpcomingRemindersCard
                                     bookings={bookings}
                                     currentBusiness={currentBusiness}
