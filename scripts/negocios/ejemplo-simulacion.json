@@ -4,140 +4,1168 @@
     {
       "nombre": "Punto Pádel La Rioja",
       "rubro": "canchas",
-      "subcategorias": ["Pádel"],
+      "subcategorias": [
+        "Pádel"
+      ],
       "whatsapp": "3804111001",
       "direccion": "Av. San Francisco 1850, La Rioja",
       "latitud": -29.4262,
       "longitud": -66.8722,
-      "descripcion": "Tres canchas de pádel techadas con iluminación LED y vestuarios.",
-      "logo": "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&h=400&fit=crop",
-      "portada": "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=1200&h=400&fit=crop",
+      "tema": "dark",
+      "color": "#00B4D8",
+      "descripcion": "Tres canchas de pádel con césped sintético, iluminación LED y vestuarios. Clases, torneos y alquiler de paletas.",
+      "logo": "https://images.unsplash.com/photo-1658723826297-fe4d1b1e6600?w=400&h=400&fit=crop&q=80",
+      "portada": "https://images.unsplash.com/photo-1657704358775-ed705c7388d2?w=1600&h=600&fit=crop&q=80",
       "canchas": [
-        { "nombre": "Cancha 1 (techada)", "precio": 14000, "deporte": "padel" },
-        { "nombre": "Cancha 2 (techada)", "precio": 14000, "deporte": "padel" },
-        { "nombre": "Cancha 3 (descubierta)", "precio": 11000, "deporte": "padel" }
-      ]
+        {
+          "nombre": "Cancha 1 (techada)",
+          "precio": 14000,
+          "deporte": "padel"
+        },
+        {
+          "nombre": "Cancha 2 (techada)",
+          "precio": 14000,
+          "deporte": "padel"
+        },
+        {
+          "nombre": "Cancha 3 (descubierta)",
+          "precio": 11000,
+          "deporte": "padel"
+        }
+      ],
+      "comodidades": [
+        {
+          "nombre": "Vestuarios con duchas",
+          "icono": "ShowerHead"
+        },
+        {
+          "nombre": "Buffet",
+          "icono": "Coffee"
+        },
+        {
+          "nombre": "Estacionamiento",
+          "icono": "Car"
+        },
+        {
+          "nombre": "WiFi",
+          "icono": "Wifi"
+        },
+        {
+          "nombre": "Iluminación LED",
+          "icono": "Lightbulb"
+        },
+        {
+          "nombre": "Alquiler de paletas",
+          "icono": "Trophy"
+        }
+      ],
+      "destacados": [
+        {
+          "titulo": "Canchas",
+          "fotos": [
+            "https://images.unsplash.com/photo-1689942963385-f5bd03f3b270?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1709587823868-735f9375ae74?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1673266893352-6de89e258064?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "Torneos",
+          "fotos": [
+            "https://images.unsplash.com/photo-1767128890439-1af9ca2ff1ac?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1767128890954-20ce481be8f0?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1759355456246-6937354a395d?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "Clases",
+          "fotos": [
+            "https://images.unsplash.com/photo-1612534847738-b3af9bc31f0c?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1767128890609-227bdfdb7f5c?w=900&h=900&fit=crop&q=80"
+          ]
+        }
+      ],
+      "extras": [
+        {
+          "nombre": "Alquiler de paletas (x2)",
+          "precio": 3000,
+          "descripcion": "Dos paletas para el turno",
+          "foto": "https://images.unsplash.com/photo-1612534847738-b3af9bc31f0c?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Tubo de pelotas nuevas",
+          "precio": 7000,
+          "descripcion": "Tres pelotas sin usar",
+          "foto": "https://images.unsplash.com/photo-1694097296764-d3219567d96b?w=900&h=900&fit=crop&q=80"
+        }
+      ],
+      "tienda": {
+        "banner": "https://images.unsplash.com/photo-1658723745294-89c5e056efb5?w=1600&h=600&fit=crop&q=80",
+        "titulo": "Pro Shop",
+        "subtitulo": "Todo para tu partido",
+        "productos": [
+          {
+            "nombre": "Tubo de pelotas x3",
+            "precio": 7000,
+            "categoria": "Pelotas",
+            "descripcion": "Pelotas de presión para pádel",
+            "foto": "https://images.unsplash.com/photo-1694097296764-d3219567d96b?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Paleta de control",
+            "precio": 85000,
+            "categoria": "Paletas",
+            "descripcion": "Forma redonda, ideal para empezar",
+            "foto": "https://images.unsplash.com/photo-1612534847738-b3af9bc31f0c?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Overgrip x3",
+            "precio": 6500,
+            "categoria": "Accesorios",
+            "descripcion": "Cubregrip antideslizante",
+            "foto": "https://images.unsplash.com/photo-1569597773156-9e38923c0043?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Bebida isotónica",
+            "precio": 2500,
+            "categoria": "Bebidas",
+            "descripcion": "Botella de 500 ml bien fría",
+            "foto": "https://images.unsplash.com/photo-1648313021325-d81f28d57824?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Agua mineral",
+            "precio": 1500,
+            "categoria": "Bebidas",
+            "descripcion": "500 ml",
+            "foto": "https://images.unsplash.com/photo-1620726337086-caf521fe53db?w=900&h=900&fit=crop&q=80"
+          }
+        ]
+      }
     },
     {
       "nombre": "La Redonda Fútbol 5",
       "rubro": "canchas",
-      "subcategorias": ["Fútbol"],
+      "subcategorias": [
+        "Fútbol"
+      ],
       "whatsapp": "3804111002",
       "direccion": "Av. Juan Facundo Quiroga 2300, La Rioja",
       "latitud": -29.4389,
       "longitud": -66.8541,
-      "descripcion": "Canchas de fútbol 5 de césped sintético, buffet y estacionamiento.",
-      "logo": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&h=400&fit=crop",
-      "portada": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&h=400&fit=crop",
+      "tema": "dark",
+      "color": "#22C55E",
+      "descripcion": "Dos canchas de fútbol 5 de césped sintético, parrilla para el tercer tiempo y buffet.",
+      "logo": "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=400&h=400&fit=crop&q=80",
+      "portada": "https://images.unsplash.com/photo-1760174012435-630a17a434ed?w=1600&h=600&fit=crop&q=80",
       "canchas": [
-        { "nombre": "Cancha A", "precio": 30000, "deporte": "futbol" },
-        { "nombre": "Cancha B", "precio": 30000, "deporte": "futbol" }
-      ]
+        {
+          "nombre": "Cancha A",
+          "precio": 30000,
+          "deporte": "futbol"
+        },
+        {
+          "nombre": "Cancha B",
+          "precio": 30000,
+          "deporte": "futbol"
+        }
+      ],
+      "comodidades": [
+        {
+          "nombre": "Vestuarios",
+          "icono": "ShowerHead"
+        },
+        {
+          "nombre": "Parrilla",
+          "icono": "Flame"
+        },
+        {
+          "nombre": "Buffet",
+          "icono": "Beer"
+        },
+        {
+          "nombre": "Estacionamiento",
+          "icono": "Car"
+        },
+        {
+          "nombre": "Iluminación LED",
+          "icono": "Lightbulb"
+        },
+        {
+          "nombre": "Tribuna",
+          "icono": "Users"
+        }
+      ],
+      "destacados": [
+        {
+          "titulo": "Canchas",
+          "fotos": [
+            "https://images.unsplash.com/photo-1704633785114-52104ce3d626?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1600529533273-938db2591dc4?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1774798154048-8ea018a9cd1c?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "Partidos",
+          "fotos": [
+            "https://images.unsplash.com/photo-1760174034302-e4e8177569ff?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1763775594018-4a84eeadd83d?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1645199189393-ac9e474d1e4e?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "Tercer tiempo",
+          "fotos": [
+            "https://images.unsplash.com/photo-1560219994-bdee950370e2?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1757967708227-c67e37e7c96a?w=900&h=900&fit=crop&q=80"
+          ]
+        }
+      ],
+      "extras": [
+        {
+          "nombre": "Pelota profesional",
+          "precio": 3000,
+          "descripcion": "Pelota N° 5 para el partido",
+          "foto": "https://images.unsplash.com/photo-1543351611-58f69d7c1781?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Juego de pecheras",
+          "precio": 2000,
+          "descripcion": "10 pecheras de dos colores",
+          "foto": "https://images.unsplash.com/photo-1552066379-e7bfd22155c5?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Parrilla para el tercer tiempo",
+          "precio": 8000,
+          "descripcion": "Parrilla con carbón incluido",
+          "foto": "https://images.unsplash.com/photo-1560219994-bdee950370e2?w=900&h=900&fit=crop&q=80"
+        }
+      ],
+      "tienda": {
+        "banner": "https://images.unsplash.com/photo-1551958219-acbc608c6377?w=1600&h=600&fit=crop&q=80",
+        "titulo": "Tienda La Redonda",
+        "subtitulo": "Pelotas, botines y bebidas",
+        "productos": [
+          {
+            "nombre": "Pelota N° 5",
+            "precio": 28000,
+            "categoria": "Pelotas",
+            "descripcion": "Para césped sintético",
+            "foto": "https://images.unsplash.com/photo-1543351611-58f69d7c1781?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Botines para sintético",
+            "precio": 95000,
+            "categoria": "Calzado",
+            "descripcion": "Tapones cortos",
+            "foto": "https://images.unsplash.com/photo-1511886929837-354d827aae26?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Camiseta del club",
+            "precio": 35000,
+            "categoria": "Indumentaria",
+            "descripcion": "Talles S a XXL",
+            "foto": "https://images.unsplash.com/photo-1552066379-e7bfd22155c5?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Bebida hidratante",
+            "precio": 2500,
+            "categoria": "Bebidas",
+            "descripcion": "500 ml",
+            "foto": "https://images.unsplash.com/photo-1757800733812-e62d5ea2590a?w=900&h=900&fit=crop&q=80"
+          }
+        ]
+      }
     },
     {
       "nombre": "Barbería Don Ramón",
       "rubro": "belleza",
-      "subcategorias": ["Barbería"],
+      "subcategorias": [
+        "Barbería"
+      ],
       "whatsapp": "3804111003",
       "direccion": "Pelagio B. Luna 650, La Rioja",
       "latitud": -29.4128,
       "longitud": -66.8559,
-      "descripcion": "Cortes clásicos, fade y arreglo de barba con navaja.",
-      "logo": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&h=400&fit=crop",
-      "portada": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1200&h=400&fit=crop",
+      "tema": "dark",
+      "color": "#D4A373",
+      "descripcion": "Barbería clásica: cortes, fade y arreglo de barba con navaja y toalla caliente.",
+      "logo": "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400&h=400&fit=crop&q=80",
+      "portada": "https://images.unsplash.com/photo-1675599193990-33d71150902b?w=1600&h=600&fit=crop&q=80",
       "profesionales": [
-        { "nombre": "Ramón Herrera", "rol": "Barbero" },
-        { "nombre": "Nicolás Brizuela", "rol": "Fade y diseños" }
+        {
+          "nombre": "Ramón Herrera",
+          "rol": "Barbero",
+          "foto": "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=300&h=300&fit=crop&q=80"
+        },
+        {
+          "nombre": "Nicolás Brizuela",
+          "rol": "Fade y diseños",
+          "foto": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&q=80"
+        }
       ],
       "servicios": [
-        { "nombre": "Corte de pelo", "duracion": 30, "precio": 9000, "categoria": "Cortes" },
-        { "nombre": "Corte y barba", "duracion": 45, "precio": 13000, "categoria": "Cortes" },
-        { "nombre": "Perfilado de barba", "duracion": 20, "precio": 6000, "categoria": "Barba" }
-      ]
+        {
+          "nombre": "Corte de pelo",
+          "duracion": 30,
+          "precio": 9000,
+          "categoria": "Cortes",
+          "descripcion": "Máquina y tijera, con lavado y peinado.",
+          "foto": "https://images.unsplash.com/photo-1647140655214-e4a2d914971f?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Corte y barba",
+          "duracion": 45,
+          "precio": 13000,
+          "categoria": "Combos",
+          "descripcion": "Corte completo y perfilado de barba con navaja.",
+          "foto": "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Perfilado de barba",
+          "duracion": 20,
+          "precio": 6000,
+          "categoria": "Barba",
+          "descripcion": "Toalla caliente, navaja y aceite.",
+          "foto": "https://images.unsplash.com/photo-1635273051937-a0ddef9573b6?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Corte infantil",
+          "duracion": 30,
+          "precio": 7000,
+          "categoria": "Cortes",
+          "descripcion": "Hasta 12 años.",
+          "foto": "https://images.unsplash.com/photo-1593702275687-f8b402bf1fb5?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Lavado y peinado",
+          "duracion": 20,
+          "precio": 4500,
+          "categoria": "Cortes",
+          "descripcion": "Lavado con masaje capilar y peinado con producto.",
+          "foto": "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=900&h=900&fit=crop&q=80"
+        }
+      ],
+      "comodidades": [
+        {
+          "nombre": "Café de cortesía",
+          "icono": "Coffee"
+        },
+        {
+          "nombre": "WiFi",
+          "icono": "Wifi"
+        },
+        {
+          "nombre": "Aire acondicionado",
+          "icono": "Snowflake"
+        },
+        {
+          "nombre": "Fútbol en la tele",
+          "icono": "Tv"
+        },
+        {
+          "nombre": "Buena música",
+          "icono": "Music"
+        }
+      ],
+      "destacados": [
+        {
+          "titulo": "El local",
+          "fotos": [
+            "https://images.unsplash.com/photo-1621645582931-d1d3e6564943?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1675599193990-33d71150902b?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1678356164573-9a534fe43958?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "Trabajos",
+          "fotos": [
+            "https://images.unsplash.com/photo-1647140655214-e4a2d914971f?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1635273051839-003bf06a8751?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1593702275687-f8b402bf1fb5?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "Productos",
+          "fotos": [
+            "https://images.unsplash.com/photo-1775126454590-f6c47fbaa5c1?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1775127741095-86ee33b6b385?w=900&h=900&fit=crop&q=80"
+          ]
+        }
+      ],
+      "extras": [
+        {
+          "nombre": "Diseño o rayita",
+          "precio": 2000,
+          "descripcion": "Diseño a máquina",
+          "foto": "https://images.unsplash.com/photo-1635273051839-003bf06a8751?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Toalla caliente",
+          "precio": 1500,
+          "descripcion": "Antes del afeitado",
+          "foto": "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=900&h=900&fit=crop&q=80"
+        }
+      ],
+      "tienda": {
+        "banner": "https://images.unsplash.com/photo-1775127741799-b06306261a08?w=1600&h=600&fit=crop&q=80",
+        "titulo": "Productos Don Ramón",
+        "subtitulo": "Lo que usamos en el sillón",
+        "productos": [
+          {
+            "nombre": "Pomada efecto mate",
+            "precio": 9500,
+            "categoria": "Peinado",
+            "descripcion": "Fijación media, sin brillo",
+            "foto": "https://images.unsplash.com/photo-1775127741095-86ee33b6b385?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Cera brillo",
+            "precio": 8500,
+            "categoria": "Peinado",
+            "descripcion": "Fijación fuerte con brillo",
+            "foto": "https://images.unsplash.com/photo-1775126250972-9321ca2d110b?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Aceite para barba",
+            "precio": 11000,
+            "categoria": "Barba",
+            "descripcion": "Suaviza y perfuma",
+            "foto": "https://images.unsplash.com/photo-1673350963924-cb4267d9b6eb?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Spray de sal marina",
+            "precio": 9000,
+            "categoria": "Peinado",
+            "descripcion": "Textura y volumen",
+            "foto": "https://images.unsplash.com/photo-1775126250996-91cfa684f1a0?w=900&h=900&fit=crop&q=80"
+          }
+        ]
+      }
     },
     {
       "nombre": "Estudio Bella Uñas",
       "rubro": "belleza",
-      "subcategorias": ["Salón de Uñas", "Manicura"],
+      "subcategorias": [
+        "Salón de Uñas",
+        "Manicura"
+      ],
       "whatsapp": "3804111004",
       "direccion": "San Nicolás de Bari 480, La Rioja",
       "latitud": -29.4135,
-      "longitud": -66.8530,
-      "descripcion": "Esculpidas, semipermanente y kapping en un espacio tranquilo.",
-      "logo": "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&h=400&fit=crop",
-      "portada": "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=1200&h=400&fit=crop",
-      "profesionales": [{ "nombre": "Valentina Ocampo", "rol": "Manicura" }],
+      "longitud": -66.853,
+      "tema": "light",
+      "color": "#EC4899",
+      "descripcion": "Esculpidas, kapping y semipermanente en un estudio tranquilo, con turnos puntuales.",
+      "logo": "https://images.unsplash.com/photo-1610992015762-45dca7fa3a85?w=400&h=400&fit=crop&q=80",
+      "portada": "https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=1600&h=600&fit=crop&q=80",
+      "profesionales": [
+        {
+          "nombre": "Valentina Ocampo",
+          "rol": "Manicura",
+          "foto": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&h=300&fit=crop&q=80"
+        }
+      ],
       "servicios": [
-        { "nombre": "Semipermanente", "duracion": 60, "precio": 12000, "categoria": "Manicura" },
-        { "nombre": "Kapping", "duracion": 75, "precio": 15000, "categoria": "Manicura" },
-        { "nombre": "Esculpidas", "duracion": 120, "precio": 22000, "categoria": "Uñas" }
-      ]
+        {
+          "nombre": "Semipermanente",
+          "duracion": 60,
+          "precio": 12000,
+          "categoria": "Manicura",
+          "descripcion": "Esmaltado que dura hasta 3 semanas.",
+          "foto": "https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Kapping",
+          "duracion": 75,
+          "precio": 15000,
+          "categoria": "Manicura",
+          "descripcion": "Refuerzo de la uña natural con gel.",
+          "foto": "https://images.unsplash.com/photo-1772322586649-fc11154e76b9?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Esculpidas",
+          "duracion": 120,
+          "precio": 22000,
+          "categoria": "Uñas",
+          "descripcion": "Extensión en gel con la forma que elijas.",
+          "foto": "https://images.unsplash.com/photo-1746607242420-12fc2604775d?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Retiro de semipermanente",
+          "duracion": 30,
+          "precio": 5000,
+          "categoria": "Manicura",
+          "descripcion": "Retiro sin dañar la uña.",
+          "foto": "https://images.unsplash.com/photo-1779636198585-658170ee0283?w=900&h=900&fit=crop&q=80"
+        }
+      ],
+      "comodidades": [
+        {
+          "nombre": "WiFi",
+          "icono": "Wifi"
+        },
+        {
+          "nombre": "Aire acondicionado",
+          "icono": "Snowflake"
+        },
+        {
+          "nombre": "Café y té",
+          "icono": "Coffee"
+        },
+        {
+          "nombre": "Música ambiental",
+          "icono": "Music"
+        }
+      ],
+      "destacados": [
+        {
+          "titulo": "Diseños",
+          "fotos": [
+            "https://images.unsplash.com/photo-1772322586754-34c9e6f5be6f?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1772322586702-73125782bd99?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1772322586785-3a34772cbc61?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1746607242420-12fc2604775d?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "El estudio",
+          "fotos": [
+            "https://images.unsplash.com/photo-1660505102581-85cffa4e6550?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1658492055212-e1acbccfca5a?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "Colores",
+          "fotos": [
+            "https://images.unsplash.com/photo-1619607146034-5a05296c8f9a?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1599948128020-9a44505b0d1b?w=900&h=900&fit=crop&q=80"
+          ]
+        }
+      ],
+      "extras": [
+        {
+          "nombre": "Nail art (por uña)",
+          "precio": 1000,
+          "descripcion": "Diseño a mano alzada",
+          "foto": "https://images.unsplash.com/photo-1772322586785-3a34772cbc61?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Francesita",
+          "precio": 2500,
+          "descripcion": "Clásica o de color",
+          "foto": "https://images.unsplash.com/photo-1772322586754-34c9e6f5be6f?w=900&h=900&fit=crop&q=80"
+        }
+      ],
+      "tienda": {
+        "banner": "https://images.unsplash.com/photo-1619607146034-5a05296c8f9a?w=1600&h=600&fit=crop&q=80",
+        "titulo": "Tienda Bella Uñas",
+        "subtitulo": "Cuidá tus uñas en casa",
+        "productos": [
+          {
+            "nombre": "Esmalte semipermanente",
+            "precio": 6500,
+            "categoria": "Esmaltes",
+            "descripcion": "Varios colores",
+            "foto": "https://images.unsplash.com/photo-1602585578130-c9076e09330d?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Set de 6 esmaltes",
+            "precio": 18000,
+            "categoria": "Esmaltes",
+            "descripcion": "Tonos de temporada",
+            "foto": "https://images.unsplash.com/photo-1696342003838-4a8f9f36588c?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Aceite de cutículas",
+            "precio": 5000,
+            "categoria": "Cuidado",
+            "descripcion": "Hidrata y fortalece",
+            "foto": "https://images.unsplash.com/photo-1790145001749-788a05d5e151?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Crema de manos",
+            "precio": 6000,
+            "categoria": "Cuidado",
+            "descripcion": "Con manteca de karité",
+            "foto": "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Kit de limas",
+            "precio": 4500,
+            "categoria": "Accesorios",
+            "descripcion": "Limas y pulidor",
+            "foto": "https://images.unsplash.com/photo-1775500835259-d3b3f6d6e2f2?w=900&h=900&fit=crop&q=80"
+          }
+        ]
+      }
     },
     {
       "nombre": "Kinesio Movimiento",
       "rubro": "salud",
-      "subcategorias": ["Kinesiología"],
+      "subcategorias": [
+        "Kinesiología"
+      ],
       "whatsapp": "3804111005",
       "direccion": "Av. Rivadavia 920, La Rioja",
-      "latitud": -29.4160,
+      "latitud": -29.416,
       "longitud": -66.8475,
-      "descripcion": "Rehabilitación, kinesiología deportiva y masoterapia.",
-      "logo": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400&h=400&fit=crop",
-      "portada": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&h=400&fit=crop",
-      "profesionales": [{ "nombre": "Lic. Martín Quinteros", "rol": "Kinesiólogo" }],
+      "tema": "light",
+      "color": "#0EA5E9",
+      "descripcion": "Rehabilitación, kinesiología deportiva y masoterapia. Atendemos con orden médica y particular.",
+      "logo": "https://images.unsplash.com/photo-1630226040750-d934f017f0e4?w=400&h=400&fit=crop&q=80",
+      "portada": "https://images.unsplash.com/photo-1649751361457-01d3a696c7e6?w=1600&h=600&fit=crop&q=80",
+      "profesionales": [
+        {
+          "nombre": "Lic. Martín Quinteros",
+          "rol": "Kinesiólogo",
+          "foto": "https://images.unsplash.com/photo-1522529599102-193c0d76b5b6?w=300&h=300&fit=crop&q=80"
+        }
+      ],
       "servicios": [
-        { "nombre": "Sesión de kinesiología", "duracion": 45, "precio": 14000, "categoria": "Kinesiología" },
-        { "nombre": "Masaje descontracturante", "duracion": 50, "precio": 16000, "categoria": "Masajes" }
-      ]
+        {
+          "nombre": "Sesión de kinesiología",
+          "duracion": 45,
+          "precio": 14000,
+          "categoria": "Kinesiología",
+          "descripcion": "Evaluación y tratamiento de lesiones.",
+          "foto": "https://images.unsplash.com/photo-1649751361457-01d3a696c7e6?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Rehabilitación deportiva",
+          "duracion": 60,
+          "precio": 18000,
+          "categoria": "Kinesiología",
+          "descripcion": "Ejercicios guiados para volver a entrenar.",
+          "foto": "https://images.unsplash.com/photo-1586401100295-7a8096fd231a?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Masaje descontracturante",
+          "duracion": 50,
+          "precio": 16000,
+          "categoria": "Masajes",
+          "descripcion": "Espalda, cuello y hombros.",
+          "foto": "https://images.unsplash.com/photo-1519824145371-296894a0daa9?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Drenaje linfático",
+          "duracion": 50,
+          "precio": 17000,
+          "categoria": "Masajes",
+          "descripcion": "Técnica manual suave para piernas.",
+          "foto": "https://images.unsplash.com/photo-1712638932314-e2b185ca0930?w=900&h=900&fit=crop&q=80"
+        }
+      ],
+      "comodidades": [
+        {
+          "nombre": "Estacionamiento",
+          "icono": "Car"
+        },
+        {
+          "nombre": "Aire acondicionado",
+          "icono": "Snowflake"
+        },
+        {
+          "nombre": "WiFi",
+          "icono": "Wifi"
+        },
+        {
+          "nombre": "Acceso para silla de ruedas",
+          "icono": "Accessibility"
+        }
+      ],
+      "destacados": [
+        {
+          "titulo": "Consultorio",
+          "fotos": [
+            "https://images.unsplash.com/photo-1630226040750-d934f017f0e4?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1699523229208-be1e1dd9252d?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "Tratamientos",
+          "fotos": [
+            "https://images.unsplash.com/photo-1741522509438-a120c0bb5e88?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1645005512942-a17817fb7c11?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1586401100295-7a8096fd231a?w=900&h=900&fit=crop&q=80"
+          ]
+        }
+      ],
+      "extras": [
+        {
+          "nombre": "Piedras calientes",
+          "precio": 4000,
+          "descripcion": "Se suma al masaje",
+          "foto": "https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Vendaje neuromuscular",
+          "precio": 3500,
+          "descripcion": "Cinta kinesiológica",
+          "foto": "https://images.unsplash.com/photo-1731575131896-c8bd19209358?w=900&h=900&fit=crop&q=80"
+        }
+      ],
+      "tienda": {
+        "banner": "https://images.unsplash.com/photo-1671492246169-cdd6305870a0?w=1600&h=600&fit=crop&q=80",
+        "titulo": "Para seguir en casa",
+        "subtitulo": "Lo que te recomendamos entre sesiones",
+        "productos": [
+          {
+            "nombre": "Cinta kinesiológica",
+            "precio": 9000,
+            "categoria": "Vendajes",
+            "descripcion": "Rollo de 5 m",
+            "foto": "https://images.unsplash.com/photo-1731575131896-c8bd19209358?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Aceite de masajes",
+            "precio": 7500,
+            "categoria": "Masajes",
+            "descripcion": "Con árnica",
+            "foto": "https://images.unsplash.com/photo-1671493235081-5842463637cd?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Mancuernas 1 kg (par)",
+            "precio": 12000,
+            "categoria": "Ejercicio",
+            "descripcion": "Para ejercicios en casa",
+            "foto": "https://images.unsplash.com/photo-1586401100295-7a8096fd231a?w=900&h=900&fit=crop&q=80"
+          }
+        ]
+      }
     },
     {
       "nombre": "Consultorio Sonrisas",
       "rubro": "salud",
-      "subcategorias": ["Odontología"],
+      "subcategorias": [
+        "Odontología"
+      ],
       "whatsapp": "3804111006",
       "direccion": "Hipólito Yrigoyen 310, La Rioja",
-      "latitud": -29.4110,
-      "longitud": -66.8590,
-      "descripcion": "Odontología general, limpiezas y estética dental.",
-      "logo": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=400&h=400&fit=crop",
-      "portada": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=1200&h=400&fit=crop",
+      "latitud": -29.411,
+      "longitud": -66.859,
+      "tema": "light",
+      "color": "#14B8A6",
+      "descripcion": "Odontología general, ortodoncia y estética dental. Turnos de mañana y tarde.",
+      "logo": "https://images.unsplash.com/photo-1606811971618-4486d14f3f99?w=400&h=400&fit=crop&q=80",
+      "portada": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=1600&h=600&fit=crop&q=80",
       "profesionales": [
-        { "nombre": "Dra. Lucía Fernández", "rol": "Odontóloga" },
-        { "nombre": "Dr. Pablo Romero", "rol": "Ortodoncista" }
+        {
+          "nombre": "Dra. Lucía Fernández",
+          "rol": "Odontóloga",
+          "foto": "https://images.unsplash.com/photo-1594756154841-ac5d160dbf46?w=300&h=300&fit=crop&q=80"
+        },
+        {
+          "nombre": "Dr. Pablo Romero",
+          "rol": "Ortodoncista",
+          "foto": "https://images.unsplash.com/photo-1600603406200-5b2a104684ac?w=300&h=300&fit=crop&q=80"
+        }
       ],
       "servicios": [
-        { "nombre": "Consulta y diagnóstico", "duracion": 30, "precio": 15000, "categoria": "Consultas" },
-        { "nombre": "Limpieza dental", "duracion": 45, "precio": 25000, "categoria": "Prevención" },
-        { "nombre": "Blanqueamiento", "duracion": 60, "precio": 60000, "categoria": "Estética" }
-      ]
+        {
+          "nombre": "Consulta y diagnóstico",
+          "duracion": 30,
+          "precio": 15000,
+          "categoria": "Consultas",
+          "descripcion": "Revisión completa y plan de tratamiento.",
+          "foto": "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Limpieza dental",
+          "duracion": 45,
+          "precio": 25000,
+          "categoria": "Prevención",
+          "descripcion": "Limpieza con ultrasonido y pulido.",
+          "foto": "https://images.unsplash.com/photo-1681939278218-a755fb2bf2d3?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Arreglo de caries",
+          "duracion": 45,
+          "precio": 30000,
+          "categoria": "Tratamientos",
+          "descripcion": "Restauración con resina del color del diente.",
+          "foto": "https://images.unsplash.com/photo-1657470179447-0f5aa16daa91?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Control de ortodoncia",
+          "duracion": 20,
+          "precio": 12000,
+          "categoria": "Ortodoncia",
+          "descripcion": "Ajuste mensual de brackets.",
+          "foto": "https://images.unsplash.com/photo-1667133295315-820bb6481730?w=900&h=900&fit=crop&q=80"
+        },
+        {
+          "nombre": "Blanqueamiento",
+          "duracion": 60,
+          "precio": 60000,
+          "categoria": "Estética",
+          "descripcion": "Blanqueamiento en consultorio.",
+          "foto": "https://images.unsplash.com/photo-1654373535457-383a0a4d00f9?w=900&h=900&fit=crop&q=80"
+        }
+      ],
+      "comodidades": [
+        {
+          "nombre": "Aire acondicionado",
+          "icono": "Snowflake"
+        },
+        {
+          "nombre": "Sala de espera",
+          "icono": "Armchair"
+        },
+        {
+          "nombre": "WiFi",
+          "icono": "Wifi"
+        },
+        {
+          "nombre": "Estacionamiento",
+          "icono": "Car"
+        },
+        {
+          "nombre": "Acceso para silla de ruedas",
+          "icono": "Accessibility"
+        }
+      ],
+      "destacados": [
+        {
+          "titulo": "Consultorio",
+          "fotos": [
+            "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1728342057953-94bfad8f0e7e?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1643660527190-4f401370f788?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "Equipo",
+          "fotos": [
+            "https://images.unsplash.com/photo-1588776814546-daab30f310ce?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1662837625421-5fd8ed6131a0?w=900&h=900&fit=crop&q=80"
+          ]
+        }
+      ],
+      "extras": [
+        {
+          "nombre": "Aplicación de flúor",
+          "precio": 5000,
+          "descripcion": "Se suma a la limpieza",
+          "foto": "https://images.unsplash.com/photo-1663755489920-5e09f66d011a?w=900&h=900&fit=crop&q=80"
+        }
+      ],
+      "tienda": {
+        "banner": "https://images.unsplash.com/photo-1625834319124-345137437603?w=1600&h=600&fit=crop&q=80",
+        "titulo": "Higiene bucal",
+        "subtitulo": "Lo que recomendamos en consulta",
+        "productos": [
+          {
+            "nombre": "Cepillo de dientes suave",
+            "precio": 3500,
+            "categoria": "Cepillos",
+            "descripcion": "Cerdas suaves",
+            "foto": "https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Cepillo eléctrico",
+            "precio": 45000,
+            "categoria": "Cepillos",
+            "descripcion": "Recargable, 2 cabezales",
+            "foto": "https://images.unsplash.com/photo-1559592892-19db4235d786?w=900&h=900&fit=crop&q=80"
+          },
+          {
+            "nombre": "Enjuague bucal",
+            "precio": 6000,
+            "categoria": "Enjuagues",
+            "descripcion": "Sin alcohol, 500 ml",
+            "foto": "https://images.unsplash.com/photo-1682618901459-54ae8c166d16?w=900&h=900&fit=crop&q=80"
+          }
+        ]
+      }
     },
     {
       "nombre": "Quincho Los Algarrobos",
       "rubro": "alquileres",
-      "subcategorias": ["Quinchos"],
+      "subcategorias": [
+        "Quinchos"
+      ],
       "whatsapp": "3804111007",
       "direccion": "Ruta 75 Km 4, Las Higueras, La Rioja",
-      "latitud": -29.3870,
-      "longitud": -66.8650,
-      "descripcion": "Quincho con pileta, parrilla y parque para 60 personas.",
-      "logo": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=400&fit=crop",
-      "portada": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&h=400&fit=crop",
+      "latitud": -29.387,
+      "longitud": -66.865,
+      "tema": "light",
+      "color": "#F97316",
+      "descripcion": "Quincho con pileta, parrilla y parque para hasta 60 personas.",
+      "descripcion_larga": "Predio parquizado con quincho cerrado, parrilla grande, horno de barro y pileta. Ideal para cumpleaños, reuniones familiares y despedidas. Tiene heladera, freezer, vajilla para 60 personas y estacionamiento adentro del predio.",
+      "logo": "https://images.unsplash.com/photo-1694885090746-d90472e11c0e?w=400&h=400&fit=crop&q=80",
+      "portada": "https://images.unsplash.com/photo-1783125126717-e9c855c86a63?w=1600&h=600&fit=crop&q=80",
       "precio_hora": 18000,
-      "capacidad": 60
+      "capacidad": 60,
+      "duraciones": [
+        4,
+        6,
+        8,
+        12
+      ],
+      "tarifas": [
+        {
+          "desde": 1,
+          "hasta": 30,
+          "precio": 18000
+        },
+        {
+          "desde": 31,
+          "hasta": 60,
+          "precio": 22000
+        }
+      ],
+      "galeria": [
+        {
+          "url": "https://images.unsplash.com/photo-1783125126717-e9c855c86a63?w=900&h=900&fit=crop&q=80",
+          "titulo": "Pileta y quincho",
+          "categoria": "Piscina",
+          "destacada": true
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1694885090746-d90472e11c0e?w=900&h=900&fit=crop&q=80",
+          "titulo": "Quincho con parrilla",
+          "categoria": "Quincho"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1694885161486-6390b35de012?w=900&h=900&fit=crop&q=80",
+          "titulo": "Mesas bajo techo",
+          "categoria": "Quincho"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1657383543451-e47d1589195d?w=900&h=900&fit=crop&q=80",
+          "titulo": "Parque",
+          "categoria": "Parque"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1780898259326-4ad741d812bc?w=900&h=900&fit=crop&q=80",
+          "titulo": "Vista del predio",
+          "categoria": "General"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1765036741158-5a1698974257?w=900&h=900&fit=crop&q=80",
+          "titulo": "Parrilla",
+          "categoria": "Parrilla"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1786175087770-57c9e7866e4b?w=900&h=900&fit=crop&q=80",
+          "titulo": "Solárium",
+          "categoria": "Piscina"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1694885186013-5aa7d91ae5d5?w=900&h=900&fit=crop&q=80",
+          "titulo": "Jardín",
+          "categoria": "Parque"
+        }
+      ],
+      "comodidades": [
+        {
+          "nombre": "Pileta",
+          "icono": "Waves"
+        },
+        {
+          "nombre": "Parrilla",
+          "icono": "Flame"
+        },
+        {
+          "nombre": "Quincho cubierto",
+          "icono": "House"
+        },
+        {
+          "nombre": "Horno de barro",
+          "icono": "Pizza"
+        },
+        {
+          "nombre": "Heladera y freezer",
+          "icono": "Refrigerator"
+        },
+        {
+          "nombre": "Parque",
+          "icono": "Trees"
+        },
+        {
+          "nombre": "WiFi",
+          "icono": "Wifi"
+        },
+        {
+          "nombre": "Estacionamiento",
+          "icono": "Car"
+        },
+        {
+          "nombre": "Baños completos",
+          "icono": "ShowerHead"
+        },
+        {
+          "nombre": "Equipo de sonido",
+          "icono": "Speaker"
+        }
+      ],
+      "extras": [
+        {
+          "nombre": "Limpieza post evento",
+          "precio": 15000,
+          "icono": "🧹",
+          "descripcion": "Quincho, baños y parque"
+        },
+        {
+          "nombre": "Vajilla y mantelería",
+          "precio": 12000,
+          "icono": "🍽️",
+          "descripcion": "Por cada 20 personas",
+          "por_cantidad": true
+        },
+        {
+          "nombre": "Castillo inflable",
+          "precio": 25000,
+          "icono": "🏰",
+          "descripcion": "Durante toda la reserva"
+        },
+        {
+          "nombre": "Asador",
+          "precio": 30000,
+          "icono": "🔥",
+          "descripcion": "Se encarga de la parrilla"
+        }
+      ]
     },
     {
       "nombre": "Salón Eventos del Sol",
       "rubro": "alquileres",
-      "subcategorias": ["Salones de eventos"],
+      "subcategorias": [
+        "Salones de eventos"
+      ],
       "whatsapp": "3804111008",
       "direccion": "Av. Ortiz de Ocampo 3100, La Rioja",
-      "latitud": -29.4480,
-      "longitud": -66.8820,
-      "descripcion": "Salón climatizado para cumpleaños y fiestas, con cocina y sonido.",
-      "logo": "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&h=400&fit=crop",
-      "portada": "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=1200&h=400&fit=crop",
-      "precio_dia": 250000,
-      "capacidad": 150
+      "latitud": -29.448,
+      "longitud": -66.882,
+      "tema": "dark",
+      "color": "#A855F7",
+      "descripcion": "Salón climatizado para cumpleaños, casamientos y fiestas de hasta 150 personas.",
+      "descripcion_larga": "Salón de 300 m² con pista de baile, iluminación, equipo de sonido, cocina equipada y baños accesibles. Incluye mesas y sillas para 150 personas. Podés sumar DJ, mesa dulce y decoración.",
+      "logo": "https://images.unsplash.com/photo-1717680281618-442cb9c12b6c?w=400&h=400&fit=crop&q=80",
+      "portada": "https://images.unsplash.com/photo-1768851142332-75f3d1b47452?w=1600&h=600&fit=crop&q=80",
+      "precio_hora": 35000,
+      "capacidad": 150,
+      "duraciones": [
+        4,
+        6,
+        8,
+        12
+      ],
+      "tarifas": [
+        {
+          "desde": 1,
+          "hasta": 80,
+          "precio": 35000
+        },
+        {
+          "desde": 81,
+          "hasta": 150,
+          "precio": 45000
+        }
+      ],
+      "galeria": [
+        {
+          "url": "https://images.unsplash.com/photo-1768851142332-75f3d1b47452?w=900&h=900&fit=crop&q=80",
+          "titulo": "Salón principal",
+          "categoria": "Salón",
+          "destacada": true
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1783314867628-220ab03cac99?w=900&h=900&fit=crop&q=80",
+          "titulo": "Armado para casamiento",
+          "categoria": "Salón"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1763553113332-800519753e40?w=900&h=900&fit=crop&q=80",
+          "titulo": "Centros de mesa",
+          "categoria": "Decoración"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1775918427144-51f0bf53f8c4?w=900&h=900&fit=crop&q=80",
+          "titulo": "Recepción",
+          "categoria": "Salón"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1642267877584-1fcb61638cc4?w=900&h=900&fit=crop&q=80",
+          "titulo": "Cumpleaños",
+          "categoria": "Decoración"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1780586383023-102780a48b32?w=900&h=900&fit=crop&q=80",
+          "titulo": "Mesa dulce",
+          "categoria": "Decoración"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1578736641330-3155e606cd40?w=900&h=900&fit=crop&q=80",
+          "titulo": "Pista de baile",
+          "categoria": "Fiesta"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1768851244529-39180171a168?w=900&h=900&fit=crop&q=80",
+          "titulo": "Mesas altas",
+          "categoria": "Salón"
+        }
+      ],
+      "comodidades": [
+        {
+          "nombre": "Aire acondicionado",
+          "icono": "Snowflake"
+        },
+        {
+          "nombre": "Pista de baile",
+          "icono": "PartyPopper"
+        },
+        {
+          "nombre": "Equipo de sonido",
+          "icono": "Speaker"
+        },
+        {
+          "nombre": "Iluminación",
+          "icono": "Lightbulb"
+        },
+        {
+          "nombre": "Cocina equipada",
+          "icono": "ChefHat"
+        },
+        {
+          "nombre": "Baños accesibles",
+          "icono": "Accessibility"
+        },
+        {
+          "nombre": "Estacionamiento",
+          "icono": "Car"
+        },
+        {
+          "nombre": "Mesas y sillas",
+          "icono": "Armchair"
+        }
+      ],
+      "extras": [
+        {
+          "nombre": "DJ y luces",
+          "precio": 60000,
+          "icono": "🎧",
+          "descripcion": "Sonido profesional e iluminación de pista"
+        },
+        {
+          "nombre": "Mesa dulce",
+          "precio": 45000,
+          "icono": "🍰",
+          "descripcion": "Para 50 personas"
+        },
+        {
+          "nombre": "Decoración temática",
+          "precio": 35000,
+          "icono": "🎈",
+          "descripcion": "Globos, centros de mesa y fondo"
+        },
+        {
+          "nombre": "Vajilla y mantelería",
+          "precio": 20000,
+          "icono": "🍽️",
+          "descripcion": "Por cada 50 personas",
+          "por_cantidad": true
+        }
+      ]
     }
   ]
 }

@@ -2,8 +2,8 @@
 --
 -- admin_seed_business(p_data): crea la cuenta del dueño, llama a
 --   admin_create_business() (misma alta que los formularios) y completa el
---   perfil: descripción, horarios, imágenes, profesionales, servicios, canchas
---   y precios. Todo en una transacción: si algo falla no queda nada a medias.
+--   perfil con admin_apply_business_profile() (20261004_seed_business_profile).
+--   Todo en una transacción: si algo falla no queda nada a medias.
 -- admin_delete_simulated_businesses(): borra los negocios cargados con
 --   "simulacion": true y sus cuentas.
 --
@@ -41,16 +41,10 @@ DECLARE
     v_password     text;
     v_user_id      uuid := gen_random_uuid();
     v_sub_ids      jsonb;
-    v_pros         jsonb := coalesce(p_data->'profesionales', '[]'::jsonb);
-    v_courts       jsonb := coalesce(p_data->'canchas', '[]'::jsonb);
-    v_services     jsonb := coalesce(p_data->'servicios', '[]'::jsonb);
     v_count        integer;
     v_created      jsonb;
     v_business_id  text;
     v_type         text;
-    v_item         jsonb;
-    v_spec_id      text;
-    v_court_id     text;
     i              integer;
 BEGIN
     IF v_name = '' THEN
@@ -120,7 +114,8 @@ BEGIN
         'email', now(), now(), now()
     );
 
-    v_count := greatest(1, jsonb_array_length(v_pros), jsonb_array_length(v_courts),
+    v_count := greatest(1, jsonb_array_length(coalesce(p_data->'profesionales', '[]')),
+                        jsonb_array_length(coalesce(p_data->'canchas', '[]')),
                         coalesce(nullif(p_data->>'cantidad', '')::integer, 1));
 
     v_created := public.admin_create_business(v_user_id, jsonb_build_object(
@@ -141,76 +136,8 @@ BEGIN
     v_business_id := v_created->>'id';
     v_type := v_created->>'type';
 
-    -- Perfil
-    UPDATE public.businesses b SET
-        description  = coalesce(nullif(trim(p_data->>'descripcion'), ''), b.description),
-        logo_url     = coalesce(nullif(p_data->>'logo', ''), b.logo_url),
-        banner_url   = coalesce(nullif(p_data->>'portada', ''), b.banner_url),
-        hours        = CASE WHEN jsonb_typeof(p_data->'horarios') = 'object' THEN (p_data->'horarios')::text ELSE b.hours END,
-        latitude     = coalesce(nullif(p_data->>'latitud', '')::double precision, b.latitude),
-        longitude    = coalesce(nullif(p_data->>'longitud', '')::double precision, b.longitude),
-        price_per_hour = coalesce(nullif(p_data->>'precio_hora', '')::numeric, b.price_per_hour),
-        price_per_day  = coalesce(nullif(p_data->>'precio_dia', '')::numeric, b.price_per_day),
-        pricing_model  = CASE WHEN nullif(p_data->>'precio_dia', '') IS NOT NULL
-                               AND nullif(p_data->>'precio_hora', '') IS NULL THEN 'daily' ELSE b.pricing_model END,
-        max_capacity   = coalesce(nullif(p_data->>'capacidad', '')::integer, b.max_capacity),
-        capacity_limit = coalesce(nullif(p_data->>'capacidad', '')::integer, b.capacity_limit),
-        metadata = b.metadata
-            || CASE WHEN coalesce((p_data->>'simulacion')::boolean, false)
-                    THEN '{"simulacion": true}'::jsonb ELSE '{}'::jsonb END
-            || jsonb_build_object('cargado_por_script', now())
-    WHERE b.id = v_business_id;
-
-    -- Profesionales: renombra "Especialista N" en el orden del archivo
-    IF v_type = 'service' THEN
-        i := 0;
-        FOR v_spec_id IN
-            SELECT s.id FROM public.specialists s WHERE s.business_id = v_business_id
-            ORDER BY s.created_at, s.name
-        LOOP
-            v_item := v_pros->i;
-            IF v_item IS NOT NULL THEN
-                UPDATE public.specialists SET
-                    name = coalesce(v_item->>'nombre', v_item #>> '{}'),
-                    role = coalesce(nullif(v_item->>'rol', ''), role)
-                WHERE id = v_spec_id;
-            END IF;
-            i := i + 1;
-        END LOOP;
-
-        FOR v_item IN SELECT * FROM jsonb_array_elements(v_services) LOOP
-            INSERT INTO public.services (business_id, name, duration, price, category, description)
-            VALUES (
-                v_business_id,
-                v_item->>'nombre',
-                coalesce(nullif(v_item->>'duracion', '')::integer, 30),
-                coalesce(nullif(v_item->>'precio', '')::numeric, 0),
-                coalesce(nullif(v_item->>'categoria', ''), 'General'),
-                nullif(v_item->>'descripcion', '')
-            );
-        END LOOP;
-    ELSIF v_type = 'sport' THEN
-        -- Canchas: nombre y precio (courts + su recurso sincronizado)
-        i := 0;
-        FOR v_court_id IN
-            SELECT c.id FROM public.courts c WHERE c.business_id = v_business_id
-            ORDER BY (regexp_replace(c.name, '\D', '', 'g'))::integer NULLS LAST
-        LOOP
-            v_item := v_courts->i;
-            IF v_item IS NOT NULL THEN
-                UPDATE public.courts SET
-                    name  = coalesce(nullif(v_item->>'nombre', ''), name),
-                    price = coalesce(nullif(v_item->>'precio', '')::numeric, price),
-                    sport = coalesce(nullif(public.seed_slugify(v_item->>'deporte'), ''), sport)
-                WHERE id = v_court_id;
-                UPDATE public.resources r SET
-                    name = c.name, base_price = c.price, sport = c.sport, updated_at = now()
-                FROM public.courts c
-                WHERE c.id = v_court_id AND r.metadata->>'court_id' = v_court_id;
-            END IF;
-            i := i + 1;
-        END LOOP;
-    END IF;
+    -- Perfil completo (20261004_seed_business_profile.sql)
+    PERFORM public.admin_apply_business_profile(v_business_id, p_data);
 
     RETURN jsonb_build_object(
         'id', v_business_id,

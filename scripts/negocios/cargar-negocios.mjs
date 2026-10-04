@@ -2,7 +2,7 @@
 /**
  * Carga masiva de negocios desde un JSON o CSV.
  *
- *   node scripts/negocios/cargar-negocios.mjs <archivo> [--probar] [--sql]
+ *   node scripts/negocios/cargar-negocios.mjs <archivo> [--probar] [--sql] [--actualizar]
  *   node scripts/negocios/cargar-negocios.mjs --borrar-simulacion [--sql]
  *
  * Cada negocio pasa por public.admin_seed_business() (supabase/migrations/20261004_seed_business.sql):
@@ -166,7 +166,7 @@ function writeSql(file, sql) {
     fs.mkdirSync(OUT_DIR, { recursive: true });
     fs.writeFileSync(file, sql, 'utf8');
     console.log(`SQL generado: ${path.relative(process.cwd(), file)}`);
-    console.log('Correlo en el editor SQL de Supabase; el resultado trae link, email y contraseña de cada negocio.');
+    console.log('Correlo en el editor SQL de Supabase.');
 }
 
 function writeCredentials(rows) {
@@ -253,6 +253,28 @@ async function main() {
     if (flags.has('--probar')) return;
 
     const client = forceSql ? null : await getClient();
+
+    // --actualizar: aplica el archivo sobre negocios que ya existen (los busca por slug)
+    if (flags.has('--actualizar')) {
+        const name = path.basename(file).replace(/\.[^.]+$/, '');
+        if (!client) {
+            writeSql(path.join(OUT_DIR, `${name}-actualizar.sql`),
+                `-- Generado por cargar-negocios.mjs --actualizar desde ${path.basename(file)}\n` +
+                `select b.slug, public.admin_apply_business_profile(b.id, x.data) is null as actualizado\n` +
+                `from jsonb_array_elements(${sqlLiteral(businesses)}) as x(data)\n` +
+                `join public.businesses b on b.slug = coalesce(nullif(public.seed_slugify(x.data->>'slug'), ''), public.seed_slugify(x.data->>'nombre'));\n`);
+            return;
+        }
+        for (const b of businesses) {
+            const slug = slugify(b.slug || b.nombre);
+            const { data: found } = await client.from('businesses').select('id').eq('slug', slug).maybeSingle();
+            if (!found) { console.error(`  x ${b.nombre}: no existe ${slug}`); continue; }
+            const { error } = await client.rpc('admin_apply_business_profile', { p_business_id: found.id, p_data: b });
+            console.log(error ? `  x ${b.nombre}: ${error.message}` : `  ok ${b.nombre}`);
+        }
+        return;
+    }
+
     if (!client) {
         const name = path.basename(file).replace(/\.[^.]+$/, '');
         writeSql(path.join(OUT_DIR, `${name}.sql`),
