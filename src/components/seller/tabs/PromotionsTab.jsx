@@ -747,7 +747,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                 </label>
                                 <input
                                     type="text"
-                                    placeholder="Ej: PLAN GRATIS / 2x1 / PROMO"
+                                    placeholder="Ej: 2x1 / PROMO VERANO"
                                     value={form.discount}
                                     onChange={(e) => setForm({ ...form, discount: e.target.value })}
                                     style={{
