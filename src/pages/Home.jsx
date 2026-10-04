@@ -5,6 +5,7 @@ import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
 import SEOHead from '../components/SEOHead';
 import { generateSlug } from '../utils/utils';
+import { isProfileReady } from '../utils/profileChecklist';
 
 const DEFAULT_CATEGORIES = [
     { id: 'deportes', slug: 'deportes', name: 'Deportes', icon: '⚽' },
@@ -161,6 +162,10 @@ export default function Home() {
         const termNorm = normalizeText(searchTerm);
 
         return businesses.filter(b => {
+            // 0. Only businesses with a complete profile are listed (the direct link still works).
+            // "Cerca mío" results don't carry services/courts, so they skip this check.
+            if (!isNearMeActive && !isProfileReady(b)) return false;
+
             // 1. Search Filter
             let matchesSearch = true;
             if (termNorm.length >= 1) {
