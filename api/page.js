@@ -13,15 +13,15 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/;
 const VIEWS = ['turnos', 'tienda', 'bio'];
 const SEO_BLOCK = /<!-- seo:start -->[\s\S]*?<!-- seo:end -->/;
 
-// The built index.html is bundled with this function (vercel.json includeFiles).
+// The built app shell (dist/app.html) is bundled with this function (vercel.json includeFiles).
 // Fetching it from the site is the fallback; it is a static file, so it never loops back here.
 let shellCache = null;
 async function getShell() {
     if (shellCache) return shellCache;
     try {
-        shellCache = fs.readFileSync(path.join(process.cwd(), 'dist', 'index.html'), 'utf8');
+        shellCache = fs.readFileSync(path.join(process.cwd(), 'dist', 'app.html'), 'utf8');
     } catch {
-        const res = await fetch(`${SITE_URL}/index.html`);
+        const res = await fetch(`${SITE_URL}/app.html`);
         shellCache = await res.text();
     }
     return shellCache;

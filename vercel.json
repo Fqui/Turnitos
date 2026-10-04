@@ -1,7 +1,7 @@
 {
     "functions": {
         "api/page.js": {
-            "includeFiles": "dist/index.html"
+            "includeFiles": "dist/app.html"
         }
     },
     "rewrites": [
@@ -43,7 +43,7 @@
         },
         {
             "source": "/(.*)",
-            "destination": "/index.html"
+            "destination": "/app.html"
         }
     ],
     "headers": [
