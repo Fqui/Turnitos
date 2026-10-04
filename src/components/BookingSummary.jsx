@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatDisplayDate, formatFriendlyDate, calculateEndTime } from '../utils/dateUtils';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 import CouponInput from './common/CouponInput';
-import { buildWhatsAppUrl } from '../utils/utils';
+import { buildWhatsAppUrl } from '../utils/whatsapp';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
 let globalCachedPaymentData = {

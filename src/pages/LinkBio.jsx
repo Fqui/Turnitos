@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
 import SEOHead from '../components/SEOHead';
-import { findBusinessBySlug, buildWhatsAppUrl } from '../utils/utils';
+import { findBusinessBySlug } from '../utils/utils';
 import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerModal';
 import ProfileHighlightsBar from '../components/profile/ProfileHighlightsBar';
 
@@ -40,7 +40,9 @@ const formatSocialUrl = (type, handle) => {
 };
 
 const formatWhatsAppUrl = (phone) => {
-    return buildWhatsAppUrl(phone);
+    if (!phone) return '';
+    const clean = String(phone).replace(/\D/g, '');
+    return `https://wa.me/${clean}`;
 };
 
 const LinkBio = ({ overrideSlug = null }) => {

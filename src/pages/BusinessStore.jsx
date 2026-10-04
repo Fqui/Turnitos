@@ -21,7 +21,7 @@ import {
     Tag
 } from 'lucide-react';
 import serviceAdapter from '../services/serviceAdapter';
-import { findBusinessBySlug, getSubdomain, buildWhatsAppUrl } from '../utils/utils';
+import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import { isFreePlan } from '../utils/subscriptionUtils';
 import PromotionModal from '../components/promotions/PromotionModal';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
@@ -385,7 +385,7 @@ export default function BusinessStore({ overrideSlug }) {
 
         const message = `¡Hola ${business.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${productListText}\n${discountText}\n*Total a pagar:* $${totalText}\n\n¿Tienen disponibilidad para coordinar el retiro/entrega? ¡Gracias!`;
 
-        window.open(buildWhatsAppUrl(business.whatsapp, message), '_blank');
+        window.open(`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
         setCart([]);
         setIsCartOpen(false);
     };

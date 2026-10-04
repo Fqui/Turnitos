@@ -1,5 +1,5 @@
 import React from 'react';
-import { buildWhatsAppUrl } from '../../utils/utils';
+import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 

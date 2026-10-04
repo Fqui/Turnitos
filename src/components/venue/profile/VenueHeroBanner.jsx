@@ -1,5 +1,5 @@
 import React from 'react';
-import { buildWhatsAppUrl } from '../../../utils/utils';
+import { buildWhatsAppUrl } from '../../../utils/whatsapp';
 
 export default function VenueHeroBanner({
     business,

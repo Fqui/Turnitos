@@ -77,31 +77,3 @@ export function getSubdomain() {
     }
     return null;
 }
-
-/**
- * Normalizes an Argentine phone number for wa.me links (country code 549).
- * "3804167663", "0380 4167663", "+54 380 4167663" -> "5493804167663"
- * @param {string} phone - Phone as stored by the business
- * @returns {string} - Digits only with country code, or '' if empty
- */
-export function toWhatsAppNumber(phone) {
-    let digits = String(phone || '').replace(/\D/g, '');
-    if (!digits) return '';
-    if (digits.startsWith('00')) digits = digits.slice(2);
-    if (digits.startsWith('549')) return digits;
-    if (digits.startsWith('54') && digits.length >= 12) return `549${digits.slice(2)}`;
-    if (digits.startsWith('0')) digits = digits.slice(1);
-    return `549${digits}`;
-}
-
-/**
- * Builds a wa.me link for a business phone, optionally with a prefilled message.
- * Returns '' when there is no phone.
- */
-export function buildWhatsAppUrl(phone, message = '') {
-    const number = toWhatsAppNumber(phone);
-    if (!number) return '';
-    return message
-        ? `https://wa.me/${number}?text=${encodeURIComponent(message)}`
-        : `https://wa.me/${number}`;
-}
