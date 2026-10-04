@@ -1,9 +1,6 @@
 import React, { useMemo } from 'react';
 import { Wallet, CalendarClock, AlertTriangle, TrendingUp, Plus } from 'lucide-react';
-import { getBillingInfo, formatMoney, formatDueText } from '../../../utils/billingUtils';
-
-const PAYING_STATUSES = new Set(['active', 'due_soon', 'grace', 'overdue']);
-const ATTENTION_ORDER = { overdue: 0, trial_expired: 1, grace: 2, due_soon: 3, trial: 4 };
+import { getBillingRows, needsAttention, PAYING_STATUSES, ATTENTION_ORDER, formatMoney, formatDueText } from '../../../utils/billingUtils';
 
 const METHOD_LABELS = {
     transferencia: 'Transferencia',
@@ -26,13 +23,7 @@ function Kpi({ icon, label, value, foot, variant }) {
 export default function OverviewTab({ businesses = [], billing, onRegisterPayment }) {
     const payments = billing?.payments || [];
 
-    const rows = useMemo(() => {
-        const subByBusiness = new Map((billing?.subscriptions || []).map(s => [String(s.business_id), s]));
-        return businesses.map(b => ({
-            business: b,
-            info: getBillingInfo(b, subByBusiness.get(String(b.id)))
-        }));
-    }, [businesses, billing]);
+    const rows = useMemo(() => getBillingRows(businesses, billing), [businesses, billing]);
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -54,10 +45,7 @@ export default function OverviewTab({ businesses = [], billing, onRegisterPaymen
     const overdueAmount = overdue.reduce((sum, r) => sum + r.info.monthlyPrice, 0);
 
     const attention = rows
-        .filter(r => {
-            if (r.info.status in ATTENTION_ORDER && r.info.status !== 'trial') return true;
-            return r.info.status === 'trial' && r.info.daysToDue !== null && r.info.daysToDue <= 7;
-        })
+        .filter(r => needsAttention(r.info))
         .sort((a, b) => (ATTENTION_ORDER[a.info.status] - ATTENTION_ORDER[b.info.status])
             || ((a.info.daysToDue ?? 0) - (b.info.daysToDue ?? 0)));
 
