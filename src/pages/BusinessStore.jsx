@@ -23,6 +23,8 @@ import {
 import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import PromotionModal from '../components/promotions/PromotionModal';
+import ShareButton from '../components/common/ShareButton';
+import { buildBusinessShareUrl } from '../utils/share';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 
 export default function BusinessStore({ overrideSlug }) {
@@ -183,6 +185,20 @@ export default function BusinessStore({ overrideSlug }) {
             fetchPromo();
         }
     }, [searchParams, business, products.length]);
+
+    // Shared product link (?producto=<id>): open that product's detail
+    const [sharedProductHandled, setSharedProductHandled] = useState(null);
+    useEffect(() => {
+        const productId = searchParams.get('producto');
+        if (!productId || sharedProductHandled === productId || !products?.length) return;
+        const sharedProduct = products.find(p => String(p.id) === String(productId));
+        if (!sharedProduct) return;
+        setSharedProductHandled(productId);
+        setSelectedProductModal(sharedProduct);
+        setActiveImageIndex(0);
+        setModalQty(1);
+        setSelectedSize(sharedProduct.sizes?.[0] || null);
+    }, [searchParams, products, sharedProductHandled]);
 
     // Theme setup matching LinkBio / BusinessProfile with useLayoutEffect for zero-latency dark transition
     useLayoutEffect(() => {
@@ -1179,48 +1195,59 @@ export default function BusinessStore({ overrideSlug }) {
                                         <CheckCircle2 size={12} color={primaryColor} />
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSelectedProductModal(null);
-                                        setIsCartOpen(true);
-                                    }}
-                                    style={{
-                                        width: '38px',
-                                        height: '38px',
-                                        borderRadius: '50%',
-                                        border: '1px solid var(--border)',
-                                        background: 'var(--bg-main)',
-                                        color: 'var(--text-primary)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: 'pointer',
-                                        position: 'relative'
-                                    }}
-                                    title="Ver carrito"
-                                >
-                                    <ShoppingBag size={17} />
-                                    {getCartCount() > 0 && (
-                                        <span style={{
-                                            position: 'absolute',
-                                            top: '-3px',
-                                            right: '-3px',
-                                            backgroundColor: primaryColor,
-                                            color: '#fff',
-                                            fontSize: '9px',
-                                            fontWeight: '800',
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {business.slug && (
+                                        <ShareButton
+                                            variant="circle"
+                                            label="Compartir producto"
+                                            url={buildBusinessShareUrl(business.slug, '/tienda', { producto: selectedProductModal.id })}
+                                            title={`${selectedProductModal.name} · ${business.name}`}
+                                            text={`Mirá ${selectedProductModal.name} en la tienda de ${business.name}:`}
+                                        />
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedProductModal(null);
+                                            setIsCartOpen(true);
+                                        }}
+                                        style={{
+                                            width: '38px',
+                                            height: '38px',
                                             borderRadius: '50%',
-                                            minWidth: '17px',
-                                            height: '17px',
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--bg-main)',
+                                            color: 'var(--text-primary)',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}>
-                                            {getCartCount()}
-                                        </span>
-                                    )}
-                                </button>
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            position: 'relative'
+                                        }}
+                                        title="Ver carrito"
+                                    >
+                                        <ShoppingBag size={17} />
+                                        {getCartCount() > 0 && (
+                                            <span style={{
+                                                position: 'absolute',
+                                                top: '-3px',
+                                                right: '-3px',
+                                                backgroundColor: primaryColor,
+                                                color: '#fff',
+                                                fontSize: '9px',
+                                                fontWeight: '800',
+                                                borderRadius: '50%',
+                                                minWidth: '17px',
+                                                height: '17px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                                {getCartCount()}
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Modal Body */}

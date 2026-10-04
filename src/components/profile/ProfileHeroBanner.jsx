@@ -2,13 +2,15 @@ import React from 'react';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import ShareButton from '../common/ShareButton';
 
 export default function ProfileHeroBanner({
     business,
     selectedItem,
     activeStories,
     onStoryClick,
-    openNow = null
+    openNow = null,
+    shareUrl = ''
 }) {
     const navigate = useNavigate();
 
@@ -79,6 +81,15 @@ export default function ProfileHeroBanner({
                         <path d="M12 19l-7-7 7-7" />
                     </svg>
                 </button>
+
+                <ShareButton
+                    variant="icon"
+                    label="Compartir negocio"
+                    url={shareUrl}
+                    title={business.name}
+                    text={`Reservá tu turno online en ${business.name}:`}
+                    style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}
+                />
             </div>
 
             {/* Business Info Card */}

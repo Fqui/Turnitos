@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Info, X, Calendar, CalendarCheck, CheckCircle2, ArrowRight, Sparkles, Tag } from 'lucide-react';
 import { doesPromoApplyToService, calculatePromoDiscount, parsePromotionTarget } from '../utils/promotionUtils';
 import HorizontalScroller from './HorizontalScroller';
+import ShareButton from './common/ShareButton';
 
 // Display-only: category names come from each business ("combos" → "Combos")
 const capitalize = (text) => (typeof text === 'string' && text ? text.charAt(0).toUpperCase() + text.slice(1) : text);
 
-export default function ServiceSelector({ services, selected, onSelect, color = '#00E676', activePromotion = null }) {
+export default function ServiceSelector({ services, selected, onSelect, color = '#00E676', activePromotion = null, businessName = '', getShareUrl = null }) {
     const [activeCategory, setActiveCategory] = useState('Todos');
     const [categories, setCategories] = useState(['Todos']);
     const [detailService, setDetailService] = useState(null);
@@ -606,6 +607,18 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 >
                                     Volver
                                 </button>
+
+                                {getShareUrl && (
+                                    <ShareButton
+                                        variant="compact"
+                                        label="Compartir servicio"
+                                        menuPlacement="up"
+                                        menuAlign="left"
+                                        url={getShareUrl(detailService)}
+                                        title={`${detailService.name} · ${businessName}`}
+                                        text={`Mirá ${detailService.name} en ${businessName}. Reservá tu turno online:`}
+                                    />
+                                )}
 
                                 <button
                                     type="button"
