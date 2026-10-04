@@ -18,12 +18,13 @@ export default function VenueBookingPanel({
 }) {
     const primaryColor = business?.primary_color || business?.button_color || '#84CC16';
     const isDark = business?.theme === 'dark';
-    const cardBg = isDark ? '#1E293B' : 'white';
-    const textColor = isDark ? '#F8FAFC' : '#1a1a1a';
-    const secondaryTextColor = isDark ? '#94A3B8' : '#64748B';
-    const subCardBg = isDark ? '#0F172A' : '#F8F9FA';
-    const btnBg = isDark ? '#334155' : 'white';
-    const borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0';
+    const cardBg = isDark ? '#1E1E1E' : 'white';
+    const textColor = isDark ? '#FFFFFF' : '#1a1a1a';
+    const secondaryTextColor = isDark ? '#A0A0A0' : '#64748B';
+    const subCardBg = isDark ? '#2A2A2A' : '#F8F9FA';
+    const btnBg = isDark ? '#333333' : 'white';
+    const dividerColor = isDark ? 'rgba(255,255,255,0.12)' : '#E5E7EB';
+    const borderColor = isDark ? '#333333' : '#E2E8F0';
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
     const maxCapacity = Number(business?.capacity_limit || business?.capacity || 100);
 
@@ -49,14 +50,14 @@ export default function VenueBookingPanel({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                 {/* Guest Counter */}
                 <div>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#64748B', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: secondaryTextColor, marginBottom: '8px' }}>
                         Invitados
                     </div>
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        background: '#F8F9FA',
+                        background: subCardBg,
                         borderRadius: '12px',
                         padding: '12px'
                     }}>
@@ -64,7 +65,7 @@ export default function VenueBookingPanel({
                             onClick={() => setGuestCount(prev => Math.max(5, (Number(prev) || 30) - 5))}
                             disabled={guestCount <= 5}
                             style={{
-                                background: 'white',
+                                background: btnBg,
                                 border: 'none',
                                 width: '36px',
                                 height: '36px',
@@ -73,22 +74,22 @@ export default function VenueBookingPanel({
                                 opacity: guestCount <= 5 ? 0.3 : 1,
                                 fontSize: '18px',
                                 fontWeight: '700',
-                                color: '#1a1a1a'
+                                color: textColor
                             }}
                         >
                             −
                         </button>
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#1a1a1a' }}>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: textColor }}>
                                 {guestCount}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#64748B' }}>personas</div>
+                            <div style={{ fontSize: '11px', color: secondaryTextColor }}>personas</div>
                         </div>
                         <button
                             onClick={() => setGuestCount(prev => Math.min(maxCapacity, (Number(prev) || 30) + 5))}
                             disabled={guestCount >= maxCapacity}
                             style={{
-                                background: 'white',
+                                background: btnBg,
                                 border: 'none',
                                 width: '36px',
                                 height: '36px',
@@ -97,7 +98,7 @@ export default function VenueBookingPanel({
                                 opacity: guestCount >= maxCapacity ? 0.3 : 1,
                                 fontSize: '18px',
                                 fontWeight: '700',
-                                color: '#1a1a1a'
+                                color: textColor
                             }}
                         >
                             +
@@ -108,7 +109,7 @@ export default function VenueBookingPanel({
                 {/* Duration Selector */}
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>Duración</span>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: secondaryTextColor }}>Duración</span>
                         {durationDiscountPct > 0 && (
                             <span style={{
                                 fontSize: '10px',
@@ -127,7 +128,7 @@ export default function VenueBookingPanel({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        background: '#F8F9FA',
+                        background: subCardBg,
                         borderRadius: '12px',
                         padding: '12px'
                     }}>
@@ -138,7 +139,7 @@ export default function VenueBookingPanel({
                             }}
                             disabled={durationOptions.indexOf(duration) === 0}
                             style={{
-                                background: 'white',
+                                background: btnBg,
                                 border: 'none',
                                 width: '36px',
                                 height: '36px',
@@ -146,17 +147,17 @@ export default function VenueBookingPanel({
                                 cursor: durationOptions.indexOf(duration) === 0 ? 'not-allowed' : 'pointer',
                                 fontSize: '18px',
                                 fontWeight: '700',
-                                color: '#1a1a1a',
+                                color: textColor,
                                 opacity: durationOptions.indexOf(duration) === 0 ? 0.3 : 1
                             }}
                         >
                             −
                         </button>
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '24px', fontWeight: '900', color: '#1a1a1a' }}>
+                            <div style={{ fontSize: '24px', fontWeight: '900', color: textColor }}>
                                 {duration}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#64748B' }}>horas</div>
+                            <div style={{ fontSize: '11px', color: secondaryTextColor }}>horas</div>
                         </div>
                         <button
                             onClick={() => {
@@ -165,7 +166,7 @@ export default function VenueBookingPanel({
                             }}
                             disabled={durationOptions.indexOf(duration) === durationOptions.length - 1}
                             style={{
-                                background: 'white',
+                                background: btnBg,
                                 border: 'none',
                                 width: '36px',
                                 height: '36px',
@@ -173,7 +174,7 @@ export default function VenueBookingPanel({
                                 cursor: durationOptions.indexOf(duration) === durationOptions.length - 1 ? 'not-allowed' : 'pointer',
                                 fontSize: '18px',
                                 fontWeight: '700',
-                                color: '#1a1a1a',
+                                color: textColor,
                                 opacity: durationOptions.indexOf(duration) === durationOptions.length - 1 ? 0.3 : 1
                             }}
                         >
@@ -185,20 +186,20 @@ export default function VenueBookingPanel({
 
             {/* Price Breakdown */}
             <div style={{
-                background: '#F8F9FA',
+                background: subCardBg,
                 borderRadius: '16px',
                 padding: '20px',
                 marginBottom: '24px'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '14px', color: '#64748B' }}>Precio por hora</span>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#1a1a1a' }}>
+                    <span style={{ fontSize: '14px', color: secondaryTextColor }}>Precio por hora</span>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: textColor }}>
                         ${pricePerHour.toLocaleString()}
                     </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '14px', color: '#64748B' }}>Duración ({duration} horas)</span>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#1a1a1a' }}>
+                    <span style={{ fontSize: '14px', color: secondaryTextColor }}>Duración ({duration} horas)</span>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: textColor }}>
                         ${(rawBasePrice || (pricePerHour * duration)).toLocaleString()}
                     </span>
                 </div>
@@ -209,12 +210,12 @@ export default function VenueBookingPanel({
                     </div>
                 )}
                 <div style={{
-                    borderTop: '2px solid #E5E7EB',
+                    borderTop: `2px solid ${dividerColor}`,
                     paddingTop: '12px',
                     display: 'flex',
                     justifyContent: 'space-between'
                 }}>
-                    <span style={{ fontSize: '15px', fontWeight: '700', color: '#1a1a1a' }}>Total</span>
+                    <span style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>Total</span>
                     <span style={{ fontSize: '18px', fontWeight: '900', color: business?.primary_color || business?.button_color || '#84CC16' }}>
                         ${totalPrice.toLocaleString()}
                     </span>
@@ -246,7 +247,7 @@ export default function VenueBookingPanel({
             >
                 {!selectedDate ? 'Seleccionar Fecha' : 'Continuar'}
             </button>
-            <div style={{ textAlign: 'center', fontSize: '13px', color: '#64748B' }}>
+            <div style={{ textAlign: 'center', fontSize: '13px', color: secondaryTextColor }}>
                 No se realizará ningún cargo todavía
             </div>
         </div>

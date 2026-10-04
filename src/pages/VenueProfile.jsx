@@ -693,7 +693,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                             right: 0,
                                             height: '60px',
                                             background: isDark
-                                                ? 'linear-gradient(to bottom, transparent, #1E293B)'
+                                                ? 'linear-gradient(to bottom, transparent, #1E1E1E)'
                                                 : 'linear-gradient(to bottom, transparent, white)',
                                             pointerEvents: 'none'
                                         }} />
