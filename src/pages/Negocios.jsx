@@ -13,7 +13,7 @@ const WHATSAPP_URL = 'https://wa.me/5493805002706?text=Hola,%20quiero%20sumar%20
 const PLANS = [
     { icon: Scissors, title: 'Servicios', detail: 'Peluquería, estética, salud, mascotas', price: 'Desde $17.000', unit: 'por mes', note: 'Arrancás con 1 profesional y sumás a tu equipo cuando crezcas.' },
     { icon: Trophy, title: 'Canchas', detail: 'Pádel, fútbol, tenis y más', price: '$20.000', unit: 'por cancha, por mes', note: 'Cuantas más canchas, menos pagás: desde 4, cada una te sale más barata.' },
-    { icon: HomeIcon, title: 'Alquileres', detail: 'Quinchos, salones y espacios', price: '$15.000', unit: 'por mes', note: 'Sin comisiones: lo que cobrás por cada reserva es todo tuyo.' }
+    { icon: HomeIcon, title: 'Alquileres', detail: 'Quinchos, salones y espacios', price: '$15.000', unit: 'por mes', note: 'Lo que te reservan por tu link es todo tuyo, sin comisión.' }
 ];
 
 const FEATURES = [
@@ -55,7 +55,7 @@ export default function ForBusinesses() {
                         </a>
                         <a className="sp-btn" href="#precios">Ver precios</a>
                     </div>
-                    <p className="sp-meta">14 días gratis · Sin comisión por turno · Te armamos el perfil</p>
+                    <p className="sp-meta">14 días gratis · Sin comisión en las reservas por tu link · Te armamos el perfil</p>
                 </div>
             </header>
 
@@ -63,7 +63,7 @@ export default function ForBusinesses() {
                 <section id="precios" className="sp-section" style={{ scrollMarginTop: '96px' }}>
                     <div className="sp-section-head sp-section-head--center">
                         <h2 className="sp-h2">Precios simples</h2>
-                        <p className="sp-lead">Un abono mensual según tu rubro. Sin comisiones por turno.</p>
+                        <p className="sp-lead">Un abono mensual según tu rubro. Las reservas por tu link no pagan comisión; las que llegan desde el buscador de TurnitosLR pagan $500 por turno (3% en alquileres).</p>
                     </div>
                     <div className="sp-grid">
                         {PLANS.map(({ icon: Icon, title, detail, price, unit, note }) => (
