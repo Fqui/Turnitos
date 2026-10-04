@@ -12,6 +12,7 @@ import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerMod
 import ProfileHighlightsBar from '../components/profile/ProfileHighlightsBar';
 import { isStoreAvailable } from '../utils/storeUtils';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
+import PageLoader from '../components/common/PageLoader';
 
 // Fix for default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -138,24 +139,7 @@ const LinkBio = ({ overrideSlug = null }) => {
     }, [business]);
 
     if (loading) {
-        return (
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100vh',
-                backgroundColor: 'var(--bg-main)'
-            }}>
-                <div className="spinner" style={{
-                    width: '40px',
-                    height: '40px',
-                    border: '4px solid var(--border)',
-                    borderTopColor: 'var(--primary-paddle)',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                }} />
-            </div>
-        );
+        return <PageLoader />;
     }
 
     if (!business) {

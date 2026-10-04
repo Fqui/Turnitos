@@ -10,6 +10,7 @@ import { parseAmenity } from '../components/common/AmenityIcon';
 import { pushService } from '../services/pushService';
 import { supabase } from '../services/supabaseClient';
 import 'leaflet/dist/leaflet.css';
+import PageLoader from '../components/common/PageLoader';
 
 import VenueHeroBanner from '../components/venue/profile/VenueHeroBanner';
 import VenueGallerySection from '../components/venue/profile/VenueGallerySection';
@@ -545,7 +546,7 @@ export default function VenueProfile({ business: initialBusiness }) {
         return schemaObj;
     }, [business]);
 
-    if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando espacio...</div>;
+    if (loading) return <PageLoader label="Cargando espacio..." />;
     if (!business) return <div style={{ padding: 40, textAlign: 'center' }}>Espacio no encontrado</div>;
 
     const pageTitle = `${business.name} - Alquiler de Quincho y Eventos en ${business.location || 'La Rioja'}`;

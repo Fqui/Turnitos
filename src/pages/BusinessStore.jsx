@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
+import PageLoader from '../components/common/PageLoader';
 import { getActiveStoreProducts, isStoreAvailable } from '../utils/storeUtils';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
 import PromotionModal from '../components/promotions/PromotionModal';
@@ -478,29 +479,8 @@ export default function BusinessStore({ overrideSlug }) {
     const primaryColor = business?.primary_color || business?.button_color || business?.buttonColor || '#10B981';
 
     if (loading) {
-        const isDark = (business?.theme || business?.metadata?.theme) === 'dark' ||
-            (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark') ||
-            (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('turnitos_current_theme') === 'dark');
-
-        return (
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100vh',
-                backgroundColor: isDark ? '#121212' : 'var(--bg-main, #F8FAFC)',
-                color: isDark ? '#EDEDED' : 'var(--text-primary, #0F172A)'
-            }}>
-                <div style={{
-                    width: '40px',
-                    height: '40px',
-                    border: isDark ? '3px solid #2E2E2E' : '3px solid var(--border, #E2E8F0)',
-                    borderTopColor: primaryColor,
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                }} />
-            </div>
-        );
+        const isDarkBusiness = (business?.theme || business?.metadata?.theme) === 'dark';
+        return <PageLoader label="Cargando tienda..." accentColor={primaryColor} dark={isDarkBusiness} />;
     }
 
     if (!business) {
