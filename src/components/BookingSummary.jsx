@@ -4,6 +4,7 @@ import { formatDisplayDate, formatFriendlyDate, calculateEndTime } from '../util
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 import CouponInput from './common/CouponInput';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
+import { Info } from 'lucide-react';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
 let globalCachedPaymentData = {
@@ -367,7 +368,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                             {currentStep === 1 ? 'Sumá a tu reserva' : (currentStep === 2 ? 'Tus Datos' : 'Datos de Pago')}
                         </h2>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
-                            {currentStep === 1 ? '¿Querés agregar algún adicional?' : (currentStep === 2 ? 'Completa tus datos para continuar' : (isPartial ? 'Transferí la seña para confirmar' : 'Realizá la transferencia para confirmar'))}
+                            {currentStep === 1 ? '¿Querés agregar algún adicional?' : (currentStep === 2 ? 'Completá tus datos para continuar' : (isPartial ? 'Transferí la seña para confirmar' : 'Realizá la transferencia para confirmar'))}
                         </p>
                     </div>
                 </div>
@@ -997,11 +998,11 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                         alignItems: 'flex-start',
                                         gap: '10px'
                                     }}>
-                                        <span style={{ fontSize: '16px' }}>ℹ️</span>
+                                        <Info size={16} aria-hidden="true" style={{ color: sportColor, flexShrink: 0, marginTop: '1px' }} />
                                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                                             <strong style={{ color: 'var(--text-primary)' }}>Política de cancelación: </strong>
                                             {cancellationPolicy.deadline_hours > 0 ? (
-                                                <>Cancela gratis hasta <strong>{cancellationPolicy.deadline_hours} hs antes</strong> del turno ({
+                                                <>Cancelás gratis hasta <strong>{cancellationPolicy.deadline_hours} hs antes</strong> del turno ({
                                                     cancellationPolicy.refund_policy === 'full' ? 'reembolso completo' :
                                                     cancellationPolicy.refund_policy === 'partial' ? 'reembolso parcial' :
                                                     'sin reembolso'

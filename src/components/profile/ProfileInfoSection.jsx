@@ -193,7 +193,8 @@ export default function ProfileInfoSection({
                         {business.amenities && business.amenities.length > 0 ? (
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'repeat(2, 1fr)',
+                                // One column on phones, two when there is room
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 200px), 1fr))',
                                 gap: '12px',
                                 fontSize: '14px'
                             }}>

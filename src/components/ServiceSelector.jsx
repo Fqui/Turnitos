@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Info, X, Calendar, CalendarCheck, CheckCircle2, ArrowRight, Sparkles, Tag } from 'lucide-react';
 import { doesPromoApplyToService, calculatePromoDiscount, parsePromotionTarget } from '../utils/promotionUtils';
+import HorizontalScroller from './HorizontalScroller';
+
+// Display-only: category names come from each business ("combos" → "Combos")
+const capitalize = (text) => (typeof text === 'string' && text ? text.charAt(0).toUpperCase() + text.slice(1) : text);
 
 export default function ServiceSelector({ services, selected, onSelect, color = '#00E676', activePromotion = null }) {
     const [activeCategory, setActiveCategory] = useState('Todos');
@@ -36,12 +40,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
         <div>
             {/* Category Tabs */}
             {categories.length > 2 && (
-                <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '10px',
-                    marginBottom: '20px'
-                }}>
+                <HorizontalScroller gap="10px" arrows={false} style={{ marginBottom: '20px' }} innerStyle={{ padding: '2px 0 8px' }}>
                     {categories.map(cat => (
                         <button
                             key={cat}
@@ -58,13 +57,14 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 whiteSpace: 'nowrap',
                                 transition: 'all 0.2s ease',
                                 boxShadow: activeCategory === cat ? `0 4px 12px ${color}40` : 'none',
-                                border: activeCategory === cat ? 'none' : '1px solid var(--border)'
+                                border: activeCategory === cat ? 'none' : '1px solid var(--border)',
+                                flexShrink: 0
                             }}
                         >
-                            {cat}
+                            {capitalize(cat)}
                         </button>
                     ))}
-                </div>
+                </HorizontalScroller>
             )}
 
             {/* Services Grid */}

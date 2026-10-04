@@ -450,17 +450,17 @@ const TimeSlotPicker = ({
 
         // For services, show a unified view with all available slots
         return (
-            <div style={{ maxWidth: '800px', margin: '20px auto 0', animation: 'slideUp 0.5s ease' }}>
-                <div className="card" style={{ padding: '20px', textAlign: 'left' }}>
-                    <h4 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '16px' }}>
+            <div style={{ animation: 'slideUp 0.5s ease' }}>
+                <div style={{ textAlign: 'left' }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
                         Horarios disponibles
                     </h4>
 
-                    {/* Time slots grid */}
+                    {/* Time slots grid: 4 columns on phones, as many as fit on desktop */}
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))',
-                        gap: '10px'
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
+                        gap: '8px'
                     }}>
                         {allSlots.filter(slot => slot.status === 'available').map((slot) => {
                             const isSelected = selectedTime?.time === slot.time;
@@ -470,8 +470,8 @@ const TimeSlotPicker = ({
                                     key={slot.time}
                                     onClick={() => onTimeSelect(slot.time, null)} // No courtId for services
                                     style={{
-                                        padding: '12px 8px',
-                                        borderRadius: '8px',
+                                        padding: '10px 4px',
+                                        borderRadius: '10px',
                                         border: isSelected ? `2px solid ${sportColor}` : '2px solid var(--border)',
                                         background: isSelected ? `${sportColor}15` : 'var(--card-bg)',
                                         color: isSelected ? sportColor : 'var(--text-primary)',

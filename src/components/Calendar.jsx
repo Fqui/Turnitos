@@ -1,4 +1,5 @@
 import React from 'react';
+import HorizontalScroller from './HorizontalScroller';
 
 export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00E676', maxDays = 30, specialDays = [], isDateClosed }) {
     const count = Math.min(Math.max(Number(maxDays) || 7, 1), 90);
@@ -11,19 +12,7 @@ export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00
     const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     const isScrollable = count > 7;
 
-    return (
-        <div>
-            <div style={{
-                display: isScrollable ? 'flex' : 'grid',
-                gridTemplateColumns: isScrollable ? undefined : `repeat(${count}, 1fr)`,
-                overflowX: isScrollable ? 'auto' : 'visible',
-                gap: '8px',
-                paddingBottom: isScrollable ? '6px' : '0px',
-                textAlign: 'center',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
-            }}>
-                {dates.map((date) => {
+    const renderDays = () => dates.map((date) => {
                     const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
                     const dayName = days[date.getDay()];
                     const dayNumber = date.getDate();
@@ -126,8 +115,24 @@ export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00
                             )}
                         </button>
                     );
-                })}
-            </div>
+                });
+
+    if (isScrollable) {
+        return (
+            <HorizontalScroller gap="8px" innerStyle={{ paddingBottom: '6px', textAlign: 'center' }}>
+                {renderDays()}
+            </HorizontalScroller>
+        );
+    }
+
+    return (
+        <div style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${count}, 1fr)`,
+            gap: '8px',
+            textAlign: 'center'
+        }}>
+            {renderDays()}
         </div>
     );
 }
