@@ -1,4 +1,72 @@
 import React from 'react';
+import { Users, Check, AlertCircle } from 'lucide-react';
+import SpecialistAvatar from './SpecialistAvatar';
+
+function OptionCard({ isSelected, onClick, avatar, title, subtitle }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={isSelected}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                width: '100%',
+                padding: '12px 14px',
+                borderRadius: '14px',
+                border: isSelected ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                // Keep the same outer size whether selected (2px border) or not (1px)
+                margin: isSelected ? 0 : '1px',
+                background: isSelected
+                    ? 'color-mix(in srgb, var(--primary-paddle, #7c3aed) 10%, var(--bg-card))'
+                    : 'var(--bg-main)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontFamily: 'inherit',
+                transition: 'background 0.2s ease, border-color 0.2s ease'
+            }}
+        >
+            {avatar}
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    color: isSelected ? 'var(--primary-paddle)' : 'var(--text-primary)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                }}>
+                    {title}
+                </div>
+                <div style={{
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                    marginTop: '2px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                }}>
+                    {subtitle}
+                </div>
+            </div>
+            <span style={{
+                width: '22px',
+                height: '22px',
+                borderRadius: '50%',
+                border: isSelected ? 'none' : '2px solid var(--border)',
+                background: isSelected ? 'var(--primary-paddle)' : 'transparent',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+            }}>
+                {isSelected && <Check size={13} strokeWidth={3} />}
+            </span>
+        </button>
+    );
+}
 
 export default function ProfileSpecialistSelector({
     availableSpecialists,
@@ -9,34 +77,35 @@ export default function ProfileSpecialistSelector({
 }) {
     return (
         <div style={{
-            marginTop: '24px',
-            padding: '20px',
-            background: 'var(--bg-card)',
-            borderRadius: '12px',
-            border: '1px solid var(--border)'
+            marginTop: '20px',
+            paddingTop: '20px',
+            borderTop: '1px solid var(--border)'
         }}>
-            <h4 style={{
-                fontSize: '16px',
-                fontWeight: '600',
-                marginBottom: '12px',
-                color: 'var(--text-primary)'
-            }}>
-                Especialista
+            <h4 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 4px', color: 'var(--text-primary)' }}>
+                ¿Con quién?
             </h4>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 14px' }}>
+                Estos profesionales están libres en ese horario.
+            </p>
 
             {loadingSpecialists ? (
-                <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    Cargando especialistas disponibles...
+                <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                    Buscando profesionales libres...
                 </div>
             ) : availableSpecialists.length === 0 ? (
-                <div style={{
-                    padding: '12px',
-                    background: 'rgba(255, 0, 0, 0.05)',
-                    borderRadius: '8px',
-                    color: 'var(--error)',
+                <div role="alert" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    background: 'color-mix(in srgb, var(--error, #ef4444) 10%, var(--bg-card))',
+                    border: '1px solid color-mix(in srgb, var(--error, #ef4444) 35%, transparent)',
+                    color: 'var(--text-primary)',
                     fontSize: '14px'
                 }}>
-                    ⚠️ No hay especialistas disponibles para este horario
+                    <AlertCircle size={18} style={{ color: 'var(--error, #ef4444)', flexShrink: 0 }} />
+                    No hay profesionales libres en ese horario. Elegí otro horario.
                 </div>
             ) : (
                 <div style={{
@@ -44,155 +113,40 @@ export default function ProfileSpecialistSelector({
                     gap: '10px',
                     gridTemplateColumns: isMobile
                         ? '1fr'
-                        : availableSpecialists.length <= 3
-                            ? `repeat(${availableSpecialists.length + 1}, minmax(0, 1fr))`
-                            : 'repeat(auto-fill, minmax(210px, 1fr))'
+                        : 'repeat(auto-fill, minmax(230px, 1fr))'
                 }}>
-                    {/* "Sin preferencia" Option */}
-                    <div
+                    <OptionCard
+                        isSelected={!selectedSpecialist}
                         onClick={() => setSelectedSpecialist(null)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px',
-                            borderRadius: '12px',
-                            border: !selectedSpecialist ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
-                            background: !selectedSpecialist ? 'color-mix(in srgb, var(--primary-paddle, #7c3aed) 8%, var(--bg-card))' : 'var(--bg-main)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            boxShadow: !selectedSpecialist ? '0 4px 12px color-mix(in srgb, var(--primary-paddle, #7c3aed) 15%, transparent)' : 'none'
-                        }}
-                    >
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            background: !selectedSpecialist ? 'color-mix(in srgb, var(--primary-paddle, #7c3aed) 15%, var(--border))' : 'var(--border)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '18px',
-                            flexShrink: 0
-                        }}>
-                            👥
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        title="Sin preferencia"
+                        subtitle="El primero que esté libre"
+                        avatar={(
                             <div style={{
-                                fontWeight: '700',
-                                fontSize: '14px',
-                                color: !selectedSpecialist ? 'var(--primary-paddle)' : 'var(--text-primary)',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '50%',
+                                background: 'color-mix(in srgb, var(--primary-paddle, #7c3aed) 18%, var(--bg-card))',
+                                color: 'var(--primary-paddle)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
                             }}>
-                                Sin preferencia
+                                <Users size={20} />
                             </div>
-                            <div style={{
-                                fontSize: '11px',
-                                color: 'var(--text-secondary)',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                            }}>
-                                Asignación rápida
-                            </div>
-                        </div>
-                        <div style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            border: !selectedSpecialist ? 'none' : '2px solid var(--border)',
-                            background: !selectedSpecialist ? 'var(--primary-paddle)' : 'transparent',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            flexShrink: 0
-                        }}>
-                            {!selectedSpecialist && (
-                                <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            )}
-                        </div>
-                    </div>
+                        )}
+                    />
 
-                    {/* Available Specialists list */}
-                    {availableSpecialists.map(specialist => {
-                        const isSelected = selectedSpecialist?.id === specialist.id;
-                        const avatarUrl = specialist.avatar_url || specialist.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(specialist.name)}&background=random&size=100`;
-                        return (
-                            <div
-                                key={specialist.id}
-                                onClick={() => setSelectedSpecialist(specialist)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    padding: '12px',
-                                    borderRadius: '12px',
-                                    border: isSelected ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
-                                    background: isSelected ? 'color-mix(in srgb, var(--primary-paddle, #7c3aed) 8%, var(--bg-card))' : 'var(--bg-main)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    boxShadow: isSelected ? '0 4px 12px color-mix(in srgb, var(--primary-paddle, #7c3aed) 15%, transparent)' : 'none'
-                                }}
-                            >
-                                <img
-                                    src={avatarUrl}
-                                    alt={specialist.name}
-                                    style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        borderRadius: '50%',
-                                        objectFit: 'cover',
-                                        border: '2px solid var(--bg-card)',
-                                        flexShrink: 0
-                                    }}
-                                />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{
-                                        fontWeight: '700',
-                                        fontSize: '14px',
-                                        color: isSelected ? 'var(--primary-paddle)' : 'var(--text-primary)',
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis'
-                                    }}>
-                                        {specialist.name}
-                                    </div>
-                                    <div style={{
-                                        fontSize: '11px',
-                                        color: 'var(--text-secondary)',
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis'
-                                    }}>
-                                        {specialist.role || 'Especialista'}
-                                    </div>
-                                </div>
-                                <div style={{
-                                    width: '20px',
-                                    height: '20px',
-                                    borderRadius: '50%',
-                                    border: isSelected ? 'none' : '2px solid var(--border)',
-                                    background: isSelected ? 'var(--primary-paddle)' : 'transparent',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.2s',
-                                    flexShrink: 0
-                                }}>
-                                    {isSelected && (
-                                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
+                    {availableSpecialists.map(specialist => (
+                        <OptionCard
+                            key={specialist.id}
+                            isSelected={selectedSpecialist?.id === specialist.id}
+                            onClick={() => setSelectedSpecialist(specialist)}
+                            title={specialist.name}
+                            subtitle={specialist.role || 'Especialista'}
+                            avatar={<SpecialistAvatar specialist={specialist} size={44} />}
+                        />
+                    ))}
                 </div>
             )}
         </div>

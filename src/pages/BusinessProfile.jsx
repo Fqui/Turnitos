@@ -193,6 +193,26 @@ export default function BusinessProfile({ business: initialBusiness }) {
         };
     };
 
+    // Is the business open right now? null when it has no schedule loaded
+    const getOpenNowStatus = () => {
+        if (!business?.hours) return null;
+        const now = new Date();
+        const hours = getBusinessHours(now);
+        if (hours.isClosed || (hours.open === '00:00' && hours.close === '00:00')) return false;
+        const toMin = (t) => {
+            const [h, m] = String(t || '').split(':').map(Number);
+            return (Number.isNaN(h) ? 0 : h) * 60 + (Number.isNaN(m) ? 0 : m);
+        };
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const ranges = hours.ranges && hours.ranges.length > 0 ? hours.ranges : [{ open: hours.open, close: hours.close }];
+        return ranges.some(range => {
+            const start = toMin(range.open);
+            let end = toMin(range.close);
+            if (end <= start) end += 1440;
+            return nowMin >= start && nowMin < end;
+        });
+    };
+
     // Scroll to top or anchor when component mounts
     useEffect(() => {
         if (location.hash) {
@@ -791,6 +811,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     business={business}
                     selectedItem={selectedItem}
                     activeStories={activeStories}
+                    openNow={getOpenNowStatus()}
                     onStoryClick={() => {
                         if (activeStories && activeStories.length > 0) {
                             setStoryViewerList(activeStories);
@@ -1344,11 +1365,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
                     {/* Business Reviews Section */}
                     {business && (
-                        <BusinessReviewsSection
-                            businessId={business.id}
-                            businessName={business.name}
-                            primaryColor={primaryColor}
-                        />
+                        <div id="opiniones" style={{ scrollMarginTop: '80px' }}>
+                            <BusinessReviewsSection
+                                businessId={business.id}
+                                businessName={business.name}
+                                primaryColor={primaryColor}
+                            />
+                        </div>
                     )}
 
                     {/* BookingSummary Modal */}
