@@ -1,53 +1,63 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { generateSlug } from '../utils/utils';
 
+const addToSet = (src) => (prev) => {
+    if (prev.has(src)) return prev;
+    const next = new Set(prev);
+    next.add(src);
+    return next;
+};
+
 export default function PromotionsHero({ promotions, businesses }) {
-    const [currentIndex, setCurrentIndex] = useState(0);
+    // previous = slide that stays opaque underneath while the current one fades in
+    const [slide, setSlide] = useState({ current: 0, previous: null });
     const [loadedImages, setLoadedImages] = useState(() => new Set());
     const [failedImages, setFailedImages] = useState(() => new Set());
 
-    // Preload all promotion images for instant carousel transitions
+    const markLoaded = (src) => setLoadedImages(addToSet(src));
+    const markFailed = (src) => setFailedImages(addToSet(src));
+
+    // Preload all promotion images so the next slide is ready before it shows
     useEffect(() => {
         if (!promotions || promotions.length === 0) return;
         promotions.forEach(p => {
-            if (p.image) {
-                const img = new Image();
-                img.onload = () => {
-                    setLoadedImages(prev => {
-                        const next = new Set(prev);
-                        next.add(p.image);
-                        return next;
-                    });
-                };
-                img.onerror = () => {
-                    setFailedImages(prev => {
-                        const next = new Set(prev);
-                        next.add(p.image);
-                        return next;
-                    });
-                };
-                img.src = p.image;
-                if (img.complete && img.naturalWidth > 0) {
-                    setLoadedImages(prev => {
-                        const next = new Set(prev);
-                        next.add(p.image);
-                        return next;
-                    });
-                }
-            }
+            if (!p.image) return;
+            const img = new Image();
+            img.onload = () => setLoadedImages(addToSet(p.image));
+            img.onerror = () => setFailedImages(addToSet(p.image));
+            img.src = p.image;
+            if (img.complete && img.naturalWidth > 0) setLoadedImages(addToSet(p.image));
         });
     }, [promotions]);
 
-    // Auto-rotate every 5 seconds
+    const count = promotions?.length || 0;
+    // Wrap so the index stays valid if the list shrinks
+    const activeIndex = count > 0 ? slide.current % count : 0;
+    const previousIndex = slide.previous;
+
+    const goTo = (getIndex) => setSlide((s) => {
+        const from = s.current % count;
+        const to = getIndex(from);
+        return to === from ? s : { current: to, previous: from };
+    });
+
+    const nextPromo = count > 1 ? promotions[(activeIndex + 1) % count] : null;
+    const nextReady = Boolean(nextPromo) && (
+        !nextPromo.image || loadedImages.has(nextPromo.image) || failedImages.has(nextPromo.image)
+    );
+
+    // Auto-rotate 5s after the current slide shows, once the next image is ready.
+    // Depending on activeIndex restarts the countdown after manual navigation.
     useEffect(() => {
-        if (!promotions || promotions.length === 0) return;
-        const timer = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % promotions.length);
+        if (!nextReady) return;
+        const timer = setTimeout(() => {
+            goTo((from) => (from + 1) % count);
         }, 5000);
-        return () => clearInterval(timer);
-    }, [promotions]);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeIndex, nextReady, count]);
 
     if (!promotions || promotions.length === 0) {
         return (
@@ -74,17 +84,12 @@ export default function PromotionsHero({ promotions, businesses }) {
         );
     }
 
-    const currentPromo = promotions[currentIndex];
-    const business = businesses.find(b => b.id === currentPromo.business_id);
-    const hasImage = Boolean(currentPromo.image);
-    const imgError = hasImage && failedImages.has(currentPromo.image);
-
     const handleNext = () => {
-        setCurrentIndex((prev) => (prev + 1) % promotions.length);
+        goTo((from) => (from + 1) % count);
     };
 
     const handlePrev = () => {
-        setCurrentIndex((prev) => (prev - 1 + promotions.length) % promotions.length);
+        goTo((from) => (from - 1 + count) % count);
     };
 
     const handleDragEnd = (event, info) => {
@@ -96,6 +101,160 @@ export default function PromotionsHero({ promotions, businesses }) {
         }
     };
 
+    const renderSlide = (promo, isActive, isVisible) => {
+        const business = businesses.find(b => b.id === promo.business_id);
+        const imgError = Boolean(promo.image) && failedImages.has(promo.image);
+
+        // Si no hay negocio pero hay link (guardado en description o action_url), abrimos enlace externo o ruta
+        const isGeneralCampaign = !promo.business_id;
+
+        let meta = null;
+        try {
+            if (promo.description && typeof promo.description === 'string' && promo.description.trim().startsWith('{')) {
+                meta = JSON.parse(promo.description);
+            }
+        } catch (e) {}
+
+        const actionUrl = meta?.action_url || (typeof promo.description === 'string' && (promo.description.startsWith('http://') || promo.description.startsWith('https://') || promo.description.startsWith('/')) ? promo.description : '');
+
+        const isExternal = actionUrl?.startsWith('http://') || actionUrl?.startsWith('https://');
+        const targetUrl = actionUrl || (business?.slug ? `/${business.slug}?promoId=${promo.id}` : (business?.name ? `/${generateSlug(business.name)}?promoId=${promo.id}` : '/negocios'));
+
+        const placeholder = (
+            <div style={{
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, #00E67620 0%, #2979FF20 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '48px'
+            }}>
+                🏷️
+            </div>
+        );
+
+        const content = isGeneralCampaign ? (
+            /* 🌐 Campaña General: Banner total sin división */
+            <div className="promo-card promo-card--general">
+                <div className="promo-image-container promo-image-container--general" style={{ overflow: 'hidden' }}>
+                    {promo.image && !imgError && (
+                        <img
+                            className="promo-general-backdrop"
+                            src={promo.image}
+                            alt=""
+                            aria-hidden="true"
+                        />
+                    )}
+                    {promo.image && !imgError ? (
+                        <img
+                            src={promo.image}
+                            alt={promo.title || 'Publicidad Turnitos'}
+                            onLoad={() => markLoaded(promo.image)}
+                            onError={() => markFailed(promo.image)}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                objectPosition: 'center',
+                                display: 'block'
+                            }}
+                        />
+                    ) : placeholder}
+                </div>
+            </div>
+        ) : (
+            /* 🏢 Promoción de Negocio Específico: Split imagen a la izquierda y textos/descuento a la derecha */
+            <div className="promo-card">
+                {/* Image Section */}
+                <div className="promo-image-container" style={{ overflow: 'hidden', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
+                    {promo.image && !imgError ? (
+                        <img
+                            src={promo.image}
+                            alt={promo.title}
+                            onLoad={() => markLoaded(promo.image)}
+                            onError={() => markFailed(promo.image)}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                objectPosition: 'center 40%'
+                            }}
+                        />
+                    ) : placeholder}
+                </div>
+
+                {/* Content Section */}
+                <div className="promo-content">
+                    <motion.div
+                        initial={false}
+                        animate={isVisible ? { y: 0, opacity: 1 } : { y: 15, opacity: 0 }}
+                        transition={{ delay: isActive ? 0.15 : 0, duration: isVisible ? 0.35 : 0 }}
+                    >
+                        <div className="promo-badge" style={{
+                            display: 'inline-flex',
+                            padding: '4px 10px',
+                            backdropFilter: 'blur(4px)',
+                            borderRadius: '50px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            marginBottom: '8px',
+                        }}>
+                            {promo.discount}
+                            {promo.discount && promo.discount.toString().trim().endsWith('%') && ' OFF'}
+                        </div>
+                        <h2 className="promo-title-mobile" style={{
+                            fontSize: 'clamp(18px, 4.5vw, 36px)',
+                            fontWeight: '800',
+                            lineHeight: 1.15,
+                            marginBottom: '6px',
+                        }}>
+                            {promo.title}
+                        </h2>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '16px' }}>{business?.name ? '📍' : '⚡'}</span>
+                            <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'var(--font-title)' }}>
+                                {business?.name || 'Ver Negocio'}
+                            </span>
+                        </div>
+                    </motion.div>
+                </div>
+            </div>
+        );
+
+        const linkStyle = {
+            textDecoration: 'none',
+            display: 'block',
+            height: '100%',
+            pointerEvents: 'auto'
+        };
+
+        if (isExternal) {
+            return (
+                <a
+                    href={targetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    tabIndex={isActive ? 0 : -1}
+                    style={linkStyle}
+                >
+                    {content}
+                </a>
+            );
+        }
+
+        return (
+            <Link
+                to={targetUrl}
+                state={{ business, activePromo: promo }}
+                tabIndex={isActive ? 0 : -1}
+                style={linkStyle}
+            >
+                {content}
+            </Link>
+        );
+    };
+
     return (
         <section style={{ marginBottom: '40px', position: 'relative' }}>
             <style>{`
@@ -105,207 +264,40 @@ export default function PromotionsHero({ promotions, businesses }) {
                 }
             `}</style>
             <div className="promotions-hero-card">
-                <AnimatePresence mode='wait'>
-                    <motion.div
-                        key={currentPromo.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        drag="x"
-                        dragConstraints={{ left: 0, right: 0 }}
-                        dragElastic={0.2}
-                        onDragEnd={handleDragEnd}
-                        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, cursor: 'grab' }}
-                        whileDrag={{ cursor: 'grabbing' }}
-                    >
-                        {/* Si no hay negocio pero hay link (guardado en description o action_url), abrimos enlace externo o ruta */}
-                        {(() => {
-                            const isGeneralCampaign = !currentPromo.business_id;
-
-                            let meta = null;
-                            try {
-                                if (currentPromo.description && typeof currentPromo.description === 'string' && currentPromo.description.trim().startsWith('{')) {
-                                    meta = JSON.parse(currentPromo.description);
-                                }
-                            } catch (e) {}
-
-                            const actionUrl = meta?.action_url || (typeof currentPromo.description === 'string' && (currentPromo.description.startsWith('http://') || currentPromo.description.startsWith('https://') || currentPromo.description.startsWith('/')) ? currentPromo.description : '');
-
-                            const isExternal = actionUrl?.startsWith('http://') || actionUrl?.startsWith('https://');
-                            const targetUrl = actionUrl || (business?.slug ? `/${business.slug}?promoId=${currentPromo.id}` : (business?.name ? `/${generateSlug(business.name)}?promoId=${currentPromo.id}` : '/negocios'));
-
-                            const content = isGeneralCampaign ? (
-                                /* 🌐 Campaña General: Banner total sin división */
-                                <div className="promo-card promo-card--general">
-                                    <div className="promo-image-container promo-image-container--general" style={{ overflow: 'hidden' }}>
-                                        {currentPromo.image && !imgError && (
-                                            <img
-                                                className="promo-general-backdrop"
-                                                src={currentPromo.image}
-                                                alt=""
-                                                aria-hidden="true"
-                                            />
-                                        )}
-                                        {currentPromo.image && !imgError ? (
-                                            <img
-                                                src={currentPromo.image}
-                                                alt={currentPromo.title || 'Publicidad Turnitos'}
-                                                onLoad={() => {
-                                                    setLoadedImages(prev => {
-                                                        const next = new Set(prev);
-                                                        next.add(currentPromo.image);
-                                                        return next;
-                                                    });
-                                                }}
-                                                onError={() => {
-                                                    setFailedImages(prev => {
-                                                        const next = new Set(prev);
-                                                        next.add(currentPromo.image);
-                                                        return next;
-                                                    });
-                                                }}
-                                                style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    objectFit: 'cover',
-                                                    objectPosition: 'center',
-                                                    display: 'block'
-                                                }}
-                                            />
-                                        ) : (
-                                            <div style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                background: 'linear-gradient(135deg, #00E67620 0%, #2979FF20 100%)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '48px'
-                                            }}>
-                                                🏷️
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ) : (
-                                /* 🏢 Promoción de Negocio Específico: Split imagen a la izquierda y textos/descuento a la derecha */
-                                <div className="promo-card">
-                                    {/* Image Section */}
-                                    <div className="promo-image-container" style={{ overflow: 'hidden', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-                                        {currentPromo.image && !imgError ? (
-                                            <img
-                                                src={currentPromo.image}
-                                                alt={currentPromo.title}
-                                                onLoad={() => {
-                                                    setLoadedImages(prev => {
-                                                        const next = new Set(prev);
-                                                        next.add(currentPromo.image);
-                                                        return next;
-                                                    });
-                                                }}
-                                                onError={() => {
-                                                    setFailedImages(prev => {
-                                                        const next = new Set(prev);
-                                                        next.add(currentPromo.image);
-                                                        return next;
-                                                    });
-                                                }}
-                                                style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    objectFit: 'cover',
-                                                    objectPosition: 'center 40%'
-                                                }}
-                                            />
-                                        ) : (
-                                            <div style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                background: 'linear-gradient(135deg, #00E67620 0%, #2979FF20 100%)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '48px'
-                                            }}>
-                                                🏷️
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Content Section */}
-                                    <div className="promo-content">
-                                        <motion.div
-                                            initial={{ y: 15, opacity: 0 }}
-                                            animate={{ y: 0, opacity: 1 }}
-                                            transition={{ delay: 0.05 }}
-                                        >
-                                            <div className="promo-badge" style={{
-                                                display: 'inline-flex',
-                                                padding: '4px 10px',
-                                                backdropFilter: 'blur(4px)',
-                                                borderRadius: '50px',
-                                                fontSize: '12px',
-                                                fontWeight: '700',
-                                                marginBottom: '8px',
-                                            }}>
-                                                {currentPromo.discount}
-                                                {currentPromo.discount && currentPromo.discount.toString().trim().endsWith('%') && ' OFF'}
-                                            </div>
-                                            <h2 className="promo-title-mobile" style={{
-                                                fontSize: 'clamp(18px, 4.5vw, 36px)',
-                                                fontWeight: '800',
-                                                lineHeight: 1.15,
-                                                marginBottom: '6px',
-                                            }}>
-                                                {currentPromo.title}
-                                            </h2>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <span style={{ fontSize: '16px' }}>{business?.name ? '📍' : '⚡'}</span>
-                                                <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'var(--font-title)' }}>
-                                                    {business?.name || 'Ver Negocio'}
-                                                </span>
-                                            </div>
-                                        </motion.div>
-                                    </div>
-                                </div>
-                            );
-
-                            if (isExternal) {
-                                return (
-                                    <a
-                                        href={targetUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{
-                                            textDecoration: 'none',
-                                            display: 'block',
-                                            height: '100%',
-                                            pointerEvents: 'auto'
-                                        }}
-                                    >
-                                        {content}
-                                    </a>
-                                );
-                            }
-
-                            return (
-                                <Link
-                                    to={targetUrl}
-                                    state={{ business, activePromo: currentPromo }}
-                                    style={{
-                                        textDecoration: 'none',
-                                        display: 'block',
-                                        height: '100%',
-                                        pointerEvents: 'auto'
-                                    }}
-                                >
-                                    {content}
-                                </Link>
-                            );
-                        })()}
-                    </motion.div>
-                </AnimatePresence>
+                {/* All slides stay mounted and stacked. The outgoing banner stays fully
+                    opaque underneath while the new one fades in on top, so the card never
+                    shows its empty background between slides */}
+                {promotions.map((promo, idx) => {
+                    const isActive = idx === activeIndex;
+                    const isPrevious = idx === previousIndex && !isActive;
+                    const isVisible = isActive || isPrevious;
+                    return (
+                        <motion.div
+                            key={promo.id}
+                            aria-hidden={!isActive}
+                            initial={false}
+                            animate={{ opacity: isVisible ? 1 : 0 }}
+                            transition={{ duration: isActive ? 0.5 : 0, ease: 'easeInOut' }}
+                            drag={isActive && promotions.length > 1 ? 'x' : false}
+                            dragConstraints={{ left: 0, right: 0 }}
+                            dragElastic={0.2}
+                            onDragEnd={handleDragEnd}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                zIndex: isActive ? 2 : (isPrevious ? 1 : 0),
+                                pointerEvents: isActive ? 'auto' : 'none',
+                                cursor: 'grab'
+                            }}
+                            whileDrag={{ cursor: 'grabbing' }}
+                        >
+                            {renderSlide(promo, isActive, isVisible)}
+                        </motion.div>
+                    );
+                })}
 
                 {/* Navigation Arrows - Desktop Only via CSS */}
                 {promotions.length > 1 && (
@@ -344,13 +336,13 @@ export default function PromotionsHero({ promotions, businesses }) {
                         {promotions.map((_, idx) => (
                             <div
                                 key={idx}
-                                onClick={() => setCurrentIndex(idx)}
+                                onClick={() => goTo(() => idx)}
                                 style={{
-                                    width: idx === currentIndex ? '24px' : '8px',
+                                    width: idx === activeIndex ? '24px' : '8px',
                                     height: '8px',
                                     borderRadius: '4px',
                                     background: 'white',
-                                    opacity: idx === currentIndex ? 1 : 0.4,
+                                    opacity: idx === activeIndex ? 1 : 0.4,
                                     transition: 'all 0.3s',
                                     cursor: 'pointer',
                                     boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
