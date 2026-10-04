@@ -633,7 +633,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                         letterSpacing: '-0.2px',
                                                         lineHeight: 1.2
                                                     }}>
-                                                        {serviceName || courtName || 'Servicio'}
+                                                        {courtName || serviceName || 'Servicio'}
                                                     </span>
                                                     {specialistName && (
                                                         <span style={{
