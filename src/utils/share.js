@@ -1,15 +1,11 @@
-// Public link of a business page. In production every business lives on its own
-// subdomain (slug.turnitoslr.com); locally and in Vercel previews it's /slug/...
+// Public link of a business page: always the production subdomain (slug.turnitoslr.com),
+// even from localhost or a Vercel preview, so a shared link is never a dev address.
 export function buildBusinessShareUrl(slug, path = '', params = {}) {
-    if (!slug || typeof window === 'undefined') return '';
+    if (!slug) return '';
     const query = new URLSearchParams(
         Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
     ).toString();
-    const suffix = `${path}${query ? `?${query}` : ''}`;
-    if (window.location.hostname.endsWith('turnitoslr.com')) {
-        return `https://${slug}.turnitoslr.com${suffix}`;
-    }
-    return `${window.location.origin}/${slug}${suffix}`;
+    return `https://${slug}.turnitoslr.com${path}${query ? `?${query}` : ''}`;
 }
 
 // Phones get the native share sheet (WhatsApp, Instagram, etc.). Desktops get our own menu,
