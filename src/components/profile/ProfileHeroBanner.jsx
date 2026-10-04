@@ -1,4 +1,5 @@
 import React from 'react';
+import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
@@ -198,7 +199,7 @@ export default function ProfileHeroBanner({
                             {/* WhatsApp */}
                             {business.whatsapp && (
                                 <a
-                                    href={`https://wa.me/${business.whatsapp}`}
+                                    href={buildWhatsAppUrl(business.whatsapp)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     style={{

@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
 import CustomDropdown from '../common/CustomDropdown';
 
-const BookingDetailsModal = ({
-    isOpen,
+const BookingDetailsModalContent = ({
     onClose,
     isMobile,
     booking,
@@ -14,7 +13,6 @@ const BookingDetailsModal = ({
     getStatusLabel
 }) => {
     const { showToast } = useNotification();
-    if (!isOpen || !booking) return null;
 
     const biz = businesses?.find(b => String(b.id) === String(selectedBusinessId || booking.business_id || booking.businessId));
     const isRental = biz?.type === 'venue' ||
@@ -2818,6 +2816,12 @@ const BookingDetailsModal = ({
             )}
         </div>
     );
+};
+
+// Mount the content only while open so its hooks always run in the same order
+const BookingDetailsModal = ({ isOpen, ...props }) => {
+    if (!isOpen || !props.booking) return null;
+    return <BookingDetailsModalContent {...props} />;
 };
 
 export default BookingDetailsModal;

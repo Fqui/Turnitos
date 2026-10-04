@@ -6,7 +6,7 @@
  *   - trial  → due date is trial_end_date
  *   - active → due date is subscriptions.next_billing_date
  */
-export const GRACE_DAYS = 5;
+export const GRACE_DAYS = 10;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

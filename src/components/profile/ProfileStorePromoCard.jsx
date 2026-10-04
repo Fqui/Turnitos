@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, Sparkles, Tag } from 'lucide-react';
 import { getSubdomain } from '../../utils/utils';
-import { getStoreProducts } from '../../services/supabase/storeService';
 
 export const getSafeStoreProducts = (biz) => {
     if (!biz) return [];
@@ -39,30 +38,11 @@ export default function ProfileStorePromoCard({
 }) {
     const navigate = useNavigate();
 
-    // 1. Synchronously resolve metadata products
+    // Products live in business.metadata.store_products (there is no store_products table)
     const directProducts = getSafeStoreProducts(business);
-    const [fetchedProducts, setFetchedProducts] = useState(null);
-
-    // Fallback: If no products found directly in biz, fetch directly from storeService
-    useEffect(() => {
-        if (
-            (!propProducts || propProducts.length === 0) &&
-            directProducts.length === 0 &&
-            (business?.id || business?.slug)
-        ) {
-            getStoreProducts(business.id || business.slug)
-                .then(res => {
-                    if (Array.isArray(res) && res.length > 0) {
-                        setFetchedProducts(res);
-                    }
-                })
-                .catch(() => {});
-        }
-    }, [business?.id, business?.slug, propProducts, directProducts.length]);
-
     const products = (propProducts && Array.isArray(propProducts) && propProducts.length > 0)
         ? propProducts
-        : (directProducts.length > 0 ? directProducts : (fetchedProducts || []));
+        : directProducts;
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isHovered, setIsHovered] = useState(false);

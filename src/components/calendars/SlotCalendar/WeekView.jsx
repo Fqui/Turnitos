@@ -236,17 +236,6 @@ export default function WeekView({
                         <React.Fragment key={time}>
                             {/* Time Column */}
                             <div
-                                onClick={() => {
-                                    setConfirmModal({
-                                        isOpen: true,
-                                        title: 'Bloquear Horario Global',
-                                        message: `¿Deseas bloquear TODAS las canchas para las ${time} hs en este día?`,
-                                        confirmText: 'Sí, bloquear todas',
-                                        isDanger: true,
-                                        onConfirm: () => onBlockSlot && onBlockSlot(currentDate, time, null)
-                                    });
-                                }}
-                                title="Click para bloquear todas las canchas a esta hora"
                                 style={{
                                     padding: '10px',
                                     textAlign: 'center',
@@ -261,12 +250,8 @@ export default function WeekView({
                                     zIndex: 10,
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    justifyContent: 'center'
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-main)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-card)'}
                             >
                                 {time}
                             </div>
