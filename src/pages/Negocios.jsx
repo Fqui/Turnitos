@@ -11,9 +11,9 @@ import '../styles/support.css';
 const WHATSAPP_URL = 'https://wa.me/5493805002706?text=Hola,%20quiero%20sumar%20mi%20negocio%20a%20Turnitos';
 
 const PLANS = [
-    { icon: Scissors, title: 'Servicios', detail: 'Peluquería, estética, salud, mascotas', price: 'Desde $17.000', unit: 'por mes', note: 'Con 1 profesional. Sumás más a medida que crecés.' },
-    { icon: Trophy, title: 'Canchas', detail: 'Pádel, fútbol, tenis y más', price: '$20.000', unit: 'por cancha, por mes', note: 'Precio más bajo desde 4 canchas.' },
-    { icon: HomeIcon, title: 'Alquileres', detail: 'Quinchos, salones y espacios', price: '$15.000', unit: 'por mes', note: 'Sin comisión por reserva.' }
+    { icon: Scissors, title: 'Servicios', detail: 'Peluquería, estética, salud, mascotas', price: 'Desde $17.000', unit: 'por mes', note: 'Arrancás con 1 profesional y sumás a tu equipo cuando crezcas.' },
+    { icon: Trophy, title: 'Canchas', detail: 'Pádel, fútbol, tenis y más', price: '$20.000', unit: 'por cancha, por mes', note: 'Cuantas más canchas, menos pagás: desde 4, cada una te sale más barata.' },
+    { icon: HomeIcon, title: 'Alquileres', detail: 'Quinchos, salones y espacios', price: '$15.000', unit: 'por mes', note: 'Sin comisiones: lo que cobrás por cada reserva es todo tuyo.' }
 ];
 
 const FEATURES = [
