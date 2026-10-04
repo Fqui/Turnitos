@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
-import { getPlanDetails, isFreePlan, calculateSubscriptionPrice } from '../../utils/subscriptionUtils';
+import { getPlanDetails, calculateSubscriptionPrice } from '../../utils/subscriptionUtils';
 import { getBillingInfo, formatDueText } from '../../utils/billingUtils';
 
 export default function BusinessSubscriptionView({ business, isMobile }) {
@@ -11,8 +11,6 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
         business?.subscription || (Array.isArray(business?.subscriptions) ? business.subscriptions[0] : null) || null
     );
 
-    const isFree = isFreePlan(business?.subscription_plan_id || business?.subscription_plan_name);
-    
     // Detección robusta de tipo de negocio
     const bType = String(business?.type || '').toLowerCase();
     const bCat = String(business?.category || '').toLowerCase();
@@ -48,7 +46,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
     // Quinchos / Salones
     const totalRentalPrice = 15000;
 
-    const monthlyPrice = isFree ? 0 : (subscription?.monthly_price ? Number(subscription.monthly_price) : (isRental ? totalRentalPrice : (isSport ? totalCourtsPrice : totalServicesPrice)));
+    const monthlyPrice = subscription?.monthly_price ? Number(subscription.monthly_price) : (isRental ? totalRentalPrice : (isSport ? totalCourtsPrice : totalServicesPrice));
 
     // Fechas de ciclo y vencimiento
     const now = new Date();
@@ -102,10 +100,6 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
         loadStats();
     }, [business?.id]);
 
-    const totalBookings = stats?.totalBookings || 0;
-    const limit = 100;
-    const usagePercent = Math.min(100, Math.round((totalBookings / limit) * 100));
-
     // Filtrar cualquier bloqueo residual de la lista
     const filteredMarketplaceList = (stats?.marketplaceList || []).filter(item => 
         item.status !== 'blocked' &&
@@ -114,7 +108,6 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
     );
 
     const getItemCommission = (item) => {
-        if (isFree) return Math.round(Number(item.price || 0) * 0.05);
         if (isRental) return Math.round(Number(item.price || 0) * 0.03);
         if (item.metadata?.commission_amount !== undefined && item.metadata?.commission_amount !== null) {
             return Number(item.metadata.commission_amount);
@@ -169,19 +162,17 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                         display: 'inline-block',
                         padding: '4px 12px',
                         borderRadius: '20px',
-                        background: isFree ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.15)',
-                        color: isFree ? '#EF4444' : 'var(--primary-paddle)',
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        color: 'var(--primary-paddle)',
                         fontSize: '12px',
                         fontWeight: '800',
                         marginBottom: '10px'
                     }}>
-                        {isFree ? 'PLAN GRATUITO' : 'PLAN PREMIUM'}
+                        PLAN PREMIUM
                     </div>
 
                     <h3 style={{ margin: '0 0 6px 0', fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                        {isFree 
-                            ? 'Plan Básico (Hasta 100 turnos/mes)'
-                            : isRental
+                        {isRental
                                 ? 'Alquileres (Quinchos y Salones)'
                                 : isSport 
                                     ? (subscription?.plan_name || `Canchas (${courtsCount} ${courtsCount === 1 ? 'Cancha' : 'Canchas'})`)
@@ -194,9 +185,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                     </h3>
 
                     <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '520px', lineHeight: '1.5' }}>
-                        {isFree ? (
-                            'Hasta 100 reservas al mes. 5% de comisión por turno.'
-                        ) : isRental ? (
+                        {isRental ? (
                             <span>
                                 <strong style={{ color: 'var(--text-primary)' }}>
                                     Abono fijo $15.000 / mes.
@@ -298,61 +287,6 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                 </div>
             </div>
 
-            {/* Free Plan Monthly Limit Progress */}
-            {isFree && (
-                <div style={{
-                    background: 'var(--bg-card)',
-                    borderRadius: '20px',
-                    padding: '24px',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.05)'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <div>
-                            <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                Consumo de Turnos del Mes
-                            </h4>
-                            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Límite de 100 turnos mensuales incluidos en el Plan Gratis.
-                            </p>
-                        </div>
-                        <div style={{ fontSize: '18px', fontWeight: '800', color: totalBookings >= 100 ? '#EF4444' : 'var(--text-primary)' }}>
-                            {totalBookings} / {limit}
-                        </div>
-                    </div>
-
-                    <div style={{
-                        width: '100%',
-                        height: '10px',
-                        background: 'var(--bg-main)',
-                        borderRadius: '5px',
-                        overflow: 'hidden',
-                        marginBottom: '10px'
-                    }}>
-                        <div style={{
-                            width: `${usagePercent}%`,
-                            height: '100%',
-                            background: totalBookings >= 100 ? '#EF4444' : (totalBookings >= 80 ? '#F59E0B' : 'var(--primary-paddle)'),
-                            borderRadius: '5px',
-                            transition: 'width 0.4s ease'
-                        }} />
-                    </div>
-
-                    {totalBookings >= 100 && (
-                        <div style={{
-                            padding: '10px 14px',
-                            borderRadius: '10px',
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            color: '#EF4444',
-                            fontSize: '13px',
-                            fontWeight: '600'
-                        }}>
-                            ⚠️ Cupo mensual alcanzado (100/100). Las reservas online para clientes están pausadas hasta el próximo mes.
-                        </div>
-                    )}
-                </div>
-            )}
-
             {/* Marketplace Reservations Breakdown */}
             <div style={{
                 background: 'var(--bg-card)',
@@ -401,7 +335,7 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                             {isRental ? 'Comisión por Reserva' : 'Comisión por Turno'}
                         </div>
                         <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary-paddle)' }}>
-                            {isFree ? '5%' : (isRental ? '3%' : '$500')}
+                            {isRental ? '3%' : '$500'}
                         </div>
                     </div>
 

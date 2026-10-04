@@ -81,7 +81,7 @@ const SECTIONS = [
         content: (
             <ul>
                 <li>El alta de cada Negocio la realiza TurnitosLR o un vendedor autorizado, previa verificación de que el Negocio existe.</li>
-                <li>Los Negocios abonan un cargo mensual según su rubro y la cantidad de canchas, profesionales o espacios. Los precios vigentes se publican en la sección Para Negocios. TurnitosLR no cobra comisión por turno.</li>
+                <li>Los Negocios abonan un cargo mensual según su rubro y la cantidad de canchas, profesionales o espacios. Los precios vigentes se publican en la sección Para Negocios. Las reservas que llegan por el enlace propio del Negocio no pagan comisión. Las reservas que llegan desde el buscador de TurnitosLR pagan una comisión por turno según el plan, que se informa en el panel del Negocio.</li>
                 <li>Los Negocios nuevos cuentan con 14 días de prueba gratuita.</li>
                 <li>El abono se paga por transferencia bancaria, Mercado Pago o en efectivo.</li>
                 <li>Si transcurren 10 días desde el vencimiento sin que se registre el pago, la página del Negocio se oculta hasta que regularice su situación.</li>
