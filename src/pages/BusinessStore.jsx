@@ -22,7 +22,8 @@ import {
 } from 'lucide-react';
 import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
-import { isFreePlan } from '../utils/subscriptionUtils';
+import { getActiveStoreProducts, isStoreAvailable } from '../utils/storeUtils';
+import { buildWhatsAppUrl } from '../utils/whatsapp';
 import PromotionModal from '../components/promotions/PromotionModal';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 
@@ -54,7 +55,28 @@ export default function BusinessStore({ overrideSlug }) {
         return true;
     });
 
-    const [cart, setCart] = useState([]);
+    // Cart survives reloads and closing the tab (per business, per browser session)
+    const cartStorageKey = `turnitos_cart_${businessSlug}`;
+    const [cart, setCart] = useState(() => {
+        try {
+            const saved = sessionStorage.getItem(cartStorageKey);
+            const parsed = saved ? JSON.parse(saved) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    });
+    // Set after opening WhatsApp: the cart stays until the customer says the order was sent
+    const [orderSentToWhatsApp, setOrderSentToWhatsApp] = useState(false);
+
+    useEffect(() => {
+        try {
+            if (cart.length > 0) sessionStorage.setItem(cartStorageKey, JSON.stringify(cart));
+            else sessionStorage.removeItem(cartStorageKey);
+        } catch {
+            // Storage unavailable (private mode): the cart just won't survive a reload
+        }
+    }, [cart, cartStorageKey]);
     const [activeCategory, setActiveCategory] = useState('Todos');
     const [searchQuery, setSearchQuery] = useState('');
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -121,32 +143,26 @@ export default function BusinessStore({ overrideSlug }) {
     useEffect(() => {
         const fetchBusiness = async () => {
             try {
-                const allBusinesses = await serviceAdapter.getBusinesses();
-                const foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
+                // Direct lookup first; the full list is only a fallback for slugs saved differently (e.g. spa-3-soles vs spa3soles)
+                let foundBusiness = null;
+                try {
+                    foundBusiness = await serviceAdapter.getBusinessBySlug(businessSlug);
+                } catch {
+                    foundBusiness = null;
+                }
+                if (!foundBusiness) {
+                    const allBusinesses = await serviceAdapter.getBusinesses();
+                    foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
+                }
                 if (foundBusiness) {
-                    if (isFreePlan(foundBusiness.subscription_plan_id || foundBusiness.subscription_plan_name)) {
-                        navigate(`/${foundBusiness.slug || businessSlug}`, { replace: true });
-                        return;
-                    }
                     setBusiness(foundBusiness);
                     try {
                         sessionStorage.setItem(`turnitos_biz_${foundBusiness.slug || businessSlug}`, JSON.stringify(foundBusiness));
                         sessionStorage.setItem(`turnitos_theme_${foundBusiness.slug || businessSlug}`, ((foundBusiness.theme || foundBusiness.metadata?.theme) === 'dark') ? 'dark' : 'light');
                     } catch (e) {}
 
-                    // 1. Check metadata store_products
-                    const customProducts = foundBusiness.metadata?.store_products;
-                    if (Array.isArray(customProducts) && customProducts.length > 0) {
-                        setProducts(customProducts.filter(p => p.is_active !== false));
-                    } else {
-                        // 2. Check store_products table
-                        const dbProducts = await serviceAdapter.getStoreProducts(foundBusiness.id, true);
-                        if (dbProducts && dbProducts.length > 0) {
-                            setProducts(dbProducts);
-                        } else {
-                            setProducts([]);
-                        }
-                    }
+                    // Products live in businesses.metadata.store_products
+                    setProducts(getActiveStoreProducts(foundBusiness));
                 }
             } catch (error) {
                 console.error('Error fetching business for Store:', error);
@@ -356,19 +372,8 @@ export default function BusinessStore({ overrideSlug }) {
         }
     };
 
-    // Alerta al intentar recargar o cerrar pestaña con carrito activo
-    useEffect(() => {
-        if (cart.length === 0) return;
-        const handleBeforeUnload = (e) => {
-            e.preventDefault();
-            e.returnValue = '';
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [cart.length]);
-
     const handleConfirmOrder = () => {
-        if (!business?.whatsapp) {
+        if (!buildWhatsAppUrl(business?.whatsapp)) {
             alert('El negocio no tiene configurado un número de WhatsApp para pedidos.');
             return;
         }
@@ -385,9 +390,17 @@ export default function BusinessStore({ overrideSlug }) {
 
         const message = `¡Hola ${business.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${productListText}\n${discountText}\n*Total a pagar:* $${totalText}\n\n¿Tienen disponibilidad para coordinar el retiro/entrega? ¡Gracias!`;
 
-        window.open(`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
+        window.open(buildWhatsAppUrl(business.whatsapp, message), '_blank');
+        // Keep the cart until the customer confirms the message was actually sent
+        setOrderSentToWhatsApp(true);
+    };
+
+    const handleOrderSent = () => {
         setCart([]);
+        setOrderSentToWhatsApp(false);
         setIsCartOpen(false);
+        setToastMessage('¡Gracias por tu pedido! 🙌');
+        setTimeout(() => setToastMessage(null), 2000);
     };
 
     const getProductImages = (prod) => {
@@ -477,10 +490,7 @@ export default function BusinessStore({ overrideSlug }) {
         return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
     }
 
-    const hasStoreProducts = (Array.isArray(products) && products.length > 0) ||
-        (Array.isArray(business.metadata?.store_products) && business.metadata.store_products.length > 0);
-
-    if (!business.store_enabled && !hasStoreProducts) {
+    if (!isStoreAvailable(business)) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', gap: '16px', padding: '20px', textAlign: 'center' }}>
                 <div style={{ fontSize: '54px' }}>🏪</div>
@@ -1930,9 +1940,34 @@ export default function BusinessStore({ overrideSlug }) {
                                         onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
                                         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                                     >
-                                        <span>Confirmar Pedido vía WhatsApp</span>
+                                        <span>{orderSentToWhatsApp ? 'Abrir WhatsApp de nuevo' : 'Confirmar Pedido vía WhatsApp'}</span>
                                         <span>💬</span>
                                     </button>
+
+                                    {orderSentToWhatsApp && (
+                                        <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                                            <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: '0 0 8px' }}>
+                                                ¿Ya enviaste el mensaje por WhatsApp?
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={handleOrderSent}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px',
+                                                    borderRadius: '24px',
+                                                    border: '1px solid var(--border)',
+                                                    backgroundColor: 'transparent',
+                                                    color: 'var(--text-primary)',
+                                                    fontWeight: '700',
+                                                    fontSize: '13.5px',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Sí, ya lo envié · vaciar carrito
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </motion.div>
