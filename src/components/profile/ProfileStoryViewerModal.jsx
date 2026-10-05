@@ -224,6 +224,7 @@ export default function ProfileStoryViewerModal({
                     zIndex: 2000,
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
+                    WebkitTapHighlightColor: 'transparent',
                     overflow: 'hidden'
                 }}
             >
