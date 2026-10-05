@@ -1,6 +1,7 @@
 import React from 'react';
 import ProfileHighlightsBar from './ProfileHighlightsBar';
 import ProfileStorePromoCard, { getSafeStoreProducts } from './ProfileStorePromoCard';
+import ProfileAboutCard, { getPublicSpecialists } from './ProfileAboutCard';
 import { isStoreAvailable } from '../../utils/storeUtils';
 
 export default function ProfileHighlightsAndStore({
@@ -12,9 +13,11 @@ export default function ProfileHighlightsAndStore({
     const products = getSafeStoreProducts(business);
     const hasHighlights = Boolean(permanentHighlights && permanentHighlights.length > 0);
     const hasStore = isStoreAvailable(business);
+    // Without a store, the "Nosotros" card (team) takes the store's slot
+    const hasAbout = !hasStore && getPublicSpecialists(business).length > 0;
 
-    // No store: show only the highlights (or nothing)
-    if (!hasStore) {
+    // No store and no team: show only the highlights (or nothing)
+    if (!hasStore && !hasAbout) {
         if (!hasHighlights) return null;
         return (
             <ProfileHighlightsBar
@@ -24,8 +27,17 @@ export default function ProfileHighlightsAndStore({
         );
     }
 
-    // Case 1: No highlights at all -> render full-width store banner
+    // Case 1: No highlights at all -> render the side card full-width
     if (!hasHighlights) {
+        if (hasAbout) {
+            return (
+                <div className="profile-highlights-and-store">
+                    <div className="profile-store-wrapper profile-about-wrapper-full">
+                        <ProfileAboutCard business={business} primaryColor={primaryColor} />
+                    </div>
+                </div>
+            );
+        }
         return (
             <ProfileStorePromoCard
                 business={business}
@@ -36,7 +48,7 @@ export default function ProfileHighlightsAndStore({
         );
     }
 
-    // Case 2: Highlights exist -> render Highlights + Store Promo Card
+    // Case 2: Highlights exist -> render Highlights + Store Promo / About Card
     // (Desktop: side-by-side, Mobile: stacked)
     return (
         <div className="profile-highlights-and-store">
@@ -48,12 +60,16 @@ export default function ProfileHighlightsAndStore({
                 />
             </div>
             <div className="profile-store-wrapper">
-                <ProfileStorePromoCard
-                    business={business}
-                    products={products}
-                    primaryColor={primaryColor}
-                    isFullWidth={false}
-                />
+                {hasAbout ? (
+                    <ProfileAboutCard business={business} primaryColor={primaryColor} />
+                ) : (
+                    <ProfileStorePromoCard
+                        business={business}
+                        products={products}
+                        primaryColor={primaryColor}
+                        isFullWidth={false}
+                    />
+                )}
             </div>
         </div>
     );

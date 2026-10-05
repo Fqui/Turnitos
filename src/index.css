@@ -977,6 +977,42 @@ textarea {
   width: 100%;
 }
 
+/* "Nosotros" card: team shown next to the highlights when there is no store */
+.profile-about-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  min-height: 124px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg-card);
+  box-sizing: border-box;
+}
+
+.profile-about-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.profile-about-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.profile-about-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 180px;
+}
+
 @media (min-width: 700px) {
   .profile-highlights-and-store {
     flex-direction: row;
