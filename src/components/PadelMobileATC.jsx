@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const PadelMobileATC = ({
@@ -13,6 +13,16 @@ const PadelMobileATC = ({
 }) => {
     const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
     const [selectedSelection, setSelectedSelection] = useState(null); // { court, duration, price }
+    const courtListRef = useRef(null);
+
+    // After picking a time, bring the court list into view
+    useEffect(() => {
+        if (!selectedTimeSlot) return;
+        const timer = setTimeout(() => {
+            courtListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+        return () => clearTimeout(timer);
+    }, [selectedTimeSlot]);
 
     // --- Helpers (Shared) ---
     const timeToMinutes = (time) => {
@@ -261,6 +271,8 @@ const PadelMobileATC = ({
                 {selectedTimeSlot && (
                     <motion.div
                         key="court-list"
+                        ref={courtListRef}
+                        style={{ scrollMarginTop: '16px' }}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
