@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CouponInput from '../../common/CouponInput';
 import AmenityIcon from '../../common/AmenityIcon';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function VenueBookingWizardModal({
     showBookingModal,
@@ -38,6 +39,7 @@ export default function VenueBookingWizardModal({
     borderColor,
     primaryColor
 }) {
+    useBodyScrollLock(!!showBookingModal);
     // Deposit calculation
     const depositSettings = business?.payment_settings?.deposit || business?.metadata?.payment_settings?.deposit;
     const hasDeposit = Boolean(depositSettings?.enabled && (Number(depositSettings?.percentage) > 0 || Number(depositSettings?.fixed_amount) > 0));

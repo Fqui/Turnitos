@@ -8,6 +8,7 @@ import {
     Snowflake, Wind, Wifi, Lightbulb, Lamp, Armchair, Bed, Car, ShieldCheck, Lock, Key, Plug, Zap, Accessibility,
     Baby, Smile, Dog, Heart, Users, Target, Search
 } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const LucideIcons = {
     Flame, Utensils, ChefHat, Wine, Beer, GlassWater, Coffee, Refrigerator, Microwave, Pizza, Cake, Apple,
@@ -444,6 +445,7 @@ export function EmojiPickerModal({ isOpen, onClose, onSelect, onSelectIcon, curr
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [customInput, setCustomInput] = useState('');
 
+    useBodyScrollLock(isOpen);
     if (!isOpen) return null;
 
     const handleSelect = onSelect || onSelectIcon || (() => {});
@@ -704,6 +706,7 @@ export function IconPickerModal({ isOpen, onClose, onSelect, onSelectIcon, curre
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
 
+    useBodyScrollLock(isOpen);
     if (!isOpen) return null;
 
     const handleSelect = onSelect || onSelectIcon || (() => {});

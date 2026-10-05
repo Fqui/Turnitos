@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function ServicesTab({
     formData,
@@ -28,6 +29,7 @@ export default function ServicesTab({
         specialist_ids: []
     });
     const [editingService, setEditingService] = useState(null);
+    useBodyScrollLock(!!editingService);
 
     const services = formData.services || [];
     const serviceCategories = formData.service_categories || [];

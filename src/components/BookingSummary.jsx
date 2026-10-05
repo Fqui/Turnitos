@@ -5,6 +5,7 @@ import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotion
 import CouponInput from './common/CouponInput';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
 import { Info } from 'lucide-react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
 const globalCachedPaymentData = {
@@ -91,12 +92,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
     const { business, paymentSettings, depositSettings, bankDetailsFromSettings } = paymentDataRef.current;
 
     // Block body scroll when modal is open
-    useEffect(() => {
-        document.body.style.overflow = 'hidden';
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
-    }, []);
+    useBodyScrollLock();
 
     const bookingRules = useMemo(() => {
         let r = business?.booking_rules || bookingDetails?.business?.booking_rules;

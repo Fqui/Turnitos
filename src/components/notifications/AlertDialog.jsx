@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const AlertDialog = () => {
     const { alertDialog } = useNotification();
     const prefersReducedMotion = useReducedMotion();
+    useBodyScrollLock(!!alertDialog);
 
     useEffect(() => {
         if (!alertDialog) return;

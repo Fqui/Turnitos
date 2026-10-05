@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sun, Moon, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { SUPERADMIN_NAV } from './superAdminNav';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export default function SuperAdminSidebar({
     activeTab,
@@ -110,6 +111,7 @@ export default function SuperAdminSidebar({
         </aside>
     );
 
+    useBodyScrollLock(isMobile && !!isOpenMobile);
     if (isMobile) {
         if (!isOpenMobile) return null;
         return (

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import supabaseService from '../services/supabaseService';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 const ChangePasswordModal = ({ businessId, onPasswordChanged }) => {
+    useBodyScrollLock();
     const [currentPassword, setCurrentPassword] = useState('admin123');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');

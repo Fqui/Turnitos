@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CalendarDays, X } from 'lucide-react';
 import MonthCalendar from './MonthCalendar';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 const VISIBLE_DAYS = 7;
 
@@ -28,16 +29,13 @@ export default function Calendar({ selectedDate, onDateSelect, sportColor = '#00
         return () => window.removeEventListener('resize', onResize);
     }, []);
 
+    useBodyScrollLock(isMonthOpen);
+
     useEffect(() => {
         if (!isMonthOpen) return undefined;
         const onKey = (e) => { if (e.key === 'Escape') setIsMonthOpen(false); };
-        const prevOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
         window.addEventListener('keydown', onKey);
-        return () => {
-            document.body.style.overflow = prevOverflow;
-            window.removeEventListener('keydown', onKey);
-        };
+        return () => window.removeEventListener('keydown', onKey);
     }, [isMonthOpen]);
 
     return (

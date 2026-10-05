@@ -1,7 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 export default function BookingSuccessModal({ onClose, whatsappUrl }) {
+    useBodyScrollLock();
     return (
         <div
             style={{

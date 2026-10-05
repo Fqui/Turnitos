@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function VenueLightboxModal({
     showLightbox,
@@ -8,6 +9,7 @@ export default function VenueLightboxModal({
     setLightboxIndex,
     galleryImages
 }) {
+    useBodyScrollLock(!!showLightbox);
     // Keyboard navigation: Escape to close, arrows to cycle
     React.useEffect(() => {
         if (!showLightbox) return;

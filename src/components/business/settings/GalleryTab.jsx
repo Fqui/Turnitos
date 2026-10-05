@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function GalleryTab({
     formData,
@@ -19,6 +20,7 @@ export default function GalleryTab({
     // Separate states for permanent highlights and 24h stories
     const [editingHighlight, setEditingHighlight] = useState(null);
     const [editingStory, setEditingStory] = useState(null);
+    useBodyScrollLock(!!editingHighlight || !!editingStory);
     const [uploadingMedia, setUploadingMedia] = useState(false);
 
     const highlights = formData.gallery_highlights || [];

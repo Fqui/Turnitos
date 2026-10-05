@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const STORY_DURATION = 5000; // 5 seconds per image slide
 const PROGRESS_INTERVAL = 30; // Update progress every 30ms
@@ -203,6 +204,7 @@ export default function ProfileStoryViewerModal({
         }
     };
 
+    useBodyScrollLock(selectedHighlight !== null && selectedPhotoIndex !== null && !!highlight);
     if (selectedHighlight === null || selectedPhotoIndex === null || !highlight) {
         return null;
     }

@@ -3,6 +3,7 @@ import CalendarHeader from '../shared/CalendarHeader';
 import MonthView from './MonthView';
 import YearView from './YearView';
 import { formatDateKey } from '../shared/utils';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function PeriodCalendar({
     business,
@@ -15,6 +16,7 @@ export default function PeriodCalendar({
     const [viewMode, setViewMode] = useState('month');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedFreeDay, setSelectedFreeDay] = useState(null);
+    useBodyScrollLock(!!selectedFreeDay);
 
     // Navegación
     const handlePrevious = () => {

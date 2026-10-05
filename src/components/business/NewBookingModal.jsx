@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import CustomDropdown from '../common/CustomDropdown';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const NewBookingModal = ({
     isOpen,
@@ -505,6 +506,7 @@ const NewBookingModal = ({
 
     const allCalendarDays = [...prevDays, ...currentDays, ...nextDays];
 
+    useBodyScrollLock(isOpen);
     if (!isOpen) return null;
 
     return (

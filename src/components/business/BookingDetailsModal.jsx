@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
 import CustomDropdown from '../common/CustomDropdown';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const BookingDetailsModalContent = ({
     onClose,
@@ -194,6 +195,7 @@ const BookingDetailsModalContent = ({
     // WhatsApp Menu and Custom Message Modal State
     const [showWhatsappMenu, setShowWhatsappMenu] = useState(false);
     const [previewMessage, setPreviewMessage] = useState(null);
+    useBodyScrollLock();
 
     // Custom extra add form state
     const [showAddCustomExtra, setShowAddCustomExtra] = useState(false);

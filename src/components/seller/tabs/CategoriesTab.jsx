@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import supabaseService from '../../../services/supabaseService';
 import { useNotification } from '../../../contexts/NotificationContext';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 function SimpleModal({ title, children, onClose }) {
+    useBodyScrollLock();
     return (
         <div
             style={{

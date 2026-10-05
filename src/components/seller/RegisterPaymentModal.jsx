@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import supabaseService from '../../services/supabaseService';
 import { formatMoney } from '../../utils/billingUtils';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 // Colors read the SuperAdmin theme tokens and fall back to a dark palette
 // so the modal also works inside the seller panel.
@@ -32,6 +33,7 @@ const fieldStyle = {
 const labelStyle = { display: 'block', fontSize: '12.5px', fontWeight: 600, color: c.muted, marginBottom: '6px' };
 
 export default function RegisterPaymentModal({ business, monthlyPrice, onClose, onRegistered }) {
+    useBodyScrollLock();
     const [months, setMonths] = useState(1);
     const [amount, setAmount] = useState(String(monthlyPrice || ''));
     const [method, setMethod] = useState('transferencia');

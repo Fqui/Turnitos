@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 const DurationSelector = ({
     court,
@@ -9,6 +10,7 @@ const DurationSelector = ({
     sportColor,
     getPrice: customGetPrice // 🆕 Optional custom price calculator
 }) => {
+    useBodyScrollLock();
     // Use custom getPrice or default calculation
     const getPrice = customGetPrice || ((duration) => {
         const basePrice = court.price || 0;

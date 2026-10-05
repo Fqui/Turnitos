@@ -32,6 +32,7 @@ import ShareButton from '../components/common/ShareButton';
 import { buildBusinessShareUrl } from '../utils/share';
 import { ProductCardImage, ProductDetailImage } from '../components/store/ProductImage';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 export default function BusinessStore({ overrideSlug }) {
     const { businessSlug: routeSlug } = useParams();
@@ -131,6 +132,7 @@ export default function BusinessStore({ overrideSlug }) {
 
     // Product Detail View state (matching Screen 2 from reference)
     const [selectedProductModal, setSelectedProductModal] = useState(null);
+    useBodyScrollLock(isCartOpen || !!selectedProductModal || showLeaveConfirmation || !!itemToDelete);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [modalQty, setModalQty] = useState(1);
     const [selectedSize, setSelectedSize] = useState(null);

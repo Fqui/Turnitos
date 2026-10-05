@@ -4,10 +4,12 @@ import supabaseService from '../../services/supabaseService';
 import { useNotification } from '../../contexts/NotificationContext';
 import { calculateSubscriptionPrice } from '../../utils/subscriptionUtils';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 // mode 'seller': a seller creates or edits their own businesses (no seller assignment,
 // no subscription status, no new subcategories). The server enforces the same rules.
 const BusinessFormModal = ({ business, categories = [], subcategories = [], sellers = [], onClose, onSave, mode = 'superadmin', sellerId = null }) => {
+    useBodyScrollLock();
     const { showToast, showConfirm } = useNotification();
     const isSellerMode = mode === 'seller';
     const formatSlug = (text) => {

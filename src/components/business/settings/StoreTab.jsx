@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function StoreTab({
     formData,
@@ -22,6 +23,7 @@ export default function StoreTab({
     // Turn Extras management modal state
     const [isExtraModalOpen, setIsExtraModalOpen] = useState(false);
     const [editingExtra, setEditingExtra] = useState(null);
+    useBodyScrollLock((isProductModalOpen && !!editingProduct) || (isExtraModalOpen && !!editingExtra));
     const [uploadingExtraImage, setUploadingExtraImage] = useState(false);
     const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
 

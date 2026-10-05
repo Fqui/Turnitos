@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function ResetPasswordModal({ credentials, onClose }) {
     const [copied, setCopied] = useState(false);
 
+    useBodyScrollLock(!!credentials);
     if (!credentials) return null;
 
     const loginUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://www.turnitoslr.com'}${credentials.loginPath || '/login'}`;

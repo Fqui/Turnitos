@@ -1,6 +1,8 @@
 import React from 'react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const BookingListModal = ({ isOpen, onClose, bookings, title, onBookingClick, onUnblock }) => {
+    useBodyScrollLock(isOpen);
     if (!isOpen) return null;
 
     // Helper to get status label and color matching DashboardCalendar

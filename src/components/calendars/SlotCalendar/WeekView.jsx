@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
 import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot } from '../shared/utils';
 import ConfirmModal from '../../common/ConfirmModal';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function WeekView({
     type,
@@ -23,6 +24,7 @@ export default function WeekView({
 }) {
     const [showSlotMenu, setShowSlotMenu] = useState(null);
     const [showBookingMenu, setShowBookingMenu] = useState(null);
+    useBodyScrollLock(!!showSlotMenu || !!showBookingMenu);
     const [selectedResourceId, setSelectedResourceId] = useState(() => (resources && resources.length > 0) ? resources[0].id : '');
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 

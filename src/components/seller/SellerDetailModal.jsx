@@ -1,6 +1,8 @@
 import React from 'react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const SellerDetailModal = ({ seller, onClose }) => {
+    useBodyScrollLock(!!seller);
     if (!seller) return null;
 
     const formatDate = (dateString) => {

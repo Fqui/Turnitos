@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
 import { formatDisplayDate } from '../utils/dateUtils';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 export default function ClientManagement({ businessId, isMobile, bookings = [] }) {
     const { showToast } = useNotification();
@@ -10,6 +11,7 @@ export default function ClientManagement({ businessId, isMobile, bookings = [] }
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [showModal, setShowModal] = useState(false);
+    useBodyScrollLock(showModal && !!selectedCustomer);
     const [editingNotes, setEditingNotes] = useState('');
     const [editingBirthday, setEditingBirthday] = useState('');
     const [saving, setSaving] = useState(false);

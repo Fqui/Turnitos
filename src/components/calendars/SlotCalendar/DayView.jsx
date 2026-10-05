@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
 import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot, timeToMinutes } from '../shared/utils';
 import ConfirmModal from '../../common/ConfirmModal';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function DayView({
     type,
@@ -23,6 +24,7 @@ export default function DayView({
 }) {
     const [showSlotMenu, setShowSlotMenu] = useState(null);
     const [showBookingMenu, setShowBookingMenu] = useState(null);
+    useBodyScrollLock(!!showSlotMenu || !!showBookingMenu);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Generar slots de tiempo
