@@ -236,7 +236,6 @@ function AppContent() {
         flexDirection: 'column',
         backgroundColor: 'var(--bg-main)'
       }}>
-        {!isBio && <Header showSearch={false} />}
         <main style={{ 
           flex: 1, 
           display: 'flex', 
@@ -256,6 +255,7 @@ function AppContent() {
             </Suspense>
           </ErrorBoundary>
         </main>
+        {/* On the business's own link: no TurnitosLR banner, only the small footer */}
         <Footer minimal={true} />
         <Toast />
         <ConfirmDialog />
