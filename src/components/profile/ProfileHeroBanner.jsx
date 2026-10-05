@@ -37,7 +37,7 @@ export default function ProfileHeroBanner({
             {/* Header / Banner */}
             <div className="business-profile-banner" style={{
                 position: 'relative',
-                height: window.innerWidth <= 768 ? '25vh' : '260px',
+                height: window.innerWidth <= 768 ? '25vh' : '320px',
                 minHeight: '180px',
                 maxHeight: '300px',
                 overflow: 'hidden'

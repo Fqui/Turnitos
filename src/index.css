@@ -1097,9 +1097,9 @@ textarea {
   }
 
   .business-profile-banner {
-    height: 260px !important;
-    min-height: 260px !important;
-    max-height: 300px !important;
+    height: 320px !important;
+    min-height: 320px !important;
+    max-height: 360px !important;
     border-top-left-radius: 24px;
     border-top-right-radius: 24px;
   }
