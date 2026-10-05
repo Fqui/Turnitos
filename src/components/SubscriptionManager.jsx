@@ -173,7 +173,12 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                 <div className="resources-header">
                     <div>
                         <h3 className="resources-title">{isSport ? "Mis Canchas" : "Mis Especialistas"}</h3>
-                        <p className="resources-subtitle">Toca el <span className="pencil-hint">✏️</span> para cambiar el nombre{isSport ? " y precio" : ""}.</p>
+                        <p className="resources-subtitle">Toca el <span className="pencil-hint">✏️</span> para cambiar el nombre{isSport ? " y precio" : " y el rol"}.</p>
+                        {!isSport && (
+                            <p className="resources-subtitle">
+                                La foto, el nombre y el rol se muestran en la card "Nosotros" de tu página. Subí una foto de cada uno para que se vea mejor; los servicios que atiende se toman de la pestaña Servicios.
+                            </p>
+                        )}
                     </div>
                 </div>
                 <div className="resources-list">
