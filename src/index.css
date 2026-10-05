@@ -1015,8 +1015,13 @@ textarea {
   flex: 1 1 auto;
 }
 
+.profile-about-block {
+  width: 100%;
+}
+
 .profile-about-eyebrow {
-  display: inline-flex;
+  margin: 0 0 8px 4px;
+  display: flex;
   align-items: center;
   gap: 6px;
   font-size: 10.5px;
@@ -1201,6 +1206,10 @@ textarea {
 @container (max-width: 480px) {
   .profile-about-services {
     display: none;
+  }
+
+  .profile-about-name {
+    font-size: 20px;
   }
 }
 

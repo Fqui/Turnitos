@@ -70,14 +70,17 @@ export default function ProfileAboutCard({ business, primaryColor = '#10b981' })
     };
 
     return (
+        <div className="profile-about-block" id="nosotros" style={{ '--about-accent': primaryColor }}>
+        <h3 className="profile-about-eyebrow">
+            <span className="profile-about-eyebrow-dot" />
+            Nosotros
+        </h3>
         <section
             className="profile-about-card"
-            id="nosotros"
             aria-label="Nosotros"
             aria-roledescription={isCarousel ? 'carrusel' : undefined}
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
-            style={{ '--about-accent': primaryColor }}
         >
             <motion.div
                 className="profile-about-body"
@@ -98,13 +101,9 @@ export default function ProfileAboutCard({ business, primaryColor = '#10b981' })
                         exit="exit"
                         transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                     >
-                        <div className="profile-about-eyebrow">
-                            <span className="profile-about-eyebrow-dot" />
-                            Nosotros
-                        </div>
-                        <div className="profile-about-name">
+                        <div>
                             {prefix && <span className="profile-about-prefix">{prefix}</span>}
-                            {name}
+                            <div className="profile-about-name">{name}</div>
                         </div>
                         {current.role && <span className="profile-about-pill">{current.role}</span>}
                     </motion.div>
@@ -176,5 +175,6 @@ export default function ProfileAboutCard({ business, primaryColor = '#10b981' })
                 )}
             </div>
         </section>
+        </div>
     );
 }
