@@ -83,6 +83,15 @@ export default function ProfileStorePromoCard({
         navigate(subdomain ? '/tienda' : `/${business?.slug || ''}/tienda`, { state: { business } });
     };
 
+    // Opens the store with the product shown in the carousel already open (?producto=<id>)
+    const goToCurrentProduct = (e) => {
+        if (e) e.stopPropagation();
+        if (!currentProduct?.id) return goToStore(e);
+        const subdomain = getSubdomain();
+        const base = subdomain ? '/tienda' : `/${business?.slug || ''}/tienda`;
+        navigate(`${base}?producto=${encodeURIComponent(currentProduct.id)}`, { state: { business } });
+    };
+
     const handlePrev = (e) => {
         e.stopPropagation();
         setCurrentIndex(prev => (prev === 0 ? products.length - 1 : prev - 1));
@@ -432,7 +441,7 @@ export default function ProfileStorePromoCard({
                 {/* ═══ 2/3 COLUMN: APPLE TECH BENTO PRODUCT CARD ═══ */}
                 {products.length > 0 && (
                     <div
-                        onClick={goToStore}
+                        onClick={goToCurrentProduct}
                         style={{
                             position: 'relative',
                             background: `linear-gradient(135deg, var(--bg-card) 45%, var(--bg-card) 75%, ${primaryColor}12 100%)`,
