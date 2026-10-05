@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const getPublicSpecialists = (business) =>
     (business?.specialists || []).filter(s => s && s.id !== 'auto-assigned' && s.name);
+
+const AUTOPLAY_MS = 4500;
 
 const getInitials = (name = '') =>
     name
@@ -12,113 +15,126 @@ const getInitials = (name = '') =>
         .map(w => w[0].toUpperCase())
         .join('');
 
-function SpecialistAvatar({ specialist, size, primaryColor, ring = false }) {
+function SpecialistAvatar({ specialist, size, primaryColor }) {
     const style = {
         width: size,
         height: size,
         borderRadius: '50%',
         flexShrink: 0,
         objectFit: 'cover',
-        border: ring ? '2px solid var(--bg-card)' : '1px solid var(--border)',
-        background: `${primaryColor}1f`,
+        border: '3px solid var(--bg-card)',
+        boxShadow: `0 0 0 2px color-mix(in srgb, ${primaryColor} 35%, transparent), 0 4px 10px rgba(15, 23, 42, 0.10)`,
+        background: `color-mix(in srgb, ${primaryColor} 12%, transparent)`,
         color: primaryColor,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         fontWeight: 700,
-        fontSize: Math.round(size * 0.36)
+        fontSize: Math.round(size * 0.34)
     };
     if (specialist.avatar_url) {
-        return <img src={specialist.avatar_url} alt={specialist.name} loading="lazy" style={style} />;
+        return <img src={specialist.avatar_url} alt={specialist.name} loading="lazy" draggable={false} style={style} />;
     }
     return <div style={style} aria-hidden="true">{getInitials(specialist.name)}</div>;
 }
 
-const nameStyle = {
-    fontSize: '15px',
-    fontWeight: 700,
-    color: 'var(--text-primary)',
-    lineHeight: 1.25,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-};
-
-const roleStyle = {
-    fontSize: '13px',
-    color: 'var(--text-secondary)',
-    lineHeight: 1.3,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
-};
+function SpecialistSlide({ specialist, primaryColor }) {
+    return (
+        <div className="profile-about-slide">
+            <SpecialistAvatar specialist={specialist} size={68} primaryColor={primaryColor} />
+            <div style={{ minWidth: 0 }}>
+                <div className="profile-about-name">{specialist.name}</div>
+                {specialist.role && (
+                    <div className="profile-about-role" style={{ color: primaryColor }}>{specialist.role}</div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export default function ProfileAboutCard({ business, primaryColor = '#10b981' }) {
     const specialists = getPublicSpecialists(business);
+    const trackRef = useRef(null);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+    const isCarousel = specialists.length > 1;
+
+    const goTo = (index) => {
+        const track = trackRef.current;
+        if (!track) return;
+        const total = specialists.length;
+        const next = (index + total) % total;
+        track.scrollTo({ left: next * track.clientWidth, behavior: 'smooth' });
+    };
+
+    // Keep the active dot in sync with manual swipes
+    const handleScroll = () => {
+        const track = trackRef.current;
+        if (!track || !track.clientWidth) return;
+        setActiveIndex(Math.round(track.scrollLeft / track.clientWidth));
+    };
+
+    // Autoplay, paused while the user interacts with the card
+    useEffect(() => {
+        if (!isCarousel || isPaused) return undefined;
+        const timer = setInterval(() => goTo(activeIndex + 1), AUTOPLAY_MS);
+        return () => clearInterval(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isCarousel, isPaused, activeIndex, specialists.length]);
+
     if (specialists.length === 0) return null;
 
-    let content;
-    if (specialists.length <= 3) {
-        // Few professionals: show each one with name and role
-        const avatarSize = specialists.length === 1 ? 64 : 48;
-        content = (
-            <div className="profile-about-list">
-                {specialists.map(s => (
-                    <div key={s.id} className="profile-about-item">
-                        <SpecialistAvatar specialist={s} size={avatarSize} primaryColor={primaryColor} />
-                        <div style={{ minWidth: 0 }}>
-                            <div style={nameStyle}>{s.name}</div>
-                            {s.role && <div style={roleStyle}>{s.role}</div>}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
-    } else {
-        // Larger teams: overlapping avatars plus a summary line
-        const visible = specialists.slice(0, 4);
-        const extra = specialists.length - visible.length;
-        content = (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
-                <div style={{ display: 'flex', flexShrink: 0 }}>
-                    {visible.map((s, i) => (
-                        <div key={s.id} style={{ marginLeft: i === 0 ? 0 : -14 }}>
-                            <SpecialistAvatar specialist={s} size={48} primaryColor={primaryColor} ring />
-                        </div>
-                    ))}
-                    {extra > 0 && (
-                        <div style={{
-                            marginLeft: -14,
-                            width: 48,
-                            height: 48,
-                            borderRadius: '50%',
-                            border: '2px solid var(--bg-card)',
-                            background: 'var(--bg-input)',
-                            color: 'var(--text-secondary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '13px',
-                            fontWeight: 700
-                        }}>
-                            +{extra}
-                        </div>
-                    )}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                    <div style={nameStyle}>{specialists.length} profesionales</div>
-                    <div style={{ ...roleStyle, whiteSpace: 'normal', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {specialists.map(s => s.name).join(', ')}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <section className="profile-about-card" id="nosotros" aria-label="Nosotros">
-            <div className="profile-about-title">Nosotros</div>
-            {content}
+        <section
+            className="profile-about-card"
+            id="nosotros"
+            aria-label="Nosotros"
+            aria-roledescription={isCarousel ? 'carrusel' : undefined}
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={() => setIsPaused(true)}
+            onTouchEnd={() => setIsPaused(false)}
+            style={{ '--about-accent': primaryColor }}
+        >
+            <div className="profile-about-header">
+                <span className="profile-about-title">Nosotros</span>
+                {isCarousel && (
+                    <div className="profile-about-controls">
+                        <button type="button" className="profile-about-arrow" onClick={() => goTo(activeIndex - 1)} aria-label="Profesional anterior">
+                            <ChevronLeft size={16} />
+                        </button>
+                        <span className="profile-about-counter">{activeIndex + 1}/{specialists.length}</span>
+                        <button type="button" className="profile-about-arrow" onClick={() => goTo(activeIndex + 1)} aria-label="Profesional siguiente">
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {isCarousel ? (
+                <>
+                    <div ref={trackRef} className="profile-about-track no-scrollbar" onScroll={handleScroll}>
+                        {specialists.map(s => (
+                            <SpecialistSlide key={s.id} specialist={s} primaryColor={primaryColor} />
+                        ))}
+                    </div>
+                    <div className="profile-about-dots" role="tablist">
+                        {specialists.map((s, i) => (
+                            <button
+                                key={s.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={i === activeIndex}
+                                aria-label={`Ver a ${s.name}`}
+                                className={`profile-about-dot${i === activeIndex ? ' is-active' : ''}`}
+                                onClick={() => goTo(i)}
+                            />
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <SpecialistSlide specialist={specialists[0]} primaryColor={primaryColor} />
+            )}
         </section>
     );
 }

@@ -979,16 +979,26 @@ textarea {
 
 /* "Nosotros" card: team shown next to the highlights when there is no store */
 .profile-about-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 12px;
+  gap: 10px;
   min-height: 124px;
-  padding: 16px 20px;
+  padding: 14px 18px 12px;
   border: 1px solid var(--border);
   border-radius: 20px;
-  background: var(--bg-card);
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--about-accent) 10%, transparent) 0%, transparent 60%),
+    var(--bg-card);
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.profile-about-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .profile-about-title {
@@ -999,18 +1009,108 @@ textarea {
   color: var(--text-secondary);
 }
 
-.profile-about-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 24px;
-}
-
-.profile-about-item {
+.profile-about-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
+}
+
+.profile-about-counter {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 28px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-about-arrow {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.profile-about-arrow:hover {
+  border-color: var(--about-accent);
+  color: var(--about-accent);
+}
+
+.profile-about-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.profile-about-slide {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   min-width: 0;
-  flex: 1 1 180px;
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  padding: 6px 6px 12px;
+  box-sizing: border-box;
+}
+
+.profile-about-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-about-role {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-about-dots {
+  margin-top: -6px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.profile-about-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--border);
+  cursor: pointer;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.profile-about-dot.is-active {
+  width: 18px;
+  background: var(--about-accent);
+}
+
+@media (hover: none) {
+  .profile-about-arrow {
+    display: none;
+  }
 }
 
 @media (min-width: 700px) {
