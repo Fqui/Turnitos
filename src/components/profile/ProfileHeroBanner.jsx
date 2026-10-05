@@ -46,7 +46,7 @@ export default function ProfileHeroBanner({
                     layoutId={`business-image-${business.id}`}
                     src={business.banner_image || business.image || selectedItem?.image_url}
                     alt={business.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }}
                     transition={{ duration: 0.5, ease: "circOut" }}
                 />
                 <div style={{
