@@ -1,0 +1,54 @@
+{
+  "simulacion": true,
+  "negocios": [
+    {
+      "nombre": "Complejo Los Nogales",
+      "rubro": "canchas",
+      "subcategorias": ["Fútbol 5", "Pádel"],
+      "whatsapp": "3804111009",
+      "direccion": "Av. Ramírez de Velasco 1450, La Rioja",
+      "latitud": -29.4021,
+      "longitud": -66.8613,
+      "tema": "dark",
+      "color": "#3ECF8E",
+      "descripcion": "Complejo con tres canchas de fútbol 5 de césped sintético y dos canchas de pádel con blindex. Parrilla, buffet y estacionamiento.",
+      "logo": "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=400&h=400&fit=crop&q=80",
+      "portada": "https://images.unsplash.com/photo-1760174012435-630a17a434ed?w=1600&h=600&fit=crop&q=80",
+      "canchas": [
+        { "nombre": "Fútbol 1 (techada)", "precio": 34000, "deporte": "futbol" },
+        { "nombre": "Fútbol 2", "precio": 30000, "deporte": "futbol" },
+        { "nombre": "Fútbol 3", "precio": 30000, "deporte": "futbol" },
+        { "nombre": "Pádel 1 (blindex)", "precio": 14000, "deporte": "padel" },
+        { "nombre": "Pádel 2", "precio": 12000, "deporte": "padel" }
+      ],
+      "comodidades": [
+        { "nombre": "Vestuarios con duchas", "icono": "ShowerHead" },
+        { "nombre": "Parrilla", "icono": "Flame" },
+        { "nombre": "Buffet", "icono": "Coffee" },
+        { "nombre": "Estacionamiento", "icono": "Car" },
+        { "nombre": "Iluminación LED", "icono": "Lightbulb" },
+        { "nombre": "Alquiler de paletas", "icono": "Trophy" }
+      ],
+      "destacados": [
+        {
+          "titulo": "Fútbol",
+          "fotos": [
+            "https://images.unsplash.com/photo-1704633785114-52104ce3d626?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1600529533273-938db2591dc4?w=900&h=900&fit=crop&q=80"
+          ]
+        },
+        {
+          "titulo": "Pádel",
+          "fotos": [
+            "https://images.unsplash.com/photo-1689942963385-f5bd03f3b270?w=900&h=900&fit=crop&q=80",
+            "https://images.unsplash.com/photo-1709587823868-735f9375ae74?w=900&h=900&fit=crop&q=80"
+          ]
+        }
+      ],
+      "extras": [
+        { "nombre": "Pelota profesional", "precio": 3000, "descripcion": "Pelota N° 5 para el partido" },
+        { "nombre": "Alquiler de paletas (x2)", "precio": 4000, "descripcion": "Dos paletas para el turno de pádel" }
+      ]
+    }
+  ]
+}

@@ -30,6 +30,8 @@ import ProfileVenuePricingSection from '../components/profile/ProfileVenuePricin
 import ProfileVenueBookingSection from '../components/profile/ProfileVenueBookingSection';
 import ProfileSpecialistSelector from '../components/profile/ProfileSpecialistSelector';
 import ProfileInfoSection from '../components/profile/ProfileInfoSection';
+import ProfileSportSelector from '../components/profile/ProfileSportSelector';
+import { groupCourtsBySport, normalizeSport } from '../utils/sports';
 
 // Fix for default marker icon in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -64,6 +66,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const [selectedItem, setSelectedItem] = useState(null); // Sport (string) or Service (object)
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedTime, setSelectedTime] = useState(null);
+    const [selectedSport, setSelectedSport] = useState(null); // Only used when the courts cover 2+ sports
     const [existingBookings, setExistingBookings] = useState([]);
     const [loadingBookings, setLoadingBookings] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -348,6 +351,16 @@ export default function BusinessProfile({ business: initialBusiness }) {
             clearInterval(pollingInterval);
         };
     }, [business?.id, selectedDate]);
+
+    // Complexes with courts of 2+ sports show a sport picker before the calendar
+    const sportGroups = useMemo(
+        () => (business?.type === 'sport' ? groupCourtsBySport(business.courts) : []),
+        [business?.type, business?.courts]
+    );
+    const isMixedSports = sportGroups.length > 1;
+    const activeSport = isMixedSports
+        ? (sportGroups.some(g => g.key === selectedSport) ? selectedSport : sportGroups[0].key)
+        : null;
 
     // Auto-select sport logic
     useEffect(() => {
@@ -715,8 +728,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
     if (loading) return <PageLoader label="Cargando negocio..." />;
     if (!business) return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
 
-    const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
-    const containerWidth = hasPadelCourts ? '1320px' : '1200px';
+    // Pádel uses its own flow (PadelBookingFlow); in a mixed complex it depends on the chosen sport
+    const showPadelFlow = business.type === 'sport' && (isMixedSports
+        ? activeSport === 'padel'
+        : business.courts?.some(c => c.sport === 'padel'));
+    const containerWidth = showPadelFlow ? '1320px' : '1200px';
 
     const now = new Date();
     const rawHighlights = business?.gallery_highlights && business.gallery_highlights.length > 0
@@ -846,6 +862,21 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         </section>
                     )}
 
+
+                    {/* Sport picker (only for complexes with 2+ sports) */}
+                    {isMixedSports && (
+                        <ProfileSportSelector
+                            groups={sportGroups}
+                            selectedSport={activeSport}
+                            isMobile={isMobile}
+                            onSelect={(sport) => {
+                                if (sport === activeSport) return;
+                                setSelectedSport(sport);
+                                setSelectedTime(null);
+                                setShowModal(false);
+                            }}
+                        />
+                    )}
 
                     {/* Select Date Section */}
                     {(selectedItem || business.type === 'venue') && (
@@ -990,9 +1021,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     if (business.type === 'service') {
                                         defaultInterval = 30;
                                     } else if (business.type === 'sport') {
-                                        const sportName = typeof selectedItem === 'string'
-                                            ? selectedItem.toLowerCase()
-                                            : (business.category || '').toLowerCase();
+                                        const sportName = isMixedSports
+                                            ? activeSport
+                                            : (typeof selectedItem === 'string'
+                                                ? selectedItem.toLowerCase()
+                                                : (business.category || '').toLowerCase());
 
                                         if (sportName.includes('padel') || sportName.includes('paddle')) {
                                             defaultInterval = 30;
@@ -1070,11 +1103,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     })();
 
                                     const resources = business.type === 'sport'
-                                        ? (business.courts || []).map(c => ({
-                                            ...c,
-                                            originalPrice: c.price || 0,
-                                            price: calculateSpecialDayPrice(c.price || 0)
-                                        }))
+                                        ? (business.courts || [])
+                                            .filter(c => !isMixedSports || normalizeSport(c.sport) === activeSport)
+                                            .map(c => ({
+                                                ...c,
+                                                originalPrice: c.price || 0,
+                                                price: calculateSpecialDayPrice(c.price || 0)
+                                            }))
                                         : (qualifiedSpecialists.length > 0
                                             ? qualifiedSpecialists.map(s => ({
                                                 id: s.id,
@@ -1095,22 +1130,26 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 capacity: 1
                                             }]);
 
-                                    const businessCapacity = business.capacity ||
+                                    const businessCapacity = (!isMixedSports && business.capacity) ||
                                         (qualifiedSpecialists.length > 0
                                             ? qualifiedSpecialists.length
                                             : (resources && resources.length > 0
                                                 ? resources.reduce((sum, r) => sum + (r.capacity || 1), 0)
                                                 : 1));
 
-                                    const hasPadel = business.type === 'sport' && resources.some(r => r.sport === 'padel');
+                                    // In a mixed complex only the chosen sport's courts (and their bookings) count
+                                    const resourceIds = new Set(resources.map(r => r.id));
+                                    const slotBookings = isMixedSports
+                                        ? existingBookings.filter(b => resourceIds.has(b.resource_id) || resourceIds.has(b.court_id))
+                                        : existingBookings;
 
-                                    if (hasPadel) {
-                                        const padelCourts = resources.filter(r => r.sport === 'padel');
+                                    if (showPadelFlow) {
+                                        const padelCourts = isMixedSports ? resources : resources.filter(r => r.sport === 'padel');
                                         return (
                                             <PadelBookingFlow
                                                 courts={padelCourts}
                                                 selectedDate={selectedDate}
-                                                existingBookings={existingBookings}
+                                                existingBookings={slotBookings}
                                                 openingTime={open}
                                                 closingTime={close}
                                                 timeRanges={ranges}
@@ -1240,7 +1279,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                             openingTime={open}
                                             closingTime={close}
                                             interval={interval}
-                                            existingBookings={existingBookings}
+                                            existingBookings={slotBookings}
                                             timeRanges={ranges}
                                             selectedDate={selectedDate}
                                             maxCapacity={business.max_capacity || 1}
@@ -1286,7 +1325,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     )}
 
                     {/* Sticky Mobile Confirmation Button */}
-                    {selectedTime && (business.type !== 'sport' || selectedTime.courtId !== null) && !business.courts?.some(c => c.sport === 'padel') && (
+                    {selectedTime && (business.type !== 'sport' || selectedTime.courtId !== null) && !showPadelFlow && (
                         <div ref={confirmRef} style={{
                             textAlign: 'center',
                             marginTop: '40px',
