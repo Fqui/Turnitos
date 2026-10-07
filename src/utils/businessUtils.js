@@ -78,3 +78,19 @@ export function validateSubscriptionLimit(currentCount, limit, itemType = 'espac
             : `Límite alcanzado (${limit} ${itemType}). Actualiza tu plan para agregar más.`
     };
 }
+
+/**
+ * Whether the business rents a whole space (quinchos, salones, quintas)
+ * @param {Object} business
+ * @returns {boolean}
+ */
+export function isRentalBusiness(business) {
+    if (!business) return false;
+    const type = String(business.type || '').toLowerCase();
+    if (type === 'alquiler' || type === 'venue' || type === 'rental' || business.is_rental) return true;
+    const category = `${business.category || ''} ${business.categories?.name || ''}`
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '');
+    return ['alquiler', 'quincho', 'quinta', 'salon', 'evento'].some(word => category.includes(word));
+}

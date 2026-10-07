@@ -132,6 +132,19 @@ export default function PortalListView({
         return matchesSearch && matchesStatus && matchesDate;
     });
 
+    // Upcoming bookings first (soonest on top), then past ones (most recent on top)
+    const now = new Date();
+    const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const sortKey = (b) => `${String(b.date || '').slice(0, 10)} ${String(b.time || '00:00').slice(0, 5)}`;
+    filtered.sort((a, b) => {
+        const ka = sortKey(a);
+        const kb = sortKey(b);
+        const aUpcoming = ka >= nowKey;
+        const bUpcoming = kb >= nowKey;
+        if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+        return aUpcoming ? ka.localeCompare(kb) : kb.localeCompare(ka);
+    });
+
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);

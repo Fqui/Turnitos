@@ -66,15 +66,19 @@ export default function CalendarHeader({
                 alignItems: 'center',
                 gap: '10px',
                 justifyContent: 'center',
+                flexWrap: isMobile ? 'wrap' : 'nowrap',
                 width: isMobile ? '100%' : 'auto'
             }}>
                 {showViewToggle && (
-                    <ViewModeToggle
-                        viewMode={viewMode}
-                        setViewMode={handleSetViewMode}
-                        availableViews={availableViews}
-                        isMobile={isMobile}
-                    />
+                    // On mobile the toggle takes its own row so the date arrows and "Hoy" fit
+                    <div style={isMobile ? { flexBasis: '100%', display: 'flex', justifyContent: 'center' } : undefined}>
+                        <ViewModeToggle
+                            viewMode={viewMode}
+                            setViewMode={handleSetViewMode}
+                            availableViews={availableViews}
+                            isMobile={isMobile}
+                        />
+                    </div>
                 )}
 
                 <button

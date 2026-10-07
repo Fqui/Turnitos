@@ -1,6 +1,8 @@
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import CustomDropdown from '../common/CustomDropdown';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { isRentalBusiness } from '../../utils/businessUtils';
+import { getCourtSport } from '../../utils/sports';
 
 const NewBookingModal = ({
     isOpen,
@@ -34,44 +36,13 @@ const NewBookingModal = ({
     }, [isOpen, newBookingData?.date]);
 
     // Detect Business Types
-    const isRental = currentBusiness?.type === 'venue' ||
-        currentBusiness?.type === 'rental' ||
-        currentBusiness?.type === 'alquiler' ||
-        currentBusiness?.is_rental ||
-        (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salon') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salón') ||
-        (currentBusiness?.name || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.name || '').toLowerCase().includes('salon') ||
-        (currentBusiness?.name || '').toLowerCase().includes('salón') ||
-        currentBusiness?.subscription_plan_id === 'rental';
-
-    const isPadel = !isRental && (
-        (currentBusiness?.sport_type || '').toLowerCase().includes('padel') ||
-        (currentBusiness?.category || '').toLowerCase().includes('padel') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('padel') ||
-        (currentBusiness?.name || '').toLowerCase().includes('padel') ||
-        (newBookingData.resourceName || '').toLowerCase().includes('padel')
-    );
-
-    const isFutbol = !isRental && !isPadel && (
-        (currentBusiness?.sport_type || '').toLowerCase().includes('futbol') ||
-        (currentBusiness?.category || '').toLowerCase().includes('futbol') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('futbol') ||
-        (currentBusiness?.name || '').toLowerCase().includes('futbol') ||
-        (currentBusiness?.type === 'sport' && !isPadel)
-    );
-
-    const isService = !isRental && !isPadel && !isFutbol && (
-        currentBusiness?.type === 'service' ||
-        currentBusiness?.type === 'beauty' ||
-        currentBusiness?.type === 'barber' ||
-        (currentBusiness?.category || '').toLowerCase().includes('peluqueria') ||
-        (currentBusiness?.category || '').toLowerCase().includes('barber') ||
-        (currentBusiness?.category || '').toLowerCase().includes('estetica')
-    );
+    const isRental = isRentalBusiness(currentBusiness);
+    const selectedCourt = (currentBusiness?.courts || []).find(c => String(c.id) === String(newBookingData.courtId || newBookingData.serviceId));
+    const isCourtBusiness = !isRental && (currentBusiness?.type === 'sport' || (currentBusiness?.courts?.length || 0) > 0);
+    const courtSport = isCourtBusiness ? getCourtSport(selectedCourt, currentBusiness) : null;
+    const isPadel = courtSport === 'padel';
+    const isFutbol = isCourtBusiness && !isPadel;
+    const isService = !isRental && !isCourtBusiness;
     const hasSpecialists = !isRental && !(currentBusiness?.courts?.length) && (currentBusiness?.specialists?.length || 0) > 0;
 
     // Capacity limit for rentals
@@ -165,6 +136,69 @@ const NewBookingModal = ({
         };
     }, [newBookingData.courtId, newBookingData.serviceId, newBookingData.resourceName, newBookingData.basePrice, newBookingData.guestCount, newBookingData.durationHours, newBookingData.duration, currentBusiness, isRental, isPadel, isFutbol, calculateVenueBasePrice]);
 
+    // Service duration buttons always include the current duration (e.g. 20 min services)
+    const serviceDurationOptions = useMemo(() => {
+        const current = Number(newBookingData.duration);
+        const base = [30, 45, 60, 90];
+        return current > 0 && !base.includes(current) ? [current, ...base].sort((a, b) => a - b) : base;
+    }, [newBookingData.duration]);
+
+    // Start times for courts and services: business hours of that day, without the ones already taken
+    const timeOptions = useMemo(() => {
+        if (isRental || !newBookingData.date) return [];
+        const toMin = (t) => {
+            const [h, m] = String(t || '').split(':').map(Number);
+            return (h || 0) * 60 + (m || 0);
+        };
+        const toTime = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
+        let hours = currentBusiness?.hours;
+        if (typeof hours === 'string') {
+            try { hours = JSON.parse(hours); } catch { hours = null; }
+        }
+        const [y, m, d] = newBookingData.date.split('-').map(Number);
+        const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(y, m - 1, d).getDay()];
+        const dayConfig = hours?.[dayKey];
+
+        const ranges = [];
+        if (!dayConfig) {
+            ranges.push([8 * 60, 23 * 60]);
+        } else if (dayConfig.isOpen !== false) {
+            [[dayConfig.open, dayConfig.close], [dayConfig.open2, dayConfig.close2]].forEach(([open, close]) => {
+                if (!open || !close) return;
+                const start = toMin(open);
+                let end = toMin(close);
+                if (end <= start) end += 1440;
+                ranges.push([start, end]);
+            });
+        }
+
+        const step = isService ? 15 : 30;
+        const duration = Number(newBookingData.duration) || 60;
+        const resourceId = newBookingData.courtId || newBookingData.serviceId;
+        const busy = (bookings || []).filter(b => {
+            if (b.status === 'cancelled' || String(b.date).slice(0, 10) !== newBookingData.date) return false;
+            if (isCourtBusiness) return String(b.court_id) === String(resourceId);
+            if (newBookingData.specialistId) return String(b.specialist_id) === String(newBookingData.specialistId);
+            return false;
+        }).map(b => [toMin(b.time), toMin(b.time) + (Number(b.duration) || 60)]);
+
+        const options = [];
+        ranges.forEach(([start, end]) => {
+            for (let t = start; t + Math.min(duration, step) <= end; t += step) {
+                const taken = busy.some(([bs, be]) => t < be && t + duration > bs);
+                const value = toTime(t);
+                if (!taken || value === newBookingData.time) {
+                    options.push({ value, label: taken ? `${value} (ocupado)` : value });
+                }
+            }
+        });
+        if (newBookingData.time && !options.some(o => o.value === newBookingData.time)) {
+            options.unshift({ value: newBookingData.time, label: `${newBookingData.time} (fuera de horario)` });
+        }
+        return options;
+    }, [isRental, isService, isCourtBusiness, newBookingData.date, newBookingData.time, newBookingData.duration, newBookingData.courtId, newBookingData.serviceId, newBookingData.specialistId, currentBusiness, bookings]);
+
     // Business predefined catalog additionals (ONLY additional services / extras, exclude amenities)
     const catalogAdditionals = useMemo(() => {
         const list = [
@@ -247,10 +281,11 @@ const NewBookingModal = ({
     // Auto-set duration, default base price, and calculate deposit when modal opens
     useEffect(() => {
         if (isOpen) {
+            const initialService = (currentBusiness?.services || []).find(sv => String(sv.id) === String(newBookingData.serviceId));
             let initialDurationMin = 60;
             if (isRental) initialDurationMin = 240;
-            else if (isPadel) initialDurationMin = Number(currentBusiness?.slot_duration || 90);
-            else if (isService) initialDurationMin = Number(currentBusiness?.slot_duration || 30);
+            else if (isPadel) initialDurationMin = 90;
+            else if (isService) initialDurationMin = Number(initialService?.duration || currentBusiness?.slot_duration || 30);
             else if (isFutbol) initialDurationMin = 60;
 
             const durationToUse = Number(newBookingData.duration) || initialDurationMin;
@@ -858,13 +893,17 @@ const NewBookingModal = ({
                                         const court = (currentBusiness?.courts || []).find(c => String(c.id) === String(id));
                                         const service = (currentBusiness?.services || []).find(s => String(s.id) === String(id));
                                         const res = court || service;
+                                        // Duration follows the service, or the sport when switching courts
+                                        let duration = Number(service?.duration) || null;
+                                        if (court) duration = getCourtSport(court, currentBusiness) === 'padel' ? 90 : 60;
                                         setNewBookingData(prev => ({
                                             ...prev,
                                             courtId: id,
                                             serviceId: id,
                                             resourceName: res?.name || '',
                                             price: Number(res?.price || prev.price || 0),
-                                            basePrice: Number(res?.price || prev.basePrice || 0)
+                                            basePrice: Number(res?.price || prev.basePrice || 0),
+                                            ...(duration ? { duration, durationHours: duration / 60 } : {})
                                         }));
                                     }}
                                 />
@@ -887,6 +926,21 @@ const NewBookingModal = ({
                             )}
                         </div>
                     </div>
+
+                    {/* Start time (courts and services) */}
+                    {!isRental && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                🕐 Hora del Turno *
+                            </label>
+                            <CustomDropdown
+                                value={newBookingData.time || ''}
+                                options={timeOptions}
+                                placeholder={timeOptions.length ? 'Elegí la hora' : 'Sin horarios ese día'}
+                                onChange={(time) => setNewBookingData(prev => ({ ...prev, time }))}
+                            />
+                        </div>
+                    )}
 
                     {/* Specialist (service businesses) */}
                     {hasSpecialists && (
@@ -967,7 +1021,7 @@ const NewBookingModal = ({
                                 ⏱️ Duración del Servicio:
                             </span>
                             <div style={{ display: 'flex', gap: '6px', width: isMobile ? '100%' : 'auto' }}>
-                                {[30, 45, 60, 90].map((dur) => {
+                                {serviceDurationOptions.map((dur) => {
                                     const isSelected = Number(newBookingData.duration) === dur;
                                     return (
                                         <button

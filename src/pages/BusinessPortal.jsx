@@ -9,6 +9,7 @@ import ClientManagement from '../components/ClientManagement';
 import BusinessSettings from '../components/BusinessSettings';
 import VenueSettings from '../components/venue/VenueSettings';
 import { formatDisplayDate } from '../utils/dateUtils';
+import { isRentalBusiness as isRentalBiz } from '../utils/businessUtils';
 import BusinessLogin from '../components/business/BusinessLogin';
 import BusinessPortalSidebar from '../components/business/BusinessPortalSidebar';
 import BookingDetailsModal from '../components/business/BookingDetailsModal';
@@ -84,13 +85,6 @@ export default function BusinessPortal() {
         if (typeof setBookingsLoading === 'function') setBookingsLoading(val);
     };
 
-    const setShowBlockModal = (show) => {
-        if (!show) closeBlockModal();
-        else openBlockModal();
-    };
-
-    const setPendingBlockData = (data) => openBlockModal(data);
-
     useEffect(() => {
         checkAutoLogin();
     }, [checkAutoLogin]);
@@ -126,22 +120,7 @@ export default function BusinessPortal() {
         || storedBizObj
         || null;
 
-    const isRentalBusiness = Boolean(
-        currentBusiness?.type === 'venue' ||
-        currentBusiness?.type === 'alquiler' ||
-        currentBusiness?.type === 'rental' ||
-        Boolean(currentBusiness?.is_rental) ||
-        (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.category || '').toLowerCase().includes('quinta') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salon') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salón') ||
-        (currentBusiness?.category || '').toLowerCase().includes('evento') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.slug || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.slug || '').toLowerCase().includes('roma')
-    );
+    const isRentalBusiness = isRentalBiz(currentBusiness);
 
     // Compute analytics data when entering analytics view or changing date range/business/bookings
     useEffect(() => {
@@ -353,18 +332,7 @@ export default function BusinessPortal() {
         let time = '';
         let passedResource = null;
 
-        const isRental = currentBusiness?.type === 'venue' ||
-            currentBusiness?.type === 'rental' ||
-            currentBusiness?.type === 'alquiler' ||
-            currentBusiness?.is_rental ||
-            (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-            (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
-            (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-            (currentBusiness?.category || '').toLowerCase().includes('salon') ||
-            (currentBusiness?.category || '').toLowerCase().includes('salón') ||
-            (currentBusiness?.name || '').toLowerCase().includes('quincho') ||
-            (currentBusiness?.name || '').toLowerCase().includes('salon') ||
-            (currentBusiness?.name || '').toLowerCase().includes('salón');
+        const isRental = isRentalBusiness;
 
         if (arg1 && (arg1.stopPropagation || arg1.preventDefault)) {
             if (arg2 instanceof Date) {
@@ -498,8 +466,9 @@ export default function BusinessPortal() {
             resourceName: selectedResName || (isRental ? (currentBusiness?.name || 'Espacio / Salón') : ''),
             price: initialBasePrice,
             basePrice: initialBasePrice,
-            duration: defaultDurationMinutes,
-            durationHours: defaultDurationHours,
+            // Courts and services: the modal picks the duration from the court sport or the service
+            duration: isRental ? defaultDurationMinutes : null,
+            durationHours: isRental ? defaultDurationHours : null,
             selectedServices: [],
             servicesTotal: 0
         });
@@ -514,20 +483,9 @@ export default function BusinessPortal() {
             return;
         }
 
-        const isRentalBiz = currentBusiness?.type === 'venue' ||
-            currentBusiness?.type === 'rental' ||
-            currentBusiness?.type === 'alquiler' ||
-            currentBusiness?.is_rental ||
-            (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-            (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
-            (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-            (currentBusiness?.category || '').toLowerCase().includes('salon') ||
-            (currentBusiness?.category || '').toLowerCase().includes('salón') ||
-            (currentBusiness?.name || '').toLowerCase().includes('quincho') ||
-            (currentBusiness?.name || '').toLowerCase().includes('salon') ||
-            (currentBusiness?.name || '').toLowerCase().includes('salón');
+        const isRentalBooking = isRentalBusiness;
 
-        if (isRentalBiz) {
+        if (isRentalBooking) {
             const hasConflict = bookings.some(b => {
                 if (b.status === 'cancelled') return false;
                 let bDate = b.date;
@@ -682,14 +640,13 @@ export default function BusinessPortal() {
             timeStr = prompt('Ingrese la hora a bloquear (ej: 14:00)');
             if (!timeStr) return;
             const now = new Date();
-            dateStr = now.toISOString().split('T')[0];
+            dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         }
 
         const resourceId = resource ? (resource.id || resource) : null;
         const resourceName = resource ? (resource.name || null) : null;
 
-        setPendingBlockData({ date: dateStr, time: timeStr, resourceId, resourceName });
-        setShowBlockModal(true);
+        openBlockModal({ date: dateStr, time: timeStr, resourceId, resourceName });
     };
 
     const confirmBlockSlot = async (reason) => {
@@ -701,7 +658,8 @@ export default function BusinessPortal() {
         const slotConfig = getSlotConfig(calendarType);
         const blockDuration = slotConfig.slotSize || 60;
 
-        const isSport = calendarType === 'futbol' || calendarType === 'padel' || calendarType === 'tenis';
+        const isCourtResource = (currentBusiness?.courts || []).some(c => String(c.id) === String(resourceId));
+        const isSport = isCourtResource || calendarType === 'futbol' || calendarType === 'padel' || calendarType === 'tenis';
 
         const bookingData = {
             businessId: selectedBusinessId,
@@ -729,8 +687,7 @@ export default function BusinessPortal() {
         try {
             await serviceAdapter.createBooking(bookingData);
             fetchBookings();
-            setShowBlockModal(false);
-            setPendingBlockData(null);
+            closeBlockModal();
         } catch (error) {
             console.error('Error blocking slot:', error);
             alert('Error al bloquear horario');
@@ -888,6 +845,11 @@ export default function BusinessPortal() {
                 await serviceAdapter.updateBookingStatus(selectedBooking.id, 'deposit_paid', {
                     history: newHistory
                 });
+                // Keep the amount that was shown as the deposit
+                const depositAmount = Number(payload.depositAmount) || 0;
+                if (depositAmount > 0 && !Number(selectedBooking.deposit_amount || selectedBooking.metadata?.deposit_amount)) {
+                    await serviceAdapter.updateBooking(selectedBooking.id, { deposit_amount: depositAmount });
+                }
                 await fetchBookings();
                 setShowBookingModal(false);
             } else if (action === 'confirm_attendance') {
@@ -1338,8 +1300,7 @@ export default function BusinessPortal() {
             <BlockSlotModal
                 isOpen={showBlockModal}
                 onClose={() => {
-                    setShowBlockModal(false);
-                    setPendingBlockData(null);
+                    closeBlockModal();
                 }}
                 onConfirm={confirmBlockSlot}
                 date={pendingBlockData?.date}

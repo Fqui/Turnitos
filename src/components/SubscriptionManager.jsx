@@ -232,9 +232,10 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                 </div>
             </div>
 
+            {/* A row still open for editing is saved too, instead of being dropped */}
             <button
                 className="btn-save-resources"
-                onClick={() => onSave && onSave({ [resourceKey]: resources })}
+                onClick={() => (editingIndex !== null ? confirmEdit() : onSave && onSave({ [resourceKey]: resources }))}
                 disabled={saving}
             >
                 {saving ? "Guardando..." : `Guardar ${resourceLabelPlural}`}

@@ -75,9 +75,9 @@ export default function PortalNewBookingAlert({
                 <div style={{ color: 'var(--text-secondary)' }}>
                     <strong>Fecha:</strong> {newBookingAlert.date}
                 </div>
-                {(newBookingAlert.start_time || newBookingAlert.startTime) && (
+                {(newBookingAlert.time || newBookingAlert.start_time || newBookingAlert.startTime) && (
                     <div style={{ color: 'var(--text-secondary)' }}>
-                        <strong>Horario:</strong> {newBookingAlert.start_time || newBookingAlert.startTime}
+                        <strong>Horario:</strong> {newBookingAlert.time || newBookingAlert.start_time || newBookingAlert.startTime} hs
                     </div>
                 )}
             </div>

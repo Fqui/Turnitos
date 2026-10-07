@@ -3,6 +3,7 @@ import DateRangePicker from '../../analytics/DateRangePicker';
 import RevenueChart from '../../analytics/RevenueChart';
 import PeakHoursHeatmap from '../../analytics/PeakHoursHeatmap';
 import RentalMonthlyChart from '../../analytics/RentalMonthlyChart';
+import { isRentalBusiness as isRentalBiz } from '../../../utils/businessUtils';
 
 export default function PortalAnalyticsView({
     metrics,
@@ -16,22 +17,7 @@ export default function PortalAnalyticsView({
     currentBusiness = null
 }) {
     // Determine whether this is a rental business (venues, quinchos, quintas, salones)
-    const isRental = Boolean(
-        isRentalBusiness ||
-        metrics?.isRental ||
-        currentBusiness?.type === 'venue' ||
-        currentBusiness?.type === 'alquiler' ||
-        currentBusiness?.type === 'rental' ||
-        Boolean(currentBusiness?.is_rental) ||
-        (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.category || '').toLowerCase().includes('quinta') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salon') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salón') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.slug || '').toLowerCase().includes('quincho')
-    );
+    const isRental = Boolean(isRentalBusiness || metrics?.isRental || isRentalBiz(currentBusiness));
     // Sports venues talk about courts; every other business about services
     const isSport = currentBusiness?.type === 'sport' ||
         (currentBusiness?.categories?.slug || currentBusiness?.categories?.name || '').toLowerCase().includes('deporte');

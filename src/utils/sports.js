@@ -36,3 +36,20 @@ export function groupCourtsBySport(courts) {
         return { ...group, minPrice: prices.length > 0 ? Math.min(...prices) : null };
     });
 }
+
+// Sport of one court; falls back to the business name and subcategories when the court has none
+export function getCourtSport(court, business) {
+    const fromCourt = normalizeSport(court?.sport);
+    if (fromCourt !== 'otro') return fromCourt;
+    const hints = [
+        business?.name,
+        business?.category,
+        business?.categories?.name,
+        ...(business?.subcategories || []).map(s => s?.name || s?.slug)
+    ];
+    for (const hint of hints) {
+        const sport = normalizeSport(hint);
+        if (sport === 'padel' || sport === 'futbol' || sport === 'tenis') return sport;
+    }
+    return 'futbol';
+}

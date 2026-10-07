@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
 import CustomDropdown from '../common/CustomDropdown';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { isRentalBusiness } from '../../utils/businessUtils';
+import { getCourtSport } from '../../utils/sports';
 
 const BookingDetailsModalContent = ({
     onClose,
@@ -16,39 +18,19 @@ const BookingDetailsModalContent = ({
     const { showToast } = useNotification();
 
     const biz = businesses?.find(b => String(b.id) === String(selectedBusinessId || booking.business_id || booking.businessId));
-    const isRental = biz?.type === 'venue' ||
-        biz?.type === 'alquiler' ||
-        biz?.rubro === 'alquiler' ||
-        biz?.rubro === 'venue' ||
-        (biz?.category || '').toLowerCase().includes('quincho') ||
-        (biz?.category || '').toLowerCase().includes('alquiler') ||
-        (biz?.categories?.name || '').toLowerCase().includes('alquiler') ||
-        (biz?.categories?.name || '').toLowerCase().includes('quincho') ||
-        (biz?.name || '').toLowerCase().includes('quincho') ||
-        (booking.business_type === 'venue') ||
-        (booking.metadata?.business_type === 'venue') ||
-        Boolean(booking.guest_count || booking.guestCount || booking.metadata?.guestCount || booking.metadata?.durationHours);
+    const isRental = biz
+        ? isRentalBusiness(biz)
+        : (booking.business_type === 'venue' || booking.metadata?.business_type === 'venue' || Boolean(booking.guest_count || booking.guestCount));
 
     const courtId = booking.court_id || booking.courtId || booking.service_id || booking.serviceId;
     const court = (biz?.courts || []).find(c => String(c.id) === String(courtId));
     const service = (biz?.services || []).find(s => String(s.id) === String(booking.service_id || booking.serviceId));
     const resourceName = court?.name || service?.name || booking.resource_name || booking.court_name || booking.service_name || booking.metadata?.resource_name || (isRental ? 'Espacio Completo' : 'Cancha Asignada');
+    const specialist = (biz?.specialists || []).find(sp => String(sp.id) === String(booking.specialist_id || booking.specialistId));
 
-    const isPadel = !isRental && (
-        (biz?.sport_type || '').toLowerCase().includes('padel') ||
-        (biz?.category || '').toLowerCase().includes('padel') ||
-        (biz?.categories?.name || '').toLowerCase().includes('padel') ||
-        (biz?.name || '').toLowerCase().includes('padel') ||
-        (resourceName || '').toLowerCase().includes('padel')
-    );
-
-    const isFutbol = !isRental && !isPadel && (
-        (biz?.sport_type || '').toLowerCase().includes('futbol') ||
-        (biz?.category || '').toLowerCase().includes('futbol') ||
-        (biz?.categories?.name || '').toLowerCase().includes('futbol') ||
-        (biz?.name || '').toLowerCase().includes('futbol') ||
-        (biz?.type === 'sport')
-    );
+    const courtSport = !isRental && (court || biz?.type === 'sport') ? getCourtSport(court, biz) : null;
+    const isPadel = courtSport === 'padel';
+    const isFutbol = courtSport === 'futbol';
 
     // Durations
     const rawDurations = biz?.rental_duration_options || biz?.rentalDurationOptions || [];
@@ -784,6 +766,9 @@ const BookingDetailsModalContent = ({
                                               booking.booking_source === 'marketplace' || 
                                               booking.bookingSource === 'marketplace' || 
                                               booking.metadata?.source === 'marketplace';
+                        const isManual = booking.metadata?.booking_source === 'manual' ||
+                                         booking.booking_source === 'manual' ||
+                                         booking.bookingSource === 'manual';
                         return (
                             <div style={{
                                 display: 'flex',
@@ -799,6 +784,10 @@ const BookingDetailsModalContent = ({
                                 {isMarketplace ? (
                                     <span style={{ fontWeight: '800', color: 'var(--primary-paddle)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                         <span>🌐</span> TurnitosLR (Marketplace)
+                                    </span>
+                                ) : isManual ? (
+                                    <span style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span>✍️</span> Cargada en el panel
                                     </span>
                                 ) : (
                                     <span style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -1919,7 +1908,7 @@ const BookingDetailsModalContent = ({
                                         {booking.status === 'pending' && !isEditing && (
                                             <button
                                                 type="button"
-                                                onClick={() => onAction('confirm_deposit')}
+                                                onClick={() => onAction('confirm_deposit', { depositAmount: activeDeposit })}
                                                 style={{
                                                     width: '100%',
                                                     padding: '7px 8px',
@@ -2072,7 +2061,7 @@ const BookingDetailsModalContent = ({
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                                 {(booking.status === 'pending' || booking.status === 'deposit_paid') && (
                                     <button
-                                        onClick={() => booking.status === 'pending' && onAction('confirm_deposit')}
+                                        onClick={() => booking.status === 'pending' && onAction('confirm_deposit', { depositAmount: activeDeposit })}
                                         disabled={booking.status === 'deposit_paid'}
                                         style={{
                                             padding: '11px 14px',
@@ -2204,11 +2193,16 @@ const BookingDetailsModalContent = ({
 
                                 <div>
                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>
-                                        {isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '🎯 Espacio / Cancha'}
+                                        {isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '💼 Servicio'}
                                     </label>
                                     <div style={{ fontWeight: '800', color: 'var(--primary-paddle)', fontSize: isMobile ? '13px' : '14px' }}>
                                         {resourceName}
                                     </div>
+                                    {specialist && (
+                                        <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                            👤 {specialist.name}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -2528,7 +2522,7 @@ const BookingDetailsModalContent = ({
                                     fontSize: '12px'
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                                        <span>Alquiler cancha:</span>
+                                        <span>{isPadel || isFutbol ? 'Alquiler cancha:' : 'Servicio:'}</span>
                                         <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>${baseRentalPrice.toLocaleString('es-AR')}</span>
                                     </div>
                                     {editableServices.length > 0 && (
@@ -2616,7 +2610,7 @@ const BookingDetailsModalContent = ({
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                                 {(booking.status === 'pending' || booking.status === 'deposit_paid') && (
                                     <button
-                                        onClick={() => booking.status === 'pending' && onAction('confirm_deposit')}
+                                        onClick={() => booking.status === 'pending' && onAction('confirm_deposit', { depositAmount: activeDeposit })}
                                         disabled={booking.status === 'deposit_paid'}
                                         style={{
                                             padding: '10px 14px',

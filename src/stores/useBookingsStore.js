@@ -99,6 +99,9 @@ export const useBookingsStore = create((set, get) => {
 
             const handleNewBookingAlert = (bookingData, customTitle) => {
                 if (!bookingData) return;
+                // Bookings the business loads itself are not news
+                const source = bookingData?.metadata?.booking_source || bookingData?.booking_source || bookingData?.bookingSource;
+                if (source === 'manual') return;
                 const isBlocked = bookingData?.status === 'blocked' ||
                     bookingData?.is_blocked ||
                     bookingData?.isBlocked ||

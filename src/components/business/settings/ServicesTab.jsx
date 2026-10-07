@@ -34,7 +34,14 @@ export default function ServicesTab({
     const services = formData.services || [];
     const serviceCategories = formData.service_categories || [];
     const specialistsList = formData.specialists || business?.specialists || [];
-    const durationOptions = [15, 30, 45, 60, 90, 120];
+    const durationOptions = [15, 20, 30, 40, 45, 60, 75, 90, 120, 150, 180];
+    // Keeps a service's current duration selectable even if it is not in the list
+    const durationOptionsWith = (current) => {
+        const value = Number(current);
+        return value > 0 && !durationOptions.includes(value)
+            ? [...durationOptions, value].sort((a, b) => a - b)
+            : durationOptions;
+    };
 
     const handleAddService = () => {
         if (!newService.name || !newService.name.trim()) {
@@ -750,7 +757,7 @@ export default function ServicesTab({
                                         value={editingService.duration || 60}
                                         onChange={e => setEditingService(prev => ({ ...prev, duration: Number(e.target.value) }))}
                                     >
-                                        {durationOptions.map(dur => (
+                                        {durationOptionsWith(editingService.duration).map(dur => (
                                             <option key={dur} value={dur}>{dur} min ({dur >= 60 ? `${dur / 60}h` : `${dur}m`})</option>
                                         ))}
                                     </select>

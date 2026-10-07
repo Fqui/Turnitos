@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 import { getPlanDetails, calculateSubscriptionPrice } from '../../utils/subscriptionUtils';
 import { getBillingInfo, formatDueText } from '../../utils/billingUtils';
+import { isRentalBusiness } from '../../utils/businessUtils';
 
 export default function BusinessSubscriptionView({ business, isMobile }) {
     const [stats, setStats] = useState(null);
@@ -15,21 +16,8 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
     const bType = String(business?.type || '').toLowerCase();
     const bCat = String(business?.category || '').toLowerCase();
     const bCatId = String(business?.category_id || '').toLowerCase();
-    const bName = String(business?.name || '').toLowerCase();
 
-    const isRental = bType === 'rental' ||
-        bType === 'venue' ||
-        bType === 'alquiler' ||
-        business?.is_rental ||
-        bCat === 'rental' ||
-        bCat === 'alquiler' ||
-        bCat === 'venue' ||
-        bCatId.includes('venue') ||
-        bCatId.includes('alquiler') ||
-        bName.includes('quincho') ||
-        bName.includes('salon') ||
-        bName.includes('salón') ||
-        business?.subscription_plan_id === 'rental';
+    const isRental = isRentalBusiness(business) || bCat === 'rental' || bCatId.includes('venue') || bCatId.includes('alquiler');
 
     // Detección de canchas y cálculo dinámico de abono
     const isSport = !isRental && (bType === 'sport' || bType === 'courts' || (business?.courts && business.courts.length > 0));

@@ -258,7 +258,10 @@ const BusinessPortalSidebar = ({
             {onCreateBooking && (
                 <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: isVisible ? '16px' : '8px' }}>
                     <button
-                        onClick={onCreateBooking}
+                        onClick={(e) => {
+                            if (isMobile) onToggleSidebar(false);
+                            onCreateBooking(e);
+                        }}
                         title={!isVisible ? 'Nueva Reserva' : ''}
                         style={{
                             display: 'flex',

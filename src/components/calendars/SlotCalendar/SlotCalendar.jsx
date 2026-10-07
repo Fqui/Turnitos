@@ -52,6 +52,12 @@ export default function SlotCalendar({
 
     // Parsear horarios del negocio (dinámico por día o global para la semana)
     const getBusinessHours = (targetDate = null) => {
+        // Closing hour rounded up, so 23:30 still shows the last half hour
+        const closeHour = (t) => {
+            const [h, m] = String(t).split(':').map(Number);
+            return m > 0 ? h + 1 : h;
+        };
+
         if (!business?.hours) return { start: 8, end: 23 };
 
         let hoursObj = business.hours;
@@ -81,7 +87,7 @@ export default function SlotCalendar({
 
                     if (dayConfig.open && dayConfig.close) {
                         const s = parseInt(dayConfig.open.split(':')[0]);
-                        let e = parseInt(dayConfig.close.split(':')[0]);
+                        let e = closeHour(dayConfig.close);
                         if (e < s || e === 0) e += 24;
                         dayStart = s;
                         dayEnd = e;
@@ -89,7 +95,7 @@ export default function SlotCalendar({
 
                     if (dayConfig.open2 && dayConfig.close2) {
                         const s2 = parseInt(dayConfig.open2.split(':')[0]);
-                        let e2 = parseInt(dayConfig.close2.split(':')[0]);
+                        let e2 = closeHour(dayConfig.close2);
                         if (e2 < s2 || e2 === 0) e2 += 24;
                         if (dayStart === null || s2 < dayStart) dayStart = s2;
                         if (dayEnd === null || e2 > dayEnd) dayEnd = e2;
@@ -111,16 +117,13 @@ export default function SlotCalendar({
                             }
 
                             if (bKey === targetKey) {
-                                const bStart = parseInt(b.time.split(':')[0]);
-                                if (!isNaN(bStart)) {
-                                    if (bStart < dayStart) dayStart = bStart;
-                                    if (b.end_time || b.endTime) {
-                                        let bEnd = parseInt((b.end_time || b.endTime).split(':')[0]);
-                                        if (bEnd < bStart || bEnd === 0) bEnd += 24;
-                                        if (bEnd > dayEnd) dayEnd = bEnd;
-                                    } else if (bStart + 1 > dayEnd) {
-                                        dayEnd = bStart + 1;
-                                    }
+                                const [bh, bm] = String(b.time).split(':').map(Number);
+                                if (!isNaN(bh)) {
+                                    if (bh < dayStart) dayStart = bh;
+                                    // end_time is a full timestamp, so the end comes from the duration
+                                    const durationMin = Number(b.duration) || 60;
+                                    const bEnd = Math.min(Math.ceil((bh * 60 + (bm || 0) + durationMin) / 60), 30);
+                                    if (bEnd > dayEnd) dayEnd = bEnd;
                                 }
                             }
                         });
@@ -139,7 +142,7 @@ export default function SlotCalendar({
                 if (dayConfig && typeof dayConfig === 'object' && dayConfig.isOpen !== false) {
                     if (dayConfig.open && dayConfig.close) {
                         const startHour = parseInt(dayConfig.open.split(':')[0]);
-                        let endHour = parseInt(dayConfig.close.split(':')[0]);
+                        let endHour = closeHour(dayConfig.close);
                         if (endHour < startHour || endHour === 0) endHour += 24;
 
                         if (!isNaN(startHour) && startHour < minStart) minStart = startHour;
@@ -149,7 +152,7 @@ export default function SlotCalendar({
 
                     if (dayConfig.open2 && dayConfig.close2) {
                         const startHour2 = parseInt(dayConfig.open2.split(':')[0]);
-                        let endHour2 = parseInt(dayConfig.close2.split(':')[0]);
+                        let endHour2 = closeHour(dayConfig.close2);
                         if (endHour2 < startHour2 || endHour2 === 0) endHour2 += 24;
 
                         if (!isNaN(startHour2) && startHour2 < minStart) minStart = startHour2;
