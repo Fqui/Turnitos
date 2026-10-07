@@ -337,7 +337,7 @@ export default function BusinessPortal() {
         if (arg1 && (arg1.stopPropagation || arg1.preventDefault)) {
             if (arg2 instanceof Date) {
                 date = arg2;
-                time = arg3 || (isRental ? '00:00' : '');
+                time = arg3 || '';
                 passedResource = arg4;
             } else {
                 const nowLocal = new Date();
@@ -345,7 +345,7 @@ export default function BusinessPortal() {
                 const [y, m, d] = dateStr.split('-');
                 date = new Date(y, m - 1, d);
                 if (isRental) {
-                    time = '00:00';
+                    time = '';
                 } else {
                     const now = new Date();
                     const nextHour = Math.min(now.getHours() + 1, 23);
@@ -354,7 +354,7 @@ export default function BusinessPortal() {
             }
         } else {
             date = arg1;
-            time = arg2 || (isRental ? '00:00' : '');
+            time = arg2 || '';
             passedResource = arg3;
         }
 
@@ -456,7 +456,7 @@ export default function BusinessPortal() {
 
         setNewBookingData({
             date: dateStr,
-            time: time || (isRental ? '00:00' : '08:00'),
+            time: time || (isRental ? '' : '08:00'),
             customerName: '',
             customerPhone: '',
             customerEmail: '',
@@ -505,6 +505,11 @@ export default function BusinessPortal() {
                 alert(`La fecha seleccionada (${newBookingData.date}) ya se encuentra reservada u ocupada.`);
                 return;
             }
+        }
+
+        if (isRentalBooking && !newBookingData.time) {
+            alert('Indicá la hora de inicio del alquiler');
+            return;
         }
 
         if (!newBookingData.customerName || !newBookingData.customerPhone) {
@@ -764,17 +769,18 @@ export default function BusinessPortal() {
 
         try {
             if (action === 'update_booking') {
+                const { historyLabel, ...updates } = payload;
                 const currentHistory = Array.isArray(selectedBooking.history) ? selectedBooking.history : [];
                 const newHistory = [...currentHistory];
                 newHistory.push({
                     action: 'updated',
-                    label: 'Reserva Editada',
+                    label: historyLabel || 'Reserva Editada',
                     timestamp: new Date().toISOString(),
                     status: selectedBooking.status
                 });
 
                 const updated = await serviceAdapter.updateBooking(selectedBooking.id, {
-                    ...payload,
+                    ...updates,
                     history: newHistory
                 });
                 await fetchBookings();

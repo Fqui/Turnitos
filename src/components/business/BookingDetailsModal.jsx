@@ -4,6 +4,7 @@ import CustomDropdown from '../common/CustomDropdown';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { isRentalBusiness } from '../../utils/businessUtils';
 import { getCourtSport } from '../../utils/sports';
+import RentalPaymentsCard from './RentalPaymentsCard';
 
 const BookingDetailsModalContent = ({
     onClose,
@@ -248,6 +249,14 @@ const BookingDetailsModalContent = ({
     const activePrice = Number(editablePrice) || 0;
     const activeDeposit = Number(editableDeposit) || 0;
     const pendingBalance = activePrice - activeDeposit > 0 ? activePrice - activeDeposit : 0;
+    const rentalPayments = Array.isArray(booking.metadata?.payments) ? booking.metadata.payments : [];
+    const rentalPaid = rentalPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    // Once payments are recorded, the balance comes from them instead of the deposit
+    const rentalBalance = rentalPayments.length > 0 ? Math.max(0, activePrice - rentalPaid) : pendingBalance;
+    const saveRentalPayments = (payments, label) => onAction('update_booking', {
+        metadata: { payments },
+        historyLabel: label
+    });
     const extrasSum = editableServices.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
     const baseRentalPrice = Math.max(0, activePrice + discountAmount + durationDiscountAmount - extrasSum);
 
@@ -1936,10 +1945,10 @@ const BookingDetailsModalContent = ({
                                     <div style={{
                                         padding: '12px',
                                         borderRadius: '12px',
-                                        background: (booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                        background: ((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                             ? 'rgba(0, 230, 118, 0.06)'
                                             : 'rgba(239, 68, 68, 0.06)',
-                                        border: (booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                        border: ((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                             ? '1px solid rgba(0, 230, 118, 0.3)'
                                             : '1px solid rgba(239, 68, 68, 0.25)',
                                         display: 'flex',
@@ -1957,14 +1966,14 @@ const BookingDetailsModalContent = ({
                                                     fontWeight: '800',
                                                     padding: '2px 6px',
                                                     borderRadius: '4px',
-                                                    background: (booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                                    background: ((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                                         ? 'rgba(0, 230, 118, 0.2)'
                                                         : 'rgba(239, 68, 68, 0.15)',
-                                                    color: (booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                                    color: ((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                                         ? '#00E676'
                                                         : '#E11D48'
                                                 }}>
-                                                    {(booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                                    {((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                                         ? '✓ Liquidado'
                                                         : 'A cobrar el día del evento'}
                                                 </span>
@@ -1973,13 +1982,13 @@ const BookingDetailsModalContent = ({
                                             <div style={{
                                                 fontSize: '18px',
                                                 fontWeight: '900',
-                                                color: (booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                                color: ((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                                     ? '#00E676'
                                                     : '#E11D48'
                                             }}>
-                                                {(booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                                {((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                                     ? '$0'
-                                                    : `$${pendingBalance.toLocaleString('es-AR')}`}
+                                                    : `$${rentalBalance.toLocaleString('es-AR')}`}
                                             </div>
                                             <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
                                                 A cobrar al recibir al cliente al quincho/salón
@@ -1992,6 +2001,13 @@ const BookingDetailsModalContent = ({
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Payments the business agreed with the client */}
+                            <RentalPaymentsCard
+                                payments={rentalPayments}
+                                total={activePrice}
+                                onSave={saveRentalPayments}
+                            />
 
                             {/* TIMELINE / HISTORY */}
                             <div style={{

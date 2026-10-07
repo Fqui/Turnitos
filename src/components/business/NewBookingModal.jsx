@@ -927,6 +927,32 @@ const NewBookingModal = ({
                         </div>
                     </div>
 
+                    {/* Start time of the rental */}
+                    {isRental && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                🕐 Hora de Inicio *
+                            </label>
+                            <input
+                                type="time"
+                                required
+                                value={newBookingData.time || ''}
+                                onChange={(e) => setNewBookingData(prev => ({ ...prev, time: e.target.value }))}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '13px',
+                                    fontWeight: '700',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+                    )}
+
                     {/* Start time (courts and services) */}
                     {!isRental && (
                         <div>
