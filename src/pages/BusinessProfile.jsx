@@ -732,7 +732,9 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const showPadelFlow = business.type === 'sport' && (isMixedSports
         ? activeSport === 'padel'
         : business.courts?.some(c => c.sport === 'padel'));
-    const containerWidth = showPadelFlow ? '1320px' : '1200px';
+    // Width follows the business, not the chosen sport, so switching sports doesn't resize the page
+    const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel' || c.sport === 'paddle');
+    const containerWidth = hasPadelCourts ? '1320px' : '1200px';
 
     const now = new Date();
     const rawHighlights = business?.gallery_highlights && business.gallery_highlights.length > 0
