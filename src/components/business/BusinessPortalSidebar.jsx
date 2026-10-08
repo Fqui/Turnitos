@@ -109,9 +109,13 @@ const BusinessPortalSidebar = ({
         }
     };
 
+    const catName = (currentBusiness?.categories?.name || currentBusiness?.category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const isSport = currentBusiness?.type === 'sport' || catName.includes('deport') || catName.includes('cancha') || ((currentBusiness?.courts?.length || 0) > 0);
+
     const navItems = [
         { id: 'calendar', icon: '📅', label: 'Calendario' },
         { id: 'list', icon: '📋', label: 'Reservas', badge: pendingCount > 0 ? pendingCount : null },
+        ...(isSport ? [{ id: 'caja', icon: '💰', label: 'Registro de Caja' }] : []),
         { id: 'analytics', icon: '📊', label: 'Analytics' },
         { id: 'subscription', icon: '💳', label: 'Suscripción' },
         { id: 'customers', icon: '👥', label: 'Clientes' },
