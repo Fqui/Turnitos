@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { pushService } from '../../services/pushService';
 import { useNotification } from '../../contexts/NotificationContext';
+import { isSportBusiness } from '../../utils/businessUtils';
 
 const BusinessPortalSidebar = ({
     isVisible,
@@ -109,8 +110,7 @@ const BusinessPortalSidebar = ({
         }
     };
 
-    const catName = (currentBusiness?.categories?.name || currentBusiness?.category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const isSport = currentBusiness?.type === 'sport' || catName.includes('deport') || catName.includes('cancha') || ((currentBusiness?.courts?.length || 0) > 0);
+    const isSport = isSportBusiness(currentBusiness);
 
     const navItems = [
         { id: 'calendar', icon: '📅', label: 'Calendario' },

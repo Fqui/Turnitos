@@ -1133,22 +1133,8 @@ export default function BusinessPortal() {
                         ) : viewMode === 'caja' ? (
                             <SportCanteenCashPanel
                                 business={currentBusiness}
-                                bookings={bookings}
                                 showToast={showToast}
                                 isMobile={isMobile}
-                                onUpdateBusiness={(updated) => {
-                                    setBusinesses(prev => {
-                                        const exists = prev.some(b => String(b.id) === String(updated.id));
-                                        return exists
-                                            ? prev.map(b => String(b.id) === String(updated.id) ? { ...b, ...updated } : b)
-                                            : [...prev, updated];
-                                    });
-                                    try {
-                                        const currentStored = localStorage.getItem('business');
-                                        const storedObj = currentStored ? JSON.parse(currentStored) : {};
-                                        localStorage.setItem('business', JSON.stringify({ ...storedObj, ...updated }));
-                                    } catch (e) { }
-                                }}
                             />
                         ) : viewMode === 'subscription' ? (
                             <BusinessSubscriptionView
@@ -1309,6 +1295,10 @@ export default function BusinessPortal() {
                 isMobile={isMobile}
                 formatDisplayDate={formatDisplayDate}
                 getStatusLabel={getStatusLabel}
+                onGoToCashRegister={() => {
+                    setShowBookingModal(false);
+                    setViewMode('caja');
+                }}
             />
 
             {/* New Booking Modal */}

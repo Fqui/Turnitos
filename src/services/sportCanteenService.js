@@ -1,501 +1,506 @@
 import { supabase } from './supabaseClient';
-import serviceAdapter from './serviceAdapter';
 
-const DEFAULT_SPORT_PRODUCTS = [
-    { id: 'prod-1', name: 'Gatorade 500ml', category: 'Bebidas', sale_price: 2500, cost_price: 1600, current_stock: 24, min_stock_alert: 6, is_active: true },
-    { id: 'prod-2', name: 'Agua Mineral 500ml', category: 'Bebidas', sale_price: 1500, cost_price: 800, current_stock: 30, min_stock_alert: 10, is_active: true },
-    { id: 'prod-3', name: 'Cerveza Lata 473ml', category: 'Bebidas', sale_price: 2800, cost_price: 1700, current_stock: 18, min_stock_alert: 6, is_active: true },
-    { id: 'prod-4', name: 'Tubo Pelotas Pádel (x3)', category: 'Equipamiento', sale_price: 12000, cost_price: 8500, current_stock: 8, min_stock_alert: 2, is_active: true },
-    { id: 'prod-5', name: 'Cubre Grip', category: 'Equipamiento', sale_price: 3000, cost_price: 1500, current_stock: 15, min_stock_alert: 4, is_active: true },
-    { id: 'prod-6', name: 'Alquiler Paleta Pádel', category: 'Alquileres', sale_price: 4000, cost_price: 0, current_stock: 6, min_stock_alert: 1, is_active: true }
+/**
+ * Registro de Caja Diaria y Artículos y Stock (negocios de canchas).
+ * Todo vive en sport_canteen_products / sport_cash_registers / sport_cash_movements,
+ * protegidas por RLS (can_manage_business). Lo que toca caja + stock va por RPC.
+ * Cada función lanza un Error con un mensaje en español listo para mostrar en un toast.
+ */
+
+export const PRODUCT_CATEGORIES = ['Bebidas', 'Snacks', 'Equipamiento', 'Alquileres', 'Otro'];
+
+export const MOVEMENT_TYPE_LABELS = {
+    booking_income: 'Turno',
+    canteen_sale: 'Artículos',
+    manual_income: 'Ingreso',
+    manual_expense: 'Gasto'
+};
+
+export const PAYMENT_METHOD_LABELS = {
+    cash: 'Efectivo',
+    transfer: 'Transferencia'
+};
+
+// Editable template for "Cargar artículos sugeridos": stock starts at 0 so nothing looks real until the owner loads it
+const SUGGESTED_PRODUCTS = [
+    { name: 'Agua mineral 500 ml', category: 'Bebidas', sale_price: 1500, cost_price: 800, track_stock: true, min_stock_alert: 6 },
+    { name: 'Bebida isotónica 500 ml', category: 'Bebidas', sale_price: 2500, cost_price: 1600, track_stock: true, min_stock_alert: 6 },
+    { name: 'Gaseosa lata 354 ml', category: 'Bebidas', sale_price: 2000, cost_price: 1100, track_stock: true, min_stock_alert: 6 },
+    { name: 'Cerveza lata 473 ml', category: 'Bebidas', sale_price: 2800, cost_price: 1700, track_stock: true, min_stock_alert: 6 },
+    { name: 'Barra de cereal', category: 'Snacks', sale_price: 1200, cost_price: 600, track_stock: true, min_stock_alert: 4 },
+    { name: 'Tubo de pelotas de pádel (x3)', category: 'Equipamiento', sale_price: 12000, cost_price: 8500, track_stock: true, min_stock_alert: 2 },
+    { name: 'Cubre grip', category: 'Equipamiento', sale_price: 3000, cost_price: 1500, track_stock: true, min_stock_alert: 4 },
+    { name: 'Alquiler de paleta', category: 'Alquileres', sale_price: 4000, cost_price: 0, track_stock: false, min_stock_alert: 0 },
+    { name: 'Alquiler de pechera', category: 'Alquileres', sale_price: 1000, cost_price: 0, track_stock: false, min_stock_alert: 0 }
 ];
 
-const getStorageKey = (businessId, key) => `turnitos_sport_${key}_${businessId}`;
+const toError = (error, fallback) => {
+    if (!error) return new Error(fallback);
+    if (error.code === '23505') return new Error('Ya hay una caja abierta en este negocio');
+    if (error.code === '42501' || /permission|row-level/i.test(error.message || '')) {
+        return new Error('No tenés permiso para administrar la caja de este negocio');
+    }
+    if (error.code === 'P0001' && error.message) return new Error(error.message); // RAISE EXCEPTION de las funciones
+    if (/fetch|network/i.test(error.message || '')) return new Error('Sin conexión. Revisá internet y probá de nuevo');
+    return new Error(fallback);
+};
+
+const money = (value) => `$${Math.round(Number(value) || 0).toLocaleString('es-AR')}`;
+
+const monthRange = (year, month) => ({
+    from: new Date(year, month, 1).toISOString(),
+    to: new Date(year, month + 1, 1).toISOString()
+});
+
+/**
+ * Totals of a set of movements (voided ones are ignored).
+ * cash/transfers are the balance by payment method; expenses subtract.
+ */
+export function summarizeMovements(movements = [], initialCash = 0) {
+    const totals = {
+        cash: Number(initialCash) || 0,
+        transfers: 0,
+        bookings: 0,
+        canteen: 0,
+        manualIncome: 0,
+        expenses: 0,
+        income: 0,
+        net: 0,
+        count: 0,
+        voidedCount: 0
+    };
+
+    movements.forEach(m => {
+        if (m.voided_at) {
+            totals.voidedCount += 1;
+            return;
+        }
+        const amount = Number(m.amount) || 0;
+        const sign = m.type === 'manual_expense' ? -1 : 1;
+        if (m.payment_method === 'transfer') totals.transfers += sign * amount;
+        else totals.cash += sign * amount;
+
+        if (m.type === 'booking_income') totals.bookings += amount;
+        else if (m.type === 'canteen_sale') totals.canteen += amount;
+        else if (m.type === 'manual_income') totals.manualIncome += amount;
+        else if (m.type === 'manual_expense') totals.expenses += amount;
+        totals.count += 1;
+    });
+
+    totals.income = totals.bookings + totals.canteen + totals.manualIncome;
+    totals.net = totals.income - totals.expenses;
+    return totals;
+}
+
+const csvCell = (value) => {
+    const text = value === null || value === undefined ? '' : String(value);
+    return /[;"\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
+
+// Excel en español espera coma decimal y sin separador de miles
+const csvNumber = (value) => (value === null || value === undefined || value === '')
+    ? ''
+    : (Number(value) || 0).toFixed(2).replace('.', ',');
+
+const csvDate = (iso) => iso ? new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+const csvTime = (iso) => iso ? new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
 
 export const sportCanteenService = {
     // ==========================================
-    // 1. GESTIÓN DE PRODUCTOS / STOCK
+    // 1. ARTÍCULOS Y STOCK
     // ==========================================
 
-    async getProducts(businessId, currentMetadata = null) {
+    async listProducts(businessId, { includeInactive = true } = {}) {
         if (!businessId) return [];
+        let query = supabase
+            .from('sport_canteen_products')
+            .select('*')
+            .eq('business_id', String(businessId))
+            .order('category', { ascending: true })
+            .order('name', { ascending: true });
+        if (!includeInactive) query = query.eq('is_active', true);
 
-        // 1. Buscar en localStorage primero para respuesta instantánea
-        try {
-            const cached = localStorage.getItem(getStorageKey(businessId, 'products'));
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    return parsed;
-                }
-            }
-        } catch (e) {}
-
-        // 2. Intentar desde Supabase
-        try {
-            const { data, error } = await supabase
-                .from('sport_canteen_products')
-                .select('*')
-                .eq('business_id', businessId)
-                .order('name', { ascending: true });
-
-            if (!error && data && data.length > 0) {
-                try {
-                    localStorage.setItem(getStorageKey(businessId, 'products'), JSON.stringify(data));
-                } catch (e) {}
-                return data;
-            }
-        } catch (e) {}
-
-        // 3. Fallback a metadata
-        const metadataProducts = currentMetadata?.sport_canteen_products;
-        if (Array.isArray(metadataProducts) && metadataProducts.length > 0) {
-            try {
-                localStorage.setItem(getStorageKey(businessId, 'products'), JSON.stringify(metadataProducts));
-            } catch (e) {}
-            return metadataProducts;
-        }
-
-        // 4. Plantilla por defecto inicial
-        const initial = DEFAULT_SPORT_PRODUCTS.map(p => ({
-            ...p,
-            id: `prod-${p.id}-${businessId.toString().slice(-4)}`,
-            business_id: businessId
-        }));
-        try {
-            localStorage.setItem(getStorageKey(businessId, 'products'), JSON.stringify(initial));
-        } catch (e) {}
-        return initial;
+        const { data, error } = await query;
+        if (error) throw toError(error, 'No se pudieron cargar los artículos');
+        return data || [];
     },
 
-    async saveProduct(businessId, product, currentMetadata = null) {
-        const prodData = {
-            id: product.id || `prod-${Date.now()}`,
-            business_id: businessId,
-            name: product.name?.trim(),
-            category: product.category || 'Bebidas',
-            sale_price: Number(product.sale_price) || 0,
-            cost_price: Number(product.cost_price) || 0,
-            current_stock: Math.max(0, parseInt(product.current_stock, 10) || 0),
-            min_stock_alert: Math.max(0, parseInt(product.min_stock_alert, 10) || 5),
+    async saveProduct(businessId, product) {
+        const name = String(product.name || '').trim();
+        if (!name) throw new Error('Ingresá el nombre del artículo');
+        const trackStock = product.track_stock !== false;
+
+        const payload = {
+            name,
+            category: PRODUCT_CATEGORIES.includes(product.category) ? product.category : 'Otro',
+            sale_price: Math.max(0, Number(product.sale_price) || 0),
+            cost_price: Math.max(0, Number(product.cost_price) || 0),
+            track_stock: trackStock,
+            min_stock_alert: trackStock ? Math.max(0, parseInt(product.min_stock_alert, 10) || 0) : 0,
             is_active: product.is_active !== false,
-            image_url: product.image_url || null,
             updated_at: new Date().toISOString()
         };
 
-        // Guardar en localStorage de inmediato
-        const existingList = await this.getProducts(businessId, currentMetadata);
-        const exists = existingList.some(p => String(p.id) === String(prodData.id));
-        const updatedList = exists
-            ? existingList.map(p => String(p.id) === String(prodData.id) ? prodData : p)
-            : [...existingList, prodData];
-
-        try {
-            localStorage.setItem(getStorageKey(businessId, 'products'), JSON.stringify(updatedList));
-        } catch (e) {}
-
-        // Intentar guardar en Supabase si tabla existe
-        try {
-            if (product.id && !String(product.id).startsWith('prod-')) {
-                await supabase.from('sport_canteen_products').update(prodData).eq('id', product.id);
-            } else {
-                await supabase.from('sport_canteen_products').insert([prodData]);
-            }
-        } catch (e) {}
-
-        // Persistir en metadata como respaldo
-        try {
-            const newMeta = { ...(currentMetadata || {}), sport_canteen_products: updatedList };
-            await serviceAdapter.patchBusiness(businessId, { metadata: newMeta });
-        } catch (e) {}
-
-        return prodData;
-    },
-
-    async adjustStock(businessId, productId, delta, currentMetadata = null) {
-        const existingList = await this.getProducts(businessId, currentMetadata);
-        let targetProduct = null;
-
-        const updatedList = existingList.map(p => {
-            if (String(p.id) === String(productId)) {
-                targetProduct = { ...p, current_stock: Math.max(0, (p.current_stock || 0) + delta) };
-                return targetProduct;
-            }
-            return p;
-        });
-
-        // Guardar en localStorage inmediatamente
-        try {
-            localStorage.setItem(getStorageKey(businessId, 'products'), JSON.stringify(updatedList));
-        } catch (e) {}
-
-        // Guardar en Supabase si tabla existe
-        try {
-            if (productId && !String(productId).startsWith('prod-')) {
-                await supabase
-                    .from('sport_canteen_products')
-                    .update({ current_stock: targetProduct?.current_stock, updated_at: new Date().toISOString() })
-                    .eq('id', productId);
-            }
-        } catch (e) {}
-
-        // Persistir en metadata
-        try {
-            const newMeta = { ...(currentMetadata || {}), sport_canteen_products: updatedList };
-            await serviceAdapter.patchBusiness(businessId, { metadata: newMeta });
-        } catch (e) {}
-
-        return targetProduct;
-    },
-
-    async deleteProduct(businessId, productId, currentMetadata = null) {
-        const existingList = await this.getProducts(businessId, currentMetadata);
-        const updatedList = existingList.filter(p => String(p.id) !== String(productId));
-
-        try {
-            localStorage.setItem(getStorageKey(businessId, 'products'), JSON.stringify(updatedList));
-        } catch (e) {}
-
-        try {
-            if (productId && !String(productId).startsWith('prod-')) {
-                await supabase.from('sport_canteen_products').delete().eq('id', productId);
-            }
-        } catch (e) {}
-
-        try {
-            const newMeta = { ...(currentMetadata || {}), sport_canteen_products: updatedList };
-            await serviceAdapter.patchBusiness(businessId, { metadata: newMeta });
-        } catch (e) {}
-
-        return true;
-    },
-
-    // ==========================================
-    // 2. GESTIÓN DE CAJA DIARIA & ARQUEO
-    // ==========================================
-
-    async getCurrentCashSession(businessId, currentMetadata = null) {
-        if (!businessId) return null;
-
-        // 1. Revisar localStorage primero (persistencia de sesión local segura)
-        try {
-            const cached = localStorage.getItem(getStorageKey(businessId, 'active_session'));
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                if (parsed && parsed.status === 'open') {
-                    return parsed;
-                }
-            }
-        } catch (e) {}
-
-        // 2. Revisar Supabase
-        try {
+        if (product.id) {
+            // Stock changes on existing products go through adjust_sport_product_stock to stay atomic
             const { data, error } = await supabase
-                .from('sport_cash_registers')
-                .select('*')
-                .eq('business_id', businessId)
-                .eq('status', 'open')
-                .order('opened_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            if (!error && data) {
-                const { data: movs } = await supabase
-                    .from('sport_cash_movements')
-                    .select('*')
-                    .eq('cash_register_id', data.id)
-                    .order('created_at', { ascending: false });
-
-                const fullSession = { ...data, movements: movs || [] };
-                try {
-                    localStorage.setItem(getStorageKey(businessId, 'active_session'), JSON.stringify(fullSession));
-                } catch (e) {}
-                return fullSession;
-            }
-        } catch (e) {}
-
-        // 3. Revisar metadata
-        const sessionMeta = currentMetadata?.active_cash_register;
-        if (sessionMeta && sessionMeta.status === 'open') {
-            try {
-                localStorage.setItem(getStorageKey(businessId, 'active_session'), JSON.stringify(sessionMeta));
-            } catch (e) {}
-            return sessionMeta;
-        }
-
-        return null;
-    },
-
-    async openCashSession(businessId, { initialCash = 0, openedBy = 'Encargado' }, currentMetadata = null) {
-        const sessionPayload = {
-            id: `session-${Date.now()}`,
-            business_id: businessId,
-            opened_at: new Date().toISOString(),
-            opened_by: openedBy || 'Encargado',
-            initial_cash: Number(initialCash) || 0,
-            expected_cash: Number(initialCash) || 0,
-            expected_transfers: 0,
-            status: 'open',
-            notes: '',
-            difference: 0,
-            movements: []
-        };
-
-        // Guardar en localStorage de inmediato
-        try {
-            localStorage.setItem(getStorageKey(businessId, 'active_session'), JSON.stringify(sessionPayload));
-        } catch (e) {}
-
-        // Intentar guardar en Supabase
-        try {
-            const { data, error } = await supabase
-                .from('sport_cash_registers')
-                .insert([{
-                    business_id: businessId,
-                    opened_at: sessionPayload.opened_at,
-                    opened_by: sessionPayload.opened_by,
-                    initial_cash: sessionPayload.initial_cash,
-                    expected_cash: sessionPayload.expected_cash,
-                    expected_transfers: 0,
-                    status: 'open'
-                }])
+                .from('sport_canteen_products')
+                .update(payload)
+                .eq('id', product.id)
                 .select()
                 .single();
+            if (error) throw toError(error, 'No se pudo guardar el artículo');
+            return data;
+        }
 
-            if (!error && data) {
-                sessionPayload.id = data.id;
-                try {
-                    localStorage.setItem(getStorageKey(businessId, 'active_session'), JSON.stringify(sessionPayload));
-                } catch (e) {}
-            }
-        } catch (e) {}
-
-        // Persistir en metadata
-        try {
-            const newMeta = { ...(currentMetadata || {}), active_cash_register: sessionPayload };
-            await serviceAdapter.patchBusiness(businessId, { metadata: newMeta });
-        } catch (e) {}
-
-        return sessionPayload;
+        const { data, error } = await supabase
+            .from('sport_canteen_products')
+            .insert([{
+                ...payload,
+                business_id: String(businessId),
+                current_stock: trackStock ? Math.max(0, parseInt(product.current_stock, 10) || 0) : 0
+            }])
+            .select()
+            .single();
+        if (error) throw toError(error, 'No se pudo crear el artículo');
+        return data;
     },
 
-    async registerMovement(businessId, {
-        sessionId,
-        type, // 'canteen_sale', 'booking_income', 'manual_income', 'manual_expense'
-        paymentMethod = 'cash', // 'cash', 'transfer'
-        amount = 0,
-        description = '',
-        itemsDetail = [],
-        bookingId = null
-    }, currentMetadata = null) {
-        // Obtener sesión activa de forma segura
-        let activeSession = await this.getCurrentCashSession(businessId, currentMetadata);
-        if (!activeSession) {
-            // Si por alguna razón no existía, abrir una sesión por defecto
-            activeSession = await this.openCashSession(businessId, { initialCash: 0, openedBy: 'Turno' }, currentMetadata);
+    async seedSuggestedProducts(businessId) {
+        const rows = SUGGESTED_PRODUCTS.map(p => ({
+            ...p,
+            business_id: String(businessId),
+            current_stock: 0,
+            is_active: true
+        }));
+        const { data, error } = await supabase
+            .from('sport_canteen_products')
+            .insert(rows)
+            .select();
+        if (error) throw toError(error, 'No se pudieron cargar los artículos sugeridos');
+        return data || [];
+    },
+
+    async adjustStock(productId, delta) {
+        const { data, error } = await supabase.rpc('adjust_sport_product_stock', {
+            p_product_id: productId,
+            p_delta: Math.trunc(Number(delta) || 0)
+        });
+        if (error) throw toError(error, 'No se pudo actualizar el stock');
+        return data;
+    },
+
+    async setProductActive(productId, isActive) {
+        const { data, error } = await supabase
+            .from('sport_canteen_products')
+            .update({ is_active: Boolean(isActive), updated_at: new Date().toISOString() })
+            .eq('id', productId)
+            .select()
+            .single();
+        if (error) throw toError(error, 'No se pudo actualizar el artículo');
+        return data;
+    },
+
+    /**
+     * Removes a product. If it was ever sold it is only deactivated, so past movements keep their detail.
+     * @returns {'deleted'|'archived'}
+     */
+    async removeProduct(product) {
+        const { data: sold, error: soldError } = await supabase
+            .from('sport_cash_movements')
+            .select('id')
+            .eq('business_id', String(product.business_id))
+            // jsonb containment: .contains() with an array would be sent as a Postgres array literal
+            .filter('items_detail', 'cs', JSON.stringify([{ product_id: product.id }]))
+            .limit(1);
+        if (soldError) throw toError(soldError, 'No se pudo dar de baja el artículo');
+
+        if (sold && sold.length > 0) {
+            await this.setProductActive(product.id, false);
+            return 'archived';
         }
 
-        const movementData = {
-            id: `mov-${Date.now()}`,
-            cash_register_id: activeSession.id,
-            business_id: businessId,
-            type,
-            payment_method: paymentMethod,
-            amount: Number(amount) || 0,
-            description,
-            items_detail: itemsDetail || [],
-            booking_id: bookingId,
-            created_at: new Date().toISOString()
-        };
+        const { error } = await supabase.from('sport_canteen_products').delete().eq('id', product.id);
+        if (error) throw toError(error, 'No se pudo eliminar el artículo');
+        return 'deleted';
+    },
 
-        // Descontar stock de artículos vendidos
-        if (itemsDetail && itemsDetail.length > 0) {
-            for (const item of itemsDetail) {
-                if (item.productId) {
-                    await this.adjustStock(businessId, item.productId, -(item.quantity || 1), currentMetadata);
-                }
-            }
+    // ==========================================
+    // 2. CAJA
+    // ==========================================
+
+    async getOpenRegister(businessId) {
+        if (!businessId) return null;
+        const { data, error } = await supabase
+            .from('sport_cash_registers')
+            .select('*')
+            .eq('business_id', String(businessId))
+            .eq('status', 'open')
+            .maybeSingle();
+        if (error) throw toError(error, 'No se pudo cargar la caja');
+        return data || null;
+    },
+
+    /**
+     * Opens a register. If another device opened one first, returns that one with alreadyOpen = true.
+     */
+    async openRegister(businessId, { initialCash = 0, openedBy = '' } = {}) {
+        const { data, error } = await supabase
+            .from('sport_cash_registers')
+            .insert([{
+                business_id: String(businessId),
+                opened_by: String(openedBy || '').trim() || 'Encargado',
+                initial_cash: Math.max(0, Number(initialCash) || 0)
+            }])
+            .select()
+            .single();
+
+        if (error?.code === '23505') {
+            const existing = await this.getOpenRegister(businessId);
+            if (existing) return { register: existing, alreadyOpen: true };
         }
+        if (error) throw toError(error, 'No se pudo abrir la caja');
+        return { register: data, alreadyOpen: false };
+    },
 
-        // Agregar movimiento a la sesión y recalcular totales
-        const updatedMovements = [movementData, ...(activeSession.movements || [])];
-        let expCash = Number(activeSession.initial_cash || 0);
-        let expTransfers = 0;
+    async closeRegister(registerId, { cashCounted, closedBy = '', notes = '' }) {
+        const { data, error } = await supabase.rpc('close_sport_cash_register', {
+            p_register_id: registerId,
+            p_cash_counted: Math.max(0, Number(cashCounted) || 0),
+            p_closed_by: closedBy || null,
+            p_notes: notes || null
+        });
+        if (error) throw toError(error, 'No se pudo cerrar la caja');
+        return data;
+    },
 
-        updatedMovements.forEach(m => {
-            const val = Number(m.amount) || 0;
-            if (m.payment_method === 'cash') {
-                if (m.type === 'manual_expense') expCash -= val;
-                else expCash += val;
-            } else if (m.payment_method === 'transfer') {
-                if (m.type === 'manual_expense') expTransfers -= val;
-                else expTransfers += val;
-            }
+    async listMovements(registerId) {
+        if (!registerId) return [];
+        const { data, error } = await supabase
+            .from('sport_cash_movements')
+            .select('*')
+            .eq('cash_register_id', registerId)
+            .order('created_at', { ascending: false });
+        if (error) throw toError(error, 'No se pudieron cargar los movimientos');
+        return data || [];
+    },
+
+    /**
+     * @param {Object} movement
+     * @param {'booking_income'|'canteen_sale'|'manual_income'|'manual_expense'} movement.type
+     * @param {'cash'|'transfer'} movement.paymentMethod
+     * @param {Array<{product_id, name, quantity, unit_price}>} movement.items - stock is discounted in the database
+     */
+    async registerMovement(businessId, { type, paymentMethod = 'cash', amount, description = '', items = [], bookingId = null }) {
+        const value = Math.round((Number(amount) || 0) * 100) / 100;
+        if (value <= 0) throw new Error('El monto tiene que ser mayor a $0');
+
+        const { data, error } = await supabase.rpc('register_sport_cash_movement', {
+            p_business_id: String(businessId),
+            p_type: type,
+            p_payment_method: paymentMethod === 'transfer' ? 'transfer' : 'cash',
+            p_amount: value,
+            p_description: String(description || '').trim(),
+            p_items: (items || []).map(it => ({
+                product_id: it.product_id || null,
+                name: it.name,
+                quantity: Math.max(1, parseInt(it.quantity, 10) || 1),
+                unit_price: Number(it.unit_price) || 0
+            })),
+            p_booking_id: bookingId || null
+        });
+        if (error) throw toError(error, 'No se pudo registrar el movimiento');
+        return data;
+    },
+
+    async voidMovement(movementId, reason = '') {
+        const { data, error } = await supabase.rpc('void_sport_cash_movement', {
+            p_movement_id: movementId,
+            p_reason: String(reason || '').trim()
+        });
+        if (error) throw toError(error, 'No se pudo anular el movimiento');
+        return data;
+    },
+
+    // ==========================================
+    // 3. HISTORIAL Y EXPORTACIÓN
+    // ==========================================
+
+    async listClosedRegisters(businessId, { from, to } = {}) {
+        let query = supabase
+            .from('sport_cash_registers')
+            .select('*')
+            .eq('business_id', String(businessId))
+            .eq('status', 'closed')
+            .order('opened_at', { ascending: false });
+        if (from) query = query.gte('opened_at', from);
+        if (to) query = query.lt('opened_at', to);
+
+        const { data, error } = await query;
+        if (error) throw toError(error, 'No se pudo cargar el historial de cajas');
+        return data || [];
+    },
+
+    async listMovementsForRegisters(registerIds = []) {
+        if (registerIds.length === 0) return [];
+        const { data, error } = await supabase
+            .from('sport_cash_movements')
+            .select('*')
+            .in('cash_register_id', registerIds)
+            .order('created_at', { ascending: true });
+        if (error) throw toError(error, 'No se pudieron cargar los movimientos');
+        return data || [];
+    },
+
+    /** Closed registers opened in the given month (month is 0-based) with their movements */
+    async getMonthHistory(businessId, year, month) {
+        const registers = await this.listClosedRegisters(businessId, monthRange(year, month));
+        const movements = await this.listMovementsForRegisters(registers.map(r => r.id));
+        return { registers, movements };
+    },
+
+    async listBookingMovements(bookingId) {
+        if (!bookingId) return [];
+        const { data, error } = await supabase
+            .from('sport_cash_movements')
+            .select('*')
+            .eq('booking_id', bookingId)
+            .order('created_at', { ascending: true });
+        if (error) throw toError(error, 'No se pudieron cargar los cobros del turno');
+        return data || [];
+    },
+
+    /** CSV (separador ;, BOM UTF-8) with the registers and every movement of the month */
+    buildMonthCsv(registers = [], movements = []) {
+        const lines = [];
+        const row = (cells) => lines.push(cells.map(csvCell).join(';'));
+        const registerById = new Map(registers.map(r => [r.id, r]));
+
+        row(['CAJAS']);
+        row(['Apertura', 'Hora apertura', 'Cierre', 'Hora cierre', 'Encargado', 'Fondo inicial', 'Turnos', 'Artículos', 'Ingresos manuales', 'Gastos', 'Efectivo esperado', 'Efectivo contado', 'Diferencia', 'Transferencias', 'Notas']);
+        registers.slice().reverse().forEach(r => {
+            const totals = summarizeMovements(movements.filter(m => m.cash_register_id === r.id), r.initial_cash);
+            row([
+                csvDate(r.opened_at), csvTime(r.opened_at), csvDate(r.closed_at), csvTime(r.closed_at),
+                r.closed_by || r.opened_by,
+                csvNumber(r.initial_cash), csvNumber(totals.bookings), csvNumber(totals.canteen),
+                csvNumber(totals.manualIncome), csvNumber(totals.expenses),
+                csvNumber(r.expected_cash), csvNumber(r.final_cash_counted), csvNumber(r.difference),
+                csvNumber(r.expected_transfers), r.notes || ''
+            ]);
         });
 
-        const updatedSession = {
-            ...activeSession,
-            expected_cash: Math.max(0, expCash),
-            expected_transfers: Math.max(0, expTransfers),
-            movements: updatedMovements
-        };
-
-        // 1. Guardar en localStorage inmediatamente (Garantía de no pérdida)
-        try {
-            localStorage.setItem(getStorageKey(businessId, 'active_session'), JSON.stringify(updatedSession));
-        } catch (e) {}
-
-        // 2. Intentar guardar en Supabase si tabla existe
-        try {
-            if (activeSession.id && !String(activeSession.id).startsWith('session-')) {
-                await supabase.from('sport_cash_movements').insert([movementData]);
-                await supabase.from('sport_cash_registers').update({
-                    expected_cash: updatedSession.expected_cash,
-                    expected_transfers: updatedSession.expected_transfers
-                }).eq('id', activeSession.id);
-            }
-        } catch (e) {}
-
-        // 3. Persistir en metadata
-        try {
-            const newMeta = { ...(currentMetadata || {}), active_cash_register: updatedSession };
-            await serviceAdapter.patchBusiness(businessId, { metadata: newMeta });
-        } catch (e) {}
-
-        return movementData;
-    },
-
-    async closeCashSession(businessId, sessionId, {
-        finalCashCounted = 0,
-        notes = '',
-        closedBy = 'Encargado',
-        expectedCash = 0,
-        expectedTransfers = 0
-    }, currentMetadata = null) {
-        const active = await this.getCurrentCashSession(businessId, currentMetadata);
-        const diff = Number(finalCashCounted) - Number(expectedCash);
-
-        const closedSession = {
-            ...(active || {}),
-            status: 'closed',
-            closed_at: new Date().toISOString(),
-            closed_by: closedBy,
-            final_cash_counted: Number(finalCashCounted),
-            expected_cash: Number(expectedCash),
-            expected_transfers: Number(expectedTransfers),
-            difference: diff,
-            notes: notes || ''
-        };
-
-        // 1. Actualizar historial en localStorage y quitar sesión activa
-        try {
-            localStorage.removeItem(getStorageKey(businessId, 'active_session'));
-            const historyKey = getStorageKey(businessId, 'history');
-            const prevHistory = JSON.parse(localStorage.getItem(historyKey) || '[]');
-            localStorage.setItem(historyKey, JSON.stringify([closedSession, ...prevHistory].slice(0, 50)));
-        } catch (e) {}
-
-        // 2. Supabase
-        try {
-            if (sessionId && !String(sessionId).startsWith('session-')) {
-                await supabase
-                    .from('sport_cash_registers')
-                    .update({
-                        status: 'closed',
-                        closed_at: closedSession.closed_at,
-                        closed_by: closedSession.closed_by,
-                        final_cash_counted: closedSession.final_cash_counted,
-                        difference: closedSession.difference,
-                        notes: closedSession.notes
-                    })
-                    .eq('id', sessionId);
-            }
-        } catch (e) {}
-
-        // 3. Metadata
-        try {
-            const newMeta = {
-                ...(currentMetadata || {}),
-                active_cash_register: null,
-                cash_register_history: [closedSession, ...(currentMetadata?.cash_register_history || [])].slice(0, 30)
-            };
-            await serviceAdapter.patchBusiness(businessId, { metadata: newMeta });
-        } catch (e) {}
-
-        return closedSession;
-    },
-
-    // ==========================================
-    // 3. GENERADOR DE REPORTE WHATSAPP
-    // ==========================================
-
-    generateWhatsAppReport(business, session, movements = []) {
-        if (!session) return '';
-
-        const openTime = session.opened_at ? new Date(session.opened_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-        const closeTime = session.closed_at ? new Date(session.closed_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-        const dateStr = session.opened_at ? new Date(session.opened_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : new Date().toLocaleDateString('es-AR');
-
-        let totalTurnosCash = 0;
-        let totalTurnosTrans = 0;
-        let totalItemsCash = 0;
-        let totalItemsTrans = 0;
-        let totalGastos = 0;
-        const itemsVendidos = {};
-
+        lines.push('');
+        row(['MOVIMIENTOS']);
+        row(['Fecha', 'Hora', 'Caja (apertura)', 'Tipo', 'Medio', 'Descripción', 'Artículos', 'Monto', 'Estado', 'Motivo de anulación']);
         movements.forEach(m => {
-            const amt = Number(m.amount) || 0;
-            if (m.type === 'booking_income') {
-                if (m.payment_method === 'cash') totalTurnosCash += amt;
-                else totalTurnosTrans += amt;
-            } else if (m.type === 'canteen_sale') {
-                if (m.payment_method === 'cash') totalItemsCash += amt;
-                else totalItemsTrans += amt;
-
-                if (Array.isArray(m.items_detail)) {
-                    m.items_detail.forEach(it => {
-                        const q = Number(it.quantity) || 1;
-                        itemsVendidos[it.name] = (itemsVendidos[it.name] || 0) + q;
-                    });
-                }
-            } else if (m.type === 'manual_expense') {
-                totalGastos += amt;
-            }
+            const reg = registerById.get(m.cash_register_id);
+            const items = Array.isArray(m.items_detail)
+                ? m.items_detail.map(it => `${it.quantity || 1}x ${it.name}`).join(', ')
+                : '';
+            const signed = m.type === 'manual_expense' ? -Number(m.amount) : Number(m.amount);
+            row([
+                csvDate(m.created_at), csvTime(m.created_at),
+                reg ? `${csvDate(reg.opened_at)} ${csvTime(reg.opened_at)}` : '',
+                MOVEMENT_TYPE_LABELS[m.type] || m.type,
+                PAYMENT_METHOD_LABELS[m.payment_method] || m.payment_method,
+                m.description || '', items, csvNumber(signed),
+                m.voided_at ? 'Anulado' : 'Válido', m.voided_reason || ''
+            ]);
         });
 
-        const totalCashEsperado = Number(session.expected_cash || 0);
-        const totalCashContado = Number(session.final_cash_counted || session.expected_cash || 0);
-        const diff = totalCashContado - totalCashEsperado;
-        const totalTransfers = Number(session.expected_transfers || (totalTurnosTrans + totalItemsTrans));
+        const BOM = String.fromCharCode(0xFEFF); // para que Excel lea los acentos como UTF-8
+        return `${BOM}${lines.join('\r\n')}\r\n`;
+    },
 
-        const itemsDetailLines = Object.entries(itemsVendidos)
-            .map(([item, qty]) => `  • ${item}: ${qty} un.`)
-            .join('\n');
+    downloadCsv(filename, content) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
 
-        return `📊 *CIERRE DE CAJA DIARIA - ${business?.name || 'CANCHAS'}*
-📅 *Fecha:* ${dateStr} (${openTime} a ${closeTime})
-👤 *Turno:* ${session.closed_by || session.opened_by || 'Encargado'}
+    // ==========================================
+    // 4. REPORTE WHATSAPP
+    // ==========================================
 
-💵 *EFECTIVO EN CAJA:*
-• Fondo inicial (cambio): $${Number(session.initial_cash || 0).toLocaleString('es-AR')}
-• Turnos en efectivo: $${totalTurnosCash.toLocaleString('es-AR')}
-• Artículos en efectivo: $${totalItemsCash.toLocaleString('es-AR')}
-• Gastos/Retiros del turno: -$${totalGastos.toLocaleString('es-AR')}
---------------------------------
-👉 *Efectivo esperado:* $${totalCashEsperado.toLocaleString('es-AR')}
-👉 *Efectivo contado:* $${totalCashContado.toLocaleString('es-AR')}
-${diff === 0 ? '✅ *Caja cuadra perfecta ($0)*' : diff > 0 ? `⚠️ *Sobrante:* +$${diff.toLocaleString('es-AR')}` : `🚨 *Faltante:* -$${Math.abs(diff).toLocaleString('es-AR')}`}
+    generateWhatsAppReport(business, register, movements = []) {
+        if (!register) return '';
 
-📲 *TRANSFERENCIAS (Alias / MP):*
-• Turnos por transferencia: $${totalTurnosTrans.toLocaleString('es-AR')}
-• Artículos por transferencia: $${totalItemsTrans.toLocaleString('es-AR')}
-👉 *Total Transferencias:* $${totalTransfers.toLocaleString('es-AR')}
+        const fmtTime = (iso) => new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        const openTime = register.opened_at ? fmtTime(register.opened_at) : '--:--';
+        const closeTime = register.closed_at ? fmtTime(register.closed_at) : fmtTime(new Date().toISOString());
+        const dateStr = new Date(register.opened_at || Date.now()).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-🛍️ *VENTAS DE ARTÍCULOS / MOSTRADOR:*
-Total artículos: $${(totalItemsCash + totalItemsTrans).toLocaleString('es-AR')}
-${itemsDetailLines ? `${itemsDetailLines}\n` : 'Sin detalle de ítems\n'}
-${session.notes ? `📝 *Notas del turno:* ${session.notes}\n` : ''}
-_Generado automáticamente desde Turnitos_`;
+        const valid = movements.filter(m => !m.voided_at);
+        const sumBy = (type, method) => valid
+            .filter(m => m.type === type && m.payment_method === method)
+            .reduce((acc, m) => acc + (Number(m.amount) || 0), 0);
+
+        const bookingsCash = sumBy('booking_income', 'cash');
+        const bookingsTransfer = sumBy('booking_income', 'transfer');
+        const canteenCash = sumBy('canteen_sale', 'cash');
+        const canteenTransfer = sumBy('canteen_sale', 'transfer');
+        const incomeCash = sumBy('manual_income', 'cash');
+        const incomeTransfer = sumBy('manual_income', 'transfer');
+        const expensesCash = sumBy('manual_expense', 'cash');
+        const expensesTransfer = sumBy('manual_expense', 'transfer');
+        const bookingsCount = valid.filter(m => m.type === 'booking_income').length;
+
+        // Articles sold, whether at the counter or charged together with a court
+        const itemsSold = {};
+        valid.forEach(m => {
+            if (m.type !== 'canteen_sale' && m.type !== 'booking_income') return;
+            (Array.isArray(m.items_detail) ? m.items_detail : []).forEach(it => {
+                itemsSold[it.name] = (itemsSold[it.name] || 0) + (Number(it.quantity) || 1);
+            });
+        });
+        const itemsLines = Object.entries(itemsSold).map(([name, qty]) => `  • ${name}: ${qty} u.`).join('\n');
+
+        const totals = summarizeMovements(movements, register.initial_cash);
+        const hasValue = (v) => v !== null && v !== undefined;
+        const expectedCash = hasValue(register.expected_cash) ? Number(register.expected_cash) : totals.cash;
+        const expectedTransfers = hasValue(register.expected_transfers) ? Number(register.expected_transfers) : totals.transfers;
+        const counted = hasValue(register.final_cash_counted) ? Number(register.final_cash_counted) : null;
+        const diff = counted === null ? null : counted - expectedCash;
+        const voidedCount = movements.length - valid.length;
+
+        const lines = [
+            `*CIERRE DE CAJA · ${business?.name || 'Complejo'}*`,
+            `Fecha: ${dateStr} (${openTime} a ${closeTime})`,
+            `Encargado: ${register.closed_by || register.opened_by || 'Encargado'}`,
+            '',
+            '*EFECTIVO*',
+            `• Fondo inicial: ${money(register.initial_cash)}`,
+            `• Turnos: ${money(bookingsCash)}`,
+            `• Artículos: ${money(canteenCash)}`,
+            ...(incomeCash > 0 ? [`• Otros ingresos: ${money(incomeCash)}`] : []),
+            `• Gastos: -${money(expensesCash)}`,
+            `Esperado: ${money(expectedCash)}`,
+            ...(counted !== null ? [`Contado: ${money(counted)}`] : []),
+            ...(diff === null ? [] : [diff === 0 ? 'Caja OK (sin diferencia)' : diff > 0 ? `Sobrante: +${money(diff)}` : `Faltante: -${money(Math.abs(diff))}`]),
+            '',
+            '*TRANSFERENCIAS*',
+            `• Turnos: ${money(bookingsTransfer)}`,
+            `• Artículos: ${money(canteenTransfer)}`,
+            ...(incomeTransfer > 0 ? [`• Otros ingresos: ${money(incomeTransfer)}`] : []),
+            ...(expensesTransfer > 0 ? [`• Gastos: -${money(expensesTransfer)}`] : []),
+            `Total: ${money(expectedTransfers)}`,
+            '',
+            `*TURNOS COBRADOS:* ${bookingsCount} (${money(bookingsCash + bookingsTransfer)})`,
+            `*ARTÍCULOS:* ${money(canteenCash + canteenTransfer)}`,
+            itemsLines || '  Sin artículos vendidos',
+            ...(voidedCount > 0 ? ['', `Movimientos anulados: ${voidedCount}`] : []),
+            ...(register.notes ? ['', `Notas: ${register.notes}`] : []),
+            '',
+            '_Generado desde TurnitosLR_'
+        ];
+        return lines.join('\n');
     }
 };
 

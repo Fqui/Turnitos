@@ -94,3 +94,20 @@ export function isRentalBusiness(business) {
         .replace(/[̀-ͯ]/g, '');
     return ['alquiler', 'quincho', 'quinta', 'salon', 'evento'].some(word => category.includes(word));
 }
+
+/**
+ * Whether the business rents courts (canchas, predios deportivos): enables the cash register
+ * @param {Object} business
+ * @returns {boolean}
+ */
+export function isSportBusiness(business) {
+    if (!business) return false;
+    const category = (business.categories?.name || business.category || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '');
+    return business.type === 'sport' ||
+        category.includes('deport') ||
+        category.includes('cancha') ||
+        (business.courts?.length || 0) > 0;
+}
