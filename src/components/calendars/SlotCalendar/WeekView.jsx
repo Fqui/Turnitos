@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
-import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot } from '../shared/utils';
+import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot, getDayHoursConfig } from '../shared/utils';
 import ConfirmModal from '../../common/ConfirmModal';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
@@ -84,8 +84,8 @@ export default function WeekView({
     };
 
     // Verificar si este es el primer slot de una reserva
-    const isFirstSlotOfBooking = (booking, currentTime) => {
-        return bookingStartsInSlot(booking, currentTime, config.slotSize);
+    const isFirstSlotOfBooking = (booking, currentTime, dayConfig) => {
+        return bookingStartsInSlot(booking, currentTime, config.slotSize, dayConfig);
     };
 
     const COURT_COLORS = [
@@ -271,11 +271,14 @@ export default function WeekView({
                                     return true;
                                 });
 
+                                // Horario de ese día: las filas de madrugada pertenecen al día que abre
+                                const dayConfig = getDayHoursConfig(business?.hours, day);
                                 const slotBookings = getBookingsForSlot(
                                     dayBookings,
                                     day,
                                     time,
-                                    config.slotSize
+                                    config.slotSize,
+                                    dayConfig
                                 );
 
                                 const isToday = formatDateKey(day) === formatDateKey(new Date());
@@ -299,7 +302,7 @@ export default function WeekView({
                                         {slotBookings.length > 0 ? (
                                             <div style={{ display: 'flex', gap: '4px', width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, padding: '4px', boxSizing: 'border-box' }}>
                                                 {slotBookings.map((booking, idx) => {
-                                                    if (!isFirstSlotOfBooking(booking, time)) {
+                                                    if (!isFirstSlotOfBooking(booking, time, dayConfig)) {
                                                         return null;
                                                     }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
-import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot, timeToMinutes } from '../shared/utils';
+import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot, getDayHoursConfig, normalizeDayMinutes } from '../shared/utils';
 import ConfirmModal from '../../common/ConfirmModal';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
@@ -115,44 +115,29 @@ export default function DayView({
         }
     };
 
+    // Horario del día que se muestra (las filas de madrugada pertenecen a este día)
+    const dayConfig = getDayHoursConfig(business?.hours, currentDate);
+
     // Verificar si el negocio está abierto en un día/hora específico
     const isBusinessOpen = (time) => {
-        const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const dayKey = daysMap[currentDate.getDay()];
-        const dayConfig = business?.hours?.[dayKey];
-
         if (dayConfig?.isOpen === false) return false;
+        if (!dayConfig?.open || !dayConfig?.close) return true;
 
-        const slotMin = timeToMinutes(time);
+        // Minutos desde la apertura del día: la madrugada de un horario que cruza la medianoche suma 1440
+        const slotMin = normalizeDayMinutes(time, dayConfig);
+        const inShift = (open, close) => {
+            const start = normalizeDayMinutes(open, dayConfig);
+            let end = normalizeDayMinutes(close, dayConfig);
+            if (end <= start) end += 1440; // Cruzado a medianoche
+            return slotMin >= start && slotMin < end;
+        };
 
-        // Verificar si es horario cortado (con open/close/open2/close2)
-        if (dayConfig?.isSplit) {
-            const start1 = timeToMinutes(dayConfig.open);
-            let close1 = timeToMinutes(dayConfig.close);
-            if (close1 < start1) close1 += 1440; // Cruzado a medianoche
-
-            const inFirstShift = slotMin >= start1 && slotMin < close1;
-
-            let inSecondShift = false;
-            if (dayConfig.open2 && dayConfig.close2) {
-                const start2 = timeToMinutes(dayConfig.open2);
-                let close2 = timeToMinutes(dayConfig.close2);
-                if (close2 < start2) close2 += 1440; // Cruzado a medianoche
-                inSecondShift = slotMin >= start2 && slotMin < close2;
-            }
-
-            return inFirstShift || inSecondShift;
+        // Horario cortado (con open/close/open2/close2)
+        if (dayConfig.isSplit && dayConfig.open2 && dayConfig.close2) {
+            return inShift(dayConfig.open, dayConfig.close) || inShift(dayConfig.open2, dayConfig.close2);
         }
 
-        // Horario continuo
-        if (dayConfig?.open && dayConfig?.close) {
-            const start = timeToMinutes(dayConfig.open);
-            let close = timeToMinutes(dayConfig.close);
-            if (close < start) close += 1440; // Cruzado a medianoche
-            return slotMin >= start && slotMin < close;
-        }
-
-        return true;
+        return inShift(dayConfig.open, dayConfig.close);
     };
 
     // Calcular cuántos slots ocupa una reserva
@@ -163,7 +148,7 @@ export default function DayView({
 
     // Verificar si este es el primer slot de una reserva (para renderizar la tarjeta)
     const isFirstSlotOfBooking = (booking, currentTime) => {
-        return bookingStartsInSlot(booking, currentTime, config.slotSize);
+        return bookingStartsInSlot(booking, currentTime, config.slotSize, dayConfig);
     };
 
     return (
@@ -313,7 +298,8 @@ export default function DayView({
                                     }),
                                     currentDate,
                                     time,
-                                    config.slotSize
+                                    config.slotSize,
+                                    dayConfig
                                 );
 
                                 return (
@@ -435,7 +421,8 @@ export default function DayView({
                                         bookings,
                                         currentDate,
                                         time,
-                                        config.slotSize
+                                        config.slotSize,
+                                        dayConfig
                                     );
 
                                     if (slotBookings.length > 0) {

@@ -3,6 +3,7 @@ import CustomDropdown from '../common/CustomDropdown';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { isRentalBusiness } from '../../utils/businessUtils';
 import { getCourtSport } from '../../utils/sports';
+import { getDayHoursConfig, normalizeDayMinutes } from '../calendars/shared/utils';
 
 const NewBookingModal = ({
     isOpen,
@@ -152,13 +153,8 @@ const NewBookingModal = ({
         };
         const toTime = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
-        let hours = currentBusiness?.hours;
-        if (typeof hours === 'string') {
-            try { hours = JSON.parse(hours); } catch { hours = null; }
-        }
         const [y, m, d] = newBookingData.date.split('-').map(Number);
-        const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(y, m - 1, d).getDay()];
-        const dayConfig = hours?.[dayKey];
+        const dayConfig = getDayHoursConfig(currentBusiness?.hours, new Date(y, m - 1, d));
 
         const ranges = [];
         if (!dayConfig) {
@@ -181,7 +177,11 @@ const NewBookingModal = ({
             if (isCourtBusiness) return String(b.court_id) === String(resourceId);
             if (newBookingData.specialistId) return String(b.specialist_id) === String(newBookingData.specialistId);
             return false;
-        }).map(b => [toMin(b.time), toMin(b.time) + (Number(b.duration) || 60)]);
+        }).map(b => {
+            // The early hours of an overnight schedule count after the opening (00:30 -> 24:30)
+            const bs = normalizeDayMinutes(toTime(toMin(b.time)), dayConfig);
+            return [bs, bs + (Number(b.duration) || 60)];
+        });
 
         const options = [];
         ranges.forEach(([start, end]) => {

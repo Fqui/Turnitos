@@ -4,7 +4,7 @@ import DayView from './DayView';
 import WeekView from './WeekView';
 import MonthView from './MonthView';
 import { getSlotConfig, getResourcesByType } from '../shared/config';
-import { formatDateKey, generateWeekDays, generateMonthDays } from '../shared/utils';
+import { formatDateKey, generateWeekDays, generateMonthDays, normalizeDayMinutes } from '../shared/utils';
 import { formatLongDate } from '../../../utils/dateUtils';
 
 export default function SlotCalendar({
@@ -117,12 +117,14 @@ export default function SlotCalendar({
                             }
 
                             if (bKey === targetKey) {
-                                const [bh, bm] = String(b.time).split(':').map(Number);
-                                if (!isNaN(bh)) {
+                                // La madrugada de un horario que cruza la medianoche va al final del día (+24 h)
+                                const bStartMin = normalizeDayMinutes(String(b.time), dayConfig);
+                                if (!isNaN(bStartMin)) {
+                                    const bh = Math.floor(bStartMin / 60);
                                     if (bh < dayStart) dayStart = bh;
                                     // end_time is a full timestamp, so the end comes from the duration
                                     const durationMin = Number(b.duration) || 60;
-                                    const bEnd = Math.min(Math.ceil((bh * 60 + (bm || 0) + durationMin) / 60), 30);
+                                    const bEnd = Math.min(Math.ceil((bStartMin + durationMin) / 60), 30);
                                     if (bEnd > dayEnd) dayEnd = bEnd;
                                 }
                             }
