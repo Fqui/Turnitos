@@ -21,7 +21,7 @@ import SEOHead from '../components/SEOHead';
 import { buildBusinessSeo } from '../utils/seo';
 import PromotionModal from '../components/promotions/PromotionModal';
 import { parsePromotionTarget } from '../utils/promotionUtils';
-import { buildBusinessShareUrl } from '../utils/share';
+import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
 
 import ProfileHeroBanner from '../components/profile/ProfileHeroBanner';
 import ProfileHighlightsAndStore from '../components/profile/ProfileHighlightsAndStore';
@@ -48,6 +48,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const [searchParams] = useSearchParams();
     const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
     const [loading, setLoading] = useState(!business);
+    // Opened from a link shared on TurnitosLR (?via=turnitos): the booking counts as marketplace
+    useEffect(() => {
+        markTurnitosVia(business?.id);
+    }, [business?.id]);
+
     const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
 
     useEffect(() => {

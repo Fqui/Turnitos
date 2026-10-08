@@ -29,7 +29,7 @@ import { getActiveStoreProducts, isStoreAvailable } from '../utils/storeUtils';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
 import PromotionModal from '../components/promotions/PromotionModal';
 import ShareButton from '../components/common/ShareButton';
-import { buildBusinessShareUrl } from '../utils/share';
+import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
 import { ProductCardImage, ProductDetailImage } from '../components/store/ProductImage';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
@@ -53,6 +53,11 @@ export default function BusinessStore({ overrideSlug }) {
         } catch (e) {}
         return null;
     });
+
+    // Opened from a link shared on TurnitosLR (?via=turnitos): a booking made afterwards counts as marketplace
+    useEffect(() => {
+        markTurnitosVia(business?.id);
+    }, [business?.id]);
 
     const [loading, setLoading] = useState(() => {
         if (location.state?.business) return false;
