@@ -4,7 +4,7 @@ import { formatDisplayDate, formatFriendlyDate, calculateEndTime } from '../util
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 import CouponInput from './common/CouponInput';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
-import { Info } from 'lucide-react';
+import { Info, ShoppingCart, Check } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
@@ -479,71 +479,63 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                             {extra.desc || extra.category || (allowsMultiple ? 'Producto adicional' : 'Servicio extra')}
                                                         </div>
                                                     </div>
-                                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                                                        <div style={{ fontSize: '13px', fontWeight: '800', color: isSelected ? sportColor : 'var(--text-primary)' }}>
-                                                            +${(Number(extra.price) * qty).toLocaleString('es-AR')}
-                                                        </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                                                        {/* One button: cart + price to add; green with check once added (tap again to remove) */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={isSelected ? () => setSelectedExtras(prev => prev.filter(e => e.name !== extra.name)) : handleAdd}
+                                                            aria-pressed={isSelected}
+                                                            aria-label={isSelected ? `Quitar ${extra.name}` : `Agregar ${extra.name}`}
+                                                            title={isSelected ? 'Quitar este adicional' : 'Agregar a tu reserva'}
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '6px',
+                                                                minWidth: '96px',
+                                                                minHeight: '36px',
+                                                                padding: '8px 12px',
+                                                                borderRadius: '10px',
+                                                                border: 'none',
+                                                                backgroundColor: isSelected ? '#16A34A' : sportColor,
+                                                                color: '#FFFFFF',
+                                                                fontFamily: 'inherit',
+                                                                fontSize: '13px',
+                                                                fontWeight: '800',
+                                                                whiteSpace: 'nowrap',
+                                                                cursor: 'pointer',
+                                                                transition: 'background-color 0.2s, transform 0.1s',
+                                                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)'
+                                                            }}
+                                                        >
+                                                            {isSelected
+                                                                ? <Check size={15} strokeWidth={3} aria-hidden="true" />
+                                                                : <ShoppingCart size={15} strokeWidth={2.5} aria-hidden="true" />}
+                                                            ${(Number(extra.price) * qty).toLocaleString('es-AR')}
+                                                        </button>
 
-                                                        {isSelected ? (
-                                                            allowsMultiple ? (
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '12px', border: `1px solid ${sportColor}` }}>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={handleDecrement}
-                                                                        style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 4px' }}
-                                                                    >
-                                                                        -
-                                                                    </button>
-                                                                    <span style={{ fontSize: '12px', fontWeight: '800', color: sportColor, minWidth: '16px', textAlign: 'center' }}>
-                                                                        {qty}
-                                                                    </span>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={handleIncrement}
-                                                                        style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 4px' }}
-                                                                    >
-                                                                        +
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
+                                                        {isSelected && allowsMultiple && (
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '12px', border: '1px solid var(--border)' }}>
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => setSelectedExtras(prev => prev.filter(e => e.name !== extra.name))}
-                                                                    style={{
-                                                                        fontSize: '11px',
-                                                                        color: sportColor,
-                                                                        backgroundColor: `${sportColor}15`,
-                                                                        border: `1.5px solid ${sportColor}`,
-                                                                        fontWeight: '700',
-                                                                        padding: '4px 10px',
-                                                                        borderRadius: '10px',
-                                                                        cursor: 'pointer',
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '4px'
-                                                                    }}
-                                                                    title="Quitar este adicional"
+                                                                    onClick={handleDecrement}
+                                                                    aria-label="Uno menos"
+                                                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 6px' }}
                                                                 >
-                                                                    ✓ Agregado
+                                                                    -
                                                                 </button>
-                                                            )
-                                                        ) : (
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleAdd}
-                                                                style={{
-                                                                    fontSize: '11px',
-                                                                    color: '#000',
-                                                                    backgroundColor: sportColor,
-                                                                    fontWeight: '700',
-                                                                    padding: '5px 12px',
-                                                                    borderRadius: '10px',
-                                                                    border: 'none',
-                                                                    cursor: 'pointer'
-                                                                }}
-                                                            >
-                                                                ＋ Agregar
-                                                            </button>
+                                                                <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-primary)', minWidth: '16px', textAlign: 'center' }}>
+                                                                    {qty}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleIncrement}
+                                                                    aria-label="Uno más"
+                                                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 6px' }}
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
