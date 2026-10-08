@@ -2,9 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
 import CustomDropdown from '../common/CustomDropdown';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
-import { isRentalBusiness } from '../../utils/businessUtils';
+import { isRentalBusiness, isSportBusiness } from '../../utils/businessUtils';
 import { getCourtSport } from '../../utils/sports';
 import RentalPaymentsCard from './RentalPaymentsCard';
+import BookingCashCharge from './canteen/BookingCashCharge';
+import { useBookingCash } from './canteen/useBookingCash';
+
+const CANTEEN_CATEGORY_ICONS = { Bebidas: '🥤', Snacks: '🍫', Equipamiento: '🎾', Alquileres: '🏓', Otro: '🛒' };
 
 const BookingDetailsModalContent = ({
     onClose,
@@ -14,7 +18,8 @@ const BookingDetailsModalContent = ({
     selectedBusinessId,
     onAction,
     formatDisplayDate,
-    getStatusLabel
+    getStatusLabel,
+    onGoToCashRegister
 }) => {
     const { showToast } = useNotification();
 
@@ -43,13 +48,18 @@ const BookingDetailsModalContent = ({
     // Capacity limit
     const maxCapacity = Number(biz?.capacity_limit || biz?.capacity || 100);
 
+    // Court businesses charge into the cash register; its articles can be added as extras
+    const isSport = !isRental && isSportBusiness(biz);
+    const bookingCash = useBookingCash({ businessId: biz?.id, bookingId: booking.id, enabled: isSport });
+
     // Business Catalog Additionals (ONLY additional services / extras, exclude amenities)
     const catalogAdditionals = useMemo(() => {
-        const canteenItems = (biz?.metadata?.sport_canteen_products || []).map(p => ({
+        const canteenItems = bookingCash.products.map(p => ({
             id: p.id,
+            product_id: p.id,
             name: p.name,
-            price: Number(p.sale_price || p.price || 0),
-            icon: p.category === 'Bebidas' ? '🥤' : p.category === 'Equipamiento' ? '🎾' : p.category === 'Alquileres' ? '🏸' : '🍻'
+            price: Number(p.sale_price || 0),
+            icon: CANTEEN_CATEGORY_ICONS[p.category] || '🛒'
         }));
 
         const list = [
@@ -70,6 +80,7 @@ const BookingDetailsModalContent = ({
                         id: item.id || Math.random().toString(),
                         name: name.trim(),
                         price: Number(item.price || item.sale_price || 0),
+                        ...(item.product_id ? { product_id: item.product_id } : {}),
                         icon: item.icon || '✨'
                     });
                 }
@@ -87,7 +98,7 @@ const BookingDetailsModalContent = ({
         });
 
         return unique;
-    }, [biz]);
+    }, [biz, bookingCash.products]);
 
     // Parse initial services from booking with full quantity and icon support
     const parseBookingServices = (b) => {
@@ -119,12 +130,14 @@ const BookingDetailsModalContent = ({
             if (typeof s === 'object' && s !== null) {
                 const name = s.name || s.label || s.title || 'Adicional';
                 const found = catalogAdditionals.find(cat => cat.name.toLowerCase() === name.toLowerCase());
+                const productId = s.product_id || found?.product_id;
                 return {
                     id: s.id || found?.id || Math.random().toString(),
                     name: name,
                     price: Number(s.price !== undefined ? s.price : (found?.price || 0)),
                     quantity: Math.max(1, parseInt(s.quantity, 10) || 1),
-                    icon: s.icon || found?.icon || '✨'
+                    icon: s.icon || found?.icon || '✨',
+                    ...(productId ? { product_id: productId } : {})
                 };
             }
             const nameStr = String(s);
@@ -265,6 +278,18 @@ const BookingDetailsModalContent = ({
         metadata: { payments },
         historyLabel: label
     });
+    // Courts: the balance discounts the deposit already marked as paid, recorded payments and cash register charges
+    const sportPriorPaid = (booking.status === 'deposit_paid' || booking.deposit_paid_at ? activeDeposit : 0) + rentalPaid;
+    const sportCashCharged = bookingCash.movements
+        .filter(m => !m.voided_at)
+        .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+    const sportPending = Math.max(0, activePrice - sportPriorPaid - sportCashCharged);
+    const handleCashCharged = (movement) => {
+        const method = movement?.payment_method === 'transfer' ? 'Transferencia' : 'Efectivo';
+        Promise.resolve(onAction('update_booking', {
+            historyLabel: `Cobrado en caja: $${Number(movement?.amount || 0).toLocaleString('es-AR')} (${method})`
+        })).catch(() => { /* the charge is already in the register; the history line is a nicety */ });
+    };
     const extrasSum = editableServices.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
     const baseRentalPrice = Math.max(0, activePrice + discountAmount + durationDiscountAmount - extrasSum);
 
@@ -411,7 +436,8 @@ const BookingDetailsModalContent = ({
                 name: catalogItem.name,
                 price: itemPrice,
                 quantity: 1,
-                icon: catalogItem.icon || '✨'
+                icon: catalogItem.icon || '✨',
+                ...(catalogItem.product_id ? { product_id: catalogItem.product_id } : {})
             }];
             setEditableServices(updated);
             setEditablePrice(activePrice + itemPrice);
@@ -2429,7 +2455,41 @@ const BookingDetailsModalContent = ({
                                     <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                                         ✨ Adicionales ({editableServices.length}):
                                     </label>
+                                    {isSport && !isEditing && bookingCash.products.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsEditing(true)}
+                                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                                        >
+                                            + Sumar artículos
+                                        </button>
+                                    )}
                                 </div>
+
+                                {/* Courts: add cash register articles (stock is discounted when the booking is charged) */}
+                                {isSport && isEditing && catalogAdditionals.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', paddingBottom: '6px', borderBottom: '1px dashed var(--border)' }}>
+                                        {catalogAdditionals.map(catItem => (
+                                            <button
+                                                key={catItem.id}
+                                                type="button"
+                                                onClick={() => handleToggleCatalogExtra(catItem)}
+                                                style={{
+                                                    padding: '6px 10px',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid var(--border)',
+                                                    background: 'var(--bg-card)',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '12px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                + {catItem.name}{catItem.price > 0 ? ` ($${catItem.price.toLocaleString('es-AR')})` : ''}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {editableServices.length > 0 ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -2440,6 +2500,7 @@ const BookingDetailsModalContent = ({
                                                     display: 'flex',
                                                     justifyContent: 'space-between',
                                                     alignItems: 'center',
+                                                    gap: '8px',
                                                     padding: '6px 10px',
                                                     borderRadius: '8px',
                                                     background: 'var(--bg-card)',
@@ -2447,12 +2508,19 @@ const BookingDetailsModalContent = ({
                                                     fontSize: '12px'
                                                 }}
                                             >
-                                                <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-                                                    ✓ {serviceItem.name}
+                                                <span style={{ fontWeight: '600', color: 'var(--text-primary)', minWidth: 0 }}>
+                                                    ✓ {Number(serviceItem.quantity) > 1 ? `${serviceItem.quantity}x ` : ''}{serviceItem.name}
                                                 </span>
-                                                <span style={{ fontWeight: '700', color: 'var(--primary-paddle)' }}>
-                                                    {serviceItem.price > 0 ? `+$${Number(serviceItem.price).toLocaleString('es-AR')}` : 'Incluido'}
-                                                </span>
+                                                {isSport && isEditing ? (
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                        <button type="button" onClick={() => handleQuantityChange(idx, -1)} aria-label={`Quitar ${serviceItem.name}`} style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontWeight: '800', cursor: 'pointer' }}>−</button>
+                                                        <button type="button" onClick={() => handleQuantityChange(idx, 1)} aria-label={`Sumar ${serviceItem.name}`} style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontWeight: '800', cursor: 'pointer' }}>+</button>
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ fontWeight: '700', color: 'var(--primary-paddle)', flexShrink: 0 }}>
+                                                        {serviceItem.price > 0 ? `+$${(Number(serviceItem.price) * (Number(serviceItem.quantity) || 1)).toLocaleString('es-AR')}` : 'Incluido'}
+                                                    </span>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -2584,12 +2652,35 @@ const BookingDetailsModalContent = ({
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
                                         <span style={{ color: 'var(--text-secondary)', fontSize: '11px', display: 'block', marginBottom: '2px' }}>Saldo a Cobrar:</span>
-                                        <span style={{ fontWeight: '700', color: booking.status === 'confirmed' ? '#00E676' : '#E11D48' }}>
-                                            {booking.status === 'confirmed' || booking.status === 'completed' ? '$0 (Pagado Total)' : `$${pendingBalance.toLocaleString('es-AR')}`}
-                                        </span>
+                                        {isSport && bookingCash.canCharge ? (
+                                            <span style={{ fontWeight: '700', color: sportPending > 0 ? '#E11D48' : 'var(--primary-paddle)' }}>
+                                                {sportPending > 0 ? `$${sportPending.toLocaleString('es-AR')}` : '$0 (Pagado)'}
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontWeight: '700', color: booking.status === 'confirmed' ? '#00E676' : '#E11D48' }}>
+                                                {booking.status === 'confirmed' || booking.status === 'completed' ? '$0 (Pagado Total)' : `$${pendingBalance.toLocaleString('es-AR')}`}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
+
+                            {isSport && bookingCash.canCharge && booking.status !== 'cancelled' && (
+                                <BookingCashCharge
+                                    businessId={biz.id}
+                                    bookingId={booking.id}
+                                    description={`Turno ${resourceName} · ${formatDisplayDate(booking.date)}${booking.time ? ` ${String(booking.time).slice(0, 5)} hs` : ''} · ${booking.customer_name || booking.customerName || 'Cliente'}`}
+                                    total={activePrice}
+                                    priorPaid={sportPriorPaid}
+                                    priorPaidLabel={rentalPaid > 0 ? 'seña y pagos' : 'seña'}
+                                    services={editableServices}
+                                    cash={bookingCash}
+                                    disabled={isEditing}
+                                    onGoToCashRegister={onGoToCashRegister}
+                                    onCharged={handleCashCharged}
+                                    showToast={showToast}
+                                />
+                            )}
 
                             {/* Shift History */}
                             <div style={{
