@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Share2, Link2, Check } from 'lucide-react';
-import { canUseNativeShare, buildWhatsAppShareUrl } from '../../utils/share';
+import { canUseNativeShare, buildWhatsAppShareUrl, withTurnitosVia } from '../../utils/share';
 
 const WhatsAppIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true">
@@ -16,7 +16,7 @@ const WhatsAppIcon = () => (
  * variant "circle": small bordered circle, for modal headers.
  */
 export default function ShareButton({
-    url,
+    url: pageUrl,
     title,
     text,
     variant = 'button',
@@ -43,7 +43,10 @@ export default function ShareButton({
         };
     }, [menuOpen]);
 
-    if (!url) return null;
+    if (!pageUrl) return null;
+
+    // From the TurnitosLR site the link carries ?via=turnitos (marketplace); from a business subdomain it stays clean
+    const url = withTurnitosVia(pageUrl);
 
     const handleClick = async (e) => {
         e.stopPropagation();
