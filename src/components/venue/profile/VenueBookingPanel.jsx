@@ -245,7 +245,7 @@ export default function VenueBookingPanel({
                     boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)'
                 }}
             >
-                {!selectedDate ? 'Seleccionar Fecha' : 'Continuar'}
+                {!selectedDate ? 'Ver fechas disponibles' : 'Continuar'}
             </button>
             <div style={{ textAlign: 'center', fontSize: '13px', color: secondaryTextColor }}>
                 No se realizará ningún cargo todavía
