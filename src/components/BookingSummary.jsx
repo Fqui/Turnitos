@@ -105,6 +105,8 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
     const cancellationPolicy = bookingRules?.cancellation || null;
 
     const [selectedExtras, setSelectedExtras] = useState(bookingDetails.extras || []);
+    // Extra whose cart button just got tapped (plays the add/remove animation)
+    const [animatedExtra, setAnimatedExtra] = useState(null);
 
     const {
         date,
@@ -483,7 +485,17 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                         {/* One button: cart + price to add; green with check once added (tap again to remove) */}
                                                         <button
                                                             type="button"
-                                                            onClick={isSelected ? () => setSelectedExtras(prev => prev.filter(e => e.name !== extra.name)) : handleAdd}
+                                                            onClick={() => {
+                                                                // Only the button just tapped animates (not when the modal opens);
+                                                                // swapping is-adding / is-removing restarts the animation on each tap
+                                                                setAnimatedExtra(extra.name);
+                                                                if (isSelected) {
+                                                                    setSelectedExtras(prev => prev.filter(e => e.name !== extra.name));
+                                                                } else {
+                                                                    handleAdd();
+                                                                }
+                                                            }}
+                                                            className={`extra-cart-btn${animatedExtra === extra.name ? (isSelected ? ' is-adding' : ' is-removing') : ''}`}
                                                             aria-pressed={isSelected}
                                                             aria-label={isSelected ? `Quitar ${extra.name}` : `Agregar ${extra.name}`}
                                                             title={isSelected ? 'Quitar este adicional' : 'Agregar a tu reserva'}
@@ -504,13 +516,14 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                                 fontWeight: '800',
                                                                 whiteSpace: 'nowrap',
                                                                 cursor: 'pointer',
-                                                                transition: 'background-color 0.2s, transform 0.1s',
-                                                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)'
+                                                                boxShadow: isSelected ? '0 4px 12px rgba(22, 163, 74, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.12)'
                                                             }}
                                                         >
-                                                            {isSelected
-                                                                ? <Check size={15} strokeWidth={3} aria-hidden="true" />
-                                                                : <ShoppingCart size={15} strokeWidth={2.5} aria-hidden="true" />}
+                                                            <span className="extra-cart-icon" aria-hidden="true">
+                                                                {isSelected
+                                                                    ? <Check size={15} strokeWidth={3} />
+                                                                    : <ShoppingCart size={15} strokeWidth={2.5} />}
+                                                            </span>
                                                             ${(Number(extra.price) * qty).toLocaleString('es-AR')}
                                                         </button>
 
@@ -1318,6 +1331,63 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
             </motion.div>
 
             <style>{`
+                /* Botón de carrito de los adicionales */
+                .extra-cart-btn {
+                    transition: background-color 0.3s ease, transform 0.12s ease, box-shadow 0.3s ease;
+                    -webkit-tap-highlight-color: transparent;
+                }
+                .extra-cart-btn:active {
+                    transform: scale(0.97);
+                }
+                .extra-cart-btn.is-adding {
+                    animation: extraCartPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+                .extra-cart-btn.is-removing {
+                    animation: extraCartSettle 0.3s ease-out;
+                }
+                .extra-cart-icon {
+                    display: inline-flex;
+                }
+                .extra-cart-btn.is-adding .extra-cart-icon {
+                    animation: extraCartCheckIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+                .extra-cart-btn.is-removing .extra-cart-icon {
+                    animation: extraCartHop 0.38s ease-out;
+                }
+                @keyframes extraCartPop {
+                    0% { transform: scale(0.95); }
+                    55% { transform: scale(1.06); }
+                    100% { transform: scale(1); }
+                }
+                @keyframes extraCartSettle {
+                    0% { transform: scale(1.03); }
+                    100% { transform: scale(1); }
+                }
+                @keyframes extraCartCheckIn {
+                    0% { transform: scale(0.4) rotate(-25deg); opacity: 0; }
+                    60% { transform: translateY(-3px) scale(1.2) rotate(0deg); opacity: 1; }
+                    100% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+                }
+                @keyframes extraCartHop {
+                    0% { transform: scale(0.6); opacity: 0; }
+                    45% { transform: translateY(-4px) scale(1.1); opacity: 1; }
+                    75% { transform: translateY(1px) scale(0.98); }
+                    100% { transform: translateY(0) scale(1); opacity: 1; }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .extra-cart-btn,
+                    .extra-cart-btn:active {
+                        transition: none;
+                        transform: none;
+                    }
+                    .extra-cart-btn.is-adding,
+                    .extra-cart-btn.is-removing,
+                    .extra-cart-btn.is-adding .extra-cart-icon,
+                    .extra-cart-btn.is-removing .extra-cart-icon {
+                        animation: none;
+                    }
+                }
+
                 /* Mobile First Styles */
                 .responsive-modal-container {
                     max-height: 90vh;
