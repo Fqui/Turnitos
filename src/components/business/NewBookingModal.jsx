@@ -4,6 +4,7 @@ import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { isRentalBusiness } from '../../utils/businessUtils';
 import { getCourtSport } from '../../utils/sports';
 import { getDayHoursConfig, normalizeDayMinutes } from '../calendars/shared/utils';
+import { PADEL_DURATIONS, getDayShiftRanges } from '../../utils/courtHours';
 
 const NewBookingModal = ({
     isOpen,
@@ -156,21 +157,13 @@ const NewBookingModal = ({
         const [y, m, d] = newBookingData.date.split('-').map(Number);
         const dayConfig = getDayHoursConfig(currentBusiness?.hours, new Date(y, m - 1, d));
 
-        const ranges = [];
-        if (!dayConfig) {
-            ranges.push([8 * 60, 23 * 60]);
-        } else if (dayConfig.isOpen !== false) {
-            [[dayConfig.open, dayConfig.close], [dayConfig.open2, dayConfig.close2]].forEach(([open, close]) => {
-                if (!open || !close) return;
-                const start = toMin(open);
-                let end = toMin(close);
-                if (end <= start) end += 1440;
-                ranges.push([start, end]);
-            });
-        }
+        // Shifts of the day (split shifts and overnight included)
+        const ranges = dayConfig ? getDayShiftRanges(dayConfig) : [[8 * 60, 23 * 60]];
 
         const step = isService ? 15 : 30;
         const duration = Number(newBookingData.duration) || 60;
+        // Pádel only starts where its shortest duration fits before the shift closes
+        const minLength = isPadel ? PADEL_DURATIONS[0] : Math.min(duration, step);
         const resourceId = newBookingData.courtId || newBookingData.serviceId;
         const busy = (bookings || []).filter(b => {
             if (b.status === 'cancelled' || String(b.date).slice(0, 10) !== newBookingData.date) return false;
@@ -185,7 +178,7 @@ const NewBookingModal = ({
 
         const options = [];
         ranges.forEach(([start, end]) => {
-            for (let t = start; t + Math.min(duration, step) <= end; t += step) {
+            for (let t = start; t + minLength <= end; t += step) {
                 const taken = busy.some(([bs, be]) => t < be && t + duration > bs);
                 const value = toTime(t);
                 if (!taken || value === newBookingData.time) {
@@ -197,7 +190,7 @@ const NewBookingModal = ({
             options.unshift({ value: newBookingData.time, label: `${newBookingData.time} (fuera de horario)` });
         }
         return options;
-    }, [isRental, isService, isCourtBusiness, newBookingData.date, newBookingData.time, newBookingData.duration, newBookingData.courtId, newBookingData.serviceId, newBookingData.specialistId, currentBusiness, bookings]);
+    }, [isRental, isService, isCourtBusiness, isPadel, newBookingData.date, newBookingData.time, newBookingData.duration, newBookingData.courtId, newBookingData.serviceId, newBookingData.specialistId, currentBusiness, bookings]);
 
     // Business predefined catalog additionals (ONLY additional services / extras, exclude amenities)
     const catalogAdditionals = useMemo(() => {

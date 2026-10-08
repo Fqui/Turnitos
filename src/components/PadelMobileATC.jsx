@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PADEL_DURATIONS, buildShiftRanges, findShift, fitsInShift } from '../utils/courtHours';
 
 const PadelMobileATC = ({
     courts,
@@ -14,6 +15,11 @@ const PadelMobileATC = ({
     const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
     const [selectedSelection, setSelectedSelection] = useState(null); // { court, duration, price }
     const courtListRef = useRef(null);
+
+    // Opening shifts of the day, to know where each booking has to end
+    const shiftRanges = useMemo(() => buildShiftRanges(
+        timeRanges && timeRanges.length > 0 ? timeRanges : [{ open: openingTime, close: closingTime }]
+    ), [openingTime, closingTime, timeRanges]);
 
     // After picking a time, bring the court list into view
     useEffect(() => {
@@ -120,16 +126,8 @@ const PadelMobileATC = ({
     const isCourtAvailableAtTime = (courtId, time) => {
         const endTime60 = calculateEndTime(time, 60);
 
-        let closeMinutes = timeToMinutes(closingTime);
-        let startMinutes = timeToMinutes(time);
-        const openMinutes = timeToMinutes(openingTime);
-
-        if (closeMinutes <= openMinutes) closeMinutes += 1440;
-        if (startMinutes < openMinutes && closeMinutes > 1440) startMinutes += 1440;
-        const endMinutes60 = startMinutes + 60;
-
-        // If 60 min slot goes beyond closing time, it's not available
-        if (endMinutes60 > closeMinutes) return false;
+        // If 60 min goes beyond the shift's closing time (split shifts and overnight included), it's not available
+        if (!fitsInShift(time, shiftRanges, 60)) return false;
 
         return !isTimeSlotOccupied(courtId, time, endTime60);
     };
@@ -289,21 +287,11 @@ const PadelMobileATC = ({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {courts.map(court => {
                                 // Calculate available durations for THIS court at SELECTED time
-                                const openMinutes = timeToMinutes(openingTime);
-                                let closeMinutes = timeToMinutes(closingTime);
-                                if (closeMinutes <= openMinutes) closeMinutes += 1440;
+                                const shift = findShift(selectedTimeSlot, shiftRanges);
 
-                                let slotStartMinutes = timeToMinutes(selectedTimeSlot);
-                                if (slotStartMinutes < openMinutes && closeMinutes > 1440) {
-                                    slotStartMinutes += 1440;
-                                }
-
-                                const durations = [60, 90, 120];
-                                const validDurations = durations.filter(d => {
-                                    const slotEndMinutes = slotStartMinutes + d;
-
-                                    // If duration goes beyond closing time, it's not available
-                                    if (slotEndMinutes > closeMinutes) return false;
+                                const validDurations = PADEL_DURATIONS.filter(d => {
+                                    // If duration goes beyond the shift's closing time, it's not available
+                                    if (!shift || shift.start + d > shift.end) return false;
 
                                     const endTime = calculateEndTime(selectedTimeSlot, d);
                                     return !isTimeSlotOccupied(court.id, selectedTimeSlot, endTime);

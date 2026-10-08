@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
 import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot, getDayHoursConfig } from '../shared/utils';
+import { PADEL_DURATIONS, getDayShiftRanges, fitsInShift } from '../../../utils/courtHours';
+import { getCourtSport } from '../../../utils/sports';
 import ConfirmModal from '../../common/ConfirmModal';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
@@ -81,6 +83,21 @@ export default function WeekView({
     const calculateSlotSpan = (booking) => {
         const duration = booking.duration || 60;
         return Math.ceil(duration / config.slotSize);
+    };
+
+    // Recurso que recibe la reserva al tocar una celda vacía
+    const getTargetResource = () => (selectedResourceId !== 'all'
+        ? resources.find(r => String(r.id) === String(selectedResourceId)) || resources[0]
+        : resources[0]);
+
+    // Las canchas de pádel solo arrancan si el turno más corto (60 min) termina antes del cierre del turno del día
+    const canStartAt = (dayConfig, time) => {
+        const dayShifts = getDayShiftRanges(dayConfig);
+        if (type === 'service' || dayShifts.length === 0) return true;
+        return activeResources.some(resource => {
+            if (type !== 'padel' && getCourtSport(resource, business) !== 'padel') return true;
+            return fitsInShift(time, dayShifts, PADEL_DURATIONS[0]);
+        });
     };
 
     // Verificar si este es el primer slot de una reserva
@@ -340,12 +357,23 @@ export default function WeekView({
                                                     );
                                                 })}
                                             </div>
+                                        ) : !canStartAt(dayConfig, time) ? (
+                                            // Pádel: acá no entra ni el turno más corto antes del cierre
+                                            <div
+                                                title="No entra un turno antes del cierre"
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    minHeight: `${config.gridRowHeight - 8}px`,
+                                                    borderRadius: '6px',
+                                                    background: 'repeating-linear-gradient(45deg, var(--bg-main), var(--bg-main) 10px, var(--border) 10px, var(--border) 11px)',
+                                                    opacity: 0.6
+                                                }}
+                                            />
                                         ) : (
                                             <div
                                                 onClick={(e) => {
-                                                    const targetResource = selectedResourceId !== 'all'
-                                                        ? resources.find(r => String(r.id) === String(selectedResourceId)) || resources[0]
-                                                        : resources[0];
+                                                    const targetResource = getTargetResource();
 
                                                     if (isRescheduling) {
                                                         // In "all" mode keep the booking on its own court/professional

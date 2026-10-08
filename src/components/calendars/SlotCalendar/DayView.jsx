@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
 import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot, getDayHoursConfig, normalizeDayMinutes } from '../shared/utils';
+import { PADEL_DURATIONS, getDayShiftRanges, fitsInShift } from '../../../utils/courtHours';
+import { getCourtSport } from '../../../utils/sports';
 import ConfirmModal from '../../common/ConfirmModal';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
@@ -138,6 +140,14 @@ export default function DayView({
         }
 
         return inShift(dayConfig.open, dayConfig.close);
+    };
+
+    // Las canchas de pádel solo arrancan si el turno más corto (60 min) termina antes del cierre del turno del día
+    const dayShifts = getDayShiftRanges(dayConfig);
+    const canStartOnResource = (resource, time) => {
+        if (type === 'service' || dayShifts.length === 0) return true;
+        if (type !== 'padel' && getCourtSport(resource, business) !== 'padel') return true;
+        return fitsInShift(time, dayShifts, PADEL_DURATIONS[0]);
     };
 
     // Calcular cuántos slots ocupa una reserva
@@ -279,6 +289,9 @@ export default function DayView({
                         {/* Resource Columns */}
                         {config.showResourceColumns ? (
                             resources.map((resource, j) => {
+                                // Pádel: no se ofrece un inicio donde no entra el turno más corto antes del cierre
+                                const cellOpen = isOpen && canStartOnResource(resource, time);
+
                                 // Filter bookings for this specific resource
                                 const slotBookings = getBookingsForSlot(
                                     bookings.filter(b => {
@@ -312,7 +325,10 @@ export default function DayView({
                                             minHeight: `${config.gridRowHeight}px`,
                                             padding: '4px',
                                             position: 'relative',
-                                            background: isCurrentSlot ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
+                                            // Fuera de horario: rayado, igual que la vista de una sola columna
+                                            background: !cellOpen
+                                                ? 'repeating-linear-gradient(45deg, var(--bg-main), var(--bg-main) 10px, var(--border) 10px, var(--border) 11px)'
+                                                : isCurrentSlot ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
                                             cursor: 'default',
                                             display: 'flex',
                                             flexDirection: 'column',
@@ -366,7 +382,7 @@ export default function DayView({
                                                     </div>
                                                 );
                                             })
-                                        ) : isOpen && (
+                                        ) : cellOpen && (
                                             <div
                                                 onClick={(e) => {
                                                     if (isRescheduling) {

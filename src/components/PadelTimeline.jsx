@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import DurationSelector from './DurationSelector';
+import { PADEL_DURATIONS, buildShiftRanges, findShift } from '../utils/courtHours';
 
 const PadelTimeline = ({
     courts,
@@ -14,6 +15,11 @@ const PadelTimeline = ({
 }) => {
     const [selectedSlot, setSelectedSlot] = useState(null);
     const [showDurationModal, setShowDurationModal] = useState(false);
+
+    // Opening shifts of the day, to know where each booking has to end
+    const shiftRanges = useMemo(() => buildShiftRanges(
+        timeRanges && timeRanges.length > 0 ? timeRanges : [{ open: openingTime, close: closingTime }]
+    ), [openingTime, closingTime, timeRanges]);
 
     // Helper: Convert "HH:MM" to minutes
     const timeToMinutes = (time) => {
@@ -128,25 +134,16 @@ const PadelTimeline = ({
             return []; // Past slots are not available for booking today
         }
 
-        const durations = [60, 90, 120];
         const availableDurations = [];
 
-        const openMinutes = timeToMinutes(openingTime);
-        let closeMinutes = timeToMinutes(closingTime);
+        // The booking has to end before its shift closes (split shifts and overnight included)
+        const shift = findShift(startTime, shiftRanges);
+        if (!shift) return [];
 
-        if (closeMinutes <= openMinutes) {
-            closeMinutes += 1440;
-        }
+        PADEL_DURATIONS.forEach(duration => {
+            const endMinutes = shift.start + duration;
 
-        let startMinutes = timeToMinutes(startTime);
-        if (startMinutes < openMinutes && closeMinutes > 1440) {
-            startMinutes += 1440;
-        }
-
-        durations.forEach(duration => {
-            const endMinutes = startMinutes + duration;
-
-            if (endMinutes > closeMinutes) {
+            if (endMinutes > shift.end) {
                 return;
             }
 
