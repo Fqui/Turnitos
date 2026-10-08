@@ -25,6 +25,7 @@ import PortalNewBookingAlert from '../components/business/portal/PortalNewBookin
 import PortalBillingBanner from '../components/business/portal/PortalBillingBanner';
 import PortalProfileChecklist from '../components/business/portal/PortalProfileChecklist';
 import PortalPastBookingsCard from '../components/business/portal/PortalPastBookingsCard';
+import SportCanteenCashPanel from '../components/business/canteen/SportCanteenCashPanel';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuthStore, useBookingsStore, usePortalUIStore } from '../stores';
 
@@ -1128,6 +1129,26 @@ export default function BusinessPortal() {
                                 isMobile={isMobile}
                                 isRentalBusiness={isRentalBusiness}
                                 currentBusiness={currentBusiness}
+                            />
+                        ) : viewMode === 'caja' ? (
+                            <SportCanteenCashPanel
+                                business={currentBusiness}
+                                bookings={bookings}
+                                showToast={showToast}
+                                isMobile={isMobile}
+                                onUpdateBusiness={(updated) => {
+                                    setBusinesses(prev => {
+                                        const exists = prev.some(b => String(b.id) === String(updated.id));
+                                        return exists
+                                            ? prev.map(b => String(b.id) === String(updated.id) ? { ...b, ...updated } : b)
+                                            : [...prev, updated];
+                                    });
+                                    try {
+                                        const currentStored = localStorage.getItem('business');
+                                        const storedObj = currentStored ? JSON.parse(currentStored) : {};
+                                        localStorage.setItem('business', JSON.stringify({ ...storedObj, ...updated }));
+                                    } catch (e) { }
+                                }}
                             />
                         ) : viewMode === 'subscription' ? (
                             <BusinessSubscriptionView

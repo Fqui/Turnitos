@@ -45,10 +45,18 @@ const BookingDetailsModalContent = ({
 
     // Business Catalog Additionals (ONLY additional services / extras, exclude amenities)
     const catalogAdditionals = useMemo(() => {
+        const canteenItems = (biz?.metadata?.sport_canteen_products || []).map(p => ({
+            id: p.id,
+            name: p.name,
+            price: Number(p.sale_price || p.price || 0),
+            icon: p.category === 'Bebidas' ? '🥤' : p.category === 'Equipamiento' ? '🎾' : p.category === 'Alquileres' ? '🏸' : '🍻'
+        }));
+
         const list = [
             ...(biz?.additional_services || []),
             ...(biz?.additionalServices || []),
-            ...(biz?.extras || [])
+            ...(biz?.extras || []),
+            ...canteenItems
         ];
         const unique = [];
         const seen = new Set();
@@ -61,7 +69,7 @@ const BookingDetailsModalContent = ({
                     unique.push({
                         id: item.id || Math.random().toString(),
                         name: name.trim(),
-                        price: Number(item.price || 0),
+                        price: Number(item.price || item.sale_price || 0),
                         icon: item.icon || '✨'
                     });
                 }
