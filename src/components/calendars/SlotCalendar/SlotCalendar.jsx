@@ -106,6 +106,8 @@ export default function SlotCalendar({
                         const targetKey = formatDateKey(dateObj);
                         (bookings || []).forEach(b => {
                             if (!b.date || !b.time) return;
+                            // Las canceladas no se dibujan, así que no agrandan el día
+                            if (b.status === 'cancelled' || b.status === 'rejected') return;
                             let bKey = '';
                             if (typeof b.date === 'string' && b.date.includes('/')) {
                                 const parts = b.date.split('/');
