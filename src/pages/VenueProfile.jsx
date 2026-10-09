@@ -21,7 +21,7 @@ import VenueCalendarSection from '../components/venue/profile/VenueCalendarSecti
 import VenueBookingPanel from '../components/venue/profile/VenueBookingPanel';
 import VenueBookingWizardModal from '../components/venue/profile/VenueBookingWizardModal';
 import VenueLightboxModal from '../components/venue/profile/VenueLightboxModal';
-import { buildBusinessShareUrl } from '../utils/share';
+import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
 
 // Fix Leaflet default icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -39,6 +39,11 @@ export default function VenueProfile({ business: initialBusiness }) {
 
     const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
     const [loading, setLoading] = useState(!business);
+    // Opened from a link shared on TurnitosLR (?via=turnitos): the booking counts as marketplace
+    useEffect(() => {
+        markTurnitosVia(business?.id);
+    }, [business?.id]);
+
     const [selectedDate, setSelectedDate] = useState(null);
     const [guestCount, setGuestCount] = useState(30);
     const [duration, setDuration] = useState(4);

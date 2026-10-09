@@ -80,7 +80,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                     return (
                         <div
                             key={service.id}
-                            onClick={() => onSelect(service)}
+                            onClick={() => setDetailService(service)}
                             style={{
                                 position: 'relative',
                                 padding: '20px',
@@ -591,6 +591,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 borderTop: '1px solid var(--border)',
                                 backgroundColor: 'var(--bg-card)',
                                 display: 'flex',
+                                flexWrap: 'wrap',
                                 gap: '12px'
                             }}>
                                 <button
@@ -630,8 +631,8 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                         onSelect(serviceToBook);
                                     }}
                                     style={{
-                                        flex: 1,
-                                        padding: '13px 22px',
+                                        flex: '1 1 200px',
+                                        padding: '13px 18px',
                                         borderRadius: '24px',
                                         border: 'none',
                                         backgroundColor: color,
@@ -649,8 +650,8 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                     onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
                                     onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                                 >
-                                    <CalendarCheck size={18} strokeWidth={2.3} />
-                                    <span>Reservar</span>
+                                    <CalendarCheck size={18} strokeWidth={2.3} style={{ flexShrink: 0 }} />
+                                    <span>Elegir fecha y horario</span>
                                 </button>
                             </div>
                         </motion.div>

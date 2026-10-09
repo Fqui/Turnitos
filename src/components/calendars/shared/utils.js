@@ -65,16 +65,76 @@ export function generateTimeSlots(startHour, endHour, slotSize = 30) {
     return slots;
 }
 
+const DAY_KEYS_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const DAY_KEYS_ES = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+
+/**
+ * Horario configurado del negocio para el día de una fecha
+ * @param {Object|string} hours - business.hours (objeto o JSON)
+ * @param {Date} date - Fecha
+ * @returns {Object|null} Config del día ({ open, close, open2, close2, isOpen, isSplit })
+ */
+export function getDayHoursConfig(hours, date) {
+    let hoursObj = hours;
+    if (typeof hoursObj === 'string') {
+        try {
+            hoursObj = JSON.parse(hoursObj);
+        } catch {
+            return null;
+        }
+    }
+    if (!hoursObj || typeof hoursObj !== 'object' || !date) return null;
+    const dayIndex = date.getDay();
+    return hoursObj[DAY_KEYS_EN[dayIndex]] || hoursObj[DAY_KEYS_ES[dayIndex]] || hoursObj[dayIndex] || null;
+}
+
+/**
+ * Minuto de apertura del día si su horario pasa la medianoche (por ej. 18:00–02:00 o 18:00–26:00)
+ * @param {Object} dayConfig - Config del día
+ * @returns {number|null} Minutos de la primera apertura, o null si el día no cruza la medianoche
+ */
+export function getOvernightOpenMinutes(dayConfig) {
+    if (!dayConfig || dayConfig.isOpen === false) return null;
+    const ranges = [[dayConfig.open, dayConfig.close], [dayConfig.open2, dayConfig.close2]]
+        .filter(([open, close]) => typeof open === 'string' && typeof close === 'string' && open && close);
+
+    let crossesMidnight = false;
+    let firstOpen = null;
+    ranges.forEach(([open, close]) => {
+        const openMin = timeToMinutes(open);
+        const closeMin = timeToMinutes(close);
+        if (Number.isNaN(openMin) || Number.isNaN(closeMin)) return;
+        if (closeMin <= openMin || closeMin > 1440) crossesMidnight = true;
+        if (firstOpen === null || openMin < firstOpen) firstOpen = openMin;
+    });
+
+    return crossesMidnight ? firstOpen : null;
+}
+
+/**
+ * Minutos de una hora contados desde el día que abre: en un horario que cruza la medianoche,
+ * la madrugada (antes de la apertura) suma 1440. Así 00:30 queda después de 23:30.
+ * @param {string} timeStr - Tiempo HH:MM
+ * @param {Object|null} dayConfig - Config del día (sin config no cambia nada)
+ * @returns {number} Minutos
+ */
+export function normalizeDayMinutes(timeStr, dayConfig) {
+    const minutes = timeToMinutes(timeStr);
+    const openMinutes = getOvernightOpenMinutes(dayConfig);
+    return openMinutes !== null && minutes < openMinutes ? minutes + 1440 : minutes;
+}
+
 /**
  * Verifica si una reserva ocupa un slot específico
  * @param {Object} booking - Reserva
  * @param {string} slotTime - Tiempo del slot (HH:MM)
  * @param {number} slotSize - Tamaño del slot en minutos
+ * @param {Object|null} dayConfig - Config del día, para ubicar bien la madrugada
  * @returns {boolean} True si la reserva ocupa este slot
  */
-export function bookingOccupiesSlot(booking, slotTime, slotSize = 30) {
-    const slotMinutes = timeToMinutes(slotTime);
-    const bookingStartMinutes = timeToMinutes(booking.time);
+export function bookingOccupiesSlot(booking, slotTime, slotSize = 30, dayConfig = null) {
+    const slotMinutes = normalizeDayMinutes(slotTime, dayConfig);
+    const bookingStartMinutes = normalizeDayMinutes(booking.time, dayConfig);
     const bookingDuration = booking.duration || 60;
     const bookingEndMinutes = bookingStartMinutes + bookingDuration;
 
@@ -85,9 +145,9 @@ export function bookingOccupiesSlot(booking, slotTime, slotSize = 30) {
 /**
  * True si la reserva empieza dentro de este slot (ahí se dibuja la tarjeta)
  */
-export function bookingStartsInSlot(booking, slotTime, slotSize = 30) {
-    const slotMinutes = timeToMinutes(slotTime);
-    const bookingStartMinutes = timeToMinutes(booking.time);
+export function bookingStartsInSlot(booking, slotTime, slotSize = 30, dayConfig = null) {
+    const slotMinutes = normalizeDayMinutes(slotTime, dayConfig);
+    const bookingStartMinutes = normalizeDayMinutes(booking.time, dayConfig);
     return bookingStartMinutes >= slotMinutes && bookingStartMinutes < slotMinutes + slotSize;
 }
 
@@ -129,9 +189,10 @@ export function normalizeBookingDate(dateStr) {
  * @param {Date} date - Fecha
  * @param {string} time - Tiempo del slot
  * @param {number} slotSize - Tamaño del slot
+ * @param {Object|null} dayConfig - Config del día, para ubicar bien la madrugada
  * @returns {Array} Reservas que ocupan ese slot
  */
-export function getBookingsForSlot(bookings, date, time, slotSize = 30) {
+export function getBookingsForSlot(bookings, date, time, slotSize = 30, dayConfig = null) {
     const dateKey = formatDateKey(date);
 
     return bookings.filter(booking => {
@@ -145,7 +206,7 @@ export function getBookingsForSlot(bookings, date, time, slotSize = 30) {
         if (booking.status === 'cancelled') return false;
 
         // Verificar si ocupa este slot
-        return bookingOccupiesSlot(booking, time, slotSize);
+        return bookingOccupiesSlot(booking, time, slotSize, dayConfig);
     });
 }
 

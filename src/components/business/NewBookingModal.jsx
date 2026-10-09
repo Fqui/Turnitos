@@ -3,6 +3,8 @@ import CustomDropdown from '../common/CustomDropdown';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { isRentalBusiness } from '../../utils/businessUtils';
 import { getCourtSport } from '../../utils/sports';
+import { getDayHoursConfig, normalizeDayMinutes } from '../calendars/shared/utils';
+import { PADEL_DURATIONS, getDayShiftRanges, findShift } from '../../utils/courtHours';
 
 const NewBookingModal = ({
     isOpen,
@@ -143,6 +145,38 @@ const NewBookingModal = ({
         return current > 0 && !base.includes(current) ? [current, ...base].sort((a, b) => a - b) : base;
     }, [newBookingData.duration]);
 
+    // Business hours config and shifts of the selected day (split shifts and overnight included)
+    const dayConfig = useMemo(() => {
+        if (isRental || !newBookingData.date) return null;
+        const [y, m, d] = newBookingData.date.split('-').map(Number);
+        return getDayHoursConfig(currentBusiness?.hours, new Date(y, m - 1, d));
+    }, [isRental, newBookingData.date, currentBusiness]);
+    const dayRanges = useMemo(() => (dayConfig ? getDayShiftRanges(dayConfig) : [[8 * 60, 23 * 60]]), [dayConfig]);
+
+    // Durations a court can book: pádel picks 60/90/120, the other sports keep their current one
+    const courtDurations = useMemo(() => {
+        if (!isCourtBusiness) return [];
+        return isPadel ? PADEL_DURATIONS : [Number(newBookingData.duration) || 60];
+    }, [isCourtBusiness, isPadel, newBookingData.duration]);
+
+    // Court durations that end by the shift close from the chosen start time
+    const validCourtDurations = useMemo(() => {
+        if (!courtDurations.length || !newBookingData.time) return courtDurations;
+        const shift = findShift(newBookingData.time, dayRanges);
+        // Out of hours: nothing to cap against
+        if (!shift) return courtDurations;
+        return courtDurations.filter(dur => shift.start + dur <= shift.end);
+    }, [courtDurations, newBookingData.time, dayRanges]);
+
+    // If the chosen duration no longer fits after changing the time, fall back to the first one that does
+    useEffect(() => {
+        if (!isOpen || !isPadel || !validCourtDurations.length) return;
+        if (!validCourtDurations.includes(Number(newBookingData.duration))) {
+            const dur = validCourtDurations[0];
+            setNewBookingData(prev => ({ ...prev, duration: dur, durationHours: dur / 60 }));
+        }
+    }, [isOpen, isPadel, validCourtDurations, newBookingData.duration, setNewBookingData]);
+
     // Start times for courts and services: business hours of that day, without the ones already taken
     const timeOptions = useMemo(() => {
         if (isRental || !newBookingData.date) return [];
@@ -152,40 +186,25 @@ const NewBookingModal = ({
         };
         const toTime = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
-        let hours = currentBusiness?.hours;
-        if (typeof hours === 'string') {
-            try { hours = JSON.parse(hours); } catch { hours = null; }
-        }
-        const [y, m, d] = newBookingData.date.split('-').map(Number);
-        const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(y, m - 1, d).getDay()];
-        const dayConfig = hours?.[dayKey];
-
-        const ranges = [];
-        if (!dayConfig) {
-            ranges.push([8 * 60, 23 * 60]);
-        } else if (dayConfig.isOpen !== false) {
-            [[dayConfig.open, dayConfig.close], [dayConfig.open2, dayConfig.close2]].forEach(([open, close]) => {
-                if (!open || !close) return;
-                const start = toMin(open);
-                let end = toMin(close);
-                if (end <= start) end += 1440;
-                ranges.push([start, end]);
-            });
-        }
-
         const step = isService ? 15 : 30;
         const duration = Number(newBookingData.duration) || 60;
+        // Courts only start where at least one of their durations ends by the shift close
+        const minLength = isCourtBusiness ? Math.min(...courtDurations) : Math.min(duration, step);
         const resourceId = newBookingData.courtId || newBookingData.serviceId;
         const busy = (bookings || []).filter(b => {
             if (b.status === 'cancelled' || String(b.date).slice(0, 10) !== newBookingData.date) return false;
             if (isCourtBusiness) return String(b.court_id) === String(resourceId);
             if (newBookingData.specialistId) return String(b.specialist_id) === String(newBookingData.specialistId);
             return false;
-        }).map(b => [toMin(b.time), toMin(b.time) + (Number(b.duration) || 60)]);
+        }).map(b => {
+            // The early hours of an overnight schedule count after the opening (00:30 -> 24:30)
+            const bs = normalizeDayMinutes(toTime(toMin(b.time)), dayConfig);
+            return [bs, bs + (Number(b.duration) || 60)];
+        });
 
         const options = [];
-        ranges.forEach(([start, end]) => {
-            for (let t = start; t + Math.min(duration, step) <= end; t += step) {
+        dayRanges.forEach(([start, end]) => {
+            for (let t = start; t + minLength <= end; t += step) {
                 const taken = busy.some(([bs, be]) => t < be && t + duration > bs);
                 const value = toTime(t);
                 if (!taken || value === newBookingData.time) {
@@ -197,7 +216,7 @@ const NewBookingModal = ({
             options.unshift({ value: newBookingData.time, label: `${newBookingData.time} (fuera de horario)` });
         }
         return options;
-    }, [isRental, isService, isCourtBusiness, newBookingData.date, newBookingData.time, newBookingData.duration, newBookingData.courtId, newBookingData.serviceId, newBookingData.specialistId, currentBusiness, bookings]);
+    }, [isRental, isService, isCourtBusiness, courtDurations, dayConfig, dayRanges, newBookingData.date, newBookingData.time, newBookingData.duration, newBookingData.courtId, newBookingData.serviceId, newBookingData.specialistId, bookings]);
 
     // Business predefined catalog additionals (ONLY additional services / extras, exclude amenities)
     const catalogAdditionals = useMemo(() => {
@@ -999,12 +1018,15 @@ const NewBookingModal = ({
                                 ⏱️ Duración del Turno de Pádel:
                             </span>
                             <div style={{ display: 'flex', gap: '6px', width: isMobile ? '100%' : 'auto' }}>
-                                {[60, 90, 120].map((dur) => {
+                                {PADEL_DURATIONS.map((dur) => {
                                     const isSelected = Number(newBookingData.duration) === dur;
+                                    const fits = validCourtDurations.includes(dur);
                                     return (
                                         <button
                                             key={dur}
                                             type="button"
+                                            disabled={!fits}
+                                            title={fits ? undefined : 'Termina después del cierre'}
                                             onClick={() => setNewBookingData(prev => ({
                                                 ...prev,
                                                 duration: dur,
@@ -1019,7 +1041,8 @@ const NewBookingModal = ({
                                                 color: isSelected ? 'var(--primary-paddle)' : 'var(--text-primary)',
                                                 fontWeight: isSelected ? '800' : '600',
                                                 fontSize: '12px',
-                                                cursor: 'pointer',
+                                                cursor: fits ? 'pointer' : 'not-allowed',
+                                                opacity: fits ? 1 : 0.4,
                                                 transition: 'all 0.15s'
                                             }}
                                         >
