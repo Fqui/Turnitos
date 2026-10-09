@@ -5,6 +5,75 @@ import { Badge, Button, Field, MoneyInput, PaymentMethodPicker, Spinner } from '
 import { OpenRegisterForm } from './CashModals';
 import { formatMoney, formatTime } from './cashFormat';
 
+// Deposit ("seña") charged into the register; mounted only while it is being charged
+function DepositForm({ businessId, bookingId, deposit, hasRegister, onGoToCashRegister, cash, showToast }) {
+    const [amount, setAmount] = useState(deposit.amount > 0 ? String(deposit.amount) : '');
+    const [method, setMethod] = useState('transfer');
+    const [saving, setSaving] = useState(false);
+
+    const handleCharge = async () => {
+        if (saving) return;
+        const value = Number(amount);
+        if (!value || value <= 0) {
+            showToast?.('Ingresá el monto de la seña', 'warning');
+            return;
+        }
+        setSaving(true);
+        try {
+            const movement = await sportCanteenService.registerMovement(businessId, {
+                type: 'booking_income',
+                paymentMethod: method,
+                amount: value,
+                description: deposit.description,
+                bookingId
+            });
+            showToast?.(`Seña cobrada en caja: ${formatMoney(value)} (${PAYMENT_METHOD_LABELS[method]})`, 'success');
+            await cash.reload();
+            await deposit.onCharged(movement);
+        } catch (err) {
+            showToast?.(err.message, 'error');
+            if (/caja abierta/i.test(err.message)) await cash.reload();
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px', borderRadius: '10px', background: 'var(--bg-card)', border: '1px solid var(--cc-amber)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 800 }}>{deposit.needsConfirm ? 'Cobrar la seña' : 'Registrar la seña en caja'}</div>
+            {!hasRegister ? (
+                <>
+                    <div className="cc-alert cc-alert--amber" style={{ fontSize: '12px' }}>
+                        No hay una caja abierta. Abrila para que la seña quede registrada.
+                    </div>
+                    <OpenRegisterForm compact businessId={businessId} showToast={showToast} submitLabel="Abrir caja" onOpened={(reg) => cash.setRegister(reg)} />
+                    {onGoToCashRegister && <Button size="sm" variant="ghost" onClick={onGoToCashRegister}>Ir a Registro de Caja</Button>}
+                </>
+            ) : (
+                <>
+                    <Field label="Monto de la seña">
+                        <MoneyInput value={amount} onChange={setAmount} autoFocus />
+                    </Field>
+                    <PaymentMethodPicker value={method} onChange={setMethod} disabled={saving} />
+                    <div className="cc-row">
+                        <Button block onClick={deposit.onCancel} disabled={saving}>Cancelar</Button>
+                        <Button block variant="primary" loading={saving} disabled={!(Number(amount) > 0)} onClick={handleCharge}>
+                            {Number(amount) > 0 ? `Cobrar seña ${formatMoney(amount)}` : 'Cobrar seña'}
+                        </Button>
+                    </div>
+                </>
+            )}
+            {deposit.needsConfirm && (
+                <Button size="sm" variant="ghost" onClick={deposit.onConfirmWithoutCash} disabled={saving}>
+                    Confirmar seña sin registrar en caja
+                </Button>
+            )}
+            {!deposit.needsConfirm && !hasRegister && (
+                <Button size="sm" variant="ghost" onClick={deposit.onCancel}>Cancelar</Button>
+            )}
+        </div>
+    );
+}
+
 /**
  * Charges a court booking into the open cash register ("Cobrar en caja").
  * The pending balance discounts the deposit / payments already recorded and previous charges of this booking.
@@ -22,7 +91,8 @@ export default function BookingCashCharge({
     disabled = false,
     onGoToCashRegister,
     onCharged,
-    showToast
+    showToast,
+    deposit = null
 }) {
     const [showForm, setShowForm] = useState(false);
     const [amount, setAmount] = useState('');
@@ -86,7 +156,7 @@ export default function BookingCashCharge({
     };
 
     return (
-        <div className="cc-scope" style={{
+        <div id="booking-cash-charge" className="cc-scope" style={{
             padding: '12px 14px',
             borderRadius: '12px',
             background: 'var(--bg-main)',
@@ -123,9 +193,18 @@ export default function BookingCashCharge({
                             <div className="cc-amount" style={{ fontSize: '16px', fontWeight: 900, color: pending > 0 ? 'var(--cc-red)' : 'var(--cc-green)' }}>{formatMoney(pending)}</div>
                         </div>
                     </div>
-                    {priorPaid > 0 && (
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            Ya descontado: {priorPaidLabel} {formatMoney(priorPaid)}
+                    {(priorPaid > 0 || (deposit?.canRegister && !deposit.active)) && (
+                        <div className="cc-between" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {priorPaid > 0 ? <span>Ya descontado: {priorPaidLabel} {formatMoney(priorPaid)}</span> : <span />}
+                            {deposit?.canRegister && !deposit.active && !disabled && (
+                                <button
+                                    type="button"
+                                    onClick={deposit.onStart}
+                                    style={{ background: 'none', border: 'none', padding: 0, color: 'var(--cc-green)', fontWeight: 700, fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                    Registrar seña en caja
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -153,6 +232,16 @@ export default function BookingCashCharge({
 
                     {disabled ? (
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Guardá los cambios de la reserva antes de cobrar.</div>
+                    ) : deposit?.active ? (
+                        <DepositForm
+                            businessId={businessId}
+                            bookingId={bookingId}
+                            deposit={deposit}
+                            hasRegister={Boolean(cash.register)}
+                            onGoToCashRegister={onGoToCashRegister}
+                            cash={cash}
+                            showToast={showToast}
+                        />
                     ) : !cash.register ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div className="cc-alert cc-alert--amber" style={{ fontSize: '12px' }}>

@@ -278,17 +278,41 @@ const BookingDetailsModalContent = ({
         metadata: { payments },
         historyLabel: label
     });
-    // Courts: the balance discounts the deposit already marked as paid, recorded payments and cash register charges
-    const sportPriorPaid = (booking.status === 'deposit_paid' || booking.deposit_paid_at ? activeDeposit : 0) + rentalPaid;
+    // Courts: the balance discounts the deposit already marked as paid, recorded payments and cash register charges.
+    // A deposit charged in the register is one of those charges, so it is not discounted twice.
+    const [depositMode, setDepositMode] = useState(false);
+    const depositPaid = booking.status === 'deposit_paid' || Boolean(booking.deposit_paid_at);
+    const depositMovementId = booking.metadata?.deposit_cash_movement_id;
+    const depositInCash = Boolean(depositMovementId) && bookingCash.movements.some(m => m.id === depositMovementId && !m.voided_at);
+    const sportPriorPaid = (depositPaid && !depositInCash ? activeDeposit : 0) + rentalPaid;
     const sportCashCharged = bookingCash.movements
         .filter(m => !m.voided_at)
         .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
     const sportPending = Math.max(0, activePrice - sportPriorPaid - sportCashCharged);
+    const cashMethodLabel = (movement) => (movement?.payment_method === 'transfer' ? 'Transferencia' : 'Efectivo');
     const handleCashCharged = (movement) => {
-        const method = movement?.payment_method === 'transfer' ? 'Transferencia' : 'Efectivo';
         Promise.resolve(onAction('update_booking', {
-            historyLabel: `Cobrado en caja: $${Number(movement?.amount || 0).toLocaleString('es-AR')} (${method})`
+            historyLabel: `Cobrado en caja: $${Number(movement?.amount || 0).toLocaleString('es-AR')} (${cashMethodLabel(movement)})`
         })).catch(() => { /* the charge is already in the register; the history line is a nicety */ });
+    };
+    // The deposit went into the register: remember which movement it was and mark the deposit as paid if it was not
+    const handleDepositCharged = async (movement) => {
+        const amount = Number(movement?.amount) || 0;
+        setDepositMode(false);
+        try {
+            await onAction('update_booking', {
+                deposit_amount: amount,
+                metadata: { deposit_cash_movement_id: movement.id },
+                historyLabel: `Seña cobrada en caja: $${amount.toLocaleString('es-AR')} (${cashMethodLabel(movement)})`
+            });
+            if (booking.status === 'pending') await onAction('confirm_deposit', { depositAmount: amount });
+        } catch {
+            showToast('La seña quedó en la caja, pero no se pudo actualizar la reserva', 'warning');
+        }
+    };
+    const handleConfirmDepositWithoutCash = () => {
+        setDepositMode(false);
+        onAction('confirm_deposit', { depositAmount: activeDeposit });
     };
     const extrasSum = editableServices.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
     const baseRentalPrice = Math.max(0, activePrice + discountAmount + durationDiscountAmount - extrasSum);
@@ -2672,13 +2696,25 @@ const BookingDetailsModalContent = ({
                                     description={`Turno ${resourceName} · ${formatDisplayDate(booking.date)}${booking.time ? ` ${String(booking.time).slice(0, 5)} hs` : ''} · ${booking.customer_name || booking.customerName || 'Cliente'}`}
                                     total={activePrice}
                                     priorPaid={sportPriorPaid}
-                                    priorPaidLabel={rentalPaid > 0 ? 'seña y pagos' : 'seña'}
+                                    priorPaidLabel={depositPaid && !depositInCash ? (rentalPaid > 0 ? 'seña y pagos' : 'seña') : 'pagos'}
                                     services={editableServices}
                                     cash={bookingCash}
                                     disabled={isEditing}
                                     onGoToCashRegister={onGoToCashRegister}
                                     onCharged={handleCashCharged}
                                     showToast={showToast}
+                                    deposit={{
+                                        active: depositMode,
+                                        amount: activeDeposit,
+                                        // Deposits marked as paid before the register existed can still be registered
+                                        canRegister: depositPaid && !depositInCash && activeDeposit > 0,
+                                        needsConfirm: booking.status === 'pending',
+                                        description: `Seña · ${booking.customer_name || booking.customerName || 'Cliente'} · ${formatDisplayDate(booking.date)}${booking.time ? ` ${String(booking.time).slice(0, 5)} hs` : ''}`,
+                                        onStart: () => setDepositMode(true),
+                                        onCancel: () => setDepositMode(false),
+                                        onCharged: handleDepositCharged,
+                                        onConfirmWithoutCash: handleConfirmDepositWithoutCash
+                                    }}
                                 />
                             )}
 
@@ -2725,7 +2761,16 @@ const BookingDetailsModalContent = ({
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                                 {(booking.status === 'pending' || booking.status === 'deposit_paid') && (
                                     <button
-                                        onClick={() => booking.status === 'pending' && onAction('confirm_deposit', { depositAmount: activeDeposit })}
+                                        onClick={() => {
+                                            if (booking.status !== 'pending') return;
+                                            // Courts with a cash register: the deposit is charged in the register first
+                                            if (isSport && bookingCash.canCharge && !bookingCash.error) {
+                                                setDepositMode(true);
+                                                document.getElementById('booking-cash-charge')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            } else {
+                                                onAction('confirm_deposit', { depositAmount: activeDeposit });
+                                            }
+                                        }}
                                         disabled={booking.status === 'deposit_paid'}
                                         style={{
                                             padding: '10px 14px',
