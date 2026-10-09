@@ -842,6 +842,15 @@ export default function BusinessPortal() {
             } else if (action === 'confirm_deposit') {
                 const currentHistory = Array.isArray(selectedBooking.history) ? selectedBooking.history : [];
                 const newHistory = [...currentHistory];
+                // e.g. "Seña cobrada en caja: $X" when the deposit went into the cash register
+                if (payload.historyLabel) {
+                    newHistory.push({
+                        action: 'updated',
+                        label: payload.historyLabel,
+                        timestamp: new Date().toISOString(),
+                        status: selectedBooking.status
+                    });
+                }
                 newHistory.push({
                     action: 'deposit_paid',
                     label: 'Seña Confirmada',
@@ -852,10 +861,14 @@ export default function BusinessPortal() {
                 await serviceAdapter.updateBookingStatus(selectedBooking.id, 'deposit_paid', {
                     history: newHistory
                 });
-                // Keep the amount that was shown as the deposit
+                // Keep the amount that was shown as the deposit (or the one actually charged in the register)
                 const depositAmount = Number(payload.depositAmount) || 0;
-                if (depositAmount > 0 && !Number(selectedBooking.deposit_amount || selectedBooking.metadata?.deposit_amount)) {
-                    await serviceAdapter.updateBooking(selectedBooking.id, { deposit_amount: depositAmount });
+                const keepAmount = depositAmount > 0 && (payload.metadata || !Number(selectedBooking.deposit_amount || selectedBooking.metadata?.deposit_amount));
+                if (keepAmount || payload.metadata) {
+                    await serviceAdapter.updateBooking(selectedBooking.id, {
+                        ...(keepAmount ? { deposit_amount: depositAmount } : {}),
+                        ...(payload.metadata ? { metadata: payload.metadata } : {})
+                    });
                 }
                 await fetchBookings();
                 setShowBookingModal(false);

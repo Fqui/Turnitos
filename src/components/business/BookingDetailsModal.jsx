@@ -8,7 +8,13 @@ import RentalPaymentsCard from './RentalPaymentsCard';
 import BookingCashCharge from './canteen/BookingCashCharge';
 import { useBookingCash } from './canteen/useBookingCash';
 
-const CANTEEN_CATEGORY_ICONS = { Bebidas: '🥤', Snacks: '🍫', Equipamiento: '🎾', Alquileres: '🏓', Otro: '🛒' };
+// Booking history in Argentina time, 24 h, whatever the device settings
+const formatHistoryTime = (iso) => new Date(iso).toLocaleString('es-AR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    hourCycle: 'h23', timeZone: 'America/Argentina/Buenos_Aires'
+});
+
+const CANTEEN_CATEGORY_ICONS ={ Bebidas: '🥤', Snacks: '🍫', Equipamiento: '🎾', Alquileres: '🏓', Otro: '🛒' };
 
 const BookingDetailsModalContent = ({
     onClose,
@@ -299,13 +305,15 @@ const BookingDetailsModalContent = ({
     const handleDepositCharged = async (movement) => {
         const amount = Number(movement?.amount) || 0;
         setDepositMode(false);
+        const historyLabel = `Seña cobrada en caja: $${amount.toLocaleString('es-AR')} (${cashMethodLabel(movement)})`;
+        const metadata = { deposit_cash_movement_id: movement.id };
         try {
-            await onAction('update_booking', {
-                deposit_amount: amount,
-                metadata: { deposit_cash_movement_id: movement.id },
-                historyLabel: `Seña cobrada en caja: $${amount.toLocaleString('es-AR')} (${cashMethodLabel(movement)})`
-            });
-            if (booking.status === 'pending') await onAction('confirm_deposit', { depositAmount: amount });
+            // One write each, so neither overwrites the other's history line
+            if (booking.status === 'pending') {
+                await onAction('confirm_deposit', { depositAmount: amount, metadata, historyLabel });
+            } else {
+                await onAction('update_booking', { deposit_amount: amount, metadata, historyLabel });
+            }
         } catch {
             showToast('La seña quedó en la caja, pero no se pudo actualizar la reserva', 'warning');
         }
@@ -2083,9 +2091,9 @@ const BookingDetailsModalContent = ({
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
                                             <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>Reserva Creada</span>
                                             <span style={{ color: 'var(--text-secondary)', fontSize: '9px' }}>
-                                                {booking.created_at ? new Date(booking.created_at).toLocaleString('es-AR') :
+                                                {booking.created_at ? formatHistoryTime(booking.created_at) :
                                                     (booking.history?.find(h => h.action === 'creation')?.timestamp ?
-                                                        new Date(booking.history.find(h => h.action === 'creation').timestamp).toLocaleString('es-AR') : '-')}
+                                                        formatHistoryTime(booking.history.find(h => h.action === 'creation').timestamp) : '-')}
                                             </span>
                                         </div>
                                     </div>
@@ -2097,7 +2105,7 @@ const BookingDetailsModalContent = ({
                                                     {log.label === 'Turno Confirmado' ? 'Reserva Confirmada' : (log.label === 'Turno Cancelado' ? 'Reserva Cancelada' : log.label)}
                                                 </span>
                                                 <span style={{ color: 'var(--text-secondary)', fontSize: '9px' }}>
-                                                    {new Date(log.timestamp).toLocaleString('es-AR')}
+                                                    {formatHistoryTime(log.timestamp)}
                                                 </span>
                                             </div>
                                             {log.reason && (
@@ -2114,7 +2122,7 @@ const BookingDetailsModalContent = ({
                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <span style={{ color: 'var(--text-secondary)' }}>Confirmado:</span>
                                                     <span style={{ color: '#00E676', fontWeight: '500' }}>
-                                                        {new Date(booking.confirmed_at).toLocaleString('es-AR')}
+                                                        {formatHistoryTime(booking.confirmed_at)}
                                                     </span>
                                                 </div>
                                             )}
@@ -2122,7 +2130,7 @@ const BookingDetailsModalContent = ({
                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <span style={{ color: 'var(--text-secondary)' }}>Cancelado:</span>
                                                     <span style={{ color: '#ff4444', fontWeight: '500' }}>
-                                                        {new Date(booking.cancelled_at).toLocaleString('es-AR')}
+                                                        {formatHistoryTime(booking.cancelled_at)}
                                                     </span>
                                                 </div>
                                             )}
@@ -2732,9 +2740,9 @@ const BookingDetailsModalContent = ({
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
                                             <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>Turno Creado</span>
                                             <span style={{ color: 'var(--text-secondary)', fontSize: '9px' }}>
-                                                {booking.created_at ? new Date(booking.created_at).toLocaleString('es-AR') :
+                                                {booking.created_at ? formatHistoryTime(booking.created_at) :
                                                     (booking.history?.find(h => h.action === 'creation')?.timestamp ?
-                                                        new Date(booking.history.find(h => h.action === 'creation').timestamp).toLocaleString('es-AR') : '-')}
+                                                        formatHistoryTime(booking.history.find(h => h.action === 'creation').timestamp) : '-')}
                                             </span>
                                         </div>
                                     </div>
@@ -2744,7 +2752,7 @@ const BookingDetailsModalContent = ({
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
                                                 <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{log.label}</span>
                                                 <span style={{ color: 'var(--text-secondary)', fontSize: '9px' }}>
-                                                    {new Date(log.timestamp).toLocaleString('es-AR')}
+                                                    {formatHistoryTime(log.timestamp)}
                                                 </span>
                                             </div>
                                             {log.reason && (
