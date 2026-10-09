@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { Banknote, CalendarCheck, Landmark, Lock, LockOpen, Minus, Plus, ShoppingCart, TrendingDown } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 import { summarizeMovements } from '../../../services/sportCanteenService';
-import { Button, EmptyState, StatCard } from './CashUi';
+import { Button, EmptyState, Kpi } from './CashUi';
 import { CloseRegisterModal, CounterSaleModal, ManualMovementModal, MovementList, OpenRegisterForm, VoidMovementModal } from './CashModals';
-import { formatLongDate, formatMoney, formatTime } from './cashFormat';
+import { formatMoney } from './cashFormat';
 
 const FILTERS = [
     { id: 'all', label: 'Todos' },
@@ -19,7 +19,13 @@ export default function CashTab({ business, register, movements, products, onReg
 
     const totals = useMemo(() => summarizeMovements(movements, register?.initial_cash), [movements, register?.initial_cash]);
     const visible = useMemo(() => filter === 'all' ? movements : movements.filter(m => m.type === filter), [movements, filter]);
-    const lowStock = useMemo(() => products.filter(p => p.is_active && p.track_stock && Number(p.current_stock) <= Number(p.min_stock_alert)), [products]);
+    const restock = useMemo(() => {
+        const tracked = products.filter(p => p.is_active && p.track_stock && Number(p.current_stock) <= Number(p.min_stock_alert));
+        return {
+            out: tracked.filter(p => Number(p.current_stock) <= 0),
+            low: tracked.filter(p => Number(p.current_stock) > 0)
+        };
+    }, [products]);
 
     const closeModal = () => setModal(null);
     const afterMovement = async () => {
@@ -29,97 +35,58 @@ export default function CashTab({ business, register, movements, products, onReg
 
     if (!register) {
         return (
-            <div className="cc-card">
+            <div className="cc-card" style={{ maxWidth: '520px' }}>
                 <EmptyState
-                    icon={LockOpen}
-                    title="La caja está cerrada"
-                    text="Abrila al empezar el turno para cobrar turnos, vender artículos y anotar gastos. Al cerrar, comparás lo que hay en el cajón con lo que debería haber."
+                    title="No hay una caja abierta"
+                    text="Abrila al empezar el turno con el efectivo que hay para cambio. Al cerrar, comparás lo que hay en el cajón con lo que debería haber."
                 />
-                <div style={{ maxWidth: '400px', margin: '0 auto', paddingBottom: '12px' }}>
+                <div style={{ padding: '0 20px 20px' }}>
                     <OpenRegisterForm businessId={business.id} onOpened={onRegisterOpened} showToast={showToast} />
                 </div>
             </div>
         );
     }
 
+    const bookingsCount = new Set(movements.filter(m => !m.voided_at && m.type === 'booking_income').map(m => m.booking_id || m.id)).size;
+    const listName = (list) => list.slice(0, 4).map(p => p.name).join(', ') + (list.length > 4 ? ` y ${list.length - 4} más` : '');
+
     return (
         <>
-            <div className="cc-card cc-status">
-                <div className="cc-row">
-                    <span className="cc-dot cc-dot--live" style={{ color: 'var(--cc-green)' }} />
-                    <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '15px', fontWeight: 800 }}>Caja abierta</div>
-                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                            {register.opened_by} · desde las {formatTime(register.opened_at)} · {formatLongDate(register.opened_at)}
-                        </div>
-                    </div>
-                </div>
-                <div className="cc-actions">
-                    <Button variant="primary" icon={ShoppingCart} className="cc-btn--main" onClick={() => setModal('sale')}>
-                        Venta de mostrador
-                    </Button>
-                    <Button icon={Plus} onClick={() => setModal('manual_income')}>Ingreso</Button>
-                    <Button icon={Minus} onClick={() => setModal('manual_expense')}>Gasto</Button>
-                    <Button variant="danger" icon={Lock} onClick={() => setModal('close')} style={{ gridColumn: '1 / -1' }}>
-                        Cerrar caja
-                    </Button>
-                </div>
+            <div className="cc-kpis">
+                <Kpi main label="Efectivo en caja" value={formatMoney(totals.cash)} hint={`Fondo inicial ${formatMoney(register.initial_cash)}`} />
+                <Kpi label="Transferencias" value={formatMoney(totals.transfers)} />
+                <Kpi label="Turnos" value={formatMoney(totals.bookings)} hint={`${bookingsCount} ${bookingsCount === 1 ? 'turno' : 'turnos'}`} />
+                <Kpi label="Artículos" value={formatMoney(totals.canteen)} hint={totals.manualIncome > 0 ? `Otros ingresos ${formatMoney(totals.manualIncome)}` : undefined} />
+                <Kpi label="Gastos" value={totals.expenses > 0 ? `-${formatMoney(totals.expenses)}` : formatMoney(0)} className={totals.expenses > 0 ? 'cc-neg' : ''} />
             </div>
 
-            <div className="cc-stats">
-                <StatCard
-                    hero
-                    icon={Banknote}
-                    tone="green"
-                    label="Efectivo en caja"
-                    value={formatMoney(totals.cash)}
-                    hint={`Fondo inicial ${formatMoney(register.initial_cash)}`}
-                />
-                <StatCard icon={Landmark} tone="blue" label="Transferencias" value={formatMoney(totals.transfers)} hint="Alias, CVU o Mercado Pago" />
-                <StatCard
-                    icon={CalendarCheck}
-                    tone="blue"
-                    label="Turnos cobrados"
-                    value={formatMoney(totals.bookings)}
-                    hint={`${movements.filter(m => !m.voided_at && m.type === 'booking_income').length} cobros`}
-                />
-                <StatCard
-                    icon={ShoppingCart}
-                    tone="green"
-                    label="Artículos"
-                    value={formatMoney(totals.canteen)}
-                    hint={totals.expenses > 0 || totals.manualIncome > 0
-                        ? `Gastos ${formatMoney(totals.expenses)} · Ingresos ${formatMoney(totals.manualIncome)}`
-                        : 'Ventas de mostrador'}
-                />
+            <div className="cc-actions">
+                <Button variant="primary" className="cc-btn--main" onClick={() => setModal('sale')}>
+                    Venta de mostrador
+                </Button>
+                <Button icon={Plus} onClick={() => setModal('manual_income')}>Ingreso</Button>
+                <Button icon={Minus} onClick={() => setModal('manual_expense')}>Gasto</Button>
+                <span className="cc-actions-spacer" />
+                <Button variant="danger" className="cc-btn--close" onClick={() => setModal('close')}>
+                    Cerrar caja
+                </Button>
             </div>
 
-            {lowStock.length > 0 && (
+            {(restock.out.length > 0 || restock.low.length > 0) && (
                 <div className="cc-alert cc-alert--amber">
-                    <TrendingDown size={18} style={{ flexShrink: 0 }} />
                     <span>
-                        {[
-                            ['Sin stock', lowStock.filter(p => Number(p.current_stock) <= 0)],
-                            ['Stock bajo', lowStock.filter(p => Number(p.current_stock) > 0)]
-                        ].filter(([, list]) => list.length > 0).map(([label, list]) => (
-                            <span key={label} style={{ display: 'block' }}>
-                                {label}: {list.slice(0, 4).map(p => (Number(p.current_stock) > 0 ? `${p.name} (${p.current_stock})` : p.name)).join(', ')}
-                                {list.length > 4 ? ` y ${list.length - 4} más` : ''}
-                            </span>
-                        ))}
+                        {restock.out.length > 0 && <span style={{ display: 'block' }}><strong>Sin stock:</strong> {listName(restock.out)}</span>}
+                        {restock.low.length > 0 && <span style={{ display: 'block' }}><strong>Quedan pocos:</strong> {listName(restock.low)}</span>}
                     </span>
                 </div>
             )}
 
-            <div className="cc-card">
-                <div className="cc-between" style={{ marginBottom: '8px' }}>
-                    <div>
-                        <h3 className="cc-card-title">Movimientos</h3>
-                        <p className="cc-card-subtitle">
-                            {totals.count} {totals.count === 1 ? 'movimiento' : 'movimientos'}
-                            {totals.voidedCount > 0 ? ` · ${totals.voidedCount} anulado${totals.voidedCount === 1 ? '' : 's'}` : ''}
-                        </p>
-                    </div>
+            <div className="cc-card cc-card--flush">
+                <div className="cc-section-head">
+                    <h3 className="cc-card-title">
+                        Movimientos
+                        <span className="cc-muted" style={{ fontWeight: 500, marginLeft: '8px' }}>{totals.count}</span>
+                    </h3>
                     <div className="cc-chips">
                         {FILTERS.map(f => (
                             <button key={f.id} type="button" className={`cc-chip${filter === f.id ? ' is-active' : ''}`} onClick={() => setFilter(f.id)}>
@@ -129,9 +96,9 @@ export default function CashTab({ business, register, movements, products, onReg
                     </div>
                 </div>
                 {visible.length === 0 ? (
-                    <div className="cc-muted" style={{ textAlign: 'center', padding: '32px 12px', fontSize: '14px' }}>
+                    <div className="cc-muted" style={{ padding: '28px 20px', fontSize: '14px' }}>
                         {movements.length === 0
-                            ? 'Todavía no hay movimientos. Cobrá un turno desde la reserva o registrá una venta.'
+                            ? 'Todavía no hay movimientos. Los turnos se cobran desde cada reserva.'
                             : 'No hay movimientos de este tipo.'}
                     </div>
                 ) : (

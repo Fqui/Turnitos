@@ -116,40 +116,23 @@ export function PaymentMethodPicker({ value, onChange, disabled = false }) {
     );
 }
 
-export function StatCard({ icon: Icon, label, value, hint, tone, hero = false, valueClassName = '' }) {
-    const toneColor = {
-        green: 'var(--cc-green)',
-        red: 'var(--cc-red)',
-        amber: 'var(--cc-amber)',
-        blue: 'var(--cc-blue)'
-    }[tone];
+/** One figure of the totals strip; `main` is the big one (cash in the drawer, net of the month) */
+export function Kpi({ label, value, hint, main = false, className = '' }) {
     return (
-        <div className={`cc-stat${hero ? ' cc-stat--hero' : ''}`}>
-            <div className="cc-stat-head">
-                {Icon && (
-                    <span className="cc-stat-icon" style={toneColor ? { color: toneColor } : undefined}>
-                        <Icon size={16} strokeWidth={2.2} aria-hidden="true" />
-                    </span>
-                )}
-                <span>{label}</span>
-            </div>
-            <div className={`cc-stat-value ${valueClassName}`}>{value}</div>
-            {hint && <div className="cc-stat-hint">{hint}</div>}
+        <div className={`cc-kpi${main ? ' cc-kpi--main' : ''}`}>
+            <div className="cc-kpi-label">{label}</div>
+            <div className={`cc-kpi-value ${className}`}>{value}</div>
+            {hint && <div className="cc-kpi-hint">{hint}</div>}
         </div>
     );
 }
 
-export function EmptyState({ icon: Icon, title, text, children }) {
+export function EmptyState({ title, text, children, center = false }) {
     return (
-        <div className="cc-empty">
-            {Icon && (
-                <span className="cc-empty-icon">
-                    <Icon size={26} strokeWidth={2} aria-hidden="true" />
-                </span>
-            )}
+        <div className={`cc-empty${center ? ' cc-empty--center' : ''}`}>
             <h3>{title}</h3>
             {text && <p>{text}</p>}
-            {children && <div className="cc-row" style={{ flexWrap: 'wrap', justifyContent: 'center', marginTop: '8px' }}>{children}</div>}
+            {children && <div className="cc-empty-actions">{children}</div>}
         </div>
     );
 }

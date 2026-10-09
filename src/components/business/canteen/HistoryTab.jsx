@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, ChevronLeft, ChevronRight, Download, History, Scale, ShoppingCart, TrendingDown, Wallet } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import sportCanteenService, { summarizeMovements } from '../../../services/sportCanteenService';
-import { Badge, Button, EmptyState, Spinner, StatCard } from './CashUi';
+import { Button, Kpi, Spinner } from './CashUi';
 import { RegisterDetailModal } from './CashModals';
-import { dayParts, differenceLabel, differenceTone, formatDate, formatMoney, formatTime } from './cashFormat';
+import { dayParts, differenceLabel, differenceTone, formatMoney, formatTime } from './cashFormat';
+
+const toneClass = (tone) => ({ red: 'cc-neg', amber: 'cc-warn', green: 'cc-pos' }[tone] || '');
 
 const monthLabel = (year, month) => {
     const label = new Date(year, month, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
@@ -83,58 +85,54 @@ export default function HistoryTab({ business, refreshKey, showToast }) {
             {error && <div className="cc-alert">{error}</div>}
 
             {loading ? (
-                <div className="cc-card cc-loading"><Spinner large /><span>Cargando historial...</span></div>
+                <div className="cc-loading"><Spinner large /><span>Cargando…</span></div>
             ) : (
                 <>
-                    <div className="cc-stats">
-                        <StatCard hero icon={Wallet} tone="green" label="Neto del mes" value={formatMoney(totals.net)} hint={`${data.registers.length} ${data.registers.length === 1 ? 'caja cerrada' : 'cajas cerradas'}`} />
-                        <StatCard icon={CalendarCheck} tone="blue" label="Turnos" value={formatMoney(totals.bookings)} hint={totals.manualIncome > 0 ? `Otros ingresos ${formatMoney(totals.manualIncome)}` : undefined} />
-                        <StatCard icon={ShoppingCart} tone="green" label="Artículos" value={formatMoney(totals.canteen)} />
-                        <StatCard icon={TrendingDown} tone="red" label="Gastos" value={formatMoney(totals.expenses)} />
+                    <div className="cc-kpis">
+                        <Kpi main label="Neto del mes" value={formatMoney(totals.net)} hint={`${data.registers.length} ${data.registers.length === 1 ? 'caja cerrada' : 'cajas cerradas'}`} />
+                        <Kpi label="Turnos" value={formatMoney(totals.bookings)} />
+                        <Kpi label="Artículos" value={formatMoney(totals.canteen)} hint={totals.manualIncome > 0 ? `Otros ingresos ${formatMoney(totals.manualIncome)}` : undefined} />
+                        <Kpi label="Gastos" value={totals.expenses > 0 ? `-${formatMoney(totals.expenses)}` : formatMoney(0)} className={totals.expenses > 0 ? 'cc-neg' : ''} />
+                        <Kpi label="Diferencias" value={formatMoney(differences)} className={toneClass(differenceTone(differences))} />
                     </div>
 
-                    <div className="cc-card">
-                        <div className="cc-between" style={{ marginBottom: '6px' }}>
-                            <div>
-                                <h3 className="cc-card-title">Cajas cerradas</h3>
-                                <p className="cc-card-subtitle">Tocá una para ver el detalle y reenviar el resumen.</p>
-                            </div>
-                            {data.registers.length > 0 && (
-                                <Badge tone={differenceTone(differences)}>
-                                    <Scale size={12} /> Diferencias: {formatMoney(differences)}
-                                </Badge>
-                            )}
+                    <div className="cc-card cc-card--flush">
+                        <div className="cc-section-head">
+                            <h3 className="cc-card-title">Cajas cerradas</h3>
                         </div>
 
                         {data.registers.length === 0 ? (
-                            <EmptyState icon={History} title="Sin cajas cerradas" text="Cuando cierres una caja, va a aparecer acá con su arqueo." />
+                            <div className="cc-muted" style={{ padding: '28px 20px', fontSize: '14px' }}>
+                                No hay cajas cerradas en este mes.
+                            </div>
                         ) : (
-                            <div className="cc-list">
+                            <div className="cc-ledger cc-ledger--registers">
+                                <div className="cc-ledger-head" aria-hidden="true">
+                                    <span>Fecha</span>
+                                    <span>Encargado</span>
+                                    <span className="cc-cell-right">Contado</span>
+                                    <span className="cc-cell-right">Transferencias</span>
+                                    <span className="cc-cell-right">Diferencia</span>
+                                </div>
                                 {data.registers.map(r => {
-                                    const regTotals = summarizeMovements(movementsByRegister.get(r.id) || [], r.initial_cash);
                                     const tone = differenceTone(r.difference);
+                                    const { day, weekday } = dayParts(r.opened_at);
                                     return (
-                                        <button key={r.id} type="button" className="cc-list-item cc-list-item--button" onClick={() => setSelected(r)}>
-                                            <span className="cc-list-icon" style={{ background: 'var(--bg-main)', color: 'var(--text-secondary)', flexDirection: 'column', lineHeight: 1 }}>
-                                                <strong style={{ fontSize: '15px' }}>{dayParts(r.opened_at).day}</strong>
-                                                <span style={{ fontSize: '9px', textTransform: 'uppercase' }}>
-                                                    {dayParts(r.opened_at).weekday}
-                                                </span>
+                                        <button key={r.id} type="button" className="cc-ledger-row cc-ledger-row--button" onClick={() => setSelected(r)}>
+                                            <span className="cc-cell-date">
+                                                <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{weekday} {day}</span>
+                                                <span className="cc-cell-sub" style={{ display: 'block' }}>{formatTime(r.opened_at)}–{formatTime(r.closed_at)}</span>
                                             </span>
-                                            <div className="cc-list-main">
-                                                <div className="cc-list-title">{r.closed_by || r.opened_by}</div>
-                                                <div className="cc-list-meta">
-                                                    <span>{formatDate(r.opened_at)} · {formatTime(r.opened_at)} a {formatTime(r.closed_at)}</span>
-                                                    <span aria-hidden="true">·</span>
-                                                    <span>Transf. {formatMoney(r.expected_transfers)}</span>
-                                                    <span className="cc-hide-mobile" aria-hidden="true">·</span>
-                                                    <span className="cc-hide-mobile">Neto {formatMoney(regTotals.net)}</span>
-                                                </div>
-                                            </div>
-                                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                                <div className="cc-list-amount">{formatMoney(r.final_cash_counted)}</div>
-                                                <Badge tone={tone} style={{ marginTop: '2px' }}>{differenceLabel(r.difference)}</Badge>
-                                            </div>
+                                            <span className="cc-cell-main">
+                                                <span className="cc-cell-title" style={{ display: 'block' }}>{r.closed_by || r.opened_by}</span>
+                                                {r.notes && <span className="cc-cell-sub cc-hide-mobile" style={{ display: 'block' }}>{r.notes}</span>}
+                                            </span>
+                                            <span className="cc-cell-amount cc-cell-counted">{formatMoney(r.final_cash_counted)}</span>
+                                            <span className="cc-cell-amount cc-cell-transfers" style={{ fontWeight: 500 }}>{formatMoney(r.expected_transfers)}</span>
+                                            <span className={`cc-cell-amount cc-cell-diff ${toneClass(tone)}`}>{differenceLabel(r.difference)}</span>
+                                            <span className="cc-cell-meta-mobile">
+                                                <span style={{ textTransform: 'capitalize' }}>{weekday} {day}</span> · {formatTime(r.opened_at)}–{formatTime(r.closed_at)} · Transf. {formatMoney(r.expected_transfers)}
+                                            </span>
                                         </button>
                                     );
                                 })}

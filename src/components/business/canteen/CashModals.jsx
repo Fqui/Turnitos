@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CircleCheck, Copy, Lock, MessageCircle, Search, ShoppingCart, Trash2, TriangleAlert, Undo2, Plus, Minus } from 'lucide-react';
+import { Copy, MessageCircle, Search, Trash2, Plus, Minus } from 'lucide-react';
 import sportCanteenService, { PRODUCT_CATEGORIES, PAYMENT_METHOD_LABELS, summarizeMovements } from '../../../services/sportCanteenService';
 import { Badge, Button, Field, Modal, MoneyInput, PaymentMethodPicker, Spinner } from './CashUi';
 import { differenceLabel, differenceTone, formatDate, formatMoney, formatTime, MOVEMENT_VISUALS, toneStyle } from './cashFormat';
@@ -200,7 +200,6 @@ export function CounterSaleModal({ businessId, products, onClose, onDone, showTo
         >
             {active.length === 0 ? (
                 <div className="cc-alert cc-alert--info">
-                    <ShoppingCart size={18} style={{ flexShrink: 0 }} />
                     <span>Todavía no hay artículos activos. Cargalos en la pestaña “Artículos y stock”.</span>
                 </div>
             ) : (
@@ -380,7 +379,6 @@ export function VoidMovementModal({ movement, onClose, onDone, showToast }) {
             </div>
             {hasItems && (
                 <div className="cc-alert cc-alert--info">
-                    <Undo2 size={18} style={{ flexShrink: 0 }} />
                     <span>Los artículos de este movimiento vuelven al stock.</span>
                 </div>
             )}
@@ -458,23 +456,21 @@ export function CloseRegisterModal({ business, register, movements, onClose, onC
                     </>
                 }
             >
-                <div className="cc-empty" style={{ padding: '8px 0 0' }}>
-                    <span className="cc-empty-icon" style={toneStyle(tone)}>
-                        {tone === 'green' ? <CircleCheck size={26} /> : <TriangleAlert size={26} />}
-                    </span>
-                    <h3>{differenceLabel(closed.difference)}</h3>
-                    <p>Mandá el resumen por WhatsApp o copialo. Lo vas a encontrar siempre en Historial.</p>
+                <div className="cc-result">
+                    <div className="cc-result-label">Diferencia del arqueo</div>
+                    <div className="cc-result-value" style={{ color: toneStyle(tone).color }}>
+                        {differenceLabel(closed.difference)}
+                    </div>
                 </div>
                 <div className="cc-summary">
                     <div className="cc-summary-row"><span>Efectivo esperado</span><strong>{formatMoney(closed.expected_cash)}</strong></div>
                     <div className="cc-summary-row"><span>Efectivo contado</span><strong>{formatMoney(closed.final_cash_counted)}</strong></div>
                     <div className="cc-summary-row"><span>Transferencias</span><strong>{formatMoney(closed.expected_transfers)}</strong></div>
-                    <div className={`cc-summary-row cc-summary-total`}>
-                        <span>Diferencia</span>
-                        <strong style={toneStyle(tone).color ? { color: toneStyle(tone).color } : undefined}>{formatMoney(closed.difference)}</strong>
-                    </div>
                 </div>
-                <Button block onClick={() => onClosed?.(closed)}>Listo</Button>
+                <div className="cc-between">
+                    <span className="cc-muted" style={{ fontSize: '13px' }}>Queda guardada en Historial.</span>
+                    <Button variant="link" onClick={() => onClosed?.(closed)}>Listo</Button>
+                </div>
             </Modal>
         );
     }
@@ -488,7 +484,7 @@ export function CloseRegisterModal({ business, register, movements, onClose, onC
             footer={
                 <>
                     <Button onClick={onClose} disabled={saving}>Cancelar</Button>
-                    <Button type="submit" form="cc-close-form" variant="primary" icon={Lock} loading={saving} disabled={!hasCount}>
+                    <Button type="submit" form="cc-close-form" variant="primary" loading={saving} disabled={!hasCount}>
                         Cerrar caja
                     </Button>
                 </>
@@ -578,7 +574,7 @@ export function RegisterDetailModal({ business, register, movements: providedMov
                 {error && <div className="cc-alert">{error}</div>}
                 {!movements && !error && <div className="cc-loading" style={{ padding: '24px' }}><Spinner large /></div>}
                 {movements && movements.length === 0 && <div className="cc-muted" style={{ fontSize: '13px', padding: '12px 0' }}>Sin movimientos.</div>}
-                {movements && movements.length > 0 && <MovementList movements={movements} />}
+                {movements && movements.length > 0 && <MovementList inset movements={movements} />}
             </div>
         </Modal>
     );
@@ -587,38 +583,43 @@ export function RegisterDetailModal({ business, register, movements: providedMov
 // ==========================================================
 // Lista de movimientos (caja abierta e historial)
 // ==========================================================
-export function MovementList({ movements, onVoid }) {
+export function MovementList({ movements, onVoid, inset = false }) {
     return (
-        <div className="cc-list">
+        <div className={`cc-ledger cc-ledger--movements${inset ? ' cc-ledger--inset' : ''}`}>
+            <div className="cc-ledger-head" aria-hidden="true">
+                <span>Hora</span>
+                <span>Concepto</span>
+                <span>Medio</span>
+                <span className="cc-cell-right">Monto</span>
+                <span />
+            </div>
             {movements.map(m => {
-                const visual = MOVEMENT_VISUALS[m.type] || MOVEMENT_VISUALS.manual_income;
-                const Icon = visual.icon;
+                const label = MOVEMENT_VISUALS[m.type]?.label || 'Movimiento';
                 const isExpense = m.type === 'manual_expense';
                 const voided = Boolean(m.voided_at);
+                const method = PAYMENT_METHOD_LABELS[m.payment_method];
                 return (
-                    <div key={m.id} className={`cc-list-item${voided ? ' is-voided' : ''}`}>
-                        <span className="cc-list-icon" style={toneStyle(visual.tone)}>
-                            <Icon size={18} aria-hidden="true" />
-                        </span>
-                        <div className="cc-list-main">
-                            <div className="cc-list-title" title={m.description}>{m.description || visual.label}</div>
-                            <div className="cc-list-meta">
-                                <span>{formatTime(m.created_at)}</span>
-                                <span aria-hidden="true">·</span>
-                                <span>{visual.label}</span>
-                                <span aria-hidden="true">·</span>
-                                <span>{PAYMENT_METHOD_LABELS[m.payment_method]}</span>
-                                {voided && <Badge tone="red">Anulado{m.voided_reason ? `: ${m.voided_reason}` : ''}</Badge>}
+                    <div key={m.id} className={`cc-ledger-row${voided ? ' is-voided' : ''}`}>
+                        <span className="cc-cell-time">{formatTime(m.created_at)}</span>
+                        <div className="cc-cell-main">
+                            <div className="cc-cell-title" title={m.description}>{m.description || label}</div>
+                            <div className="cc-cell-sub">
+                                {label}
+                                {voided && <span className="cc-neg" style={{ textDecoration: 'none' }}> · Anulado{m.voided_reason ? `: ${m.voided_reason}` : ''}</span>}
                             </div>
                         </div>
-                        <div className={`cc-list-amount ${isExpense ? 'cc-neg' : ''}`}>
-                            {isExpense ? '-' : '+'}{formatMoney(m.amount)}
-                        </div>
-                        {onVoid && !voided && (
-                            <Button size="sm" variant="ghost" onClick={() => onVoid(m)} aria-label="Anular movimiento" title="Anular">
-                                Anular
-                            </Button>
-                        )}
+                        <span className="cc-cell-method cc-secondary" style={{ fontSize: '13px' }}>{method}</span>
+                        <span className={`cc-cell-amount ${isExpense ? 'cc-neg' : ''}`}>
+                            {isExpense ? '-' : ''}{formatMoney(m.amount)}
+                        </span>
+                        <span className="cc-cell-meta-mobile">{formatTime(m.created_at)} · {method}</span>
+                        <span className="cc-cell-action">
+                            {onVoid && !voided && (
+                                <Button variant="link" onClick={() => onVoid(m)} aria-label={`Anular ${m.description || label}`}>
+                                    Anular
+                                </Button>
+                            )}
+                        </span>
                     </div>
                 );
             })}

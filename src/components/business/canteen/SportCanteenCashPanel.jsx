@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { History, Package, Wallet } from 'lucide-react';
 import sportCanteenService from '../../../services/sportCanteenService';
-import { Badge, Button, Spinner } from './CashUi';
+import { Button, Spinner } from './CashUi';
 import CashTab from './CashTab';
 import StockTab from './StockTab';
 import HistoryTab from './HistoryTab';
+import { formatTime } from './cashFormat';
 
 const TABS = [
-    { id: 'caja', label: 'Caja', icon: Wallet },
-    { id: 'stock', label: 'Artículos y stock', shortLabel: 'Artículos', icon: Package },
-    { id: 'historial', label: 'Historial', icon: History }
+    { id: 'caja', label: 'Caja' },
+    { id: 'stock', label: 'Artículos y stock', shortLabel: 'Artículos' },
+    { id: 'historial', label: 'Historial' }
 ];
 
 /**
@@ -93,16 +93,23 @@ export default function SportCanteenCashPanel({ business, showToast, isMobile = 
     return (
         <div className="cc-root">
             <div className="cc-header">
-                <div style={{ minWidth: 0 }}>
-                    <div className="cc-row" style={{ gap: '10px', flexWrap: 'wrap' }}>
-                        <h2>Registro de Caja</h2>
-                        {!loading && !error && (
-                            register
-                                ? <Badge tone="green"><span className="cc-dot" /> Abierta</Badge>
-                                : <Badge>Cerrada</Badge>
-                        )}
-                    </div>
-                    <p>Cobros de turnos, venta de artículos, gastos y arqueo de cada turno.</p>
+                <div className="cc-header-top">
+                    <h2>Registro de Caja</h2>
+                    {!loading && !error && (
+                        <span className="cc-header-meta">
+                            {register ? (
+                                <>
+                                    <span className="cc-dot" style={{ color: 'var(--cc-green)' }} />
+                                    Abierta desde las {formatTime(register.opened_at)} · {register.opened_by}
+                                </>
+                            ) : (
+                                <>
+                                    <span className="cc-dot" style={{ color: 'var(--text-muted)' }} />
+                                    Cerrada
+                                </>
+                            )}
+                        </span>
+                    )}
                 </div>
                 <div className="cc-tabs" role="tablist" aria-label="Secciones de caja">
                     {TABS.map(t => (
@@ -114,7 +121,6 @@ export default function SportCanteenCashPanel({ business, showToast, isMobile = 
                             className={`cc-tab${tab === t.id ? ' is-active' : ''}`}
                             onClick={() => setTab(t.id)}
                         >
-                            <t.icon size={16} aria-hidden="true" />
                             {isMobile && t.shortLabel ? t.shortLabel : t.label}
                             {t.id === 'stock' && products.length > 0 && <span className="cc-tab-count">{products.filter(p => p.is_active).length}</span>}
                         </button>
@@ -123,7 +129,7 @@ export default function SportCanteenCashPanel({ business, showToast, isMobile = 
             </div>
 
             {loading ? (
-                <div className="cc-card cc-loading"><Spinner large /><span>Cargando caja...</span></div>
+                <div className="cc-loading"><Spinner large /><span>Cargando…</span></div>
             ) : error ? (
                 <div className="cc-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-start' }}>
                     <div className="cc-alert" style={{ width: '100%' }}>{error}</div>
