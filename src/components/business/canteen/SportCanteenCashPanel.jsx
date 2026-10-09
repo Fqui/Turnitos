@@ -64,6 +64,15 @@ export default function SportCanteenCashPanel({ business, showToast, isMobile = 
         }
     }, [businessId, loadRegister, showToast]);
 
+    // Another device (or the booking modal) may have changed the register: refresh when coming back to the app
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible' && !loading && !error) refresh();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, [refresh, loading, error]);
+
     const handleOpened = async (reg) => {
         setRegister(reg);
         try {

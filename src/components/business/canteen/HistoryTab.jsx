@@ -3,7 +3,7 @@ import { CalendarCheck, ChevronLeft, ChevronRight, Download, History, Scale, Sho
 import sportCanteenService, { summarizeMovements } from '../../../services/sportCanteenService';
 import { Badge, Button, EmptyState, Spinner, StatCard } from './CashUi';
 import { RegisterDetailModal } from './CashModals';
-import { differenceLabel, differenceTone, formatDate, formatMoney, formatTime } from './cashFormat';
+import { dayParts, differenceLabel, differenceTone, formatDate, formatMoney, formatTime } from './cashFormat';
 
 const monthLabel = (year, month) => new Date(year, month, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
 
@@ -113,9 +113,9 @@ export default function HistoryTab({ business, refreshKey, showToast }) {
                                     return (
                                         <button key={r.id} type="button" className="cc-list-item cc-list-item--button" onClick={() => setSelected(r)}>
                                             <span className="cc-list-icon" style={{ background: 'var(--bg-main)', color: 'var(--text-secondary)', flexDirection: 'column', lineHeight: 1 }}>
-                                                <strong style={{ fontSize: '15px' }}>{new Date(r.opened_at).getDate()}</strong>
+                                                <strong style={{ fontSize: '15px' }}>{dayParts(r.opened_at).day}</strong>
                                                 <span style={{ fontSize: '9px', textTransform: 'uppercase' }}>
-                                                    {new Date(r.opened_at).toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')}
+                                                    {dayParts(r.opened_at).weekday}
                                                 </span>
                                             </span>
                                             <div className="cc-list-main">

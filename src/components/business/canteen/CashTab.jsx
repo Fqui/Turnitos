@@ -50,7 +50,7 @@ export default function CashTab({ business, register, movements, products, onReg
                     <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: '15px', fontWeight: 800 }}>Caja abierta</div>
                         <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                            {register.opened_by} · desde las {formatTime(register.opened_at)} · <span style={{ textTransform: 'capitalize' }}>{formatLongDate(register.opened_at)}</span>
+                            {register.opened_by} · desde las {formatTime(register.opened_at)} · {formatLongDate(register.opened_at)}
                         </div>
                     </div>
                 </div>

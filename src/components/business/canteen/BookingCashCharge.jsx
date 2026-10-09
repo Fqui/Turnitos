@@ -3,7 +3,7 @@ import { CircleCheck, Package, Wallet } from 'lucide-react';
 import sportCanteenService, { PAYMENT_METHOD_LABELS } from '../../../services/sportCanteenService';
 import { Badge, Button, Field, MoneyInput, PaymentMethodPicker, Spinner } from './CashUi';
 import { OpenRegisterForm } from './CashModals';
-import { formatMoney, formatTime } from './cashFormat';
+import { formatDate, formatMoney, formatTime } from './cashFormat';
 
 // Deposit ("seña") charged into the register; mounted only while it is being charged
 function DepositForm({ businessId, bookingId, deposit, hasRegister, onGoToCashRegister, cash, showToast }) {
@@ -221,7 +221,7 @@ export default function BookingCashCharge({
                                     opacity: m.voided_at ? 0.55 : 1
                                 }}>
                                     <span style={{ color: 'var(--text-secondary)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {new Date(m.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })} {formatTime(m.created_at)} · {PAYMENT_METHOD_LABELS[m.payment_method]}
+                                        {formatDate(m.created_at, { day: '2-digit', month: '2-digit' })} {formatTime(m.created_at)} · {PAYMENT_METHOD_LABELS[m.payment_method]}
                                         {m.voided_at ? ' · Anulado' : ''}
                                     </span>
                                     <strong className="cc-amount" style={{ textDecoration: m.voided_at ? 'line-through' : 'none' }}>{formatMoney(m.amount)}</strong>

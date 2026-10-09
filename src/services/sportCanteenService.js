@@ -47,10 +47,17 @@ const toError = (error, fallback) => {
 
 const money = (value) => `$${Math.round(Number(value) || 0).toLocaleString('es-AR')}`;
 
-const monthRange = (year, month) => ({
-    from: new Date(year, month, 1).toISOString(),
-    to: new Date(year, month + 1, 1).toISOString()
-});
+// Registers belong to the Argentina day/month they were opened in, whatever the device time zone
+const AR_TIME_ZONE = 'America/Argentina/Buenos_Aires';
+const AR_OFFSET = '-03:00'; // Argentina has no daylight saving time
+
+const monthRange = (year, month) => {
+    const start = (y, m) => {
+        const d = new Date(Date.UTC(y, m, 1));
+        return new Date(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01T00:00:00${AR_OFFSET}`).toISOString();
+    };
+    return { from: start(year, month), to: start(year, month + 1) };
+};
 
 /**
  * Totals of a set of movements (voided ones are ignored).
@@ -102,8 +109,8 @@ const csvNumber = (value) => (value === null || value === undefined || value ===
     ? ''
     : (Number(value) || 0).toFixed(2).replace('.', ',');
 
-const csvDate = (iso) => iso ? new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
-const csvTime = (iso) => iso ? new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
+const csvDate = (iso) => iso ? new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: AR_TIME_ZONE }) : '';
+const csvTime = (iso) => iso ? new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: AR_TIME_ZONE }) : '';
 
 export const sportCanteenService = {
     // ==========================================
@@ -432,10 +439,10 @@ export const sportCanteenService = {
     generateWhatsAppReport(business, register, movements = []) {
         if (!register) return '';
 
-        const fmtTime = (iso) => new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        const fmtTime = (iso) => new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: AR_TIME_ZONE });
         const openTime = register.opened_at ? fmtTime(register.opened_at) : '--:--';
         const closeTime = register.closed_at ? fmtTime(register.closed_at) : fmtTime(new Date().toISOString());
-        const dateStr = new Date(register.opened_at || Date.now()).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const dateStr = new Date(register.opened_at || Date.now()).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: AR_TIME_ZONE });
 
         const valid = movements.filter(m => !m.voided_at);
         const sumBy = (type, method) => valid
@@ -450,7 +457,8 @@ export const sportCanteenService = {
         const incomeTransfer = sumBy('manual_income', 'transfer');
         const expensesCash = sumBy('manual_expense', 'cash');
         const expensesTransfer = sumBy('manual_expense', 'transfer');
-        const bookingsCount = valid.filter(m => m.type === 'booking_income').length;
+        // Deposit and balance of the same booking are one court, not two
+        const bookingsCount = new Set(valid.filter(m => m.type === 'booking_income').map(m => m.booking_id || m.id)).size;
 
         // Articles sold, whether at the counter or charged together with a court
         const itemsSold = {};

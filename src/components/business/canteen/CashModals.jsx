@@ -117,13 +117,13 @@ export function CounterSaleModal({ businessId, products, onClose, onDone, showTo
     const maxFor = (p) => (p.track_stock ? Number(p.current_stock) || 0 : Infinity);
 
     const change = (p, delta) => {
-        setCart(prev => {
-            const next = Math.max(0, Math.min(maxFor(p), (prev[p.id] || 0) + delta));
-            if (delta > 0 && next === (prev[p.id] || 0)) {
-                showToast?.(`No hay más stock de ${p.name}`, 'warning');
-            }
-            return { ...prev, [p.id]: next };
-        });
+        const current = cart[p.id] || 0;
+        const next = Math.max(0, Math.min(maxFor(p), current + delta));
+        if (delta > 0 && next === current) {
+            showToast?.(`No hay más stock de ${p.name}`, 'warning');
+            return;
+        }
+        setCart(prev => ({ ...prev, [p.id]: next }));
     };
 
     const handleConfirm = async () => {
@@ -416,7 +416,8 @@ export function CloseRegisterModal({ business, register, movements, onClose, onC
     const hasCount = counted !== '' && !Number.isNaN(Number(counted));
     const previewDiff = hasCount ? Number(counted) - totals.cash : null;
 
-    const report = closed ? sportCanteenService.generateWhatsAppReport(business, closed, movements) : '';
+    const [finalMovements, setFinalMovements] = useState(null);
+    const report = closed ? sportCanteenService.generateWhatsAppReport(business, closed, finalMovements || movements) : '';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -428,6 +429,12 @@ export function CloseRegisterModal({ business, register, movements, onClose, onC
         setSaving(true);
         try {
             const result = await sportCanteenService.closeRegister(register.id, { cashCounted: counted, closedBy: closedBy.trim(), notes: notes.trim() });
+            // The register may have movements from another device: the summary uses what the database closed with
+            try {
+                setFinalMovements(await sportCanteenService.listMovements(register.id));
+            } catch {
+                // keep the movements on screen
+            }
             setClosed(result);
             showToast?.('Caja cerrada', 'success');
         } catch (err) {

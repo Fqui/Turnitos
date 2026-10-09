@@ -12,17 +12,26 @@ export const formatSignedMoney = (value) => {
     return `${n > 0 ? '+' : '-'}${formatMoney(Math.abs(n))}`;
 };
 
+// Registers are always shown in Argentina time, 24 h, whatever the device settings
+export const AR_TIME_ZONE = 'America/Argentina/Buenos_Aires';
+
 export const formatTime = (iso) => iso
-    ? new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+    ? new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: AR_TIME_ZONE })
     : '--:--';
 
 export const formatDate = (iso, opts = { day: '2-digit', month: '2-digit', year: 'numeric' }) => iso
-    ? new Date(iso).toLocaleDateString('es-AR', opts)
+    ? new Date(iso).toLocaleDateString('es-AR', { ...opts, timeZone: AR_TIME_ZONE })
     : '';
 
-export const formatLongDate = (iso) => iso
-    ? new Date(iso).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
-    : '';
+const capitalize = (text) => (text ? text.charAt(0).toUpperCase() + text.slice(1) : '');
+
+export const formatLongDate = (iso) => capitalize(formatDate(iso, { weekday: 'long', day: 'numeric', month: 'long' }));
+
+/** Day of month and short weekday in Argentina time (history list) */
+export const dayParts = (iso) => ({
+    day: formatDate(iso, { day: 'numeric' }),
+    weekday: formatDate(iso, { weekday: 'short' }).replace('.', '')
+});
 
 // Visual identity of each movement type (icon + tone used by badges and list icons)
 export const MOVEMENT_VISUALS = {
