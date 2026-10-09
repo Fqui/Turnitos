@@ -1,11 +1,8 @@
 -- ==============================================================================
--- Caja: anular un movimiento devuelve solo el stock que realmente se descontó.
---
--- Antes, vender 3 de un artículo con stock 1 dejaba el stock en 0 (no baja de 0),
--- pero anular esa venta devolvía 3 y el stock quedaba inflado.
--- Ahora cada ítem guarda "stock_deducted" (lo que se descontó de verdad) y la
--- anulación devuelve ese número. Los movimientos viejos sin ese dato siguen
--- devolviendo "quantity" como antes.
+-- Caja: la anulación devuelve solo el stock que realmente se descontó.
+-- Antes, vender 3 con stock 1 dejaba 0, pero anular devolvía 3 (stock inflado).
+-- Ahora cada ítem guarda stock_deducted; los movimientos viejos sin ese dato
+-- devuelven quantity, como antes.
 -- ==============================================================================
 
 CREATE OR REPLACE FUNCTION public.register_sport_cash_movement(
@@ -23,10 +20,10 @@ AS $$
 DECLARE
     v_register_id uuid;
     v_item jsonb;
+    v_qty int;
+    v_stock int;
+    v_deducted int;
     v_items jsonb := '[]'::jsonb;
-    v_qty integer;
-    v_stock integer;
-    v_deducted integer;
     v_mov public.sport_cash_movements;
 BEGIN
     IF NOT public.can_manage_business(p_business_id) THEN
@@ -48,29 +45,24 @@ BEGIN
     END IF;
 
     FOR v_item IN SELECT * FROM jsonb_array_elements(COALESCE(p_items, '[]'::jsonb)) LOOP
-        v_qty := GREATEST(1, COALESCE((v_item->>'quantity')::int, 1));
         v_deducted := 0;
-
         IF v_item ? 'product_id' AND COALESCE(v_item->>'product_id', '') <> '' THEN
+            v_qty := GREATEST(1, COALESCE((v_item->>'quantity')::int, 1));
             SELECT current_stock INTO v_stock
               FROM public.sport_canteen_products
              WHERE id = (v_item->>'product_id')::uuid
                AND business_id = p_business_id
                AND track_stock
              FOR UPDATE;
-
             IF FOUND THEN
-                v_deducted := LEAST(v_stock, v_qty);
+                v_deducted := LEAST(v_qty, v_stock);
                 UPDATE public.sport_canteen_products
-                   SET current_stock = v_stock - v_deducted,
+                   SET current_stock = current_stock - v_deducted,
                        updated_at = now()
                  WHERE id = (v_item->>'product_id')::uuid;
             END IF;
         END IF;
-
-        v_items := v_items || jsonb_build_array(
-            v_item || jsonb_build_object('quantity', v_qty, 'stock_deducted', v_deducted)
-        );
+        v_items := v_items || jsonb_build_array(v_item || jsonb_build_object('stock_deducted', v_deducted));
     END LOOP;
 
     INSERT INTO public.sport_cash_movements
@@ -107,10 +99,9 @@ BEGIN
     FOR v_item IN SELECT * FROM jsonb_array_elements(v_mov.items_detail) LOOP
         IF v_item ? 'product_id' AND COALESCE(v_item->>'product_id', '') <> '' THEN
             UPDATE public.sport_canteen_products
-               SET current_stock = current_stock + CASE
-                       WHEN v_item ? 'stock_deducted' THEN GREATEST(0, COALESCE((v_item->>'stock_deducted')::int, 0))
-                       ELSE GREATEST(1, COALESCE((v_item->>'quantity')::int, 1))
-                   END,
+               SET current_stock = current_stock + COALESCE(
+                       (v_item->>'stock_deducted')::int,
+                       GREATEST(1, COALESCE((v_item->>'quantity')::int, 1))),
                    updated_at = now()
              WHERE id = (v_item->>'product_id')::uuid
                AND business_id = v_mov.business_id
@@ -125,8 +116,3 @@ BEGIN
     RETURN v_mov;
 END;
 $$;
-
-REVOKE ALL ON FUNCTION public.register_sport_cash_movement(text, text, text, numeric, text, jsonb, uuid) FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.void_sport_cash_movement(uuid, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.register_sport_cash_movement(text, text, text, numeric, text, jsonb, uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.void_sport_cash_movement(uuid, text) TO authenticated;
