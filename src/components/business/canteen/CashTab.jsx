@@ -98,8 +98,15 @@ export default function CashTab({ business, register, movements, products, onReg
                 <div className="cc-alert cc-alert--amber">
                     <TrendingDown size={18} style={{ flexShrink: 0 }} />
                     <span>
-                        Stock bajo: {lowStock.slice(0, 4).map(p => `${p.name} (${p.current_stock})`).join(', ')}
-                        {lowStock.length > 4 ? ` y ${lowStock.length - 4} más` : ''}
+                        {[
+                            ['Sin stock', lowStock.filter(p => Number(p.current_stock) <= 0)],
+                            ['Stock bajo', lowStock.filter(p => Number(p.current_stock) > 0)]
+                        ].filter(([, list]) => list.length > 0).map(([label, list]) => (
+                            <span key={label} style={{ display: 'block' }}>
+                                {label}: {list.slice(0, 4).map(p => (Number(p.current_stock) > 0 ? `${p.name} (${p.current_stock})` : p.name)).join(', ')}
+                                {list.length > 4 ? ` y ${list.length - 4} más` : ''}
+                            </span>
+                        ))}
                     </span>
                 </div>
             )}

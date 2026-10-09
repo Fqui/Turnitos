@@ -870,6 +870,11 @@ textarea.cc-input {
     min-height: 0;
 }
 
+/* The body scrolls; its children keep their height instead of being squeezed */
+.cc-modal-body > * {
+    flex-shrink: 0;
+}
+
 .cc-modal-foot {
     display: flex;
     gap: 10px;
@@ -1092,7 +1097,6 @@ textarea.cc-input {
     min-width: 132px;
     text-align: center;
     font-size: 14px;
-    text-transform: capitalize;
 }
 
 /* ---------- Responsive ---------- */

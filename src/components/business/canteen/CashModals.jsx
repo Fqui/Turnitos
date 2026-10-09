@@ -100,7 +100,10 @@ export function CounterSaleModal({ businessId, products, onClose, onDone, showTo
     const categories = useMemo(() => ['Todos', ...PRODUCT_CATEGORIES.filter(c => active.some(p => p.category === c))], [active]);
     const visible = useMemo(() => {
         const q = search.trim().toLowerCase();
-        return active.filter(p => (category === 'Todos' || p.category === category) && (!q || p.name.toLowerCase().includes(q)));
+        const soldOut = (p) => (p.track_stock && (Number(p.current_stock) || 0) <= 0 ? 1 : 0);
+        return active
+            .filter(p => (category === 'Todos' || p.category === category) && (!q || p.name.toLowerCase().includes(q)))
+            .sort((a, b) => soldOut(a) - soldOut(b)); // what can be sold first
     }, [active, category, search]);
 
     const lines = useMemo(() => Object.entries(cart)

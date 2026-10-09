@@ -5,7 +5,10 @@ import { Badge, Button, EmptyState, Spinner, StatCard } from './CashUi';
 import { RegisterDetailModal } from './CashModals';
 import { dayParts, differenceLabel, differenceTone, formatDate, formatMoney, formatTime } from './cashFormat';
 
-const monthLabel = (year, month) => new Date(year, month, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+const monthLabel = (year, month) => {
+    const label = new Date(year, month, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+    return label.charAt(0).toUpperCase() + label.slice(1); // "Octubre de 2026"
+};
 
 export default function HistoryTab({ business, refreshKey, showToast }) {
     const now = new Date();
