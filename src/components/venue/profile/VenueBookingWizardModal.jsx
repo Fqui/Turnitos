@@ -42,11 +42,16 @@ export default function VenueBookingWizardModal({
     useBodyScrollLock(!!showBookingModal);
     // Deposit calculation
     const depositSettings = business?.payment_settings?.deposit || business?.metadata?.payment_settings?.deposit;
-    const hasDeposit = Boolean(depositSettings?.enabled && (Number(depositSettings?.percentage) > 0 || Number(depositSettings?.fixed_amount) > 0));
-    const depositPct = depositSettings?.percentage ? Number(depositSettings.percentage) : null;
-    const depositAmount = depositPct
-        ? Math.round(totalPrice * (depositPct / 100))
-        : (depositSettings?.fixed_amount ? Number(depositSettings.fixed_amount) : 0);
+    const depositPctValue = Number(depositSettings?.percentage) || 0;
+    const depositFixedValue = Number(depositSettings?.fixed_amount) || 0;
+    // El tipo manda; sin tipo (datos viejos) se usa fijo solo si no hay porcentaje
+    const useFixedDeposit = depositSettings?.type === 'fixed'
+        ? depositFixedValue > 0
+        : (!depositSettings?.type && depositPctValue <= 0 && depositFixedValue > 0);
+    const depositAmount = useFixedDeposit
+        ? Math.min(depositFixedValue, totalPrice)
+        : (depositPctValue > 0 ? Math.round(totalPrice * (depositPctValue / 100)) : 0);
+    const hasDeposit = Boolean(depositSettings?.enabled && depositAmount > 0);
     const remainingBalance = Math.max(0, totalPrice - depositAmount);
 
     return (

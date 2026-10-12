@@ -171,16 +171,21 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
     } else {
         const percentage = parseFloat(depositSettings.percentage);
         const fixed = parseInt(depositSettings.fixed_amount);
+        const hasValidPercentage = !isNaN(percentage) && percentage > 0;
+        const hasValidFixed = !isNaN(fixed) && fixed > 0;
+        // El tipo manda; sin tipo (datos viejos) se usa fijo solo si no hay porcentaje
+        const useFixed = depositSettings.type === 'fixed'
+            ? hasValidFixed
+            : (!depositSettings.type && !hasValidPercentage && hasValidFixed);
+        const extrasSuffix = extrasTotal > 0 ? ' + Adicionales' : '';
 
-        if (depositSettings.percentage && !isNaN(percentage) && percentage > 0) {
-            depositAmount = Math.round(basePriceAfterDiscount * (percentage / 100)) + extrasTotal;
-            depositLabel = `Seña (${percentage}%)` + (extrasTotal > 0 ? ' + Adicionales' : '');
-        } else if (!isNaN(fixed) && fixed > 0) {
+        if (useFixed) {
             depositAmount = Math.min(fixed + extrasTotal, finalPrice);
-            depositLabel = 'Seña (Monto Fijo)' + (extrasTotal > 0 ? ' + Adicionales' : '');
+            depositLabel = 'Seña' + extrasSuffix;
         } else {
-            depositAmount = Math.round(basePriceAfterDiscount * 0.3) + extrasTotal;
-            depositLabel = 'Seña (30%)' + (extrasTotal > 0 ? ' + Adicionales' : '');
+            const pct = hasValidPercentage ? percentage : 30;
+            depositAmount = Math.round(basePriceAfterDiscount * (pct / 100)) + extrasTotal;
+            depositLabel = `Seña (${pct}%)` + extrasSuffix;
         }
     }
 
