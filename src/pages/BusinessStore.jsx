@@ -391,7 +391,7 @@ export default function BusinessStore({ overrideSlug }) {
         if (window.history.state && window.history.state.idx > 0) {
             navigate(-1);
         } else if (overrideSlug) {
-            navigate(`/${overrideSlug}`);
+            navigate('/');
         } else if (businessSlug) {
             navigate(`/${businessSlug}`);
         } else {
@@ -2471,7 +2471,7 @@ export default function BusinessStore({ overrideSlug }) {
                 promotion={activePromotion}
                 business={business}
                 onSelectService={() => {
-                    navigate(`/${business.slug}?promoId=${activePromotion?.id}`);
+                    navigate(`${overrideSlug ? '/turnos' : `/${business.slug}`}?promoId=${activePromotion?.id}`);
                 }}
                 onFilterCategory={(cat) => {
                     setActiveCategory(cat);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { getSubdomain } from '../utils/utils';
 import 'leaflet/dist/leaflet.css';
 import PageLoader from '../components/common/PageLoader';
 import L from 'leaflet';
@@ -464,7 +465,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
     };
 
     const handlePromoGoToStore = (targetId) => {
-        navigate(`/${business.slug}/tienda?promoId=${activePromotion?.id}${targetId ? `&productId=${targetId}` : ''}`);
+        navigate(`${getSubdomain() ? '/tienda' : `/${business.slug}/tienda`}?promoId=${activePromotion?.id}${targetId ? `&productId=${targetId}` : ''}`);
     };
 
     // Theme Management
