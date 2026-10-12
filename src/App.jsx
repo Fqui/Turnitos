@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useRef, useCallback } from 'react';
+import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigationType, Navigate } from 'react-router-dom';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -173,17 +173,28 @@ function useScrollMemory() {
     if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
   }, []);
 
+  // Updated before the new page scrolls, so the scroll-to-top of a page swapped
+  // in place is never saved as the old entry's position.
+  const activeKey = useRef(location.key);
+  useLayoutEffect(() => {
+    activeKey.current = location.key;
+  }, [location.key]);
+
   useEffect(() => {
     const key = location.key;
-    const save = () => scrollPositions.set(key, window.scrollY);
+    const save = () => {
+      if (activeKey.current === key) scrollPositions.set(key, window.scrollY);
+    };
     window.addEventListener('scroll', save, { passive: true });
     return () => window.removeEventListener('scroll', save);
   }, [location.key]);
 }
 
-// A business page and its /turnos alias render the same screen: keep one key
-// so switching between them doesn't remount and refetch everything.
-const getRouteKey = (pathname) => pathname.replace(/\/turnos\/?$/, '') || '/';
+// All pages of one business (profile, /turnos, /tienda, /bio) share a key: moving
+// between them swaps the page in place instead of fading the whole screen out
+// and back in, which looked like a flicker. /turnos keeps the profile mounted.
+const getRouteKey = (pathname) =>
+  pathname.replace(/^(\/[^/]+)\/(?:turnos|tienda|bio)\/?$/, '$1').replace(/\/turnos\/?$/, '') || '/';
 
 const pageTransition = {
   initial: { opacity: 0 },
@@ -204,11 +215,12 @@ function AppContent() {
   }, []);
 
   // Scroll is applied once the old page has faded out, so it never jumps while
-  // still visible. Without a page change (same key) it applies right away.
+  // still visible. Without a page change (same key) it applies right away,
+  // before paint, so the new page never shows up at the old scroll position.
   const pendingScroll = useRef(0);
   const prevRoute = useRef({ pathname: location.pathname, routeKey });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const prev = prevRoute.current;
     prevRoute.current = { pathname: location.pathname, routeKey };
     // Query-only changes (home filters, search) keep the scroll as is

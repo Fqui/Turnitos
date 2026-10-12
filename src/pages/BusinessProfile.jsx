@@ -223,8 +223,12 @@ export default function BusinessProfile({ business: initialBusiness }) {
         });
     };
 
-    // Scroll to top or anchor when component mounts
+    // Scroll to the anchor, or to top when the anchor changes. On mount the app's
+    // scroll memory already decides (top on new visits, saved spot on back).
+    const prevScrollHash = useRef(location.hash);
     useEffect(() => {
+        const hashChanged = prevScrollHash.current !== location.hash;
+        prevScrollHash.current = location.hash;
         if (location.hash) {
             const id = location.hash.replace('#', '');
             const element = document.getElementById(id);
@@ -235,7 +239,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 return;
             }
         }
-        window.scrollTo(0, 0);
+        if (hashChanged) window.scrollTo(0, 0);
     }, [location.hash, loading]);
 
     // Auto-scroll when slot/specialist is selected
