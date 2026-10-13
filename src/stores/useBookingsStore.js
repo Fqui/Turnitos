@@ -120,19 +120,7 @@ export const useBookingsStore = create((set, get) => {
                     if (typeof onAlertToast === 'function') {
                         onAlertToast(customTitle || `🔔 ¡Nueva reserva web de ${customerName}!`, 'success', 8000);
                     }
-
-                    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                        try {
-                            new Notification('🔔 ¡Nueva Reserva Web Recibida!', {
-                                body: `${customerName} solicitó una reserva para el ${bookingData.date || 'día indicado'}`,
-                                icon: '/logo-turnitos.png',
-                                // Same tag as the Web Push notice, so both show up as one
-                                tag: bookingData.id ? `booking-${bookingData.id}` : undefined
-                            });
-                        } catch {
-                            // Ignored if notifications blocked
-                        }
-                    }
+                    // System notifications come only from Web Push (sw-v2.js), never from the page
                 }
             };
 
