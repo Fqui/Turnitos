@@ -23,6 +23,7 @@ import PortalAnalyticsView from '../components/business/portal/PortalAnalyticsVi
 import PortalListView from '../components/business/portal/PortalListView';
 import PortalNewBookingAlert from '../components/business/portal/PortalNewBookingAlert';
 import PortalBillingBanner from '../components/business/portal/PortalBillingBanner';
+import PortalPushPrompt from '../components/business/portal/PortalPushPrompt';
 import PortalProfileChecklist from '../components/business/portal/PortalProfileChecklist';
 import PortalPastBookingsCard from '../components/business/portal/PortalPastBookingsCard';
 import SportCanteenCashPanel from '../components/business/canteen/SportCanteenCashPanel';
@@ -284,9 +285,39 @@ export default function BusinessPortal() {
         }
     }, [viewMode, dateRange, isLoggedIn]);
 
+    // Booking to open from a push notification: ?booking=<id> on load, or a
+    // message from the service worker when the portal was already open
+    const [bookingToOpen, setBookingToOpen] = useState(() => {
+        try {
+            return new URLSearchParams(window.location.search).get('booking');
+        } catch {
+            return null;
+        }
+    });
+
     useEffect(() => {
-        pushService.initMessageListener();
-    }, []);
+        if (!('serviceWorker' in navigator)) return;
+        const handleMessage = (event) => {
+            if (event.data?.type === 'open-booking' && event.data.bookingId) {
+                setBookingToOpen(String(event.data.bookingId));
+                if (selectedBusinessId) fetchBookingsStore(selectedBusinessId, true);
+            }
+        };
+        navigator.serviceWorker.addEventListener('message', handleMessage);
+        return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
+    }, [selectedBusinessId]);
+
+    useEffect(() => {
+        if (!bookingToOpen) return;
+        const found = bookings.find(b => String(b.id) === String(bookingToOpen));
+        if (!found) return;
+        setSelectedBooking(found);
+        setShowBookingModal(true);
+        setBookingToOpen(null);
+        if (window.location.search.includes('booking=')) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, [bookingToOpen, bookings]);
 
     const getStatusLabel = (status) => {
         const labels = {
@@ -1084,6 +1115,8 @@ export default function BusinessPortal() {
                 pendingCount={bookings.filter(b => b.status === 'pending').length}
                 onCreateBooking={(e) => handleCreateBooking(e)}
                 onLogout={async () => {
+                    // Stop this device's alerts while the session can still delete its subscription
+                    await pushService.disable();
                     await supabaseService.logout();
                     setIsLoggedIn(false);
                 }}
@@ -1121,6 +1154,7 @@ export default function BusinessPortal() {
                                 onOpenSubscription={() => setViewMode('subscription')}
                             />
                         )}
+                        <PortalPushPrompt business={currentBusiness} />
                         {viewMode !== 'settings' && viewMode !== 'subscription' && (
                             <PortalProfileChecklist
                                 business={currentBusiness}

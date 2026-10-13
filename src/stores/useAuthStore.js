@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import serviceAdapter from '../services/serviceAdapter';
 import supabaseService from '../services/supabaseService';
-import { pushService } from '../services/pushService';
 
 export const useAuthStore = create((set, get) => ({
     businesses: [],
@@ -132,12 +131,6 @@ export const useAuthStore = create((set, get) => ({
                 isLoggedIn: true,
                 loading: false
             });
-
-            try {
-                await pushService.requestPermissionAndGetToken(business.id);
-            } catch (pushError) {
-                console.warn('No se pudieron activar las notificaciones push:', pushError);
-            }
 
             return fullBusiness;
         } catch (error) {

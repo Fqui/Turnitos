@@ -8,7 +8,6 @@ import { useNotification } from '../contexts/NotificationContext';
 import SEOHead from '../components/SEOHead';
 import { buildBusinessSeo } from '../utils/seo';
 import { parseAmenity } from '../components/common/AmenityIcon';
-import { pushService } from '../services/pushService';
 import { supabase } from '../services/supabaseClient';
 import 'leaflet/dist/leaflet.css';
 import PageLoader from '../components/common/PageLoader';
@@ -434,18 +433,6 @@ export default function VenueProfile({ business: initialBusiness }) {
             };
 
             await serviceAdapter.createBooking(bookingData);
-
-            try {
-                if (pushService?.notifyBusinessNewBooking) {
-                    pushService.notifyBusinessNewBooking(business.id, {
-                        customerName: bookingDetails.customerName,
-                        date: bookingDetails.date,
-                        businessName: business.name
-                    });
-                }
-            } catch (pushErr) {
-                console.warn('[VenueProfile] Push notification failed but booking created:', pushErr);
-            }
 
             setShowBookingModal(false);
             await showAlert('¡Reserva Confirmada!', 'Tu reserva ha sido creada exitosamente. Te contactaremos pronto para confirmar los detalles.', 'success', 'Aceptar');

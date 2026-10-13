@@ -63,7 +63,7 @@ const SECTIONS = [
                     Toda la información se transmite cifrada (HTTPS) y se guarda en bases de datos con acceso restringido: cada negocio solo puede ver los datos de sus propias reservas.
                 </p>
                 <p>
-                    Para funcionar usamos estos proveedores, que procesan datos solo por cuenta de TurnitosLR: Supabase (base de datos), Vercel (alojamiento del sitio) y Google Firebase (notificaciones).
+                    Para funcionar usamos estos proveedores, que procesan datos solo por cuenta de TurnitosLR: Supabase (base de datos) y Vercel (alojamiento del sitio). Los avisos de reservas al negocio viajan por el servicio de notificaciones de su navegador (Google, Apple o Mozilla, según el dispositivo).
                 </p>
                 <p>
                     Conservamos los datos de las reservas mientras el negocio use la plataforma, para su historial y estadísticas. Podés pedir que eliminemos tus datos en cualquier momento.

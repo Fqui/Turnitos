@@ -6,7 +6,6 @@ import PageLoader from '../components/common/PageLoader';
 import L from 'leaflet';
 
 import serviceAdapter from '../services/serviceAdapter';
-import { pushService } from '../services/pushService';
 import { supabase } from '../services/supabaseClient';
 import { formatDisplayDate } from '../utils/dateUtils';
 
@@ -706,19 +705,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
             if (finalDetails.coupon?.code && business.id) {
                 serviceAdapter.incrementCouponUsage(business.id, finalDetails.coupon.code)
                     .catch(e => console.warn('Could not increment coupon used_count:', e));
-            }
-
-            try {
-                if (pushService?.notifyBusinessNewBooking) {
-                    pushService.notifyBusinessNewBooking(business.id, {
-                        customerName: finalDetails.customerName,
-                        date: formatDisplayDate(selectedDate),
-                        time: finalDetails.time,
-                        businessName: business.name
-                    });
-                }
-            } catch (pushErr) {
-                console.warn('[BusinessProfile] Push notification failed:', pushErr);
             }
 
             setShowModal(false);

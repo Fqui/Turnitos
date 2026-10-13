@@ -4,7 +4,7 @@ Guía de cómo trabajar en este repo. Proyecto de un solo autor (fernando).
 
 ## Qué es
 Plataforma de reservas de turnos para complejos deportivos y negocios (turnitoslr.com).
-Stack: React 19 + Vite, Zustand, React Router, Supabase (base de datos, auth, edge functions), Firebase, deploy en Vercel.
+Stack: React 19 + Vite, Zustand, React Router, Supabase (base de datos, auth, edge functions), Web Push (VAPID), deploy en Vercel.
 
 - `src/pages`, `src/components`, `src/stores`, `src/services`: la app
 - `supabase/migrations`, `supabase/functions`: base de datos y funciones del servidor

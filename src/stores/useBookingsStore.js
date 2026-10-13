@@ -125,7 +125,9 @@ export const useBookingsStore = create((set, get) => {
                         try {
                             new Notification('🔔 ¡Nueva Reserva Web Recibida!', {
                                 body: `${customerName} solicitó una reserva para el ${bookingData.date || 'día indicado'}`,
-                                icon: '/logo-turnitos.png'
+                                icon: '/logo-turnitos.png',
+                                // Same tag as the Web Push notice, so both show up as one
+                                tag: bookingData.id ? `booking-${bookingData.id}` : undefined
                             });
                         } catch {
                             // Ignored if notifications blocked
