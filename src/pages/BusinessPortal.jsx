@@ -298,7 +298,10 @@ export default function BusinessPortal() {
     useEffect(() => {
         if (!('serviceWorker' in navigator)) return;
         const handleMessage = (event) => {
-            if (event.data?.type === 'open-booking' && event.data.bookingId) {
+            if (event.data?.type === 'open-agenda') {
+                setViewMode('calendar');
+                if (selectedBusinessId) fetchBookingsStore(selectedBusinessId, true);
+            } else if (event.data?.type === 'open-booking' && event.data.bookingId) {
                 setBookingToOpen(String(event.data.bookingId));
                 if (selectedBusinessId) fetchBookingsStore(selectedBusinessId, true);
             }

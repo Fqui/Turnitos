@@ -58,23 +58,31 @@ self.addEventListener('push', (event) => {
       badge: '/favicon-48.png',
       tag: data.tag || (data.bookingId ? `booking-${data.bookingId}` : 'turnitos-booking'),
       renotify: true,
+      requireInteraction: true,
+      vibrate: [200, 100, 200],
+      actions: [
+        { action: 'open', title: 'Ver reserva' },
+        { action: 'agenda', title: 'Abrir agenda' }
+      ],
       data: { url: data.url || '/portal', bookingId: data.bookingId || null }
     })
   );
 });
 
+// Body tap or "Ver reserva" opens that booking; "Abrir agenda" opens the calendar
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const { url = '/portal', bookingId = null } = event.notification.data || {};
+  const showAgenda = event.action === 'agenda';
 
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const portal = windows.find((client) => new URL(client.url).pathname.startsWith('/portal'));
     if (portal) {
       await portal.focus();
-      portal.postMessage({ type: 'open-booking', bookingId });
+      portal.postMessage(showAgenda ? { type: 'open-agenda' } : { type: 'open-booking', bookingId });
       return;
     }
-    await self.clients.openWindow(url);
+    await self.clients.openWindow(showAgenda ? '/portal' : url);
   })());
 });
