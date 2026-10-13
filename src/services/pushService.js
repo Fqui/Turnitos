@@ -48,6 +48,12 @@ const saveSubscription = async (businessId, subscription) => {
     if (error) throw error;
 };
 
+const hasOurKey = (subscription) => {
+    const key = subscription?.options?.applicationServerKey;
+    if (!key) return true; // Browsers that don't expose it: trust the subscription
+    return new Uint8Array(key).join() === urlBase64ToUint8Array(VAPID_PUBLIC_KEY).join();
+};
+
 const notify = () => listeners.forEach((fn) => fn());
 
 export const pushService = {
@@ -64,7 +70,8 @@ export const pushService = {
         try {
             const reg = await navigator.serviceWorker.getRegistration('/');
             const sub = await reg?.pushManager.getSubscription();
-            return sub && Notification.permission === 'granted' ? 'on' : 'off';
+            // A leftover subscription with another key (old Firebase) doesn't receive our pushes
+            return sub && Notification.permission === 'granted' && hasOurKey(sub) ? 'on' : 'off';
         } catch {
             return 'off';
         }
@@ -91,11 +98,8 @@ export const pushService = {
             const reg = await getRegistration();
             let subscription = await reg.pushManager.getSubscription();
             const expectedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-            const currentKey = subscription?.options?.applicationServerKey
-                ? new Uint8Array(subscription.options.applicationServerKey)
-                : null;
             // A subscription made with another key (e.g. the old Firebase one) can't receive our pushes
-            if (subscription && currentKey && currentKey.join() !== expectedKey.join()) {
+            if (subscription && !hasOurKey(subscription)) {
                 await subscription.unsubscribe().catch(() => {});
                 subscription = null;
             }
@@ -128,7 +132,7 @@ export const pushService = {
         try {
             const reg = await navigator.serviceWorker.getRegistration('/');
             const subscription = await reg?.pushManager.getSubscription();
-            if (subscription) await saveSubscription(businessId, subscription);
+            if (subscription && hasOurKey(subscription)) await saveSubscription(businessId, subscription);
         } catch (error) {
             console.warn('[pushService] sync warning:', error);
         }
