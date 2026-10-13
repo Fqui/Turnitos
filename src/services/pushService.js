@@ -4,7 +4,9 @@ import { supabase } from './supabaseClient';
 // notify_new_booking_push trigger + the notify-new-booking edge function:
 // the browser only subscribes and stores its subscription here.
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
+// Public key (not secret): the env var wins, this fallback keeps deploys working without it
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
+    || 'BPSIdCSQJq8Wwog-zPhYzVWR8eccbftdR8KiabtSy5yNA1N8Qs8tj1rU-t2woFC1pE-CIJXBy9C26djtetEvR-A';
 const SW_URL = '/sw-v2.js';
 
 const listeners = new Set();
