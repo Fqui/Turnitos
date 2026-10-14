@@ -52,7 +52,7 @@ export default function PortalAnalyticsView({
             </div>
 
             {/* Publicidad del Home (solo si el negocio tiene una) */}
-            <BusinessPromoStatsCard businessId={currentBusiness?.id} isMobile={isMobile} />
+            <BusinessPromoStatsCard businessId={currentBusiness?.id} businessName={currentBusiness?.name} isMobile={isMobile} />
 
             {analyticsLoading ? (
                 <div style={{ textAlign: 'center', padding: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>

@@ -230,7 +230,7 @@ const BookingDetailsModal = ({
     const defaultTotalPrice = Number(booking.price || booking.total_price || booking.totalPrice || 0);
     const initialServices = parseBookingServices(booking);
     const initialExtrasSum = initialServices.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
-    const initialBasePrice = Number(booking.base_price || booking.basePrice || Math.max(0, defaultTotalPrice + discountAmount + promoDiscountAmount + durationDiscountAmount - initialExtrasSum));
+    const initialBasePrice = Number(booking.base_price || booking.basePrice || Math.max(0, defaultTotalPrice + discountAmount + durationDiscountAmount - initialExtrasSum));
 
     const paymentSettings = biz?.payment_settings || biz?.paymentSettings || {};
     const depositSettings = paymentSettings.deposit || { enabled: false, type: 'percentage', percentage: 30, fixed_amount: 0 };

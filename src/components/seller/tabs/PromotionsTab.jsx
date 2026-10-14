@@ -14,6 +14,49 @@ const STATUS_META = {
 
 const formatNumber = (n) => Number(n || 0).toLocaleString('es-AR');
 const formatMoney = (n) => `$${Math.round(Number(n || 0)).toLocaleString('es-AR')}`;
+// Suma días a una fecha 'YYYY-MM-DD' (sin zona horaria)
+const addDays = (ymd, days) => {
+    const [y, m, d] = String(ymd).slice(0, 10).split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d + days));
+    return dt.toISOString().slice(0, 10);
+};
+// Días entre dos fechas 'YYYY-MM-DD' (b - a)
+const daysBetween = (a, b) => {
+    const [y1, m1, d1] = String(a).slice(0, 10).split('-').map(Number);
+    const [y2, m2, d2] = String(b).slice(0, 10).split('-').map(Number);
+    return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000);
+};
+
+const PERIOD_PRESETS = [7, 15, 30];
+
+const FILTERS = [
+    { id: 'all', label: 'Todas' },
+    { id: 'live', label: 'Vigentes' },
+    { id: 'scheduled', label: 'Programadas' },
+    { id: 'expired', label: 'Vencidas' },
+    { id: 'paused', label: 'Pausadas' }
+];
+
+// Texto listo para mandarle al negocio por WhatsApp con los números de su publicidad
+function buildPromoReport(promo, bizName, stats) {
+    const s = stats || { views: 0, clicks: 0, bookings: 0, revenue: 0 };
+    const ctr = s.views > 0 ? (s.clicks / s.views) * 100 : 0;
+    const start = promo.start_date ? formatDay(promo.start_date) : null;
+    const end = promo.end_date ? formatDay(promo.end_date) : null;
+    const period = start && end ? ` (del ${start} al ${end})` : (start ? ` (desde el ${start})` : '');
+    return [
+        `📢 *Tu publicidad en TurnitosLR*`,
+        `${bizName ? `*${bizName}* — ` : ''}"${promo.title}"${period}`,
+        '',
+        `👀 ${formatNumber(s.views)} vistas en el inicio`,
+        `👆 ${formatNumber(s.clicks)} clics (${ctr.toLocaleString('es-AR', { maximumFractionDigits: 1 })}%)`,
+        `📅 ${formatNumber(s.bookings)} reservas con la promo`,
+        `💰 ${formatMoney(s.revenue)} en reservas generadas`,
+        '',
+        'Gracias por confiar en TurnitosLR 🙌'
+    ].join('\n');
+}
+
 // 'YYYY-MM-DD' -> 'dd/mm/aaaa' sin correr el día por la zona horaria
 const formatDay = (value) => {
     const [y, m, d] = String(value).slice(0, 10).split('-');
@@ -117,6 +160,7 @@ export default function PromotionsTab({ businesses = [] }) {
     const [promoStats, setPromoStats] = useState({});
     const [statsError, setStatsError] = useState(false);
     const [togglingId, setTogglingId] = useState(null);
+    const [statusFilter, setStatusFilter] = useState('all');
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingPromo, setEditingPromo] = useState(null);
@@ -130,6 +174,7 @@ export default function PromotionsTab({ businesses = [] }) {
         image: '',
         business_id: '',
         action_url: '',
+        start_date: '',
         end_date: '',
         description: '',
         target_type: 'general',
@@ -259,7 +304,8 @@ export default function PromotionsTab({ businesses = [] }) {
             image: '',
             business_id: '',
             action_url: '',
-            end_date: '',
+            start_date: todayAR(),
+            end_date: addDays(todayAR(), 30),
             description: '',
             target_type: 'general',
             target_id: '',
@@ -272,7 +318,7 @@ export default function PromotionsTab({ businesses = [] }) {
         setShowModal(true);
     };
 
-    const handleOpenEdit = (promo) => {
+    const handleOpenEdit = (promo, overrides = {}) => {
         setEditingPromo(promo);
         const parsed = parsePromotionTarget(promo);
         const isUrl = promo.description?.startsWith('http://') || promo.description?.startsWith('https://') || promo.description?.startsWith('/');
@@ -282,6 +328,7 @@ export default function PromotionsTab({ businesses = [] }) {
             image: promo.image || '',
             business_id: promo.business_id || '',
             action_url: parsed.action_url || (isUrl ? promo.description : ''),
+            start_date: promo.start_date ? String(promo.start_date).slice(0, 10) : '',
             end_date: promo.end_date || (promo.expires_at ? promo.expires_at.split('T')[0] : ''),
             description: parsed.text || (isUrl ? '' : (promo.description || '')),
             target_type: parsed.target_type || 'general',
@@ -290,9 +337,28 @@ export default function PromotionsTab({ businesses = [] }) {
             discount_type: parsed.discount_type || 'percentage',
             discount_value: parsed.discount_value || '',
             code: parsed.code || '',
-            cta_text: parsed.cta_text || ''
+            cta_text: parsed.cta_text || '',
+            ...overrides
         });
         setShowModal(true);
+    };
+
+    // Renovar: abre la edición con un nuevo período de 30 días (sigue a continuación si todavía está vigente)
+    const handleRenew = (promo) => {
+        const today = todayAR();
+        const end = promo.end_date ? String(promo.end_date).slice(0, 10) : null;
+        const start = end && end >= today ? addDays(end, 1) : today;
+        handleOpenEdit(promo, { start_date: start, end_date: addDays(start, 29), renewing: true });
+    };
+
+    const handleCopyReport = async (promo, bizName) => {
+        const text = buildPromoReport(promo, bizName, promoStats[promo.id]);
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast('Reporte copiado: pegalo en el WhatsApp del negocio', 'success');
+        } catch {
+            window.prompt('Copiá el reporte:', text);
+        }
     };
 
     // Subir imagen directo a Supabase Storage (bucket business-images)
@@ -347,6 +413,10 @@ export default function PromotionsTab({ businesses = [] }) {
             showToast('El título y la imagen son obligatorios', 'error');
             return;
         }
+        if (form.start_date && form.end_date && form.end_date < form.start_date) {
+            showToast('La fecha "Hasta" no puede ser anterior a "Desde"', 'error');
+            return;
+        }
 
         setIsSaving(true);
         try {
@@ -395,14 +465,15 @@ export default function PromotionsTab({ businesses = [] }) {
                 service_id: (form.target_type === 'service' && form.target_id) ? form.target_id : null,
                 discount_type: form.discount_type || 'percentage',
                 discount_value: Number(form.discount_value || 0),
+                start_date: form.start_date || todayAR(),
                 end_date: form.end_date ? form.end_date : null,
-                // Al editar se respeta si estaba pausada; las nuevas salen activas
-                active: editingPromo ? editingPromo.active !== false : true
+                // Al editar se respeta si estaba pausada; las nuevas y las renovadas salen activas
+                active: editingPromo && !form.renewing ? editingPromo.active !== false : true
             };
 
             if (editingPromo) {
                 await supabaseService.updatePromotion(editingPromo.id, promoPayload);
-                showToast('Publicidad actualizada correctamente', 'success');
+                showToast(form.renewing ? 'Publicidad renovada' : 'Publicidad actualizada correctamente', 'success');
             } else {
                 await supabaseService.createPromotion(promoPayload);
                 showToast('Publicidad publicada en el Home con éxito', 'success');
@@ -453,7 +524,15 @@ export default function PromotionsTab({ businesses = [] }) {
     };
 
     const today = todayAR();
-    const liveCount = promotions.filter(p => getPromotionStatus(p, today) === 'live').length;
+    const statusCounts = promotions.reduce((acc, p) => {
+        const st = getPromotionStatus(p, today);
+        acc[st] = (acc[st] || 0) + 1;
+        return acc;
+    }, { all: promotions.length });
+    const liveCount = statusCounts.live || 0;
+    const visiblePromotions = statusFilter === 'all'
+        ? promotions
+        : promotions.filter(p => getPromotionStatus(p, today) === statusFilter);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -501,6 +580,35 @@ export default function PromotionsTab({ businesses = [] }) {
                 </div>
             )}
 
+            {/* Filtros por estado */}
+            {!loading && promotions.length > 0 && (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {FILTERS.map(f => {
+                        const selected = statusFilter === f.id;
+                        const count = statusCounts[f.id] || 0;
+                        return (
+                            <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => setStatusFilter(f.id)}
+                                style={{
+                                    background: selected ? 'var(--sa-primary)' : 'var(--sa-surface)',
+                                    color: selected ? '#fff' : 'var(--sa-text-2)',
+                                    border: `1px solid ${selected ? 'var(--sa-primary)' : 'var(--sa-border-strong)'}`,
+                                    borderRadius: '999px',
+                                    padding: '6px 12px',
+                                    fontSize: '12px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {f.label} ({count})
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
             {/* Grid of Promotions */}
             {loading ? (
                 <div style={{ padding: '60px', textAlign: 'center', color: 'var(--sa-text-muted)' }}>
@@ -542,10 +650,17 @@ export default function PromotionsTab({ businesses = [] }) {
                     gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
                     gap: '20px'
                 }}>
-                    {promotions.map((promo) => {
+                    {visiblePromotions.length === 0 && (
+                        <div style={{ gridColumn: '1 / -1', padding: '30px', textAlign: 'center', color: 'var(--sa-text-muted)', fontSize: '13px' }}>
+                            No hay publicidades en este estado.
+                        </div>
+                    )}
+                    {visiblePromotions.map((promo) => {
                         const status = getPromotionStatus(promo, today);
                         const statusMeta = STATUS_META[status];
                         const isOn = promo.active !== false;
+                        const promoEnd = promo.end_date || promo.expires_at;
+                        const daysLeft = promoEnd ? daysBetween(today, promoEnd) : null;
                         const linkedBiz = businesses.find(b => b.id === promo.business_id) || promo.businesses;
                         const isExternal = promo.description?.startsWith('http://') || promo.description?.startsWith('https://') || promo.description?.startsWith('/');
 
@@ -703,9 +818,19 @@ export default function PromotionsTab({ businesses = [] }) {
                                             </p>
                                         )}
 
+                                        {!(promo.end_date || promo.expires_at) && (
+                                            <p style={{ margin: '0 0 10px 0', fontSize: '11.5px', color: 'var(--sa-text-muted)' }}>
+                                                ♾️ Sin vencimiento
+                                            </p>
+                                        )}
                                         {(promo.end_date || promo.expires_at) && (
                                             <p style={{ margin: '0 0 10px 0', fontSize: '11.5px', color: 'var(--sa-text-muted)' }}>
                                                 ⏳ {status === 'expired' ? 'Venció' : 'Vence'}: {formatDay(promo.end_date || promo.expires_at)}
+                                                {status === 'live' && daysLeft !== null && (
+                                                    <strong style={{ marginLeft: '6px', color: daysLeft <= 3 ? '#f59e0b' : 'var(--sa-text-2)' }}>
+                                                        {daysLeft === 0 ? '· último día' : `· quedan ${daysLeft} día${daysLeft === 1 ? '' : 's'}`}
+                                                    </strong>
+                                                )}
                                             </p>
                                         )}
                                         {status === 'scheduled' && promo.start_date && (
@@ -764,8 +889,50 @@ export default function PromotionsTab({ businesses = [] }) {
                                         </div>
                                     </div>
 
+                                    {/* Venta: renovar y reporte para el negocio */}
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '14px', flexWrap: 'wrap' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRenew(promo)}
+                                            style={{
+                                                flex: 1,
+                                                minWidth: '120px',
+                                                background: status === 'expired' || (daysLeft !== null && daysLeft <= 3) ? 'rgba(16, 185, 129, 0.15)' : 'var(--sa-surface-2)',
+                                                border: `1px solid ${status === 'expired' || (daysLeft !== null && daysLeft <= 3) ? 'rgba(16, 185, 129, 0.45)' : 'var(--sa-border-strong)'}`,
+                                                borderRadius: '8px',
+                                                padding: '8px',
+                                                color: status === 'expired' || (daysLeft !== null && daysLeft <= 3) ? '#10b981' : 'var(--sa-text)',
+                                                fontSize: '12px',
+                                                fontWeight: '700',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            🔁 Renovar 30 días
+                                        </button>
+                                        {linkedBiz && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCopyReport(promo, linkedBiz.name)}
+                                                style={{
+                                                    flex: 1,
+                                                    minWidth: '120px',
+                                                    background: 'var(--sa-surface-2)',
+                                                    border: '1px solid var(--sa-border-strong)',
+                                                    borderRadius: '8px',
+                                                    padding: '8px',
+                                                    color: 'var(--sa-text)',
+                                                    fontSize: '12px',
+                                                    fontWeight: '700',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                📋 Copiar reporte
+                                            </button>
+                                        )}
+                                    </div>
+
                                     {/* Action Buttons */}
-                                    <div style={{ display: 'flex', gap: '8px', marginTop: '14px', borderTop: '1px solid var(--sa-border)', paddingTop: '12px' }}>
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px', borderTop: '1px solid var(--sa-border)', paddingTop: '12px' }}>
                                         <button
                                             onClick={() => handleOpenEdit(promo)}
                                             style={{
@@ -903,7 +1070,7 @@ export default function PromotionsTab({ businesses = [] }) {
                             )}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
                                     Etiqueta / Badge
@@ -926,15 +1093,79 @@ export default function PromotionsTab({ businesses = [] }) {
                                 />
                             </div>
 
-                            <div>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
-                                    Válido Hasta (Opcional)
-                                </label>
-                                <input
-                                    type="date"
-                                    value={form.end_date}
-                                    onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                        </div>
+
+                        {/* Período contratado (lo que se le vende al negocio) */}
+                        <div style={{
+                            background: 'var(--sa-hover)',
+                            border: '1px solid var(--sa-border)',
+                            borderRadius: '12px',
+                            padding: '12px 14px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '10px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--sa-text)' }}>
+                                    🗓️ Período contratado {form.renewing && <span style={{ color: '#10b981' }}>· renovación</span>}
+                                </span>
+                                <span style={{ fontSize: '11.5px', color: 'var(--sa-text-muted)' }}>
+                                    {form.start_date && form.end_date && form.end_date >= form.start_date
+                                        ? `${daysBetween(form.start_date, form.end_date) + 1} días · del ${formatDay(form.start_date)} al ${formatDay(form.end_date)}`
+                                        : (!form.end_date ? 'Sin vencimiento' : '')}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {PERIOD_PRESETS.map(days => {
+                                    const start = form.start_date || todayAR();
+                                    const selected = form.end_date === addDays(start, days - 1);
+                                    return (
+                                        <button
+                                            key={days}
+                                            type="button"
+                                            onClick={() => setForm({ ...form, start_date: start, end_date: addDays(start, days - 1) })}
+                                            style={{
+                                                background: selected ? 'var(--sa-primary)' : 'var(--sa-bg)',
+                                                color: selected ? '#fff' : 'var(--sa-text-2)',
+                                                border: `1px solid ${selected ? 'var(--sa-primary)' : 'var(--sa-border-strong)'}`,
+                                                borderRadius: '999px',
+                                                padding: '5px 12px',
+                                                fontSize: '12px',
+                                                fontWeight: '700',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {days} días
+                                        </button>
+                                    );
+                                })}
+                                <button
+                                    type="button"
+                                    onClick={() => setForm({ ...form, end_date: '' })}
                                     style={{
+                                        background: !form.end_date ? 'var(--sa-primary)' : 'var(--sa-bg)',
+                                        color: !form.end_date ? '#fff' : 'var(--sa-text-2)',
+                                        border: `1px solid ${!form.end_date ? 'var(--sa-primary)' : 'var(--sa-border-strong)'}`,
+                                        borderRadius: '999px',
+                                        padding: '5px 12px',
+                                        fontSize: '12px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Sin vencimiento
+                                </button>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
+                                        Desde
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={form.start_date}
+                                        onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                                        style={{
                                         width: '100%',
                                         padding: '10px 14px',
                                         background: 'var(--sa-bg)',
@@ -944,8 +1175,33 @@ export default function PromotionsTab({ businesses = [] }) {
                                         fontSize: '13px',
                                         boxSizing: 'border-box'
                                     }}
-                                />
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
+                                        Hasta (inclusive)
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={form.end_date}
+                                        min={form.start_date || undefined}
+                                        onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                                        style={{
+                                        width: '100%',
+                                        padding: '10px 14px',
+                                        background: 'var(--sa-bg)',
+                                        border: '1px solid var(--sa-border-strong)',
+                                        borderRadius: '8px',
+                                        color: 'var(--sa-text)',
+                                        fontSize: '13px',
+                                        boxSizing: 'border-box'
+                                    }}
+                                    />
+                                </div>
                             </div>
+                            <span style={{ fontSize: '11px', color: 'var(--sa-text-muted)' }}>
+                                Se muestra en el Home solo dentro de este período. Al vencer queda guardada como "Vencida" con sus números, lista para renovar.
+                            </span>
                         </div>
 
                         {/* Selector de Negocio Asociado */}

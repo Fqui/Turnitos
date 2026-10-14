@@ -32,6 +32,8 @@ const lazyWithRetry = (componentImport) =>
 
 // Lazy load pages for code splitting with retry
 const Home = lazyWithRetry(() => import('./pages/Home'));
+// Vista previa de publicidades: solo en desarrollo (no entra al build)
+const PromosPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/PromosPreview')) : null;
 const BusinessProfile = lazyWithRetry(() => import('./pages/BusinessProfile'));
 const VenueProfile = lazyWithRetry(() => import('./pages/VenueProfile'));
 const BusinessProfileRouter = lazyWithRetry(() => import('./pages/BusinessProfileRouter'));
@@ -231,6 +233,7 @@ function AppContent() {
                 <Route path="/business-portal" element={<BusinessPortal />} />
                 <Route path="/calificar/:token" element={<SubmitReview />} />
                 <Route path="/review/:token" element={<SubmitReview />} />
+                {import.meta.env.DEV && <Route path="/dev/promos" element={<Suspense fallback={<LoadingFallback />}><PromosPreview /></Suspense>} />}
                 {/* /:businessSlug now goes directly to the reservation / booking page */}
                 <Route path="/:businessSlug" element={<BusinessProfileRouter />} />
                 <Route path="/:businessSlug/turnos" element={<BusinessProfileRouter />} />
