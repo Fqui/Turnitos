@@ -3,14 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatDisplayDate, formatFriendlyDate, calculateEndTime } from '../utils/dateUtils';
 import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
 import CouponInput from './common/CouponInput';
+import { buildWhatsAppUrl } from '../utils/whatsapp';
+import { Info, ShoppingCart, Check } from 'lucide-react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
-let globalCachedPaymentData = {
+const globalCachedPaymentData = {
     businessId: null,
     data: null
 };
 
-export default function BookingSummary({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting, activePromotion, availableExtras }) {
+function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm, isSubmitting, activePromotion, availableExtras }) {
     const incomingBusiness = bookingDetails?.business || {};
     const selectedServiceId = bookingDetails?.service?.id || bookingDetails?.item?.id;
 
@@ -77,10 +80,11 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             paymentDataRef.current = newData;
 
             if (businessId) {
-                globalCachedPaymentData = {
-                    businessId: businessId,
-                    data: newData
-                };
+                // Caché a nivel módulo a propósito: sobrevive a remontajes del modal
+                // eslint-disable-next-line react-hooks/immutability
+                globalCachedPaymentData.businessId = businessId;
+                // eslint-disable-next-line react-hooks/immutability
+                globalCachedPaymentData.data = newData;
             }
         }
     }
@@ -88,14 +92,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
     const { business, paymentSettings, depositSettings, bankDetailsFromSettings } = paymentDataRef.current;
 
     // Block body scroll when modal is open
-    useEffect(() => {
-        document.body.style.overflow = 'hidden';
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
-    }, []);
-
-    if (!bookingDetails) return null;
+    useBodyScrollLock();
 
     const bookingRules = useMemo(() => {
         let r = business?.booking_rules || bookingDetails?.business?.booking_rules;
@@ -108,6 +105,8 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
     const cancellationPolicy = bookingRules?.cancellation || null;
 
     const [selectedExtras, setSelectedExtras] = useState(bookingDetails.extras || []);
+    // Extra whose cart button just got tapped (plays the add/remove animation)
+    const [animatedExtra, setAnimatedExtra] = useState(null);
 
     const {
         date,
@@ -172,16 +171,21 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
     } else {
         const percentage = parseFloat(depositSettings.percentage);
         const fixed = parseInt(depositSettings.fixed_amount);
+        const hasValidPercentage = !isNaN(percentage) && percentage > 0;
+        const hasValidFixed = !isNaN(fixed) && fixed > 0;
+        // El tipo manda; sin tipo (datos viejos) se usa fijo solo si no hay porcentaje
+        const useFixed = depositSettings.type === 'fixed'
+            ? hasValidFixed
+            : (!depositSettings.type && !hasValidPercentage && hasValidFixed);
+        const extrasSuffix = extrasTotal > 0 ? ' + Adicionales' : '';
 
-        if (depositSettings.percentage && !isNaN(percentage) && percentage > 0) {
-            depositAmount = Math.round(basePriceAfterDiscount * (percentage / 100)) + extrasTotal;
-            depositLabel = `Seña (${percentage}%)` + (extrasTotal > 0 ? ' + Adicionales' : '');
-        } else if (!isNaN(fixed) && fixed > 0) {
+        if (useFixed) {
             depositAmount = Math.min(fixed + extrasTotal, finalPrice);
-            depositLabel = 'Seña (Monto Fijo)' + (extrasTotal > 0 ? ' + Adicionales' : '');
+            depositLabel = 'Seña' + extrasSuffix;
         } else {
-            depositAmount = Math.round(basePriceAfterDiscount * 0.3) + extrasTotal;
-            depositLabel = 'Seña (30%)' + (extrasTotal > 0 ? ' + Adicionales' : '');
+            const pct = hasValidPercentage ? percentage : 30;
+            depositAmount = Math.round(basePriceAfterDiscount * (pct / 100)) + extrasTotal;
+            depositLabel = `Seña (${pct}%)` + extrasSuffix;
         }
     }
 
@@ -231,13 +235,9 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             
         const message = `Hola, mi nombre es ${customerName}. Reservé ${displayServiceName}${specialistText}, el día ${formattedDate} a las ${time}.${extrasText}${couponText}\n\nA continuación le envío una captura del comprobante.`;
 
-        const businessPhone = bookingDetails.businessPhone || '5493804123456';
+        // WhatsApp opens only after the booking is saved (from the success modal)
+        const whatsappUrl = buildWhatsAppUrl(bookingDetails.businessPhone, message);
 
-        // Open WhatsApp
-        const whatsappUrl = `https://wa.me/${businessPhone}?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
-
-        // Call parent confirm
         onConfirm({
             ...bookingDetails,
             customerName,
@@ -248,7 +248,8 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             coupon_code: appliedCoupon?.coupon?.code || null,
             discount: totalDiscount,
             promoDiscount,
-            couponDiscount
+            couponDiscount,
+            whatsappUrl
         });
     };
 
@@ -371,7 +372,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                             {currentStep === 1 ? 'Sumá a tu reserva' : (currentStep === 2 ? 'Tus Datos' : 'Datos de Pago')}
                         </h2>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
-                            {currentStep === 1 ? '¿Querés agregar algún adicional?' : (currentStep === 2 ? 'Completa tus datos para continuar' : (isPartial ? 'Transferí la seña para confirmar' : 'Realizá la transferencia para confirmar'))}
+                            {currentStep === 1 ? '¿Querés agregar algún adicional?' : (currentStep === 2 ? 'Completá tus datos para continuar' : (isPartial ? 'Transferí la seña para confirmar' : 'Realizá la transferencia para confirmar'))}
                         </p>
                     </div>
                 </div>
@@ -487,71 +488,74 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                             {extra.desc || extra.category || (allowsMultiple ? 'Producto adicional' : 'Servicio extra')}
                                                         </div>
                                                     </div>
-                                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                                                        <div style={{ fontSize: '13px', fontWeight: '800', color: isSelected ? sportColor : 'var(--text-primary)' }}>
-                                                            +${(Number(extra.price) * qty).toLocaleString('es-AR')}
-                                                        </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                                                        {/* One button: cart + price to add; green with check once added (tap again to remove) */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                // Only the button just tapped animates (not when the modal opens);
+                                                                // swapping is-adding / is-removing restarts the animation on each tap
+                                                                setAnimatedExtra(extra.name);
+                                                                if (isSelected) {
+                                                                    setSelectedExtras(prev => prev.filter(e => e.name !== extra.name));
+                                                                } else {
+                                                                    handleAdd();
+                                                                }
+                                                            }}
+                                                            className={`extra-cart-btn${animatedExtra === extra.name ? (isSelected ? ' is-adding' : ' is-removing') : ''}`}
+                                                            aria-pressed={isSelected}
+                                                            aria-label={isSelected ? `Quitar ${extra.name}` : `Agregar ${extra.name}`}
+                                                            title={isSelected ? 'Quitar este adicional' : 'Agregar a tu reserva'}
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '6px',
+                                                                minWidth: '96px',
+                                                                minHeight: '36px',
+                                                                padding: '8px 12px',
+                                                                borderRadius: '10px',
+                                                                border: 'none',
+                                                                backgroundColor: isSelected ? '#16A34A' : sportColor,
+                                                                color: '#FFFFFF',
+                                                                fontFamily: 'inherit',
+                                                                fontSize: '13px',
+                                                                fontWeight: '800',
+                                                                whiteSpace: 'nowrap',
+                                                                cursor: 'pointer',
+                                                                boxShadow: isSelected ? '0 4px 12px rgba(22, 163, 74, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.12)'
+                                                            }}
+                                                        >
+                                                            <span className="extra-cart-icon" aria-hidden="true">
+                                                                {isSelected
+                                                                    ? <Check size={15} strokeWidth={3} />
+                                                                    : <ShoppingCart size={15} strokeWidth={2.5} />}
+                                                            </span>
+                                                            ${(Number(extra.price) * qty).toLocaleString('es-AR')}
+                                                        </button>
 
-                                                        {isSelected ? (
-                                                            allowsMultiple ? (
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '12px', border: `1px solid ${sportColor}` }}>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={handleDecrement}
-                                                                        style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 4px' }}
-                                                                    >
-                                                                        -
-                                                                    </button>
-                                                                    <span style={{ fontSize: '12px', fontWeight: '800', color: sportColor, minWidth: '16px', textAlign: 'center' }}>
-                                                                        {qty}
-                                                                    </span>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={handleIncrement}
-                                                                        style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 4px' }}
-                                                                    >
-                                                                        +
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
+                                                        {isSelected && allowsMultiple && (
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-main)', padding: '2px 6px', borderRadius: '12px', border: '1px solid var(--border)' }}>
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => setSelectedExtras(prev => prev.filter(e => e.name !== extra.name))}
-                                                                    style={{
-                                                                        fontSize: '11px',
-                                                                        color: sportColor,
-                                                                        backgroundColor: `${sportColor}15`,
-                                                                        border: `1.5px solid ${sportColor}`,
-                                                                        fontWeight: '700',
-                                                                        padding: '4px 10px',
-                                                                        borderRadius: '10px',
-                                                                        cursor: 'pointer',
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '4px'
-                                                                    }}
-                                                                    title="Quitar este adicional"
+                                                                    onClick={handleDecrement}
+                                                                    aria-label="Uno menos"
+                                                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 6px' }}
                                                                 >
-                                                                    ✓ Agregado
+                                                                    -
                                                                 </button>
-                                                            )
-                                                        ) : (
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleAdd}
-                                                                style={{
-                                                                    fontSize: '11px',
-                                                                    color: '#000',
-                                                                    backgroundColor: sportColor,
-                                                                    fontWeight: '700',
-                                                                    padding: '5px 12px',
-                                                                    borderRadius: '10px',
-                                                                    border: 'none',
-                                                                    cursor: 'pointer'
-                                                                }}
-                                                            >
-                                                                ＋ Agregar
-                                                            </button>
+                                                                <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-primary)', minWidth: '16px', textAlign: 'center' }}>
+                                                                    {qty}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleIncrement}
+                                                                    aria-label="Uno más"
+                                                                    style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontWeight: '800', fontSize: '14px', cursor: 'pointer', padding: '0 6px' }}
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
@@ -637,7 +641,7 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                                         letterSpacing: '-0.2px',
                                                         lineHeight: 1.2
                                                     }}>
-                                                        {serviceName || courtName || 'Servicio'}
+                                                        {courtName || serviceName || 'Servicio'}
                                                     </span>
                                                     {specialistName && (
                                                         <span style={{
@@ -1001,11 +1005,11 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
                                         alignItems: 'flex-start',
                                         gap: '10px'
                                     }}>
-                                        <span style={{ fontSize: '16px' }}>ℹ️</span>
+                                        <Info size={16} aria-hidden="true" style={{ color: sportColor, flexShrink: 0, marginTop: '1px' }} />
                                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                                             <strong style={{ color: 'var(--text-primary)' }}>Política de cancelación: </strong>
                                             {cancellationPolicy.deadline_hours > 0 ? (
-                                                <>Cancela gratis hasta <strong>{cancellationPolicy.deadline_hours} hs antes</strong> del turno ({
+                                                <>Cancelás gratis hasta <strong>{cancellationPolicy.deadline_hours} hs antes</strong> del turno ({
                                                     cancellationPolicy.refund_policy === 'full' ? 'reembolso completo' :
                                                     cancellationPolicy.refund_policy === 'partial' ? 'reembolso parcial' :
                                                     'sin reembolso'
@@ -1334,12 +1338,61 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             </motion.div>
 
             <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
+                /* Botón de carrito de los adicionales */
+                .extra-cart-btn {
+                    transition: background-color 0.3s ease, transform 0.12s ease, box-shadow 0.3s ease;
+                    -webkit-tap-highlight-color: transparent;
                 }
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
+                .extra-cart-btn:active {
+                    transform: scale(0.97);
+                }
+                .extra-cart-btn.is-adding {
+                    animation: extraCartPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+                .extra-cart-btn.is-removing {
+                    animation: extraCartSettle 0.3s ease-out;
+                }
+                .extra-cart-icon {
+                    display: inline-flex;
+                }
+                .extra-cart-btn.is-adding .extra-cart-icon {
+                    animation: extraCartCheckIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+                .extra-cart-btn.is-removing .extra-cart-icon {
+                    animation: extraCartHop 0.38s ease-out;
+                }
+                @keyframes extraCartPop {
+                    0% { transform: scale(0.95); }
+                    55% { transform: scale(1.06); }
+                    100% { transform: scale(1); }
+                }
+                @keyframes extraCartSettle {
+                    0% { transform: scale(1.03); }
+                    100% { transform: scale(1); }
+                }
+                @keyframes extraCartCheckIn {
+                    0% { transform: scale(0.4) rotate(-25deg); opacity: 0; }
+                    60% { transform: translateY(-3px) scale(1.2) rotate(0deg); opacity: 1; }
+                    100% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+                }
+                @keyframes extraCartHop {
+                    0% { transform: scale(0.6); opacity: 0; }
+                    45% { transform: translateY(-4px) scale(1.1); opacity: 1; }
+                    75% { transform: translateY(1px) scale(0.98); }
+                    100% { transform: translateY(0) scale(1); opacity: 1; }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .extra-cart-btn,
+                    .extra-cart-btn:active {
+                        transition: none;
+                        transform: none;
+                    }
+                    .extra-cart-btn.is-adding,
+                    .extra-cart-btn.is-removing,
+                    .extra-cart-btn.is-adding .extra-cart-icon,
+                    .extra-cart-btn.is-removing .extra-cart-icon {
+                        animation: none;
+                    }
                 }
 
                 /* Mobile First Styles */
@@ -1386,4 +1439,10 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             `}</style>
         </div>
     );
+}
+
+// Mount the content only with booking details so its hooks always run in the same order
+export default function BookingSummary(props) {
+    if (!props.bookingDetails) return null;
+    return <BookingSummaryContent {...props} />;
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export default function ConfirmModal({
     isOpen,
@@ -11,6 +12,7 @@ export default function ConfirmModal({
     onConfirm,
     onClose
 }) {
+    useBodyScrollLock(isOpen);
     if (!isOpen) return null;
 
     return (

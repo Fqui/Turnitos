@@ -1,14 +1,23 @@
 import React from 'react';
+import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import ShareButton from '../common/ShareButton';
 
 export default function ProfileHeroBanner({
     business,
     selectedItem,
     activeStories,
-    onStoryClick
+    onStoryClick,
+    openNow = null,
+    shareUrl = ''
 }) {
     const navigate = useNavigate();
+
+    // Only real reviews: no stars at all until the business has some
+    const ratingAvg = Number(business.rating_avg || business.metadata?.rating_avg || 0);
+    const reviewsCount = Number(business.reviews_count || business.metadata?.reviews_count || 0);
+    const hasReviews = reviewsCount > 0 || ratingAvg > 0;
 
     const getSocialLink = (url, platform) => {
         if (!url) return '';
@@ -28,7 +37,7 @@ export default function ProfileHeroBanner({
             {/* Header / Banner */}
             <div className="business-profile-banner" style={{
                 position: 'relative',
-                height: window.innerWidth <= 768 ? '25vh' : '260px',
+                height: window.innerWidth <= 768 ? '25vh' : '320px',
                 minHeight: '180px',
                 maxHeight: '300px',
                 overflow: 'hidden'
@@ -37,7 +46,7 @@ export default function ProfileHeroBanner({
                     layoutId={`business-image-${business.id}`}
                     src={business.banner_image || business.image || selectedItem?.image_url}
                     alt={business.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }}
                     transition={{ duration: 0.5, ease: "circOut" }}
                 />
                 <div style={{
@@ -72,6 +81,15 @@ export default function ProfileHeroBanner({
                         <path d="M12 19l-7-7 7-7" />
                     </svg>
                 </button>
+
+                <ShareButton
+                    variant="icon"
+                    label="Compartir negocio"
+                    url={shareUrl}
+                    title={business.name}
+                    text={`Reservá tu turno online en ${business.name}:`}
+                    style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}
+                />
             </div>
 
             {/* Business Info Card */}
@@ -139,6 +157,29 @@ export default function ProfileHeroBanner({
                             <div className="business-location-row" style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
                                 <span>📍 {business.location}</span>
                             </div>
+                            {(hasReviews || openNow !== null) && (
+                                <div className="business-location-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 12px', fontSize: '13px', marginTop: '8px' }}>
+                                    {hasReviews && (
+                                        <a href="#opiniones" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--text-primary)', fontWeight: 700, textDecoration: 'none' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="#FBBF24" aria-hidden="true">
+                                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                            </svg>
+                                            {ratingAvg > 0 ? ratingAvg.toFixed(1) : ''}
+                                            {reviewsCount > 0 && (
+                                                <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+                                                    ({reviewsCount} {reviewsCount === 1 ? 'reseña' : 'reseñas'})
+                                                </span>
+                                            )}
+                                        </a>
+                                    )}
+                                    {openNow !== null && (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: openNow ? '#16a34a' : 'var(--text-secondary)' }}>
+                                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: openNow ? '#22c55e' : '#9ca3af' }} />
+                                            {openNow ? 'Abierto ahora' : 'Cerrado'}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Social Media Buttons */}
@@ -198,7 +239,7 @@ export default function ProfileHeroBanner({
                             {/* WhatsApp */}
                             {business.whatsapp && (
                                 <a
-                                    href={`https://wa.me/${business.whatsapp}`}
+                                    href={buildWhatsAppUrl(business.whatsapp)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     style={{

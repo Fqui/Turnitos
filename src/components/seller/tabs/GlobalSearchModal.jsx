@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function GlobalSearchModal({
     searchQuery,
@@ -11,6 +12,7 @@ export default function GlobalSearchModal({
     onViewSellerDetails,
     onSelectBusiness
 }) {
+    useBodyScrollLock();
     const cleanQuery = (searchQuery || '').trim().toLowerCase();
 
     const matchedBusinesses = cleanQuery

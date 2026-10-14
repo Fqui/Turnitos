@@ -1,19 +1,60 @@
 {
+    "functions": {
+        "api/page.js": {
+            "includeFiles": "dist/app.html"
+        }
+    },
     "rewrites": [
         {
-            "source": "/:slug*",
+            "source": "/sitemap.xml",
+            "destination": "/api/sitemap"
+        },
+        {
+            "source": "/",
             "has": [
                 {
-                    "type": "header",
-                    "key": "user-agent",
-                    "value": ".*(WhatsApp|whatsapp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|Discordbot|LinkedInBot|Slackbot|SkypeUriPreview).*"
+                    "type": "host",
+                    "value": "^(?!(?:www|admin|app|portal|api)\\.)(?<sub>[a-z0-9-]+)\\.turnitoslr\\.com$"
                 }
             ],
-            "destination": "/api/og?slug=:slug*"
+            "destination": "/api/page?slug=:sub&view=bio"
+        },
+        {
+            "source": "/:view(turnos|tienda)",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "^(?!(?:www|admin|app|portal|api)\\.)(?<sub>[a-z0-9-]+)\\.turnitoslr\\.com$"
+                }
+            ],
+            "destination": "/api/page?slug=:sub&view=:view"
+        },
+        {
+            "source": "/:page(ayuda|negocios|terminos|privacidad)",
+            "destination": "/api/page?page=:page"
+        },
+        {
+            "source": "/:slug([a-z0-9-]+)/:view(turnos|tienda|bio)",
+            "destination": "/api/page?slug=:slug&view=:view"
+        },
+        {
+            "source": "/:slug((?!(?:login|portal|business-portal|admin|api|assets|calificar|review)(?![a-z0-9-]))[a-z0-9-]+)",
+            "destination": "/api/page?slug=:slug&view=turnos"
         },
         {
             "source": "/(.*)",
-            "destination": "/index.html"
+            "destination": "/app.html"
+        }
+    ],
+    "headers": [
+        {
+            "source": "/:path(login|portal|business-portal|admin|admin/.*|calificar/.*|review/.*)",
+            "headers": [
+                {
+                    "key": "X-Robots-Tag",
+                    "value": "noindex, nofollow"
+                }
+            ]
         }
     ]
 }

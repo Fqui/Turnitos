@@ -1,267 +1,161 @@
-import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import { supabase } from './supabaseClient';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyCMinuCMh4aqW7-ExjdtF9l9jGkyDrVAR4",
-    authDomain: "turnitos-lr-notif-777.firebaseapp.com",
-    projectId: "turnitos-lr-notif-777",
-    storageBucket: "turnitos-lr-notif-777.firebasestorage.app",
-    messagingSenderId: "867339529728",
-    appId: "1:867339529728:web:fbf5b2760ec7f0877072e5"
+// Web Push (VAPID) for the business portal. The server side lives in the
+// notify_new_booking_push trigger + the notify-new-booking edge function:
+// the browser only subscribes and stores its subscription here.
+
+// Public key (not secret): the env var wins, this fallback keeps deploys working without it
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
+    || 'BPSIdCSQJq8Wwog-zPhYzVWR8eccbftdR8KiabtSy5yNA1N8Qs8tj1rU-t2woFC1pE-CIJXBy9C26djtetEvR-A';
+const SW_URL = '/sw-v2.js';
+
+const listeners = new Set();
+
+const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = window.atob(base64);
+    return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 };
 
-const app = initializeApp(firebaseConfig);
+const isIOS = () => typeof navigator !== 'undefined'
+    && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+
+const isStandalone = () => typeof window !== 'undefined'
+    && (window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true);
+
+const isSupported = () => typeof window !== 'undefined'
+    && 'serviceWorker' in navigator
+    && 'PushManager' in window
+    && 'Notification' in window;
+
+const getRegistration = async () => {
+    const existing = await navigator.serviceWorker.getRegistration('/');
+    if (existing?.active?.scriptURL?.includes('sw-v')) return existing;
+    await navigator.serviceWorker.register(SW_URL, { scope: '/' });
+    return navigator.serviceWorker.ready;
+};
+
+const saveSubscription = async (businessId, subscription) => {
+    const json = subscription.toJSON();
+    const { error } = await supabase.rpc('save_push_subscription', {
+        p_business_id: String(businessId),
+        p_endpoint: json.endpoint,
+        p_p256dh: json.keys?.p256dh,
+        p_auth: json.keys?.auth,
+        p_user_agent: navigator.userAgent
+    });
+    if (error) throw error;
+};
+
+const hasOurKey = (subscription) => {
+    const key = subscription?.options?.applicationServerKey;
+    if (!key) return true; // Browsers that don't expose it: trust the subscription
+    return new Uint8Array(key).join() === urlBase64ToUint8Array(VAPID_PUBLIC_KEY).join();
+};
+
+const notify = () => listeners.forEach((fn) => fn());
 
 export const pushService = {
-    async getMessagingInstance() {
-        const supported = await isSupported();
-        if (!supported) {
-            console.warn('Firebase Messaging no es soportado en este navegador/entorno.');
-            return null;
+    isConfigured: () => Boolean(VAPID_PUBLIC_KEY),
+
+    /**
+     * 'unsupported' | 'ios-install' (iPhone outside the home-screen app) |
+     * 'denied' | 'off' | 'on'
+     */
+    async getStatus() {
+        if (!isSupported()) return isIOS() && !isStandalone() ? 'ios-install' : 'unsupported';
+        if (!VAPID_PUBLIC_KEY) return 'unsupported';
+        if (Notification.permission === 'denied') return 'denied';
+        try {
+            const reg = await navigator.serviceWorker.getRegistration('/');
+            const sub = await reg?.pushManager.getSubscription();
+            // A leftover subscription with another key (old Firebase) doesn't receive our pushes
+            return sub && Notification.permission === 'granted' && hasOurKey(sub) ? 'on' : 'off';
+        } catch {
+            return 'off';
         }
-        return getMessaging(app);
     },
 
-    async requestPermissionAndGetToken(businessId) {
-        try {
-            const messaging = await this.getMessagingInstance();
-            if (!messaging) return null;
-
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                let swRegistration = null;
-                if ('serviceWorker' in navigator) {
-                    try {
-                        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                    } catch (swErr) {
-                        console.warn('Error registrando firebase-messaging-sw.js:', swErr);
-                    }
-                }
-
-                const tokenOptions = {
-                    vapidKey: 'BLqMh62YlzvkaC_E7wHWtxiVbtK3Ip5BC6fXp3FcA7MBOW3JpGR3LmCNRkMP4C8H17vl51j0R4NKSt3xg4ExAz4'
-                };
-                if (swRegistration) {
-                    tokenOptions.serviceWorkerRegistration = swRegistration;
-                }
-
-                const token = await getToken(messaging, tokenOptions);
-
-                if (token) {
-                    if (businessId) {
-                        await this.saveTokenToSupabase(businessId, token);
-                    }
-                    return token;
-                }
-            } else {
-                console.warn('Permiso de notificación denegado');
-            }
-        } catch (error) {
-            console.error('Error al solicitar permiso o token:', error);
-        }
-        return null;
+    onChange(fn) {
+        listeners.add(fn);
+        return () => listeners.delete(fn);
     },
-    async requestPermissionAndGetTokenDetailed(businessId) {
-        try {
-            if (typeof window === 'undefined' || !('Notification' in window)) {
-                return { success: false, error: 'Tu navegador no soporta notificaciones' };
-            }
 
+    /** Asks for permission (needs a user gesture) and stores this device's subscription. */
+    async enable(businessId) {
+        if (!businessId) return { success: false, error: 'No hay negocio seleccionado' };
+        if (!isSupported() || !VAPID_PUBLIC_KEY) {
+            return { success: false, error: 'Este navegador no permite avisos' };
+        }
+        try {
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') {
-                return { success: false, error: `Permiso de notificación en estado: ${permission}` };
+                notify();
+                return { success: false, error: permission === 'denied' ? 'denied' : 'Permiso no concedido' };
             }
 
-            let token = null;
-            let bravePushNotice = null;
-
-            try {
-                let swRegistration = null;
-                if ('serviceWorker' in navigator) {
-                    try {
-                        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                    } catch (swErr) {
-                        console.warn('Error registrando firebase-messaging-sw.js:', swErr);
-                    }
-                }
-
-                const messaging = await this.getMessagingInstance();
-                if (messaging) {
-                    const tokenOptions = {
-                        vapidKey: 'BLqMh62YlzvkaC_E7wHWtxiVbtK3Ip5BC6fXp3FcA7MBOW3JpGR3LmCNRkMP4C8H17vl51j0R4NKSt3xg4ExAz4'
-                    };
-                    if (swRegistration) {
-                        tokenOptions.serviceWorkerRegistration = swRegistration;
-                    }
-
-                    token = await getToken(messaging, tokenOptions);
-
-                    if (token && businessId) {
-                        await this.saveTokenToSupabase(businessId, token);
-                    }
-                }
-            } catch (pushErr) {
-                console.warn('Push registration warning (e.g. Brave/Shields):', pushErr);
-                const isBrave = (navigator.brave && typeof navigator.brave.isBrave === 'function' && await navigator.brave.isBrave()) || false;
-                if (isBrave || (pushErr.message && (pushErr.message.includes('push service error') || pushErr.message.includes('Registration failed')))) {
-                    bravePushNotice = '🦁 Alertas activadas. Si usás Brave, para recibir avisos con la app cerrada podés activar en: Configuración de Brave ➔ Privacidad y seguridad ➔ "Usar los servicios de Google para la mensajería push".';
-                }
+            const reg = await getRegistration();
+            let subscription = await reg.pushManager.getSubscription();
+            const expectedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+            // A subscription made with another key (e.g. the old Firebase one) can't receive our pushes
+            if (subscription && !hasOurKey(subscription)) {
+                await subscription.unsubscribe().catch(() => {});
+                subscription = null;
+            }
+            if (!subscription) {
+                subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: expectedKey
+                });
             }
 
-            return {
-                success: true,
-                token: token,
-                warning: bravePushNotice
-            };
+            await saveSubscription(businessId, subscription);
+            notify();
+            return { success: true };
         } catch (error) {
-            console.error('Error al solicitar permiso o token:', error);
-            return { success: false, error: error.message || String(error) };
+            console.error('[pushService] enable error:', error);
+            notify();
+            const isBrave = Boolean(navigator.brave);
+            return {
+                success: false,
+                error: isBrave
+                    ? 'En Brave activá "Usar los servicios de Google para la mensajería push" en Configuración ➔ Privacidad y seguridad.'
+                    : (error?.message || String(error))
+            };
         }
     },
 
-    async saveTokenToSupabase(businessId, token) {
-        const { error } = await supabase
-            .from('push_subscriptions')
-            .upsert({
-                business_id: businessId,
-                token: token,
-                device_type: 'web',
-                last_updated: new Date().toISOString()
-            }, { onConflict: 'business_id,token' });
-
-        if (error) {
-            console.error('Error al guardar token en Supabase:', error);
+    /** Keeps an existing subscription linked to the current business (no prompt). */
+    async syncIfEnabled(businessId) {
+        if (!businessId || !isSupported() || !VAPID_PUBLIC_KEY || Notification.permission !== 'granted') return;
+        try {
+            const reg = await navigator.serviceWorker.getRegistration('/');
+            const subscription = await reg?.pushManager.getSubscription();
+            if (subscription && hasOurKey(subscription)) await saveSubscription(businessId, subscription);
+        } catch (error) {
+            console.warn('[pushService] sync warning:', error);
         }
     },
 
-    async initMessageListener() {
-        const messaging = await this.getMessagingInstance();
-        if (!messaging) return;
-
-        onMessage(messaging, (payload) => {
-            alert(`¡Nueva Notificación!\n${payload.notification.title}: ${payload.notification.body}`);
-        });
+    /** Stops alerts on this device (used on logout too, while the session is still valid). */
+    async disable() {
+        if (!isSupported()) return;
+        try {
+            const reg = await navigator.serviceWorker.getRegistration('/');
+            const subscription = await reg?.pushManager.getSubscription();
+            if (!subscription) return;
+            await supabase.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint);
+            await subscription.unsubscribe();
+        } catch (error) {
+            console.warn('[pushService] disable warning:', error);
+        } finally {
+            notify();
+        }
     },
 
-    async notifyBusinessNewBooking(businessId, bookingInfo = {}) {
-        if (!businessId) return;
-
-        // Never notify for blocked slots or admin blockages
-        const isBlocked = bookingInfo?.status === 'blocked' ||
-            bookingInfo?.is_blocked ||
-            bookingInfo?.isBlocked ||
-            String(bookingInfo?.status || '').toLowerCase() === 'blocked' ||
-            String(bookingInfo?.customerName || '').toUpperCase().includes('BLOQUEADO') ||
-            String(bookingInfo?.customer_name || '').toUpperCase().includes('BLOQUEADO') ||
-            String(bookingInfo?.notes || '').toUpperCase().includes('BLOQUEADO') ||
-            String(bookingInfo?.title || '').toUpperCase().includes('BLOQUEADO') ||
-            String(bookingInfo?.customerPhone || '') === '-' ||
-            String(bookingInfo?.customer_phone || '') === '-';
-
-        if (isBlocked) return;
-
-        const customerName = bookingInfo.customerName || bookingInfo.customer_name || 'Un cliente';
-        const title = '🔔 ¡Nueva Reserva Web Recibida!';
-        const body = `${customerName} solicitó una reserva para el ${bookingInfo.date || 'día indicado'} en ${bookingInfo.businessName || 'tu negocio'}.`;
-
-        // 1. Instant local HTML5 BroadcastChannel for multi-tab synchronization in same browser
-        try {
-            if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-                const bc = new BroadcastChannel(`turnitos-live-${businessId}`);
-                bc.postMessage({
-                    type: 'new_booking',
-                    businessId,
-                    bookingInfo: { ...bookingInfo, customerName },
-                    title,
-                    body,
-                    timestamp: Date.now()
-                });
-                setTimeout(() => {
-                    try { bc.close(); } catch (e) { }
-                }, 1000);
-            }
-        } catch (bcErr) {
-            console.warn('[pushService] Local BroadcastChannel warning:', bcErr);
-        }
-
-        // 2. Supabase Realtime Channel Broadcast for cross-device / open portal instances
-        try {
-            const channel = supabase.channel(`business-notif-${businessId}`);
-            channel.subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    try {
-                        await channel.send({
-                            type: 'broadcast',
-                            event: 'new_booking',
-                            payload: { title, body, bookingInfo: { ...bookingInfo, customerName } }
-                        });
-                    } catch (sendErr) {
-                        console.warn('[pushService] Realtime channel send error:', sendErr);
-                    } finally {
-                        setTimeout(() => {
-                            try { supabase.removeChannel(channel); } catch (e) { }
-                        }, 3000);
-                    }
-                }
-            });
-        } catch (e) {
-            console.warn('[pushService] Supabase broadcast error:', e);
-        }
-
-        // 3. Trigger local desktop browser notification if active
-        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-            try {
-                new Notification(title, {
-                    body: body,
-                    icon: '/logo-turnitos.png',
-                    badge: '/logo-turnitos.png'
-                });
-            } catch (e) { }
-        }
-
-        // 4. FCM push notification tokens in database
-        try {
-            const { data: subs, error } = await supabase
-                .from('push_subscriptions')
-                .select('token')
-                .eq('business_id', businessId);
-
-            if (error || !subs || subs.length === 0) {
-                return;
-            }
-
-            for (const sub of subs) {
-                if (!sub.token) continue;
-                try {
-                    await fetch('https://fcm.googleapis.com/fcm/send', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            to: sub.token,
-                            notification: {
-                                title: title,
-                                body: body,
-                                icon: '/logo-turnitos.png'
-                            },
-                            data: {
-                                url: '/portal',
-                                businessId: businessId,
-                                date: bookingInfo.date || ''
-                            }
-                        })
-                    });
-                } catch (sendErr) {
-                    console.warn('[pushService] Error sending to token:', sub.token, sendErr);
-                }
-            }
-        } catch (err) {
-            console.warn('[pushService] FCM push notification warning:', err);
-        }
-    }
+    isIOS,
+    isStandalone
 };
 
 export default pushService;
-

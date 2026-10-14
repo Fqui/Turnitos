@@ -5,7 +5,12 @@ import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
 import { isPromotionLive } from '../utils/promotionUtils';
 import SEOHead from '../components/SEOHead';
+import { SITE_URL, DEFAULT_TITLE, DEFAULT_DESCRIPTION } from '../utils/seo';
 import { generateSlug } from '../utils/utils';
+import { isProfileReady } from '../utils/profileChecklist';
+
+// Orden por reputación (rating + reseñas) en la home: apagado hasta definir el criterio
+const SORT_BY_REPUTATION = false;
 
 const DEFAULT_CATEGORIES = [
     { id: 'deportes', slug: 'deportes', name: 'Deportes', icon: '⚽' },
@@ -36,6 +41,7 @@ export default function Home() {
     const loadMoreRef = useRef(null);
     const resultsRef = useRef(null);
     const searchTimeoutRef = useRef(null);
+    const syncedSearchRef = useRef(null);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -98,16 +104,30 @@ export default function Home() {
         );
     };
 
-    // Handle URL query params for initial category selection
+    // Handle URL query params (?q= search, ?category= filter)
     useEffect(() => {
+        // Skip URL changes written by the search sync below
+        if (syncedSearchRef.current === location.search) {
+            syncedSearchRef.current = null;
+            return;
+        }
+
         const params = new URLSearchParams(location.search);
         const categoryParam = params.get('category');
+        const queryParam = params.get('q') || '';
 
-        // Always reset search triggering when navigating via footer/URL to avoid filtering conflict
-        setSearchTerm('');
+        // Search comes from the URL (?q=), otherwise reset it to avoid filtering conflicts
+        setSearchTerm(queryParam);
         setSelectedSubCategory('all');
 
-        if (categoryParam) {
+        if (queryParam) {
+            setSelectedCategory('all');
+            if (resultsRef.current) {
+                setTimeout(() => {
+                    resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        } else if (categoryParam) {
             setSelectedCategory(categoryParam);
             // Scroll to results to show the filtered category
             if (resultsRef.current) {
@@ -121,6 +141,27 @@ export default function Home() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [location.search]);
+
+    // Keep ?q= in the URL in sync with the search box so searches can be shared
+    useEffect(() => {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = setTimeout(() => {
+            const params = new URLSearchParams(location.search);
+            const term = searchTerm.trim();
+            if ((params.get('q') || '') === term) return;
+
+            if (term) {
+                params.set('q', term);
+                params.delete('category');
+            } else {
+                params.delete('q');
+            }
+            const search = params.toString() ? `?${params.toString()}` : '';
+            syncedSearchRef.current = search;
+            navigate({ search }, { replace: true });
+        }, 400);
+        return () => clearTimeout(searchTimeoutRef.current);
+    }, [searchTerm, location.search, navigate]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -165,7 +206,11 @@ export default function Home() {
     const filteredBusinesses = useMemo(() => {
         const termNorm = normalizeText(searchTerm);
 
-        return businesses.filter(b => {
+        const list = businesses.filter(b => {
+            // 0. Only businesses with a complete profile are listed (the direct link still works).
+            // "Cerca mío" results don't carry services/courts, so they skip this check.
+            if (!isNearMeActive && !isProfileReady(b)) return false;
+
             // 1. Search Filter
             let matchesSearch = true;
             if (termNorm.length >= 1) {
@@ -247,8 +292,9 @@ export default function Home() {
             return hasSubcategory;
         });
 
-        // If Near Me is active, respect geographic proximity sorting from RPC
-        if (isNearMeActive) {
+        // If Near Me is active, respect geographic proximity sorting from RPC.
+        // El orden por reputación queda apagado hasta definir el orden de la home.
+        if (isNearMeActive || !SORT_BY_REPUTATION) {
             return list;
         }
 
@@ -342,6 +388,8 @@ export default function Home() {
 
     // State for suggestions
     const [showSuggestions, setShowSuggestions] = useState(false);
+    // Logos that failed to load fall back to the business initial
+    const [failedLogos, setFailedLogos] = useState(() => new Set());
 
     // Memoize suggestions based on search term
     const suggestions = useMemo(() => {
@@ -399,7 +447,7 @@ export default function Home() {
     // Handle Nav to Business from Suggestion
     const handleSelectSuggestion = (business) => {
         try {
-            sessionStorage.setItem('turnitos_booking_source', 'marketplace');
+            sessionStorage.setItem('turnitos_booking_source', JSON.stringify({ businessId: business.id, at: Date.now() }));
         } catch (e) {}
         navigate(`/${generateSlug(business.name)}`, { state: { business, fromMarketplace: true } });
         setShowSuggestions(false);
@@ -446,20 +494,15 @@ export default function Home() {
     }), []);
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-        >
+        <div>
             <SEOHead
-                title="TurnitosLR | Reserva de Turnos Online en La Rioja"
-                description="Reservá canchas de pádel, fútbol, turnos de peluquería, estética y quinchos en La Rioja. Rápido, fácil y sin esperas."
-                keywords="turnos online la rioja, canchas de padel la rioja, futbol la rioja, peluquerias la rioja, quinchos la rioja, turnitos"
-                url="https://www.turnitoslr.com"
+                title={DEFAULT_TITLE}
+                description={DEFAULT_DESCRIPTION}
+                url={`${SITE_URL}/`}
                 schema={homeSchema}
             />
             <div className="container" style={{ padding: '20px 20px 80px' }}>
+                <h1 className="sr-only">Reservá turnos online en La Rioja: canchas, barberías, estética y quinchos</h1>
 
                 {/* 1. Hero / Promotions */}
                 {(!promotionsLoaded || promotions.length > 0) && (
@@ -580,17 +623,12 @@ export default function Home() {
                                             justifyContent: 'center',
                                             flexShrink: 0
                                         }}>
-                                            {item.logo ? (
+                                            {item.logo && !failedLogos.has(item.logo) ? (
                                                 <img
                                                     src={item.logo}
                                                     alt={item.title}
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        if (e.target.parentElement) {
-                                                            e.target.parentElement.innerHTML = `<span style="font-weight: 800; font-size: 16px; color: var(--primary-paddle);">${(item.title || 'N').charAt(0).toUpperCase()}</span>`;
-                                                        }
-                                                    }}
+                                                    onError={() => setFailedLogos(prev => new Set(prev).add(item.logo))}
                                                 />
                                             ) : (
                                                 <span style={{ fontWeight: '800', fontSize: '16px', color: 'var(--primary-paddle)' }}>
@@ -909,12 +947,6 @@ export default function Home() {
                                 borderRadius: '50%',
                                 animation: 'spin 1s linear infinite'
                             }}></div>
-                            <style>{`
-                                @keyframes spin {
-                                    0% { transform: rotate(0deg); }
-                                    100% { transform: rotate(360deg); }
-                                }
-                            `}</style>
                         </div>
                     ) : (
                         <>
@@ -937,15 +969,16 @@ export default function Home() {
                             ) : (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                                     {paginatedBusinesses.map(business => (
-                                        <div
+                                        <Link
                                             key={business.id}
+                                            to={`/${generateSlug(business.name)}`}
+                                            state={{ business, fromMarketplace: true }}
                                             onClick={() => {
                                                 try {
-                                                    sessionStorage.setItem('turnitos_booking_source', 'marketplace');
+                                                    sessionStorage.setItem('turnitos_booking_source', JSON.stringify({ businessId: business.id, at: Date.now() }));
                                                 } catch (e) {}
-                                                navigate(`/${generateSlug(business.name)}`, { state: { business, fromMarketplace: true } });
                                             }}
-                                            style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                                            style={{ display: 'block', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                                         >
                                             <motion.div
                                                 className="business-card"
@@ -1019,7 +1052,7 @@ export default function Home() {
                                                     </div>
                                                 </div>
                                             </motion.div>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
@@ -1054,6 +1087,6 @@ export default function Home() {
                     )}
                 </section>
             </div>
-        </motion.div >
+        </div>
     );
 }

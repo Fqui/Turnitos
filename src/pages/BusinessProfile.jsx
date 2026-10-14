@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { getSubdomain } from '../utils/utils';
 import 'leaflet/dist/leaflet.css';
+import PageLoader from '../components/common/PageLoader';
 import L from 'leaflet';
 
 import serviceAdapter from '../services/serviceAdapter';
-import { pushService } from '../services/pushService';
 import { supabase } from '../services/supabaseClient';
 import { formatDisplayDate } from '../utils/dateUtils';
 
@@ -18,8 +18,10 @@ import BookingSummary from '../components/BookingSummary';
 import BookingSuccessModal from '../components/BookingSuccessModal';
 import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import SEOHead from '../components/SEOHead';
+import { buildBusinessSeo } from '../utils/seo';
 import PromotionModal from '../components/promotions/PromotionModal';
 import { parsePromotionTarget, isPromotionLive } from '../utils/promotionUtils';
+import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
 
 import ProfileHeroBanner from '../components/profile/ProfileHeroBanner';
 import ProfileHighlightsAndStore from '../components/profile/ProfileHighlightsAndStore';
@@ -28,6 +30,8 @@ import ProfileVenuePricingSection from '../components/profile/ProfileVenuePricin
 import ProfileVenueBookingSection from '../components/profile/ProfileVenueBookingSection';
 import ProfileSpecialistSelector from '../components/profile/ProfileSpecialistSelector';
 import ProfileInfoSection from '../components/profile/ProfileInfoSection';
+import ProfileSportSelector from '../components/profile/ProfileSportSelector';
+import { groupCourtsBySport, normalizeSport } from '../utils/sports';
 
 // Fix for default marker icon in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -44,7 +48,18 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const [searchParams] = useSearchParams();
     const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
     const [loading, setLoading] = useState(!business);
-    const isMobile = window.innerWidth <= 768;
+    // Opened from a link shared on TurnitosLR (?via=turnitos): the booking counts as marketplace
+    useEffect(() => {
+        markTurnitosVia(business?.id);
+    }, [business?.id]);
+
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
 
     useEffect(() => {
         if (initialBusiness) {
@@ -56,10 +71,12 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const [selectedItem, setSelectedItem] = useState(null); // Sport (string) or Service (object)
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedTime, setSelectedTime] = useState(null);
+    const [selectedSport, setSelectedSport] = useState(null); // Only used when the courts cover 2+ sports
     const [existingBookings, setExistingBookings] = useState([]);
     const [loadingBookings, setLoadingBookings] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successWhatsappUrl, setSuccessWhatsappUrl] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Specialist selection state
@@ -186,8 +203,32 @@ export default function BusinessProfile({ business: initialBusiness }) {
         };
     };
 
-    // Scroll to top or anchor when component mounts
+    // Is the business open right now? null when it has no schedule loaded
+    const getOpenNowStatus = () => {
+        if (!business?.hours) return null;
+        const now = new Date();
+        const hours = getBusinessHours(now);
+        if (hours.isClosed || (hours.open === '00:00' && hours.close === '00:00')) return false;
+        const toMin = (t) => {
+            const [h, m] = String(t || '').split(':').map(Number);
+            return (Number.isNaN(h) ? 0 : h) * 60 + (Number.isNaN(m) ? 0 : m);
+        };
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const ranges = hours.ranges && hours.ranges.length > 0 ? hours.ranges : [{ open: hours.open, close: hours.close }];
+        return ranges.some(range => {
+            const start = toMin(range.open);
+            let end = toMin(range.close);
+            if (end <= start) end += 1440;
+            return nowMin >= start && nowMin < end;
+        });
+    };
+
+    // Scroll to the anchor, or to top when the anchor changes. On mount the app's
+    // scroll memory already decides (top on new visits, saved spot on back).
+    const prevScrollHash = useRef(location.hash);
     useEffect(() => {
+        const hashChanged = prevScrollHash.current !== location.hash;
+        prevScrollHash.current = location.hash;
         if (location.hash) {
             const id = location.hash.replace('#', '');
             const element = document.getElementById(id);
@@ -198,7 +239,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 return;
             }
         }
-        window.scrollTo(0, 0);
+        if (hashChanged) window.scrollTo(0, 0);
     }, [location.hash, loading]);
 
     // Auto-scroll when slot/specialist is selected
@@ -320,6 +361,16 @@ export default function BusinessProfile({ business: initialBusiness }) {
         };
     }, [business?.id, selectedDate]);
 
+    // Complexes with courts of 2+ sports show a sport picker before the calendar
+    const sportGroups = useMemo(
+        () => (business?.type === 'sport' ? groupCourtsBySport(business.courts) : []),
+        [business?.type, business?.courts]
+    );
+    const isMixedSports = sportGroups.length > 1;
+    const activeSport = isMixedSports
+        ? (sportGroups.some(g => g.key === selectedSport) ? selectedSport : sportGroups[0].key)
+        : null;
+
     // Auto-select sport logic
     useEffect(() => {
         if (business && business.type === 'sport') {
@@ -376,6 +427,22 @@ export default function BusinessProfile({ business: initialBusiness }) {
         }
     }, [searchParams, business]);
 
+    // Shared service link (?servicio=<id>): open the page with that service already chosen
+    const sharedServiceHandled = useRef(null);
+    useEffect(() => {
+        const serviceId = searchParams.get('servicio');
+        if (!serviceId || !business?.services || sharedServiceHandled.current === serviceId) return;
+        const sharedService = business.services.find(s => String(s.id) === String(serviceId));
+        if (!sharedService) return;
+        sharedServiceHandled.current = serviceId;
+        setSelectedItem(sharedService);
+        setTimeout(() => {
+            calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 600);
+    }, [searchParams, business]);
+
+    const getServiceShareUrl = (service) => buildBusinessShareUrl(business.slug, '/turnos', { servicio: service.id });
+
     const handlePromoSelectService = (service) => {
         setSelectedItem(service);
         setSelectedDate(null);
@@ -397,7 +464,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
     };
 
     const handlePromoGoToStore = (targetId) => {
-        navigate(`/${business.slug}/tienda?promoId=${activePromotion?.id}${targetId ? `&productId=${targetId}` : ''}`);
+        navigate(`${getSubdomain() ? '/tienda' : `/${business.slug}/tienda`}?promoId=${activePromotion?.id}${targetId ? `&productId=${targetId}` : ''}`);
     };
 
     // Theme Management
@@ -571,30 +638,35 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 }
             }
 
-            let finalSpecialistId = selectedSpecialist?.id;
-            if (business.type === 'service' && !finalSpecialistId && availableSpecialists.length > 0) {
-                finalSpecialistId = availableSpecialists[0].id;
+            let finalSpecialistId = null;
+            if (business.type === 'service') {
+                const realSpecialists = availableSpecialists.filter(s => s.id && s.id !== 'auto-assigned');
+                if (selectedSpecialist?.id && selectedSpecialist.id !== 'auto-assigned') {
+                    finalSpecialistId = selectedSpecialist.id;
+                } else if (realSpecialists.length > 0) {
+                    // "Sin preferencia": the free specialist with the fewest bookings that day
+                    const loadOf = (specId) => existingBookings.filter(b =>
+                        String(b.specialist_id || b.metadata?.specialist_id || b.metadata?.specialist_id_raw || '') === String(specId)
+                    ).length;
+                    finalSpecialistId = realSpecialists
+                        .map(s => ({ id: s.id, load: loadOf(s.id) }))
+                        .sort((a, b) => a.load - b.load)[0].id;
+                } else if ((business.specialists || []).length > 0) {
+                    throw new Error('Ese horario ya no tiene profesionales libres. Elegí otro horario.');
+                }
             }
 
-            let finalPrice = finalDetails.price;
-            let discountApplied = finalDetails.discount || 0;
-            // El resumen ya calcula el descuento de la promo (solo si aplica al servicio elegido)
-            let promoDiscountApplied = Number(finalDetails.promoDiscount || 0);
-            if (finalDetails.promoDiscount === undefined && activePromotion && activePromotion.discount_value > 0 && discountApplied === 0) {
-                if (activePromotion.discount_type === 'fixed') {
-                    discountApplied = Math.min(activePromotion.discount_value, finalPrice);
-                } else {
-                    discountApplied = Math.round(finalPrice * (activePromotion.discount_value / 100));
-                }
-                finalPrice = finalPrice - discountApplied;
-                promoDiscountApplied = discountApplied;
-            }
+            // BookingSummary already applied the promo (only when it matches the service)
+            const finalPrice = finalDetails.price;
+            const discountApplied = finalDetails.discount || 0;
+            // Descuento de la promo por separado del cupón (para mostrarlo en el panel del negocio)
+            const promoDiscountApplied = Number(finalDetails.promoDiscount || 0);
 
             const selectedExtrasList = finalDetails.extras || [];
 
             const bookingData = {
                 businessId: business.id,
-                serviceId: business.type === 'service' ? selectedItem.id : null,
+                serviceId: business.type === 'service' ? selectedItem?.id : null,
                 courtId: business.type === 'sport' ? (finalDetails.courtId || selectedTime?.courtId) : null,
                 specialistId: business.type === 'service' ? finalSpecialistId : null,
                 date: finalDetails.date,
@@ -639,94 +711,29 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     .catch(e => console.warn('Could not increment coupon used_count:', e));
             }
 
-            try {
-                if (pushService?.notifyBusinessNewBooking) {
-                    pushService.notifyBusinessNewBooking(business.id, {
-                        customerName: finalDetails.customerName,
-                        date: formatDisplayDate(selectedDate),
-                        time: selectedTime,
-                        businessName: business.name
-                    });
-                }
-            } catch (pushErr) {
-                console.warn('[BusinessProfile] Push notification failed:', pushErr);
-            }
-
             setShowModal(false);
+            setSuccessWhatsappUrl(finalDetails.whatsappUrl || '');
             setShowSuccessModal(true);
             refreshBookings();
             setSelectedTime(null);
 
         } catch (error) {
             console.error("Booking error:", error);
-            if (error.message && error.message.includes('cupo mensual')) {
-                alert("Este negocio ha completado su cupo mensual de turnos online. Por favor contactalo por WhatsApp para coordinar tu turno.");
-            } else {
-                alert(error.message || "Hubo un error al guardar la reserva. Por favor intenta nuevamente.");
-            }
+            alert(error.message || "Hubo un error al guardar la reserva. Por favor intenta nuevamente.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    // Schema.org JSON-LD Structured Data
-    const businessSchema = useMemo(() => {
-        if (!business) return null;
-
-        const catName = (business.categories?.name || business.category || '').toLowerCase();
-        let schemaType = 'LocalBusiness';
-        if (business.type === 'sport' || catName.includes('deporte') || catName.includes('padel') || catName.includes('futbol')) {
-            schemaType = 'SportsActivityLocation';
-        } else if (business.type === 'service' || catName.includes('belleza') || catName.includes('peluqueria') || catName.includes('barberia')) {
-            schemaType = 'HealthAndBeautyBusiness';
-        } else if (business.type === 'venue' || catName.includes('quincho')) {
-            schemaType = 'EventVenue';
-        }
-
-        const ratingVal = Number(business.rating_avg || business.rating || business.metadata?.rating_avg || 5.0);
-        const reviewsNum = Number(business.reviews_count || business.metadata?.reviews_count || 1);
-
-        const schemaObj = {
-            '@context': 'https://schema.org',
-            '@type': schemaType,
-            'name': business.name,
-            'image': business.banner_image || business.logo || 'https://www.turnitoslr.com/logo-turnitos.png',
-            'url': `https://www.turnitoslr.com/${business.slug || ''}`,
-            'telephone': business.whatsapp ? `+54${business.whatsapp}` : undefined,
-            'priceRange': '$$',
-            'address': {
-                '@type': 'PostalAddress',
-                'addressLocality': business.location || 'La Rioja',
-                'addressRegion': 'La Rioja',
-                'addressCountry': 'AR'
-            }
-        };
-
-        if (business.latitude && business.longitude) {
-            schemaObj.geo = {
-                '@type': 'GeoCoordinates',
-                'latitude': Number(business.latitude),
-                'longitude': Number(business.longitude)
-            };
-        }
-
-        if (ratingVal && reviewsNum > 0) {
-            schemaObj.aggregateRating = {
-                '@type': 'AggregateRating',
-                'ratingValue': ratingVal.toFixed(1),
-                'reviewCount': reviewsNum,
-                'bestRating': '5',
-                'worstRating': '1'
-            };
-        }
-
-        return schemaObj;
-    }, [business]);
-
-    if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando negocio...</div>;
+    if (loading) return <PageLoader label="Cargando negocio..." />;
     if (!business) return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
 
-    const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel');
+    // Pádel uses its own flow (PadelBookingFlow); in a mixed complex it depends on the chosen sport
+    const showPadelFlow = business.type === 'sport' && (isMixedSports
+        ? activeSport === 'padel'
+        : business.courts?.some(c => c.sport === 'padel'));
+    // Width follows the business, not the chosen sport, so switching sports doesn't resize the page
+    const hasPadelCourts = business.type === 'sport' && business.courts?.some(c => c.sport === 'padel' || c.sport === 'paddle');
     const containerWidth = hasPadelCourts ? '1320px' : '1200px';
 
     const now = new Date();
@@ -752,26 +759,27 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const activeStories = validHighlights.filter(h => h.is_story);
     const permanentHighlights = validHighlights.filter(h => !h.is_story);
 
-    const pageTitle = `${business.name} - Turnos Online en ${business.location || 'La Rioja'}`;
-    const pageDescription = `Reservá tu turno online en ${business.name} (${business.location || 'La Rioja'}). Turnos de canchas y servicios disponibles en tiempo real.`;
-    const pageImage = business?.banner_image || business?.logo || 'https://www.turnitoslr.com/logo-turnitos.png';
+    const noFreeSpecialist = business.type === 'service' &&
+        Boolean(selectedTime) &&
+        !loadingSpecialists &&
+        (business.specialists || []).length > 0 &&
+        availableSpecialists.filter(s => s.id !== 'auto-assigned').length === 0;
+
+    const seo = buildBusinessSeo(business, 'turnos');
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
+        <div
             className="business-profile-page"
             style={{ paddingBottom: '80px', width: '100%', overflowX: 'clip' }}
         >
             <SEOHead
-                title={pageTitle}
-                description={pageDescription}
-                keywords={`${business?.name}, turnos ${business?.name}, ${business?.category || 'deportes'}, turnos online la rioja, turnitos`}
-                image={pageImage}
-                url={`https://www.turnitoslr.com/${business?.slug || ''}`}
-                schema={businessSchema}
+                title={seo.title}
+                description={seo.description}
+                image={seo.image}
+                canonical={seo.canonical}
+                robots={seo.robots}
+                schema={seo.schema}
+                brandTitle={false}
             />
 
             <div className="business-profile-card-shell" style={{ maxWidth: containerWidth }}>
@@ -780,6 +788,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     business={business}
                     selectedItem={selectedItem}
                     activeStories={activeStories}
+                    openNow={getOpenNowStatus()}
+                    shareUrl={buildBusinessShareUrl(business.slug, '/turnos')}
                     onStoryClick={() => {
                         if (activeStories && activeStories.length > 0) {
                             setStoryViewerList(activeStories);
@@ -848,10 +858,27 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     }, 100);
                                 }}
                                 color={primaryColor}
+                                businessName={business.name}
+                                getShareUrl={business.slug ? getServiceShareUrl : null}
                             />
                         </section>
                     )}
 
+
+                    {/* Sport picker (only for complexes with 2+ sports) */}
+                    {isMixedSports && (
+                        <ProfileSportSelector
+                            groups={sportGroups}
+                            selectedSport={activeSport}
+                            isMobile={isMobile}
+                            onSelect={(sport) => {
+                                if (sport === activeSport) return;
+                                setSelectedSport(sport);
+                                setSelectedTime(null);
+                                setShowModal(false);
+                            }}
+                        />
+                    )}
 
                     {/* Select Date Section */}
                     {(selectedItem || business.type === 'venue') && (
@@ -861,7 +888,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}
                         >
                             <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
-                                {business.type === 'service' ? 'Selecciona una fecha' : '1. Selecciona una fecha'}
+                                {business.type === 'service' ? 'Elegí una fecha' : '1. Elegí una fecha'}
                             </h3>
                             <div style={{
                                 backgroundColor: 'var(--bg-card)',
@@ -894,6 +921,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                         sportColor={primaryColor}
                                         maxDays={bookingRules?.advance_booking?.max_days || 30}
                                         specialDays={business?.special_days || []}
+                                        isDateClosed={(date) => Boolean(getBusinessHours(date).isClosed)}
                                     />
                                 )}
                             </div>
@@ -972,7 +1000,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 </span>
                                             </div>
                                             <div style={{ fontSize: '12px', color: '#047857', marginTop: '3px', fontWeight: '500' }}>
-                                                Precio especial aplicado a todos los turnos de hoy
+                                                Precio especial en todos los turnos de este día
                                             </div>
                                         </div>
                                     </div>
@@ -995,9 +1023,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     if (business.type === 'service') {
                                         defaultInterval = 30;
                                     } else if (business.type === 'sport') {
-                                        const sportName = typeof selectedItem === 'string'
-                                            ? selectedItem.toLowerCase()
-                                            : (business.category || '').toLowerCase();
+                                        const sportName = isMixedSports
+                                            ? activeSport
+                                            : (typeof selectedItem === 'string'
+                                                ? selectedItem.toLowerCase()
+                                                : (business.category || '').toLowerCase());
 
                                         if (sportName.includes('padel') || sportName.includes('paddle')) {
                                             defaultInterval = 30;
@@ -1018,7 +1048,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                     Cerrado
                                                 </h4>
                                                 <p style={{ fontSize: '14px' }}>Este negocio no abre el día {formatDisplayDate(selectedDate)}.</p>
-                                                <p style={{ fontSize: '14px', marginTop: '8px' }}>Por favor, selecciona otro día.</p>
+                                                <p style={{ fontSize: '14px', marginTop: '8px' }}>Elegí otro día.</p>
                                             </div>
                                         );
                                     }
@@ -1075,11 +1105,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     })();
 
                                     const resources = business.type === 'sport'
-                                        ? (business.courts || []).map(c => ({
-                                            ...c,
-                                            originalPrice: c.price || 0,
-                                            price: calculateSpecialDayPrice(c.price || 0)
-                                        }))
+                                        ? (business.courts || [])
+                                            .filter(c => !isMixedSports || normalizeSport(c.sport) === activeSport)
+                                            .map(c => ({
+                                                ...c,
+                                                originalPrice: c.price || 0,
+                                                price: calculateSpecialDayPrice(c.price || 0)
+                                            }))
                                         : (qualifiedSpecialists.length > 0
                                             ? qualifiedSpecialists.map(s => ({
                                                 id: s.id,
@@ -1100,22 +1132,26 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 capacity: 1
                                             }]);
 
-                                    const businessCapacity = business.capacity ||
+                                    const businessCapacity = (!isMixedSports && business.capacity) ||
                                         (qualifiedSpecialists.length > 0
                                             ? qualifiedSpecialists.length
                                             : (resources && resources.length > 0
                                                 ? resources.reduce((sum, r) => sum + (r.capacity || 1), 0)
                                                 : 1));
 
-                                    const hasPadel = business.type === 'sport' && resources.some(r => r.sport === 'padel');
+                                    // In a mixed complex only the chosen sport's courts (and their bookings) count
+                                    const resourceIds = new Set(resources.map(r => r.id));
+                                    const slotBookings = isMixedSports
+                                        ? existingBookings.filter(b => resourceIds.has(b.resource_id) || resourceIds.has(b.court_id))
+                                        : existingBookings;
 
-                                    if (hasPadel) {
-                                        const padelCourts = resources.filter(r => r.sport === 'padel');
+                                    if (showPadelFlow) {
+                                        const padelCourts = isMixedSports ? resources : resources.filter(r => r.sport === 'padel');
                                         return (
                                             <PadelBookingFlow
                                                 courts={padelCourts}
                                                 selectedDate={selectedDate}
-                                                existingBookings={existingBookings}
+                                                existingBookings={slotBookings}
                                                 openingTime={open}
                                                 closingTime={close}
                                                 timeRanges={ranges}
@@ -1245,7 +1281,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                             openingTime={open}
                                             closingTime={close}
                                             interval={interval}
-                                            existingBookings={existingBookings}
+                                            existingBookings={slotBookings}
                                             timeRanges={ranges}
                                             selectedDate={selectedDate}
                                             maxCapacity={business.max_capacity || 1}
@@ -1291,7 +1327,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     )}
 
                     {/* Sticky Mobile Confirmation Button */}
-                    {selectedTime && (business.type !== 'sport' || selectedTime.courtId !== null) && !business.courts?.some(c => c.sport === 'padel') && (
+                    {selectedTime && (business.type !== 'sport' || selectedTime.courtId !== null) && !showPadelFlow && (
                         <div ref={confirmRef} style={{
                             textAlign: 'center',
                             marginTop: '40px',
@@ -1304,22 +1340,22 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             <button
                                 className="btn-primary"
                                 style={{
-                                    background: primaryColor,
+                                    background: noFreeSpecialist ? '#9E9E9E' : primaryColor,
                                     color: '#fff',
                                     fontSize: '16px',
                                     fontWeight: 'bold',
                                     padding: '16px 40px',
                                     borderRadius: '50px',
                                     border: 'none',
-                                    cursor: 'pointer',
+                                    cursor: noFreeSpecialist ? 'not-allowed' : 'pointer',
                                     boxShadow: `0 10px 30px ${primaryColor}60`,
                                     width: '100%',
                                     maxWidth: '400px'
                                 }}
                                 onClick={() => setShowModal(true)}
-                                disabled={loadingSpecialists}
+                                disabled={loadingSpecialists || noFreeSpecialist}
                             >
-                                {loadingSpecialists ? 'Cargando...' : 'Continuar'}
+                                {loadingSpecialists ? 'Cargando...' : (noFreeSpecialist ? 'Elegí otro horario' : 'Continuar')}
                             </button>
                         </div>
                     )}
@@ -1332,11 +1368,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
                     {/* Business Reviews Section */}
                     {business && (
-                        <BusinessReviewsSection
-                            businessId={business.id}
-                            businessName={business.name}
-                            primaryColor={primaryColor}
-                        />
+                        <div id="opiniones" style={{ scrollMarginTop: '80px' }}>
+                            <BusinessReviewsSection
+                                businessId={business.id}
+                                businessName={business.name}
+                                primaryColor={primaryColor}
+                            />
+                        </div>
                     )}
 
                     {/* BookingSummary Modal */}
@@ -1357,6 +1395,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             <BookingSummary
                                 bookingDetails={{
                                     businessName: business.name,
+                                    serviceId: business.type === 'service' ? selectedItem?.id : null,
                                     serviceName: business.type === 'venue' ? `Alquiler ${selectedDuration}hs` : (business.type === 'service' ? selectedItem?.name : selectedItem),
                                     specialistName: selectedSpecialist?.name,
                                     date: selectedDate instanceof Date
@@ -1402,9 +1441,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     {/* Booking Success Modal */}
                     {showSuccessModal && (
                         <BookingSuccessModal
+                            whatsappUrl={successWhatsappUrl}
                             onClose={() => {
                                 setShowSuccessModal(false);
-                                navigate('/');
+                                setSuccessWhatsappUrl('');
+                                setSelectedTime(null);
+                                setSelectedSpecialist(null);
+                                setAvailableSpecialists([]);
                             }}
                         />
                     )}
@@ -1422,6 +1465,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 setStoryViewerList={setStoryViewerList}
                 activeStories={activeStories}
             />
-        </motion.div>
+        </div>
     );
 }

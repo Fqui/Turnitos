@@ -2,11 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Info, X, Calendar, CalendarCheck, CheckCircle2, ArrowRight, Sparkles, Tag } from 'lucide-react';
 import { doesPromoApplyToService, calculatePromoDiscount, parsePromotionTarget } from '../utils/promotionUtils';
+import HorizontalScroller from './HorizontalScroller';
+import ShareButton from './common/ShareButton';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
-export default function ServiceSelector({ services, selected, onSelect, color = '#00E676', activePromotion = null }) {
+// Display-only: category names come from each business ("combos" → "Combos")
+const capitalize = (text) => (typeof text === 'string' && text ? text.charAt(0).toUpperCase() + text.slice(1) : text);
+
+export default function ServiceSelector({ services, selected, onSelect, color = '#00E676', activePromotion = null, businessName = '', getShareUrl = null }) {
     const [activeCategory, setActiveCategory] = useState('Todos');
     const [categories, setCategories] = useState(['Todos']);
     const [detailService, setDetailService] = useState(null);
+    useBodyScrollLock(!!detailService);
 
     useEffect(() => {
         if (services) {
@@ -36,12 +43,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
         <div>
             {/* Category Tabs */}
             {categories.length > 2 && (
-                <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '10px',
-                    marginBottom: '20px'
-                }}>
+                <HorizontalScroller gap="10px" arrows={false} style={{ marginBottom: '20px' }} innerStyle={{ padding: '2px 0 8px' }}>
                     {categories.map(cat => (
                         <button
                             key={cat}
@@ -58,13 +60,14 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 whiteSpace: 'nowrap',
                                 transition: 'all 0.2s ease',
                                 boxShadow: activeCategory === cat ? `0 4px 12px ${color}40` : 'none',
-                                border: activeCategory === cat ? 'none' : '1px solid var(--border)'
+                                border: activeCategory === cat ? 'none' : '1px solid var(--border)',
+                                flexShrink: 0
                             }}
                         >
-                            {cat}
+                            {capitalize(cat)}
                         </button>
                     ))}
-                </div>
+                </HorizontalScroller>
             )}
 
             {/* Services Grid */}
@@ -77,7 +80,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                     return (
                         <div
                             key={service.id}
-                            onClick={() => onSelect(service)}
+                            onClick={() => setDetailService(service)}
                             style={{
                                 position: 'relative',
                                 padding: '20px',
@@ -588,6 +591,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 borderTop: '1px solid var(--border)',
                                 backgroundColor: 'var(--bg-card)',
                                 display: 'flex',
+                                flexWrap: 'wrap',
                                 gap: '12px'
                             }}>
                                 <button
@@ -607,6 +611,18 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                     Volver
                                 </button>
 
+                                {getShareUrl && (
+                                    <ShareButton
+                                        variant="compact"
+                                        label="Compartir servicio"
+                                        menuPlacement="up"
+                                        menuAlign="left"
+                                        url={getShareUrl(detailService)}
+                                        title={`${detailService.name} · ${businessName}`}
+                                        text={`Mirá ${detailService.name} en ${businessName}. Reservá tu turno online:`}
+                                    />
+                                )}
+
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -615,8 +631,8 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                         onSelect(serviceToBook);
                                     }}
                                     style={{
-                                        flex: 1,
-                                        padding: '13px 22px',
+                                        flex: '1 1 200px',
+                                        padding: '13px 18px',
                                         borderRadius: '24px',
                                         border: 'none',
                                         backgroundColor: color,
@@ -634,8 +650,8 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                     onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
                                     onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                                 >
-                                    <CalendarCheck size={18} strokeWidth={2.3} />
-                                    <span>Reservar</span>
+                                    <CalendarCheck size={18} strokeWidth={2.3} style={{ flexShrink: 0 }} />
+                                    <span>Elegir fecha y horario</span>
                                 </button>
                             </div>
                         </motion.div>

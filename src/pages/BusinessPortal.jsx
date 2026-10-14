@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import supabaseService from '../services/supabaseService';
 import serviceAdapter from '../services/serviceAdapter';
 import analyticsService from '../services/analyticsService';
@@ -9,6 +9,7 @@ import ClientManagement from '../components/ClientManagement';
 import BusinessSettings from '../components/BusinessSettings';
 import VenueSettings from '../components/venue/VenueSettings';
 import { formatDisplayDate } from '../utils/dateUtils';
+import { isRentalBusiness as isRentalBiz } from '../utils/businessUtils';
 import BusinessLogin from '../components/business/BusinessLogin';
 import BusinessPortalSidebar from '../components/business/BusinessPortalSidebar';
 import BookingDetailsModal from '../components/business/BookingDetailsModal';
@@ -22,6 +23,10 @@ import PortalAnalyticsView from '../components/business/portal/PortalAnalyticsVi
 import PortalListView from '../components/business/portal/PortalListView';
 import PortalNewBookingAlert from '../components/business/portal/PortalNewBookingAlert';
 import PortalBillingBanner from '../components/business/portal/PortalBillingBanner';
+import PortalPushPrompt from '../components/business/portal/PortalPushPrompt';
+import PortalProfileChecklist from '../components/business/portal/PortalProfileChecklist';
+import PortalPastBookingsCard from '../components/business/portal/PortalPastBookingsCard';
+import SportCanteenCashPanel from '../components/business/canteen/SportCanteenCashPanel';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuthStore, useBookingsStore, usePortalUIStore } from '../stores';
 
@@ -70,26 +75,28 @@ export default function BusinessPortal() {
         pendingBlockData
     } = usePortalUIStore();
 
+    // Settings tab to open from the "Completá tu perfil" card; cleared when leaving settings
+    const [settingsTab, setSettingsTab] = useState(null);
+    useEffect(() => {
+        if (viewMode !== 'settings') setSettingsTab(null);
+    }, [viewMode]);
+
     const loading = authLoading || bookingsLoading;
     const setLoading = (val) => {
         if (typeof setAuthLoading === 'function') setAuthLoading(val);
         if (typeof setBookingsLoading === 'function') setBookingsLoading(val);
     };
 
-    const setShowBlockModal = (show) => {
-        if (!show) closeBlockModal();
-        else openBlockModal();
-    };
-
-    const setPendingBlockData = (data) => openBlockModal(data);
-
     useEffect(() => {
         checkAutoLogin();
     }, [checkAutoLogin]);
 
-    // Scroll to top of page whenever switching view modes
+    // Scroll to top whenever switching view modes. On desktop the content
+    // scrolls inside its own container, so reset that one too.
+    const contentRef = useRef(null);
     useEffect(() => {
         window.scrollTo(0, 0);
+        if (contentRef.current) contentRef.current.scrollTop = 0;
     }, [viewMode]);
 
     // Analytics state
@@ -115,22 +122,7 @@ export default function BusinessPortal() {
         || storedBizObj
         || null;
 
-    const isRentalBusiness = Boolean(
-        currentBusiness?.type === 'venue' ||
-        currentBusiness?.type === 'alquiler' ||
-        currentBusiness?.type === 'rental' ||
-        Boolean(currentBusiness?.is_rental) ||
-        (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.category || '').toLowerCase().includes('quinta') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salon') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salón') ||
-        (currentBusiness?.category || '').toLowerCase().includes('evento') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.slug || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.slug || '').toLowerCase().includes('roma')
-    );
+    const isRentalBusiness = isRentalBiz(currentBusiness);
 
     // Compute analytics data when entering analytics view or changing date range/business/bookings
     useEffect(() => {
@@ -293,9 +285,42 @@ export default function BusinessPortal() {
         }
     }, [viewMode, dateRange, isLoggedIn]);
 
+    // Booking to open from a push notification: ?booking=<id> on load, or a
+    // message from the service worker when the portal was already open
+    const [bookingToOpen, setBookingToOpen] = useState(() => {
+        try {
+            return new URLSearchParams(window.location.search).get('booking');
+        } catch {
+            return null;
+        }
+    });
+
     useEffect(() => {
-        pushService.initMessageListener();
-    }, []);
+        if (!('serviceWorker' in navigator)) return;
+        const handleMessage = (event) => {
+            if (event.data?.type === 'open-agenda') {
+                setViewMode('calendar');
+                if (selectedBusinessId) fetchBookingsStore(selectedBusinessId, true);
+            } else if (event.data?.type === 'open-booking' && event.data.bookingId) {
+                setBookingToOpen(String(event.data.bookingId));
+                if (selectedBusinessId) fetchBookingsStore(selectedBusinessId, true);
+            }
+        };
+        navigator.serviceWorker.addEventListener('message', handleMessage);
+        return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
+    }, [selectedBusinessId]);
+
+    useEffect(() => {
+        if (!bookingToOpen) return;
+        const found = bookings.find(b => String(b.id) === String(bookingToOpen));
+        if (!found) return;
+        setSelectedBooking(found);
+        setShowBookingModal(true);
+        setBookingToOpen(null);
+        if (window.location.search.includes('booking=')) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, [bookingToOpen, bookings]);
 
     const getStatusLabel = (status) => {
         const labels = {
@@ -331,7 +356,7 @@ export default function BusinessPortal() {
             setReschedulingBooking(null);
         } catch (error) {
             console.error('Error moving booking:', error);
-            alert('No se pudo mover la reserva. Revisa la disponibilidad.');
+            alert(error?.message ? `No se pudo mover la reserva: ${error.message}` : 'No se pudo mover la reserva. Revisa la disponibilidad.');
         } finally {
             setLoading(false);
         }
@@ -342,39 +367,29 @@ export default function BusinessPortal() {
         let time = '';
         let passedResource = null;
 
-        const isRental = currentBusiness?.type === 'venue' ||
-            currentBusiness?.type === 'rental' ||
-            currentBusiness?.type === 'alquiler' ||
-            currentBusiness?.is_rental ||
-            (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-            (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
-            (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-            (currentBusiness?.category || '').toLowerCase().includes('salon') ||
-            (currentBusiness?.category || '').toLowerCase().includes('salón') ||
-            (currentBusiness?.name || '').toLowerCase().includes('quincho') ||
-            (currentBusiness?.name || '').toLowerCase().includes('salon') ||
-            (currentBusiness?.name || '').toLowerCase().includes('salón');
+        const isRental = isRentalBusiness;
 
         if (arg1 && (arg1.stopPropagation || arg1.preventDefault)) {
             if (arg2 instanceof Date) {
                 date = arg2;
-                time = arg3 || (isRental ? '00:00' : '');
+                time = arg3 || '';
                 passedResource = arg4;
             } else {
-                const dateStr = listFilters.date || new Date().toISOString().split('T')[0];
+                const nowLocal = new Date();
+                const dateStr = listFilters.date || `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
                 const [y, m, d] = dateStr.split('-');
                 date = new Date(y, m - 1, d);
                 if (isRental) {
-                    time = '00:00';
+                    time = '';
                 } else {
                     const now = new Date();
-                    const nextHour = now.getHours() + 1;
+                    const nextHour = Math.min(now.getHours() + 1, 23);
                     time = `${String(nextHour).padStart(2, '0')}:00`;
                 }
             }
         } else {
             date = arg1;
-            time = arg2 || (isRental ? '00:00' : '');
+            time = arg2 || '';
             passedResource = arg3;
         }
 
@@ -433,6 +448,22 @@ export default function BusinessPortal() {
             }
         }
 
+        // Service businesses: the calendar columns are specialists, not services
+        const clickedSpecialist = (currentBusiness?.specialists || []).find(sp => String(sp.id) === String(selectedResId));
+        let selectedSpecialistId = null;
+        if (clickedSpecialist) {
+            selectedSpecialistId = clickedSpecialist.id;
+            const specialistServices = (currentBusiness?.services || []).filter(sv =>
+                !sv.specialist_ids?.length || sv.specialist_ids.some(id => String(id) === String(clickedSpecialist.id))
+            );
+            const firstService = specialistServices[0];
+            selectedResId = firstService?.id || '';
+            selectedResName = firstService?.name || '';
+            selectedPrice = firstService?.price || 0;
+        } else if (!isRental && (currentBusiness?.specialists || []).length === 1) {
+            selectedSpecialistId = currentBusiness.specialists[0].id;
+        }
+
         const defaultDurationMinutes = isRental
             ? 240
             : Number(currentBusiness?.slot_duration || currentBusiness?.court_duration || 60);
@@ -460,17 +491,19 @@ export default function BusinessPortal() {
 
         setNewBookingData({
             date: dateStr,
-            time: time || (isRental ? '00:00' : '08:00'),
+            time: time || (isRental ? '' : '08:00'),
             customerName: '',
             customerPhone: '',
             customerEmail: '',
             serviceId: selectedResId,
             courtId: selectedResId,
+            specialistId: selectedSpecialistId,
             resourceName: selectedResName || (isRental ? (currentBusiness?.name || 'Espacio / Salón') : ''),
             price: initialBasePrice,
             basePrice: initialBasePrice,
-            duration: defaultDurationMinutes,
-            durationHours: defaultDurationHours,
+            // Courts and services: the modal picks the duration from the court sport or the service
+            duration: isRental ? defaultDurationMinutes : null,
+            durationHours: isRental ? defaultDurationHours : null,
             selectedServices: [],
             servicesTotal: 0
         });
@@ -485,20 +518,9 @@ export default function BusinessPortal() {
             return;
         }
 
-        const isRentalBiz = currentBusiness?.type === 'venue' ||
-            currentBusiness?.type === 'rental' ||
-            currentBusiness?.type === 'alquiler' ||
-            currentBusiness?.is_rental ||
-            (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-            (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
-            (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-            (currentBusiness?.category || '').toLowerCase().includes('salon') ||
-            (currentBusiness?.category || '').toLowerCase().includes('salón') ||
-            (currentBusiness?.name || '').toLowerCase().includes('quincho') ||
-            (currentBusiness?.name || '').toLowerCase().includes('salon') ||
-            (currentBusiness?.name || '').toLowerCase().includes('salón');
+        const isRentalBooking = isRentalBusiness;
 
-        if (isRentalBiz) {
+        if (isRentalBooking) {
             const hasConflict = bookings.some(b => {
                 if (b.status === 'cancelled') return false;
                 let bDate = b.date;
@@ -518,6 +540,11 @@ export default function BusinessPortal() {
                 alert(`La fecha seleccionada (${newBookingData.date}) ya se encuentra reservada u ocupada.`);
                 return;
             }
+        }
+
+        if (isRentalBooking && !newBookingData.time) {
+            alert('Indicá la hora de inicio del alquiler');
+            return;
         }
 
         if (!newBookingData.customerName || !newBookingData.customerPhone) {
@@ -550,7 +577,8 @@ export default function BusinessPortal() {
             }
         }
 
-        const isCourt = currentBusiness?.courts?.some(c => c.id === newBookingData.serviceId);
+        const isCourt = currentBusiness?.courts?.some(c => String(c.id) === String(newBookingData.serviceId));
+        const isService = currentBusiness?.services?.some(sv => String(sv.id) === String(newBookingData.serviceId));
 
         const defaultDurationMin = isRentalBusiness
             ? 240
@@ -572,7 +600,8 @@ export default function BusinessPortal() {
         const bookingData = {
             businessId: selectedBusinessId,
             business_id: selectedBusinessId,
-            serviceId: isCourt ? null : newBookingData.serviceId || null,
+            bookingSource: 'manual',
+            serviceId: isService ? newBookingData.serviceId : null,
             courtId: isCourt ? newBookingData.serviceId : null,
             specialistId: newBookingData.specialistId || null,
             date: newBookingData.date,
@@ -634,7 +663,7 @@ export default function BusinessPortal() {
             });
         } catch (error) {
             console.error('Error creating booking:', error);
-            alert('Error al crear la reserva');
+            alert(error?.message ? `No se pudo crear la reserva: ${error.message}` : 'Error al crear la reserva');
         }
     };
 
@@ -651,14 +680,13 @@ export default function BusinessPortal() {
             timeStr = prompt('Ingrese la hora a bloquear (ej: 14:00)');
             if (!timeStr) return;
             const now = new Date();
-            dateStr = now.toISOString().split('T')[0];
+            dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         }
 
         const resourceId = resource ? (resource.id || resource) : null;
         const resourceName = resource ? (resource.name || null) : null;
 
-        setPendingBlockData({ date: dateStr, time: timeStr, resourceId, resourceName });
-        setShowBlockModal(true);
+        openBlockModal({ date: dateStr, time: timeStr, resourceId, resourceName });
     };
 
     const confirmBlockSlot = async (reason) => {
@@ -670,7 +698,8 @@ export default function BusinessPortal() {
         const slotConfig = getSlotConfig(calendarType);
         const blockDuration = slotConfig.slotSize || 60;
 
-        const isSport = calendarType === 'futbol' || calendarType === 'padel' || calendarType === 'tenis';
+        const isCourtResource = (currentBusiness?.courts || []).some(c => String(c.id) === String(resourceId));
+        const isSport = isCourtResource || calendarType === 'futbol' || calendarType === 'padel' || calendarType === 'tenis';
 
         const bookingData = {
             businessId: selectedBusinessId,
@@ -698,8 +727,7 @@ export default function BusinessPortal() {
         try {
             await serviceAdapter.createBooking(bookingData);
             fetchBookings();
-            setShowBlockModal(false);
-            setPendingBlockData(null);
+            closeBlockModal();
         } catch (error) {
             console.error('Error blocking slot:', error);
             alert('Error al bloquear horario');
@@ -708,10 +736,8 @@ export default function BusinessPortal() {
 
     const handleBlockDate = async (dateStr, reason = 'Bloqueado por el negocio') => {
         try {
-            const currentBlocked = [
-                ...(currentBusiness?.blocked_dates || []),
-                ...(currentBusiness?.metadata?.blocked_dates || [])
-            ];
+            // blocked_dates is already normalized from metadata/column when the business loads
+            const currentBlocked = [...(currentBusiness?.blocked_dates || [])];
             const exists = currentBlocked.some(b => {
                 const bStr = typeof b === 'string' ? b : b?.date;
                 return bStr === dateStr;
@@ -719,13 +745,7 @@ export default function BusinessPortal() {
 
             if (!exists) {
                 const newBlocked = [...currentBlocked, { date: dateStr, reason: reason || 'Bloqueado por el negocio' }];
-                await serviceAdapter.patchBusiness(selectedBusinessId, {
-                    blocked_dates: newBlocked,
-                    metadata: {
-                        ...(currentBusiness?.metadata || {}),
-                        blocked_dates: newBlocked
-                    }
-                });
+                await serviceAdapter.patchBusiness(selectedBusinessId, { blocked_dates: newBlocked });
                 setBusinesses(prev => prev.map(b => String(b.id) === String(selectedBusinessId) ? {
                     ...b,
                     blocked_dates: newBlocked,
@@ -784,17 +804,18 @@ export default function BusinessPortal() {
 
         try {
             if (action === 'update_booking') {
+                const { historyLabel, ...updates } = payload;
                 const currentHistory = Array.isArray(selectedBooking.history) ? selectedBooking.history : [];
                 const newHistory = [...currentHistory];
                 newHistory.push({
                     action: 'updated',
-                    label: 'Reserva Editada',
+                    label: historyLabel || 'Reserva Editada',
                     timestamp: new Date().toISOString(),
                     status: selectedBooking.status
                 });
 
                 const updated = await serviceAdapter.updateBooking(selectedBooking.id, {
-                    ...payload,
+                    ...updates,
                     history: newHistory
                 });
                 await fetchBookings();
@@ -855,6 +876,15 @@ export default function BusinessPortal() {
             } else if (action === 'confirm_deposit') {
                 const currentHistory = Array.isArray(selectedBooking.history) ? selectedBooking.history : [];
                 const newHistory = [...currentHistory];
+                // e.g. "Seña cobrada en caja: $X" when the deposit went into the cash register
+                if (payload.historyLabel) {
+                    newHistory.push({
+                        action: 'updated',
+                        label: payload.historyLabel,
+                        timestamp: new Date().toISOString(),
+                        status: selectedBooking.status
+                    });
+                }
                 newHistory.push({
                     action: 'deposit_paid',
                     label: 'Seña Confirmada',
@@ -865,6 +895,15 @@ export default function BusinessPortal() {
                 await serviceAdapter.updateBookingStatus(selectedBooking.id, 'deposit_paid', {
                     history: newHistory
                 });
+                // Keep the amount that was shown as the deposit (or the one actually charged in the register)
+                const depositAmount = Number(payload.depositAmount) || 0;
+                const keepAmount = depositAmount > 0 && (payload.metadata || !Number(selectedBooking.deposit_amount || selectedBooking.metadata?.deposit_amount));
+                if (keepAmount || payload.metadata) {
+                    await serviceAdapter.updateBooking(selectedBooking.id, {
+                        ...(keepAmount ? { deposit_amount: depositAmount } : {}),
+                        ...(payload.metadata ? { metadata: payload.metadata } : {})
+                    });
+                }
                 await fetchBookings();
                 setShowBookingModal(false);
             } else if (action === 'confirm_attendance') {
@@ -908,18 +947,21 @@ export default function BusinessPortal() {
 
                 const targetDate = selectedBooking.date;
 
+                // Courts and services: unblock only the slot that was clicked
+                const isWholeDayBlock = isRentalBusiness || String(selectedBooking.id).startsWith('blocked-');
+                if (!isWholeDayBlock) {
+                    await serviceAdapter.deleteBooking(selectedBooking.id);
+                    await fetchBookings();
+                    setShowBookingModal(false);
+                    return;
+                }
+
                 const currentBlocked = (currentBusiness?.blocked_dates || currentBusiness?.metadata?.blocked_dates || []).filter(b => {
                     const d = typeof b === 'string' ? b : b?.date;
                     return d !== targetDate;
                 });
 
-                await serviceAdapter.patchBusiness(selectedBusinessId, {
-                    blocked_dates: currentBlocked,
-                    metadata: {
-                        ...(currentBusiness?.metadata || {}),
-                        blocked_dates: currentBlocked
-                    }
-                });
+                await serviceAdapter.patchBusiness(selectedBusinessId, { blocked_dates: currentBlocked });
 
                 setBusinesses(prev => prev.map(b => String(b.id) === String(selectedBusinessId) ? {
                     ...b,
@@ -949,7 +991,9 @@ export default function BusinessPortal() {
             }
         } catch (error) {
             console.error('Error in booking action:', error);
-            alert('Error al procesar la acción');
+            // The details modal shows its own error for edits
+            if (action === 'update_booking') throw error;
+            alert(error?.message ? `No se pudo completar la acción: ${error.message}` : 'Error al procesar la acción');
         }
     };
 
@@ -1074,13 +1118,15 @@ export default function BusinessPortal() {
                 pendingCount={bookings.filter(b => b.status === 'pending').length}
                 onCreateBooking={(e) => handleCreateBooking(e)}
                 onLogout={async () => {
+                    // Stop this device's alerts while the session can still delete its subscription
+                    await pushService.disable();
                     await supabaseService.logout();
                     setIsLoggedIn(false);
                 }}
             />
 
             {/* Main Content Area */}
-            <div style={{
+            <div ref={contentRef} style={{
                 flex: 1,
                 padding: isMobile ? '16px' : '24px 40px',
                 maxWidth: '1600px',
@@ -1111,6 +1157,17 @@ export default function BusinessPortal() {
                                 onOpenSubscription={() => setViewMode('subscription')}
                             />
                         )}
+                        <PortalPushPrompt business={currentBusiness} />
+                        {viewMode !== 'settings' && viewMode !== 'subscription' && (
+                            <PortalProfileChecklist
+                                business={currentBusiness}
+                                isMobile={isMobile}
+                                onOpenSettings={(tab) => {
+                                    setSettingsTab(tab);
+                                    setViewMode('settings');
+                                }}
+                            />
+                        )}
                         {viewMode === 'analytics' ? (
                             <PortalAnalyticsView
                                 metrics={metrics}
@@ -1122,6 +1179,12 @@ export default function BusinessPortal() {
                                 isMobile={isMobile}
                                 isRentalBusiness={isRentalBusiness}
                                 currentBusiness={currentBusiness}
+                            />
+                        ) : viewMode === 'caja' ? (
+                            <SportCanteenCashPanel
+                                business={currentBusiness}
+                                showToast={showToast}
+                                isMobile={isMobile}
                             />
                         ) : viewMode === 'subscription' ? (
                             <BusinessSubscriptionView
@@ -1136,6 +1199,11 @@ export default function BusinessPortal() {
                             />
                         ) : viewMode === 'calendar' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                                <PortalPastBookingsCard
+                                    bookings={bookings}
+                                    onResolved={() => fetchBookings(true)}
+                                    isMobile={isMobile}
+                                />
                                 <UpcomingRemindersCard
                                     bookings={bookings}
                                     currentBusiness={currentBusiness}
@@ -1211,6 +1279,7 @@ export default function BusinessPortal() {
                                 <VenueSettings
                                     business={currentBusiness}
                                     isMobile={isMobile}
+                                    initialTab={settingsTab}
                                     onUpdate={(updated) => {
                                         setBusinesses(prev => {
                                             const exists = prev.some(b => String(b.id) === String(updated.id));
@@ -1229,6 +1298,7 @@ export default function BusinessPortal() {
                                 <BusinessSettings
                                     business={currentBusiness}
                                     isMobile={isMobile}
+                                    initialTab={settingsTab}
                                     onUpdate={(updated) => {
                                         setBusinesses(prev => {
                                             const exists = prev.some(b => String(b.id) === String(updated.id));
@@ -1275,6 +1345,10 @@ export default function BusinessPortal() {
                 isMobile={isMobile}
                 formatDisplayDate={formatDisplayDate}
                 getStatusLabel={getStatusLabel}
+                onGoToCashRegister={() => {
+                    setShowBookingModal(false);
+                    setViewMode('caja');
+                }}
             />
 
             {/* New Booking Modal */}
@@ -1293,8 +1367,7 @@ export default function BusinessPortal() {
             <BlockSlotModal
                 isOpen={showBlockModal}
                 onClose={() => {
-                    setShowBlockModal(false);
-                    setPendingBlockData(null);
+                    closeBlockModal();
                 }}
                 onConfirm={confirmBlockSlot}
                 date={pendingBlockData?.date}

@@ -86,8 +86,8 @@ export default function ReviewsTab({ bookingsData, businesses }) {
         }
     };
 
-    // Filter bookings
-    const allBookings = bookingsData?.recentBookings || [];
+    // Only bookings that already happened can be reviewed
+    const allBookings = (bookingsData?.recentBookings || []).filter(b => b.status === 'completed');
     const filteredBookings = allBookings.filter(b => {
         const matchesTerm = !searchTerm || 
             (b.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -294,7 +294,7 @@ export default function ReviewsTab({ bookingsData, businesses }) {
                                                                 fontSize: '11px',
                                                                 fontWeight: '600'
                                                             }}>
-                                                                Pendiente
+                                                                Sin enviar
                                                             </span>
                                                         )}
                                                     </td>

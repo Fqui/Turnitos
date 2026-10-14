@@ -1,7 +1,5 @@
 import { supabase } from '../supabaseClient';
-import { calculateBookingCommission, isFreePlan } from '../../utils/subscriptionUtils';
-
-const isUuid = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+import { calculateBookingCommission } from '../../utils/subscriptionUtils';
 
 // Helper function to convert Date to YYYY-MM-DD in local timezone (not UTC)
 export const formatDateLocal = (date) => {
@@ -151,17 +149,17 @@ export async function createBooking(bookingData) {
     }
 
     const dateStr = formatDateLocal(bookingData.date);
-    const startTime = `${dateStr}T${bookingData.time}:00`;
+    // Business hours are Argentina time; the database stores start_time/end_time with that offset
+    const AR_OFFSET = '-03:00';
+    const startTime = `${dateStr}T${bookingData.time}:00${AR_OFFSET}`;
 
     const duration = bookingData.duration || 60;
-    const [hours, minutes] = bookingData.time.split(':').map(Number);
-    const endMinutes = hours * 60 + minutes + duration;
-    const endHours = Math.floor(endMinutes / 60) % 24;
-    const endMins = endMinutes % 60;
-    const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
-    const endTime = `${dateStr}T${endTimeStr}:00`;
+    const endTime = new Date(new Date(startTime).getTime() + duration * 60000).toISOString();
 
-    if (finalResourceId) {
+    // Services are checked per specialist (the same service can be booked with
+    // different specialists at once); the database trigger does that check.
+    const isSpecialistBooking = Boolean(bookingData.specialistId || bookingData.specialist_id);
+    if (finalResourceId && !isSpecialistBooking) {
         const { data: conflicts, error: conflictError } = await supabase
             .from('bookings_public')
             .select('id')
@@ -177,6 +175,24 @@ export async function createBooking(bookingData) {
 
         if (conflicts && conflicts.length > 0) {
             throw new Error(`Este turno ya está reservado.`);
+        }
+    }
+
+    // The database trigger skips the business owner, so check the specialist here too
+    const specialistToCheck = bookingData.specialistId || bookingData.specialist_id;
+    if (isSpecialistBooking && /^[0-9a-f-]{36}$/i.test(String(specialistToCheck))) {
+        const { data: spConflicts, error: spConflictError } = await supabase
+            .from('bookings_public')
+            .select('id')
+            .eq('specialist_id', specialistToCheck)
+            .neq('status', 'cancelled')
+            .neq('status', 'rejected')
+            .lt('start_time', endTime)
+            .gt('end_time', startTime);
+
+        if (spConflictError) throw spConflictError;
+        if (spConflicts && spConflicts.length > 0) {
+            throw new Error('Ese profesional ya tiene un turno en ese horario.');
         }
     }
 
@@ -204,8 +220,11 @@ export async function createBooking(bookingData) {
 
     let bookingSource = bookingData.bookingSource || bookingData.booking_source || bookingData.metadata?.booking_source;
     if (!bookingSource && typeof window !== 'undefined') {
+        // Marketplace only when the customer reached THIS business from the TurnitosLR search in the last 24 h
         try {
-            bookingSource = sessionStorage.getItem('turnitos_booking_source') || 'direct';
+            const mark = JSON.parse(sessionStorage.getItem('turnitos_booking_source') || 'null');
+            const isRecent = mark?.at && Date.now() - mark.at < 24 * 60 * 60 * 1000;
+            bookingSource = isRecent && String(mark.businessId) === String(targetBusinessId) ? 'marketplace' : 'direct';
         } catch (e) {
             bookingSource = 'direct';
         }
@@ -226,33 +245,6 @@ export async function createBooking(bookingData) {
                 targetBusinessType = bData.type;
             }
         } catch (e) { }
-    }
-
-    if (isFreePlan(businessPlanId)) {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const startOfMonth = `${year}-${month}-01`;
-        const lastDayNum = new Date(year, now.getMonth() + 1, 0).getDate();
-        const endOfMonth = `${year}-${month}-${String(lastDayNum).padStart(2, '0')}`;
-
-        try {
-            const { count: monthlyBookingsCount } = await supabase
-                .from('bookings_public')
-                .select('id', { count: 'exact', head: true })
-                .eq('business_id', targetBusinessId)
-                .neq('status', 'cancelled')
-                .gte('date', startOfMonth)
-                .lte('date', endOfMonth);
-
-            if (monthlyBookingsCount !== null && monthlyBookingsCount >= 100) {
-                throw new Error('Este negocio ha alcanzado su cupo mensual de 100 reservas online.');
-            }
-        } catch (err) {
-            if (err.message && err.message.includes('cupo mensual')) {
-                throw err;
-            }
-        }
     }
 
     const bookingPrice = Number(bookingData.price || bookingData.total_price || bookingData.totalPrice || 0);
@@ -344,9 +336,11 @@ export async function createBooking(bookingData) {
         selected_services: bookingData.selectedServices || bookingData.selected_services || [],
         services_total: bookingData.servicesTotal || bookingData.services_total || 0,
         base_price: bookingData.basePrice || bookingData.base_price || null,
-        // Publicidad del Home que originó la reserva (para métricas y para que el negocio lo vea)
-        promo_id: isUuid(bookingData.promo_id || bookingData.promoId) ? (bookingData.promo_id || bookingData.promoId) : null,
-        discount_applied: Math.max(0, Number(bookingData.discount_applied ?? bookingData.discountApplied ?? 0) || 0)
+        promo_id: /^[0-9a-f-]{36}$/i.test(String(bookingData.promo_id || bookingData.promoId || ''))
+            ? (bookingData.promo_id || bookingData.promoId)
+            : null,
+        discount_applied: Number(bookingData.discount_applied || bookingData.discountApplied || 0),
+        history: Array.isArray(bookingData.history) ? bookingData.history : []
     };
 
     const { error } = await supabase
@@ -471,6 +465,32 @@ export async function moveBooking(id, newDate, newTime, newItemId) {
         updated_at: new Date().toISOString()
     };
 
+    const { data: current, error: currentError } = await supabase
+        .from('bookings')
+        .select('id, duration, resource_id, court_id, specialist_id')
+        .eq('id', id)
+        .single();
+    if (currentError) throw currentError;
+
+    let targetSpecialistId = current.specialist_id;
+    let targetResourceId = current.resource_id || current.court_id;
+
+    if (newItemId) {
+        try {
+            const { data: specialist } = await supabase
+                .from('specialists')
+                .select('id')
+                .eq('id', newItemId)
+                .maybeSingle();
+            if (specialist) {
+                // Service calendars: the column is the professional
+                updateData.specialist_id = newItemId;
+                targetSpecialistId = newItemId;
+                newItemId = null;
+            }
+        } catch (err) { }
+    }
+
     if (newItemId) {
         try {
             const { data: court } = await supabase
@@ -497,6 +517,28 @@ export async function moveBooking(id, newDate, newTime, newItemId) {
                 }
             }
         } catch (err) { }
+        if (updateData.resource_id) targetResourceId = updateData.resource_id;
+    }
+
+    // The database guard skips the owner, so check the new slot here
+    const startTime = `${formatDateLocal(newDate)}T${newTime}:00-03:00`;
+    const endTime = new Date(new Date(startTime).getTime() + (Number(current.duration) || 60) * 60000).toISOString();
+    const column = targetSpecialistId ? 'specialist_id' : 'resource_id';
+    const columnValue = targetSpecialistId || targetResourceId;
+    if (columnValue) {
+        const { data: conflicts, error: conflictError } = await supabase
+            .from('bookings_public')
+            .select('id')
+            .eq(column, columnValue)
+            .neq('id', id)
+            .neq('status', 'cancelled')
+            .neq('status', 'rejected')
+            .lt('start_time', endTime)
+            .gt('end_time', startTime);
+        if (conflictError) throw conflictError;
+        if (conflicts && conflicts.length > 0) {
+            throw new Error('Ese horario ya está ocupado.');
+        }
     }
 
     const { data, error } = await supabase

@@ -33,6 +33,12 @@ const BookingsTab = ({ bookingsData }) => {
                 return { bg: 'rgba(245, 158, 11, 0.1)', color: 'var(--sa-warning)', label: 'Pendiente' };
             case 'cancelled':
                 return { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', label: 'Cancelada' };
+            case 'completed':
+                return { bg: 'var(--sa-primary-soft)', color: 'var(--sa-primary-text)', label: 'Completada' };
+            case 'blocked':
+                return { bg: 'rgba(148, 163, 184, 0.1)', color: 'var(--sa-text-muted)', label: 'Bloqueado' };
+            case 'no_show':
+                return { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', label: 'No asistió' };
             default:
                 return { bg: 'rgba(148, 163, 184, 0.1)', color: 'var(--sa-text-muted)', label: status };
         }
@@ -48,7 +54,7 @@ const BookingsTab = ({ bookingsData }) => {
             `"${(b.customer_phone || '').replace(/"/g, '""')}"`,
             `"${(b.business_name || b.businesses?.name || 'Negocio').replace(/"/g, '""')}"`,
             `"${formatDate(b.created_at)}"`,
-            `"${b.status || ''}"`,
+            `"${getStatusColor(b.status).label || ''}"`,
             b.price || 0
         ]);
 
@@ -86,6 +92,7 @@ const BookingsTab = ({ bookingsData }) => {
                     icon="💰"
                     label="Ingresos Totales"
                     value={formatCurrency(bookingsData.totalRevenue)}
+                    subtitle="Solo reservas completadas"
                 />
                 <BookingMetricCard
                     icon="💵"

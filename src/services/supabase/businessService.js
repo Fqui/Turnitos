@@ -73,13 +73,12 @@ export function processBusinessData(data) {
         business.metadata = {};
     }
 
+    // The portal saves these in metadata (and now also in the column); metadata wins when present
     const directBlocked = Array.isArray(business.blocked_dates) ? business.blocked_dates : [];
-    const metaBlocked = Array.isArray(business.metadata?.blocked_dates) ? business.metadata.blocked_dates : [];
-    business.blocked_dates = directBlocked.length > 0 ? directBlocked : metaBlocked;
+    business.blocked_dates = Array.isArray(business.metadata?.blocked_dates) ? business.metadata.blocked_dates : directBlocked;
 
     const directTiers = Array.isArray(business.pricing_tiers) ? business.pricing_tiers : [];
-    const metaTiers = Array.isArray(business.metadata?.pricing_tiers) ? business.metadata.pricing_tiers : [];
-    business.pricing_tiers = directTiers.length > 0 ? directTiers : metaTiers;
+    business.pricing_tiers = Array.isArray(business.metadata?.pricing_tiers) ? business.metadata.pricing_tiers : directTiers;
 
     const parseDiscounts = (val) => {
         if (val && typeof val === 'object' && !Array.isArray(val)) return val;
@@ -94,8 +93,7 @@ export function processBusinessData(data) {
     business.duration_discounts = parseDiscounts(business.duration_discounts) || parseDiscounts(business.metadata?.duration_discounts) || {};
 
     const directCoupons = Array.isArray(business.coupons) ? business.coupons : [];
-    const metaCoupons = Array.isArray(business.metadata?.coupons) ? business.metadata.coupons : [];
-    business.coupons = directCoupons.length > 0 ? directCoupons : metaCoupons;
+    business.coupons = Array.isArray(business.metadata?.coupons) ? business.metadata.coupons : directCoupons;
 
     if (!business.whatsapp_templates && business.metadata?.whatsapp_templates) {
         business.whatsapp_templates = business.metadata.whatsapp_templates;
@@ -117,19 +115,18 @@ export function processBusinessData(data) {
         } catch (e) { }
     }
 
-    if (business.logo_url && !business.logo) {
-        business.logo = business.logo_url;
-    }
-    if (business.logo && !business.logo_url) {
-        business.logo_url = business.logo;
-    }
-    if (business.banner_url && !business.banner_image) {
-        business.banner_image = business.banner_url;
-    }
-    if (business.banner_image && !business.banner_url) {
-        business.banner_url = business.banner_image;
-    }
+    // *_url is what the portal has always saved, so it is the most recent value
+    business.logo = business.logo_url || business.logo || null;
+    business.logo_url = business.logo;
+    business.banner_image = business.banner_url || business.banner_image || null;
+    business.banner_url = business.banner_image;
     if (Array.isArray(business.courts) && business.courts.length > 0) {
+        // "Disabled" lives on the court's resources row
+        const courtResources = (business.bookable_resources || []).filter(r => r.type === 'court');
+        business.courts = business.courts.map(c => {
+            const res = courtResources.find(r => String(r.metadata?.court_id) === String(c.id));
+            return res && c.active === undefined ? { ...c, active: res.active !== false } : c;
+        });
         business.courts = [...business.courts].sort((a, b) => 
             (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
         );
@@ -172,7 +169,8 @@ export async function getBusinesses() {
                 )
             ),
             courts (*),
-            specialists (*)
+            specialists (*),
+            bookable_resources:resources (id, name, type, base_price, active, metadata)
         `);
 
     if (error) throw error;
@@ -253,7 +251,8 @@ export async function getBusinessById(id) {
                     specialists (*)
                 )
             ),
-            courts (*)
+            courts (*),
+            bookable_resources:resources (id, name, type, base_price, active, metadata)
         `)
         .eq('id', id)
         .single();
@@ -356,7 +355,8 @@ export async function getBusinessBySlug(slug) {
                 )
             ),
             courts (*),
-            specialists (*)
+            specialists (*),
+            bookable_resources:resources (id, name, type, base_price, active, metadata)
         `);
 
     if (cleanSlug === cleanNoHyphens) {
@@ -872,8 +872,10 @@ export async function updateBusiness(businessId, businessData) {
             const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
 
             if (idsToDelete.length > 0) {
+                await assertDeletable('services', 'service_id', idsToDelete, 'el servicio');
                 await supabase.from('service_specialists').delete().in('service_id', idsToDelete);
-                await supabase.from('services').delete().in('id', idsToDelete);
+                const { error: delServiceErr } = await supabase.from('services').delete().in('id', idsToDelete);
+                if (delServiceErr) throw delServiceErr;
             }
         }
 
@@ -1052,18 +1054,36 @@ export async function updateBusiness(businessId, businessData) {
     return business;
 }
 
+// Courts and services with bookings can't be deleted (the bookings point to them).
+// Fail with a clear message instead of reporting a save that didn't happen.
+async function assertDeletable(table, column, ids, label) {
+    if (!ids.length) return;
+    const { data: used, error } = await supabase
+        .from('bookings')
+        .select(column)
+        .in(column, ids)
+        .limit(1000);
+    if (error) throw error;
+    const usedIds = [...new Set((used || []).map(b => b[column]))];
+    if (usedIds.length === 0) return;
+    const { data: rows } = await supabase.from(table).select('id, name').in('id', usedIds);
+    const names = (rows || []).map(r => r.name).join(', ');
+    throw new Error(`No se puede eliminar ${label} ${names} porque tiene reservas cargadas. Podés cambiarle el nombre o el precio.`);
+}
+
 export async function patchBusiness(businessId, updates) {
     const VALID_COLUMNS = new Set([
         'name', 'slug', 'category_id', 'subscription_plan_id', 'type',
         'email', 'seller_id', 'logo_url', 'banner_url',
         'location', 'latitude', 'longitude', 'rating', 'theme', 'amenities',
-        'hours', 'button_color', 'instagram', 'facebook', 'whatsapp', 'phone',
+        'hours', 'button_color', 'instagram', 'facebook', 'whatsapp',
         'tiktok', 'gallery_highlights', 'bank_name', 'account_holder', 'cbu', 'bank_alias',
         'primary_color', 'price_per_hour', 'price_per_day', 'pricing_model',
         'rental_duration_options', 'additional_services', 'included_amenities',
-        'gallery_images', 'max_capacity', 'capacity', 'capacity_limit', 'sport_types',
+        'gallery_images', 'max_capacity', 'capacity', 'capacity_limit',
+        'pricing_tiers', 'blocked_dates',
         'service_categories', 'time_ranges', 'payment_settings', 'booking_rules', 'auth_id', 'metadata',
-        'store_enabled', 'address', 'city', 'description', 'password_changed',
+        'store_enabled', 'description', 'password_changed',
         'subscription_status', 'trial_end_date'
     ]);
 
@@ -1092,14 +1112,26 @@ export async function patchBusiness(businessId, updates) {
         metadataUpdates.whatsapp_templates = updates.whatsapp_templates;
     }
 
+    let currentImages = {};
     try {
         const { data: currentBiz } = await supabase
             .from('businesses')
-            .select('metadata')
+            .select('metadata, logo, logo_url, banner_image, banner_url')
             .eq('id', businessId)
             .single();
+        currentImages = currentBiz || {};
         if (currentBiz?.metadata && typeof currentBiz.metadata === 'object') {
+            const dbCoupons = Array.isArray(currentBiz.metadata.coupons) ? currentBiz.metadata.coupons : [];
             metadataUpdates = { ...currentBiz.metadata, ...metadataUpdates };
+            // The form holds a stale copy of the coupons: never move used_count backwards
+            // (increment_coupon_usage raises it when a customer books with a coupon)
+            if (Array.isArray(metadataUpdates.coupons) && dbCoupons.length > 0) {
+                metadataUpdates.coupons = metadataUpdates.coupons.map(c => {
+                    const dbCoupon = dbCoupons.find(d => d?.code && c?.code && d.code.toUpperCase() === c.code.toUpperCase());
+                    const dbUsed = Number(dbCoupon?.used_count) || 0;
+                    return dbUsed > (Number(c?.used_count) || 0) ? { ...c, used_count: dbUsed } : c;
+                });
+            }
         }
     } catch (e) {
         console.warn('Could not fetch existing metadata for patch:', e);
@@ -1112,17 +1144,30 @@ export async function patchBusiness(businessId, updates) {
         if (key === 'rentalDurationOptions') colName = 'rental_duration_options';
         if (key === 'additionalServices') colName = 'additional_services';
         if (key === 'maxCapacity') colName = 'max_capacity';
-        if (key === 'logo' || key === 'image' || key === 'logo_url') {
-            colName = 'logo_url';
-        }
-        if (key === 'banner_image' || key === 'banner_url') {
-            colName = 'banner_url';
-        }
 
         if (VALID_COLUMNS.has(colName)) {
             dbUpdates[colName] = updates[key];
         }
     });
+
+    // Logo and banner live in two columns each (public pages read logo/banner_image,
+    // newer code reads *_url). Keep both in sync with whichever value actually changed.
+    const pickChanged = (candidates, currentValues) => {
+        const current = currentValues.find(Boolean) || null;
+        const changed = candidates.find(v => v !== undefined && v !== current && !currentValues.includes(v));
+        if (changed !== undefined) return changed;
+        return candidates.some(v => v !== undefined) ? current : undefined;
+    };
+    const newLogo = pickChanged([updates.logo, updates.image, updates.logo_url], [currentImages.logo_url, currentImages.logo]);
+    if (newLogo !== undefined) {
+        dbUpdates.logo = newLogo;
+        dbUpdates.logo_url = newLogo;
+    }
+    const newBanner = pickChanged([updates.banner_image, updates.banner_url], [currentImages.banner_url, currentImages.banner_image]);
+    if (newBanner !== undefined) {
+        dbUpdates.banner_image = newBanner;
+        dbUpdates.banner_url = newBanner;
+    }
 
     const colorVal = updates.primary_color || updates.button_color || updates.primaryColor || updates.buttonColor;
     if (colorVal) {
@@ -1204,11 +1249,12 @@ export async function patchBusiness(businessId, updates) {
 
         const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
         if (idsToDelete.length > 0) {
-            try {
-                await supabase.from('courts').delete().in('id', idsToDelete);
-                await supabase.from('resources').delete().in('id', idsToDelete);
-            } catch (e) {
-                console.warn('Error deleting removed courts:', e);
+            await assertDeletable('courts', 'court_id', idsToDelete, 'la cancha');
+            const { error: delCourtErr } = await supabase.from('courts').delete().in('id', idsToDelete);
+            if (delCourtErr) throw delCourtErr;
+            // Each court has a resources row created by trigger_sync_court (linked by metadata.court_id)
+            for (const courtId of idsToDelete) {
+                await supabase.from('resources').delete().eq('type', 'court').eq('metadata->>court_id', courtId);
             }
         }
 
@@ -1254,20 +1300,17 @@ export async function patchBusiness(businessId, updates) {
                 }
             }
 
-            try {
-                const resourcesToUpsert = courtsToUpsert.map((c, idx) => ({
-                    id: c.id,
-                    business_id: businessId,
-                    name: c.name,
-                    type: 'court',
-                    sport: c.sport || defaultSport,
-                    base_price: c.price,
-                    consumes_space: true,
-                    active: updates.courts[idx]?.active !== false
-                }));
-                await supabase.from('resources').upsert(resourcesToUpsert, { onConflict: 'id' });
-            } catch (resErr) {
-                console.warn('Error syncing courts to resources:', resErr);
+            // New courts get their resources row from trigger_sync_court; keep existing ones in sync
+            // (inserting rows here would duplicate them)
+            for (const [idx, c] of courtsToUpsert.entries()) {
+                const resourceFields = { name: c.name, sport: c.sport || defaultSport, base_price: c.price };
+                if (updates.courts[idx]?.active !== undefined) resourceFields.active = updates.courts[idx].active !== false;
+                const { error: resErr } = await supabase
+                    .from('resources')
+                    .update(resourceFields)
+                    .eq('type', 'court')
+                    .eq('metadata->>court_id', c.id);
+                if (resErr) console.warn('Error syncing court to resources:', resErr);
             }
         }
     }
@@ -1297,8 +1340,10 @@ export async function patchBusiness(businessId, updates) {
         if (currentIds.length > 0) {
             const idsToDelete = currentIds.filter(id => !incomingIds.includes(id));
             if (idsToDelete.length > 0) {
+                await assertDeletable('services', 'service_id', idsToDelete, 'el servicio');
                 await supabase.from('service_specialists').delete().in('service_id', idsToDelete);
-                await supabase.from('services').delete().in('id', idsToDelete);
+                const { error: delServiceErr } = await supabase.from('services').delete().in('id', idsToDelete);
+                if (delServiceErr) throw delServiceErr;
             }
         }
 
@@ -1314,7 +1359,8 @@ export async function patchBusiness(businessId, updates) {
                 image_url: s.image_url || s.image || null
             }));
 
-            await supabase.from('services').upsert(servicesToUpsert);
+            const { error: upsertServicesErr } = await supabase.from('services').upsert(servicesToUpsert);
+            if (upsertServicesErr) throw upsertServicesErr;
 
             for (const s of updates.services) {
                 const specIds = Array.isArray(s.specialist_ids)

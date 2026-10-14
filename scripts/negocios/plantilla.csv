@@ -1,0 +1,4 @@
+nombre,rubro,subcategorias,whatsapp,direccion,descripcion,logo,portada,profesionales,servicios,canchas,precio_hora,precio_dia,capacidad,simulacion
+Barbería Ejemplo,belleza,Barbería,3804000000,Calle 123 La Rioja,Cortes y barba,,,Juan:Barbero|Pedro:Barbero,Corte:30:9000:Cortes|Barba:20:6000:Barba,,,,,si
+Pádel Ejemplo,canchas,Pádel,3804000001,Av. 456 La Rioja,Canchas techadas,,,,,Cancha 1:14000:padel|Cancha 2:14000:padel,,,,si
+Quincho Ejemplo,alquileres,Quinchos,3804000002,Ruta 5 La Rioja,Quincho con pileta,,,,,,18000,,60,si

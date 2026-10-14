@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { pushService } from '../../services/pushService';
 import { useNotification } from '../../contexts/NotificationContext';
+import usePushAlerts, { PUSH_HELP } from '../../hooks/usePushAlerts';
+import { isSportBusiness } from '../../utils/businessUtils';
 
 const BusinessPortalSidebar = ({
     isVisible,
@@ -15,12 +16,11 @@ const BusinessPortalSidebar = ({
     onCreateBooking,
     pendingCount = 0
 }) => {
-    const { showToast, showAlert } = useNotification();
+    const { showToast, showAlert, showConfirm } = useNotification();
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [isPwaInstalled, setIsPwaInstalled] = useState(false);
-    const [notifGranted, setNotifGranted] = useState(
-        typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted'
-    );
+    const push = usePushAlerts(currentBusiness?.id);
+    const notifGranted = push.status === 'on';
 
     useEffect(() => {
         const isStandalone = typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone);
@@ -68,33 +68,30 @@ const BusinessPortalSidebar = ({
 
     const handleToggleNotifications = async () => {
         try {
-            if (typeof window === 'undefined' || !('Notification' in window)) {
-                showToast('Tu navegador no soporta notificaciones push', 'warning');
+            if (push.busy || push.status === 'loading') return;
+
+            if (PUSH_HELP[push.status]) {
+                const help = PUSH_HELP[push.status];
+                showAlert(help.title, help.message, 'info', 'Entendido');
                 return;
             }
 
-            if (Notification.permission === 'denied') {
-                showAlert('Permisos Bloqueados', 'Los permisos de notificación están bloqueados en tu navegador.\n\nPara desbloquearlos:\n1. Tocá el ícono del Candado 🔒 o Escudo 🛡️ al lado de la barra de dirección arriba.\n2. En "Notificaciones", seleccioná "Permitir".\n3. Recargá la página.', 'warning', 'Entendido');
-                setNotifGranted(false);
-                return;
-            }
-
-            if (notifGranted && Notification.permission === 'granted') {
-                showToast('🔔 Las alertas ya están activas en este dispositivo', 'info');
-                pushService.requestPermissionAndGetTokenDetailed(currentBusiness?.id).catch(() => {});
-                return;
-            }
-
-            const result = await pushService.requestPermissionAndGetTokenDetailed(currentBusiness?.id);
-            if (result.success) {
-                setNotifGranted(true);
-                if (result.warning) {
-                    showAlert('Alertas Activas', result.warning, 'info', 'Entendido');
-                } else {
-                    showToast('🔔 ¡Notificaciones Push activadas con éxito!', 'success');
+            if (push.status === 'on') {
+                const off = await showConfirm('Avisos de reservas', 'Este dispositivo recibe un aviso con cada reserva nueva. ¿Querés dejar de recibirlos acá?', 'Desactivar', 'Seguir recibiendo');
+                if (off) {
+                    await push.disable();
+                    showToast('Avisos desactivados en este dispositivo', 'info');
                 }
+                return;
+            }
+
+            const result = await push.enable();
+            if (result.success) {
+                showToast('🔔 Listo: te avisamos de cada reserva nueva', 'success');
+            } else if (result.error === 'denied') {
+                showAlert(PUSH_HELP.denied.title, PUSH_HELP.denied.message, 'info', 'Entendido');
             } else {
-                showToast(`⚠️ No se pudo activar: ${result.error || 'Permiso denegado'}`, 'error');
+                showToast(`No se pudieron activar los avisos: ${result.error}`, 'error');
             }
         } catch (e) {
             console.error(e);
@@ -109,9 +106,12 @@ const BusinessPortalSidebar = ({
         }
     };
 
+    const isSport = isSportBusiness(currentBusiness);
+
     const navItems = [
         { id: 'calendar', icon: '📅', label: 'Calendario' },
         { id: 'list', icon: '📋', label: 'Reservas', badge: pendingCount > 0 ? pendingCount : null },
+        ...(isSport ? [{ id: 'caja', icon: '💰', label: 'Registro de Caja' }] : []),
         { id: 'analytics', icon: '📊', label: 'Analytics' },
         { id: 'subscription', icon: '💳', label: 'Suscripción' },
         { id: 'customers', icon: '👥', label: 'Clientes' },
@@ -258,7 +258,10 @@ const BusinessPortalSidebar = ({
             {onCreateBooking && (
                 <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: isVisible ? '16px' : '8px' }}>
                     <button
-                        onClick={onCreateBooking}
+                        onClick={(e) => {
+                            if (isMobile) onToggleSidebar(false);
+                            onCreateBooking(e);
+                        }}
                         title={!isVisible ? 'Nueva Reserva' : ''}
                         style={{
                             display: 'flex',
@@ -310,6 +313,8 @@ const BusinessPortalSidebar = ({
                             key={item.id}
                             onClick={() => handleNavigation(item.id)}
                             title={!isVisible ? item.label : ''}
+                            aria-label={item.badge ? `${item.label} (${item.badge} pendientes)` : item.label}
+                            aria-current={isActive ? 'page' : undefined}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -472,7 +477,7 @@ const BusinessPortalSidebar = ({
                     {/* Notification Button */}
                     <button
                         onClick={handleToggleNotifications}
-                        title={notifGranted ? 'Alertas Push Activas' : 'Activar Notificaciones Push'}
+                        title={notifGranted ? 'Avisos de reservas activos' : 'Activar avisos de reservas'}
                         style={{
                             height: isVisible ? '36px' : '28px',
                             display: 'flex',

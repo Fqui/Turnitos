@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
-import { generateTimeSlots, formatDateKey, getBookingsForSlot } from '../shared/utils';
+import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot, getDayHoursConfig } from '../shared/utils';
+import { PADEL_DURATIONS, getDayShiftRanges, fitsInShift } from '../../../utils/courtHours';
+import { getCourtSport } from '../../../utils/sports';
 import ConfirmModal from '../../common/ConfirmModal';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function WeekView({
     type,
@@ -23,6 +26,7 @@ export default function WeekView({
 }) {
     const [showSlotMenu, setShowSlotMenu] = useState(null);
     const [showBookingMenu, setShowBookingMenu] = useState(null);
+    useBodyScrollLock(!!showSlotMenu || !!showBookingMenu);
     const [selectedResourceId, setSelectedResourceId] = useState(() => (resources && resources.length > 0) ? resources[0].id : '');
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
@@ -81,9 +85,24 @@ export default function WeekView({
         return Math.ceil(duration / config.slotSize);
     };
 
+    // Recurso que recibe la reserva al tocar una celda vacía
+    const getTargetResource = () => (selectedResourceId !== 'all'
+        ? resources.find(r => String(r.id) === String(selectedResourceId)) || resources[0]
+        : resources[0]);
+
+    // Las canchas de pádel solo arrancan si el turno más corto (60 min) termina antes del cierre del turno del día
+    const canStartAt = (dayConfig, time) => {
+        const dayShifts = getDayShiftRanges(dayConfig);
+        if (type === 'service' || dayShifts.length === 0) return true;
+        return activeResources.some(resource => {
+            if (type !== 'padel' && getCourtSport(resource, business) !== 'padel') return true;
+            return fitsInShift(time, dayShifts, PADEL_DURATIONS[0]);
+        });
+    };
+
     // Verificar si este es el primer slot de una reserva
-    const isFirstSlotOfBooking = (booking, currentTime) => {
-        return booking.time === currentTime;
+    const isFirstSlotOfBooking = (booking, currentTime, dayConfig) => {
+        return bookingStartsInSlot(booking, currentTime, config.slotSize, dayConfig);
     };
 
     const COURT_COLORS = [
@@ -236,17 +255,6 @@ export default function WeekView({
                         <React.Fragment key={time}>
                             {/* Time Column */}
                             <div
-                                onClick={() => {
-                                    setConfirmModal({
-                                        isOpen: true,
-                                        title: 'Bloquear Horario Global',
-                                        message: `¿Deseas bloquear TODAS las canchas para las ${time} hs en este día?`,
-                                        confirmText: 'Sí, bloquear todas',
-                                        isDanger: true,
-                                        onConfirm: () => onBlockSlot && onBlockSlot(currentDate, time, null)
-                                    });
-                                }}
-                                title="Click para bloquear todas las canchas a esta hora"
                                 style={{
                                     padding: '10px',
                                     textAlign: 'center',
@@ -261,12 +269,8 @@ export default function WeekView({
                                     zIndex: 10,
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    justifyContent: 'center'
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-main)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-card)'}
                             >
                                 {time}
                             </div>
@@ -284,11 +288,14 @@ export default function WeekView({
                                     return true;
                                 });
 
+                                // Horario de ese día: las filas de madrugada pertenecen al día que abre
+                                const dayConfig = getDayHoursConfig(business?.hours, day);
                                 const slotBookings = getBookingsForSlot(
                                     dayBookings,
                                     day,
                                     time,
-                                    config.slotSize
+                                    config.slotSize,
+                                    dayConfig
                                 );
 
                                 const isToday = formatDateKey(day) === formatDateKey(new Date());
@@ -312,7 +319,7 @@ export default function WeekView({
                                         {slotBookings.length > 0 ? (
                                             <div style={{ display: 'flex', gap: '4px', width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, padding: '4px', boxSizing: 'border-box' }}>
                                                 {slotBookings.map((booking, idx) => {
-                                                    if (!isFirstSlotOfBooking(booking, time)) {
+                                                    if (!isFirstSlotOfBooking(booking, time, dayConfig)) {
                                                         return null;
                                                     }
 
@@ -350,19 +357,31 @@ export default function WeekView({
                                                     );
                                                 })}
                                             </div>
+                                        ) : !canStartAt(dayConfig, time) ? (
+                                            // Pádel: acá no entra ni el turno más corto antes del cierre
+                                            <div
+                                                title="No entra un turno antes del cierre"
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    minHeight: `${config.gridRowHeight - 8}px`,
+                                                    borderRadius: '6px',
+                                                    background: 'repeating-linear-gradient(45deg, var(--bg-main), var(--bg-main) 10px, var(--border) 10px, var(--border) 11px)',
+                                                    opacity: 0.6
+                                                }}
+                                            />
                                         ) : (
                                             <div
                                                 onClick={(e) => {
-                                                    const targetResource = selectedResourceId !== 'all'
-                                                        ? resources.find(r => String(r.id) === String(selectedResourceId)) || resources[0]
-                                                        : resources[0];
+                                                    const targetResource = getTargetResource();
 
                                                     if (isRescheduling) {
+                                                        // In "all" mode keep the booking on its own court/professional
                                                         onMoveBooking && onMoveBooking(
                                                             reschedulingBooking.id,
                                                             formatDateKey(day),
                                                             time,
-                                                            targetResource?.id
+                                                            selectedResourceId !== 'all' ? targetResource?.id : null
                                                         );
                                                     } else {
                                                         handleSlotClick(e, day, time, targetResource);

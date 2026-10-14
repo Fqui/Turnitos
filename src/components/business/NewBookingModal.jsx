@@ -1,5 +1,10 @@
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import CustomDropdown from '../common/CustomDropdown';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { isRentalBusiness } from '../../utils/businessUtils';
+import { getCourtSport } from '../../utils/sports';
+import { getDayHoursConfig, normalizeDayMinutes } from '../calendars/shared/utils';
+import { PADEL_DURATIONS, getDayShiftRanges, findShift } from '../../utils/courtHours';
 
 const NewBookingModal = ({
     isOpen,
@@ -33,44 +38,14 @@ const NewBookingModal = ({
     }, [isOpen, newBookingData?.date]);
 
     // Detect Business Types
-    const isRental = currentBusiness?.type === 'venue' ||
-        currentBusiness?.type === 'rental' ||
-        currentBusiness?.type === 'alquiler' ||
-        currentBusiness?.is_rental ||
-        (currentBusiness?.category || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.category || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('alquiler') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salon') ||
-        (currentBusiness?.category || '').toLowerCase().includes('salón') ||
-        (currentBusiness?.name || '').toLowerCase().includes('quincho') ||
-        (currentBusiness?.name || '').toLowerCase().includes('salon') ||
-        (currentBusiness?.name || '').toLowerCase().includes('salón') ||
-        currentBusiness?.subscription_plan_id === 'rental';
-
-    const isPadel = !isRental && (
-        (currentBusiness?.sport_type || '').toLowerCase().includes('padel') ||
-        (currentBusiness?.category || '').toLowerCase().includes('padel') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('padel') ||
-        (currentBusiness?.name || '').toLowerCase().includes('padel') ||
-        (newBookingData.resourceName || '').toLowerCase().includes('padel')
-    );
-
-    const isFutbol = !isRental && !isPadel && (
-        (currentBusiness?.sport_type || '').toLowerCase().includes('futbol') ||
-        (currentBusiness?.category || '').toLowerCase().includes('futbol') ||
-        (currentBusiness?.categories?.name || '').toLowerCase().includes('futbol') ||
-        (currentBusiness?.name || '').toLowerCase().includes('futbol') ||
-        (currentBusiness?.type === 'sport' && !isPadel)
-    );
-
-    const isService = !isRental && !isPadel && !isFutbol && (
-        currentBusiness?.type === 'service' ||
-        currentBusiness?.type === 'beauty' ||
-        currentBusiness?.type === 'barber' ||
-        (currentBusiness?.category || '').toLowerCase().includes('peluqueria') ||
-        (currentBusiness?.category || '').toLowerCase().includes('barber') ||
-        (currentBusiness?.category || '').toLowerCase().includes('estetica')
-    );
+    const isRental = isRentalBusiness(currentBusiness);
+    const selectedCourt = (currentBusiness?.courts || []).find(c => String(c.id) === String(newBookingData.courtId || newBookingData.serviceId));
+    const isCourtBusiness = !isRental && (currentBusiness?.type === 'sport' || (currentBusiness?.courts?.length || 0) > 0);
+    const courtSport = isCourtBusiness ? getCourtSport(selectedCourt, currentBusiness) : null;
+    const isPadel = courtSport === 'padel';
+    const isFutbol = isCourtBusiness && !isPadel;
+    const isService = !isRental && !isCourtBusiness;
+    const hasSpecialists = !isRental && !(currentBusiness?.courts?.length) && (currentBusiness?.specialists?.length || 0) > 0;
 
     // Capacity limit for rentals
     const maxCapacity = Number(currentBusiness?.capacity_limit || currentBusiness?.capacity || 100);
@@ -163,6 +138,86 @@ const NewBookingModal = ({
         };
     }, [newBookingData.courtId, newBookingData.serviceId, newBookingData.resourceName, newBookingData.basePrice, newBookingData.guestCount, newBookingData.durationHours, newBookingData.duration, currentBusiness, isRental, isPadel, isFutbol, calculateVenueBasePrice]);
 
+    // Service duration buttons always include the current duration (e.g. 20 min services)
+    const serviceDurationOptions = useMemo(() => {
+        const current = Number(newBookingData.duration);
+        const base = [30, 45, 60, 90];
+        return current > 0 && !base.includes(current) ? [current, ...base].sort((a, b) => a - b) : base;
+    }, [newBookingData.duration]);
+
+    // Business hours config and shifts of the selected day (split shifts and overnight included)
+    const dayConfig = useMemo(() => {
+        if (isRental || !newBookingData.date) return null;
+        const [y, m, d] = newBookingData.date.split('-').map(Number);
+        return getDayHoursConfig(currentBusiness?.hours, new Date(y, m - 1, d));
+    }, [isRental, newBookingData.date, currentBusiness]);
+    const dayRanges = useMemo(() => (dayConfig ? getDayShiftRanges(dayConfig) : [[8 * 60, 23 * 60]]), [dayConfig]);
+
+    // Durations a court can book: pádel picks 60/90/120, the other sports keep their current one
+    const courtDurations = useMemo(() => {
+        if (!isCourtBusiness) return [];
+        return isPadel ? PADEL_DURATIONS : [Number(newBookingData.duration) || 60];
+    }, [isCourtBusiness, isPadel, newBookingData.duration]);
+
+    // Court durations that end by the shift close from the chosen start time
+    const validCourtDurations = useMemo(() => {
+        if (!courtDurations.length || !newBookingData.time) return courtDurations;
+        const shift = findShift(newBookingData.time, dayRanges);
+        // Out of hours: nothing to cap against
+        if (!shift) return courtDurations;
+        return courtDurations.filter(dur => shift.start + dur <= shift.end);
+    }, [courtDurations, newBookingData.time, dayRanges]);
+
+    // If the chosen duration no longer fits after changing the time, fall back to the first one that does
+    useEffect(() => {
+        if (!isOpen || !isPadel || !validCourtDurations.length) return;
+        if (!validCourtDurations.includes(Number(newBookingData.duration))) {
+            const dur = validCourtDurations[0];
+            setNewBookingData(prev => ({ ...prev, duration: dur, durationHours: dur / 60 }));
+        }
+    }, [isOpen, isPadel, validCourtDurations, newBookingData.duration, setNewBookingData]);
+
+    // Start times for courts and services: business hours of that day, without the ones already taken
+    const timeOptions = useMemo(() => {
+        if (isRental || !newBookingData.date) return [];
+        const toMin = (t) => {
+            const [h, m] = String(t || '').split(':').map(Number);
+            return (h || 0) * 60 + (m || 0);
+        };
+        const toTime = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
+        const step = isService ? 15 : 30;
+        const duration = Number(newBookingData.duration) || 60;
+        // Courts only start where at least one of their durations ends by the shift close
+        const minLength = isCourtBusiness ? Math.min(...courtDurations) : Math.min(duration, step);
+        const resourceId = newBookingData.courtId || newBookingData.serviceId;
+        const busy = (bookings || []).filter(b => {
+            if (b.status === 'cancelled' || String(b.date).slice(0, 10) !== newBookingData.date) return false;
+            if (isCourtBusiness) return String(b.court_id) === String(resourceId);
+            if (newBookingData.specialistId) return String(b.specialist_id) === String(newBookingData.specialistId);
+            return false;
+        }).map(b => {
+            // The early hours of an overnight schedule count after the opening (00:30 -> 24:30)
+            const bs = normalizeDayMinutes(toTime(toMin(b.time)), dayConfig);
+            return [bs, bs + (Number(b.duration) || 60)];
+        });
+
+        const options = [];
+        dayRanges.forEach(([start, end]) => {
+            for (let t = start; t + minLength <= end; t += step) {
+                const taken = busy.some(([bs, be]) => t < be && t + duration > bs);
+                const value = toTime(t);
+                if (!taken || value === newBookingData.time) {
+                    options.push({ value, label: taken ? `${value} (ocupado)` : value });
+                }
+            }
+        });
+        if (newBookingData.time && !options.some(o => o.value === newBookingData.time)) {
+            options.unshift({ value: newBookingData.time, label: `${newBookingData.time} (fuera de horario)` });
+        }
+        return options;
+    }, [isRental, isService, isCourtBusiness, courtDurations, dayConfig, dayRanges, newBookingData.date, newBookingData.time, newBookingData.duration, newBookingData.courtId, newBookingData.serviceId, newBookingData.specialistId, bookings]);
+
     // Business predefined catalog additionals (ONLY additional services / extras, exclude amenities)
     const catalogAdditionals = useMemo(() => {
         const list = [
@@ -245,10 +300,11 @@ const NewBookingModal = ({
     // Auto-set duration, default base price, and calculate deposit when modal opens
     useEffect(() => {
         if (isOpen) {
+            const initialService = (currentBusiness?.services || []).find(sv => String(sv.id) === String(newBookingData.serviceId));
             let initialDurationMin = 60;
             if (isRental) initialDurationMin = 240;
-            else if (isPadel) initialDurationMin = Number(currentBusiness?.slot_duration || 90);
-            else if (isService) initialDurationMin = Number(currentBusiness?.slot_duration || 30);
+            else if (isPadel) initialDurationMin = 90;
+            else if (isService) initialDurationMin = Number(initialService?.duration || currentBusiness?.slot_duration || 30);
             else if (isFutbol) initialDurationMin = 60;
 
             const durationToUse = Number(newBookingData.duration) || initialDurationMin;
@@ -408,7 +464,9 @@ const NewBookingModal = ({
                 }
                 return true;
             }
-            return true;
+            // Courts and services book by time slot: a day with other bookings is still available
+            // (overlaps on the same court/specialist are checked when the booking is saved)
+            return false;
         });
 
         if (dayBookings.length > 0) {
@@ -502,6 +560,7 @@ const NewBookingModal = ({
 
     const allCalendarDays = [...prevDays, ...currentDays, ...nextDays];
 
+    useBodyScrollLock(isOpen);
     if (!isOpen) return null;
 
     return (
@@ -816,7 +875,7 @@ const NewBookingModal = ({
                             )}
 
                             {/* Warning if selected date is occupied/blocked */}
-                            {newBookingData.date && selectedDateAvailability.status !== 'available' && selectedDateAvailability.status !== 'past' && (
+                            {newBookingData.date && !['available', 'past'].includes(selectedDateAvailability.status) && selectedDateAvailability.status !== 'past' && (
                                 <div style={{
                                     marginTop: '6px',
                                     padding: '6px 10px',
@@ -834,7 +893,7 @@ const NewBookingModal = ({
 
                         <div>
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                {isRental ? '🏡 Espacio / Salón Asignado' : isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '🎯 Espacio / Cancha'}
+                                {isRental ? '🏡 Espacio / Salón Asignado' : isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : hasSpecialists ? '✂️ Servicio' : '🎯 Espacio / Cancha'}
                             </label>
                             {((currentBusiness?.courts?.length || 0) + (currentBusiness?.services?.length || 0)) > 1 ? (
                                 <CustomDropdown
@@ -853,13 +912,17 @@ const NewBookingModal = ({
                                         const court = (currentBusiness?.courts || []).find(c => String(c.id) === String(id));
                                         const service = (currentBusiness?.services || []).find(s => String(s.id) === String(id));
                                         const res = court || service;
+                                        // Duration follows the service, or the sport when switching courts
+                                        let duration = Number(service?.duration) || null;
+                                        if (court) duration = getCourtSport(court, currentBusiness) === 'padel' ? 90 : 60;
                                         setNewBookingData(prev => ({
                                             ...prev,
                                             courtId: id,
                                             serviceId: id,
                                             resourceName: res?.name || '',
                                             price: Number(res?.price || prev.price || 0),
-                                            basePrice: Number(res?.price || prev.basePrice || 0)
+                                            basePrice: Number(res?.price || prev.basePrice || 0),
+                                            ...(duration ? { duration, durationHours: duration / 60 } : {})
                                         }));
                                     }}
                                 />
@@ -883,6 +946,61 @@ const NewBookingModal = ({
                         </div>
                     </div>
 
+                    {/* Start time of the rental */}
+                    {isRental && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                🕐 Hora de Inicio *
+                            </label>
+                            <input
+                                type="time"
+                                required
+                                value={newBookingData.time || ''}
+                                onChange={(e) => setNewBookingData(prev => ({ ...prev, time: e.target.value }))}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg-main)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '13px',
+                                    fontWeight: '700',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+                    )}
+
+                    {/* Start time (courts and services) */}
+                    {!isRental && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                🕐 Hora del Turno *
+                            </label>
+                            <CustomDropdown
+                                value={newBookingData.time || ''}
+                                options={timeOptions}
+                                placeholder={timeOptions.length ? 'Elegí la hora' : 'Sin horarios ese día'}
+                                onChange={(time) => setNewBookingData(prev => ({ ...prev, time }))}
+                            />
+                        </div>
+                    )}
+
+                    {/* Specialist (service businesses) */}
+                    {hasSpecialists && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                👤 Profesional
+                            </label>
+                            <CustomDropdown
+                                value={newBookingData.specialistId || ''}
+                                options={currentBusiness.specialists.map(sp => ({ value: sp.id, label: sp.name }))}
+                                onChange={(id) => setNewBookingData(prev => ({ ...prev, specialistId: id }))}
+                            />
+                        </div>
+                    )}
+
                     {/* Duration Controls based on Business Type */}
                     {isPadel && (
                         <div style={{
@@ -900,12 +1018,15 @@ const NewBookingModal = ({
                                 ⏱️ Duración del Turno de Pádel:
                             </span>
                             <div style={{ display: 'flex', gap: '6px', width: isMobile ? '100%' : 'auto' }}>
-                                {[60, 90, 120].map((dur) => {
+                                {PADEL_DURATIONS.map((dur) => {
                                     const isSelected = Number(newBookingData.duration) === dur;
+                                    const fits = validCourtDurations.includes(dur);
                                     return (
                                         <button
                                             key={dur}
                                             type="button"
+                                            disabled={!fits}
+                                            title={fits ? undefined : 'Termina después del cierre'}
                                             onClick={() => setNewBookingData(prev => ({
                                                 ...prev,
                                                 duration: dur,
@@ -920,7 +1041,8 @@ const NewBookingModal = ({
                                                 color: isSelected ? 'var(--primary-paddle)' : 'var(--text-primary)',
                                                 fontWeight: isSelected ? '800' : '600',
                                                 fontSize: '12px',
-                                                cursor: 'pointer',
+                                                cursor: fits ? 'pointer' : 'not-allowed',
+                                                opacity: fits ? 1 : 0.4,
                                                 transition: 'all 0.15s'
                                             }}
                                         >
@@ -948,7 +1070,7 @@ const NewBookingModal = ({
                                 ⏱️ Duración del Servicio:
                             </span>
                             <div style={{ display: 'flex', gap: '6px', width: isMobile ? '100%' : 'auto' }}>
-                                {[30, 45, 60, 90].map((dur) => {
+                                {serviceDurationOptions.map((dur) => {
                                     const isSelected = Number(newBookingData.duration) === dur;
                                     return (
                                         <button
@@ -1461,33 +1583,33 @@ const NewBookingModal = ({
                     {/* Submit Button */}
                     <button
                         type="submit"
-                        disabled={!newBookingData.date || selectedDateAvailability.status !== 'available'}
+                        disabled={!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status)}
                         style={{
                             width: '100%',
                             padding: '12px',
-                            background: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                            background: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'var(--border)'
                                 : 'var(--primary-paddle)',
-                            color: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                            color: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'var(--text-muted)'
                                 : '#000000',
                             border: 'none',
                             borderRadius: '10px',
                             fontWeight: '800',
                             fontSize: '14px',
-                            cursor: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                            cursor: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'not-allowed'
                                 : 'pointer',
                             marginTop: '6px',
                             transition: 'all 0.2s',
-                            boxShadow: (!newBookingData.date || selectedDateAvailability.status !== 'available')
+                            boxShadow: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'none'
                                 : '0 4px 14px rgba(0, 230, 118, 0.25)'
                         }}
                     >
                         {!newBookingData.date 
                             ? 'Selecciona una Fecha Disponible'
-                            : selectedDateAvailability.status !== 'available'
+                            : !['available', 'past'].includes(selectedDateAvailability.status)
                                 ? `Fecha No Disponible (${selectedDateAvailability.label})`
                                 : 'Crear Reserva'
                         }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 const DurationSelector = ({
     court,
@@ -9,6 +10,7 @@ const DurationSelector = ({
     sportColor,
     getPrice: customGetPrice // 🆕 Optional custom price calculator
 }) => {
+    useBodyScrollLock();
     // Use custom getPrice or default calculation
     const getPrice = customGetPrice || ((duration) => {
         const basePrice = court.price || 0;
@@ -63,7 +65,7 @@ const DurationSelector = ({
                 zIndex: 1001,
                 boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
                 border: '1px solid var(--border)',
-                animation: 'slideUp 0.3s ease'
+                animation: 'centeredModalIn 0.3s ease'
             }}>
                 {/* Header */}
                 <div style={{ marginBottom: '24px', textAlign: 'center' }}>
@@ -237,22 +239,6 @@ const DurationSelector = ({
                 </button>
             </div>
 
-            <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes slideUp {
-                    from {
-                        opacity: 0;
-                        transform: translate(-50%, -45%);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translate(-50%, -50%);
-                    }
-                }
-            `}</style>
         </>
     );
 };

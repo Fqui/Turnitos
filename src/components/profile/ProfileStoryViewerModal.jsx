@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const STORY_DURATION = 5000; // 5 seconds per image slide
 const PROGRESS_INTERVAL = 30; // Update progress every 30ms
+const MEDIA_FADE_MS = 180; // Crossfade between stories
 
 /**
  * Detect if a URL points to a video file
@@ -54,6 +56,62 @@ export default function ProfileStoryViewerModal({
     const currentItem = items[selectedPhotoIndex] || items[0];
     const currentUrl = getUrl(currentItem);
     const currentIsVideo = isVideoUrl(currentItem);
+    const isOpen = selectedHighlight !== null && selectedPhotoIndex !== null && !!highlight;
+
+    // Media shown until the next one is ready: the new item fades in over it
+    // instead of the screen going black while it loads.
+    const [shownMedia, setShownMedia] = useState(null);
+    const [loadedUrl, setLoadedUrl] = useState(null);
+    const isMediaReady = loadedUrl === currentUrl;
+
+    // Tapping again mid-fade: the story that was already loaded becomes the
+    // layer underneath right away, so the screen never falls back to an older one.
+    const [trackedMedia, setTrackedMedia] = useState({ url: currentUrl, isVideo: currentIsVideo });
+    if (trackedMedia.url !== currentUrl) {
+        setTrackedMedia({ url: currentUrl, isVideo: currentIsVideo });
+        if (isOpen && trackedMedia.url && loadedUrl === trackedMedia.url) setShownMedia(trackedMedia);
+    }
+
+    useEffect(() => {
+        if (!isOpen) {
+            setShownMedia(null);
+            setLoadedUrl(null);
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen || !isMediaReady) return;
+        const timer = setTimeout(() => setShownMedia({ url: currentUrl, isVideo: currentIsVideo }), MEDIA_FADE_MS);
+        return () => clearTimeout(timer);
+    }, [isOpen, isMediaReady, currentUrl, currentIsVideo]);
+
+    // Stop the previous video once it's no longer the current one
+    useEffect(() => {
+        const video = videoRef.current;
+        return () => video?.pause();
+    }, [currentUrl]);
+
+    // Preload the neighbouring images so moving between them is instant
+    const nextHighlight = isOpen ? viewerHighlights[selectedHighlight + 1] : null;
+    const preloadUrls = isOpen
+        ? [
+            items[selectedPhotoIndex + 1],
+            items[selectedPhotoIndex - 1],
+            nextHighlight?.images?.[0] || nextHighlight?.cover_image
+        ].filter(item => item && !isVideoUrl(item)).map(getUrl).join('\n')
+        : '';
+    useEffect(() => {
+        if (!preloadUrls) return;
+        preloadUrls.split('\n').forEach(url => {
+            const img = new Image();
+            img.src = url;
+        });
+    }, [preloadUrls]);
+
+    const markLoaded = (url) => setLoadedUrl(url);
+    const imgRefFor = (url) => (node) => {
+        if (node && loadedUrl !== url && node.complete && node.naturalWidth > 0) setLoadedUrl(url);
+    };
 
     const handleClose = useCallback(() => {
         setSelectedPhotoIndex(null);
@@ -110,7 +168,8 @@ export default function ProfileStoryViewerModal({
     // Progress timer for images and fallback
     useEffect(() => {
         if (selectedHighlight === null || selectedPhotoIndex === null) return;
-        if (isPaused) {
+        // The story's time starts once it's actually on screen
+        if (isPaused || !isMediaReady) {
             if (timerRef.current) clearInterval(timerRef.current);
             return;
         }
@@ -137,7 +196,7 @@ export default function ProfileStoryViewerModal({
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
-    }, [isPaused, selectedPhotoIndex, selectedHighlight, currentIsVideo, goToNext]);
+    }, [isPaused, isMediaReady, selectedPhotoIndex, selectedHighlight, currentIsVideo, goToNext]);
 
     // Reset progress when item changes
     useEffect(() => {
@@ -203,13 +262,24 @@ export default function ProfileStoryViewerModal({
         }
     };
 
-    if (selectedHighlight === null || selectedPhotoIndex === null || !highlight) {
-        return null;
-    }
+    useBodyScrollLock(isOpen);
 
+    // Previous media stays under the new one until it has faded in
+    const mediaLayers = [];
+    if (isOpen) {
+        if (shownMedia && shownMedia.url !== currentUrl) mediaLayers.push({ ...shownMedia, isCurrent: false });
+        mediaLayers.push({ url: currentUrl, isVideo: currentIsVideo, isCurrent: true });
+    }
+    const backdropUrl = isMediaReady || !shownMedia
+        ? (currentIsVideo ? '' : currentUrl)
+        : (shownMedia.isVideo ? '' : shownMedia.url);
+
+    // Kept mounted while closed so the viewer can fade out instead of vanishing
     return (
         <AnimatePresence>
+            {isOpen && (
             <motion.div
+                key="story-viewer"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -224,6 +294,7 @@ export default function ProfileStoryViewerModal({
                     zIndex: 2000,
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
+                    WebkitTapHighlightColor: 'transparent',
                     overflow: 'hidden'
                 }}
             >
@@ -316,7 +387,7 @@ export default function ProfileStoryViewerModal({
                         style={{
                             position: 'absolute',
                             inset: '-20px',
-                            backgroundImage: currentUrl ? `url(${currentUrl})` : 'none',
+                            backgroundImage: backdropUrl ? `url(${backdropUrl})` : 'none',
                             backgroundPosition: 'center',
                             backgroundSize: 'cover',
                             filter: 'blur(35px) brightness(0.4)',
@@ -543,33 +614,34 @@ export default function ProfileStoryViewerModal({
                     />
 
                     {/* ═══ MEDIA CONTENT (Image or Video) ═══ */}
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={`${selectedHighlight}-${selectedPhotoIndex}`}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.15 }}
+                    {/* Keyed by URL: when a story becomes the previous layer it keeps its
+                        element, so it doesn't reload while the next one fades in. */}
+                    {mediaLayers.map(layer => (
+                        <div
+                            key={layer.url}
                             style={{
-                                position: 'relative',
-                                width: '100%',
-                                height: '100%',
+                                position: 'absolute',
+                                inset: 0,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                zIndex: 2
+                                zIndex: layer.isCurrent ? 3 : 2,
+                                opacity: layer.isCurrent && !isMediaReady ? 0 : 1,
+                                transition: layer.isCurrent ? `opacity ${MEDIA_FADE_MS}ms ease-out` : 'none'
                             }}
                         >
-                            {currentIsVideo ? (
+                            {layer.isVideo ? (
                                 <video
-                                    ref={videoRef}
-                                    src={currentUrl}
-                                    autoPlay
+                                    ref={layer.isCurrent ? videoRef : undefined}
+                                    src={layer.url}
+                                    autoPlay={layer.isCurrent}
                                     playsInline
-                                    muted={isMuted}
-                                    onLoadedMetadata={handleVideoLoadedMetadata}
-                                    onTimeUpdate={handleVideoTimeUpdate}
-                                    onEnded={goToNext}
+                                    muted={isMuted || !layer.isCurrent}
+                                    onLoadedMetadata={layer.isCurrent ? handleVideoLoadedMetadata : undefined}
+                                    onLoadedData={layer.isCurrent ? () => markLoaded(layer.url) : undefined}
+                                    onError={layer.isCurrent ? () => markLoaded(layer.url) : undefined}
+                                    onTimeUpdate={layer.isCurrent ? handleVideoTimeUpdate : undefined}
+                                    onEnded={layer.isCurrent ? goToNext : undefined}
                                     style={{
                                         width: '100%',
                                         height: '100%',
@@ -579,8 +651,11 @@ export default function ProfileStoryViewerModal({
                                 />
                             ) : (
                                 <img
-                                    src={currentUrl}
+                                    ref={layer.isCurrent ? imgRefFor(layer.url) : undefined}
+                                    src={layer.url}
                                     alt={`${highlight.title} - ${(selectedPhotoIndex ?? 0) + 1}`}
+                                    onLoad={layer.isCurrent ? () => markLoaded(layer.url) : undefined}
+                                    onError={layer.isCurrent ? () => markLoaded(layer.url) : undefined}
                                     style={{
                                         width: '100%',
                                         height: '100%',
@@ -590,8 +665,8 @@ export default function ProfileStoryViewerModal({
                                     draggable={false}
                                 />
                             )}
-                        </motion.div>
-                    </AnimatePresence>
+                        </div>
+                    ))}
 
                     {/* ═══ PAUSE INDICATOR ═══ */}
                     <AnimatePresence>
@@ -621,6 +696,7 @@ export default function ProfileStoryViewerModal({
                     </AnimatePresence>
                 </div>
             </motion.div>
+            )}
         </AnimatePresence>
     );
 }

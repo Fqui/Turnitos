@@ -117,10 +117,14 @@ export default function PromotionForm({ promotion, businesses = [], onSave, onCa
                             disabled={uploadingPromotionImage}
                             style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '14px' }}
                         />
+                        <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            Medida recomendada: 1200 × 800 px (3:2), sin texto y con lo importante al centro.
+                        </p>
                         {uploadingPromotionImage && <p>Cargando imagen...</p>}
                         {formData.image && (
-                            <div style={{ marginTop: '12px', borderRadius: '12px', overflow: 'hidden', maxHeight: '200px' }}>
-                                <img src={formData.image} alt="Preview" style={{ width: '100%', height: 'auto', objectFit: 'cover' }} onError={(e) => (e.target.style.display = 'none')} />
+                            // Same 3:2 crop the Home banner uses on mobile
+                            <div style={{ marginTop: '12px', borderRadius: '12px', overflow: 'hidden', aspectRatio: '3 / 2' }}>
+                                <img src={formData.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => (e.target.style.display = 'none')} />
                             </div>
                         )}
                     </div>

@@ -35,10 +35,17 @@ if ('serviceWorker' in navigator) {
   } else {
     // For regular users: unregister any existing SW to remove PWA behavior
     navigator.serviceWorker.getRegistrations().then(registrations => {
-      // Only unregister the main SW, keep firebase-messaging-sw if present
-      registrations.forEach(reg => {
-        if (reg.active && reg.active.scriptURL.includes('sw-v2')) {
+      registrations.forEach(async reg => {
+        const scriptURL = reg.active?.scriptURL || '';
+        // Old Firebase messaging worker: replaced by Web Push in sw-v2
+        if (scriptURL.includes('firebase-messaging-sw')) {
           reg.unregister();
+          return;
+        }
+        if (scriptURL.includes('sw-v2')) {
+          // Keep it on devices that receive booking alerts: unregistering drops the subscription
+          const subscription = await reg.pushManager?.getSubscription().catch(() => null);
+          if (!subscription) reg.unregister();
         }
       });
     });

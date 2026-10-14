@@ -1,9 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
 import CustomDropdown from '../common/CustomDropdown';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { isRentalBusiness, isSportBusiness } from '../../utils/businessUtils';
+import { getCourtSport } from '../../utils/sports';
+import RentalPaymentsCard from './RentalPaymentsCard';
+import BookingCashCharge from './canteen/BookingCashCharge';
+import { useBookingCash } from './canteen/useBookingCash';
 
-const BookingDetailsModal = ({
-    isOpen,
+// Booking history in Argentina time, 24 h, whatever the device settings
+const formatHistoryTime = (iso) => new Date(iso).toLocaleString('es-AR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    hourCycle: 'h23', timeZone: 'America/Argentina/Buenos_Aires'
+});
+
+const CANTEEN_CATEGORY_ICONS ={ Bebidas: '🥤', Snacks: '🍫', Equipamiento: '🎾', Alquileres: '🏓', Otro: '🛒' };
+
+const BookingDetailsModalContent = ({
     onClose,
     isMobile,
     booking,
@@ -11,45 +24,25 @@ const BookingDetailsModal = ({
     selectedBusinessId,
     onAction,
     formatDisplayDate,
-    getStatusLabel
+    getStatusLabel,
+    onGoToCashRegister
 }) => {
     const { showToast } = useNotification();
-    if (!isOpen || !booking) return null;
 
     const biz = businesses?.find(b => String(b.id) === String(selectedBusinessId || booking.business_id || booking.businessId));
-    const isRental = biz?.type === 'venue' ||
-        biz?.type === 'alquiler' ||
-        biz?.rubro === 'alquiler' ||
-        biz?.rubro === 'venue' ||
-        (biz?.category || '').toLowerCase().includes('quincho') ||
-        (biz?.category || '').toLowerCase().includes('alquiler') ||
-        (biz?.categories?.name || '').toLowerCase().includes('alquiler') ||
-        (biz?.categories?.name || '').toLowerCase().includes('quincho') ||
-        (biz?.name || '').toLowerCase().includes('quincho') ||
-        (booking.business_type === 'venue') ||
-        (booking.metadata?.business_type === 'venue') ||
-        Boolean(booking.guest_count || booking.guestCount || booking.metadata?.guestCount || booking.metadata?.durationHours);
+    const isRental = biz
+        ? isRentalBusiness(biz)
+        : (booking.business_type === 'venue' || booking.metadata?.business_type === 'venue' || Boolean(booking.guest_count || booking.guestCount));
 
     const courtId = booking.court_id || booking.courtId || booking.service_id || booking.serviceId;
     const court = (biz?.courts || []).find(c => String(c.id) === String(courtId));
     const service = (biz?.services || []).find(s => String(s.id) === String(booking.service_id || booking.serviceId));
     const resourceName = court?.name || service?.name || booking.resource_name || booking.court_name || booking.service_name || booking.metadata?.resource_name || (isRental ? 'Espacio Completo' : 'Cancha Asignada');
+    const specialist = (biz?.specialists || []).find(sp => String(sp.id) === String(booking.specialist_id || booking.specialistId));
 
-    const isPadel = !isRental && (
-        (biz?.sport_type || '').toLowerCase().includes('padel') ||
-        (biz?.category || '').toLowerCase().includes('padel') ||
-        (biz?.categories?.name || '').toLowerCase().includes('padel') ||
-        (biz?.name || '').toLowerCase().includes('padel') ||
-        (resourceName || '').toLowerCase().includes('padel')
-    );
-
-    const isFutbol = !isRental && !isPadel && (
-        (biz?.sport_type || '').toLowerCase().includes('futbol') ||
-        (biz?.category || '').toLowerCase().includes('futbol') ||
-        (biz?.categories?.name || '').toLowerCase().includes('futbol') ||
-        (biz?.name || '').toLowerCase().includes('futbol') ||
-        (biz?.type === 'sport')
-    );
+    const courtSport = !isRental && (court || biz?.type === 'sport') ? getCourtSport(court, biz) : null;
+    const isPadel = courtSport === 'padel';
+    const isFutbol = courtSport === 'futbol';
 
     // Durations
     const rawDurations = biz?.rental_duration_options || biz?.rentalDurationOptions || [];
@@ -61,12 +54,25 @@ const BookingDetailsModal = ({
     // Capacity limit
     const maxCapacity = Number(biz?.capacity_limit || biz?.capacity || 100);
 
+    // Court businesses charge into the cash register; its articles can be added as extras
+    const isSport = !isRental && isSportBusiness(biz);
+    const bookingCash = useBookingCash({ businessId: biz?.id, bookingId: booking.id, enabled: isSport });
+
     // Business Catalog Additionals (ONLY additional services / extras, exclude amenities)
     const catalogAdditionals = useMemo(() => {
+        const canteenItems = bookingCash.products.map(p => ({
+            id: p.id,
+            product_id: p.id,
+            name: p.name,
+            price: Number(p.sale_price || 0),
+            icon: CANTEEN_CATEGORY_ICONS[p.category] || '🛒'
+        }));
+
         const list = [
             ...(biz?.additional_services || []),
             ...(biz?.additionalServices || []),
-            ...(biz?.extras || [])
+            ...(biz?.extras || []),
+            ...canteenItems
         ];
         const unique = [];
         const seen = new Set();
@@ -79,7 +85,8 @@ const BookingDetailsModal = ({
                     unique.push({
                         id: item.id || Math.random().toString(),
                         name: name.trim(),
-                        price: Number(item.price || 0),
+                        price: Number(item.price || item.sale_price || 0),
+                        ...(item.product_id ? { product_id: item.product_id } : {}),
                         icon: item.icon || '✨'
                     });
                 }
@@ -97,7 +104,7 @@ const BookingDetailsModal = ({
         });
 
         return unique;
-    }, [biz]);
+    }, [biz, bookingCash.products]);
 
     // Parse initial services from booking with full quantity and icon support
     const parseBookingServices = (b) => {
@@ -129,12 +136,14 @@ const BookingDetailsModal = ({
             if (typeof s === 'object' && s !== null) {
                 const name = s.name || s.label || s.title || 'Adicional';
                 const found = catalogAdditionals.find(cat => cat.name.toLowerCase() === name.toLowerCase());
+                const productId = s.product_id || found?.product_id;
                 return {
                     id: s.id || found?.id || Math.random().toString(),
                     name: name,
                     price: Number(s.price !== undefined ? s.price : (found?.price || 0)),
                     quantity: Math.max(1, parseInt(s.quantity, 10) || 1),
-                    icon: s.icon || found?.icon || '✨'
+                    icon: s.icon || found?.icon || '✨',
+                    ...(productId ? { product_id: productId } : {})
                 };
             }
             const nameStr = String(s);
@@ -190,19 +199,24 @@ const BookingDetailsModal = ({
     const [editableNotes, setEditableNotes] = useState('');
     const [editableServices, setEditableServices] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
+    const isSlotBlock = !isRental && !String(booking.id || '').startsWith('blocked-') && Boolean(booking.time);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
     // Initial duration detection
+    // metadata.duration is minutes on manual bookings and hours on some older ones: trust it only when it looks like hours
+    const metaDuration = Number(booking.metadata?.duration);
     const initialDurationHours = Number(booking.durationHours) ||
+        Number(booking.metadata?.duration_hours) ||
         Number(booking.metadata?.durationHours) ||
-        Number(booking.metadata?.duration) ||
         (booking.duration ? Math.round(Number(booking.duration) / 60) : null) ||
+        (metaDuration > 0 && metaDuration <= 48 ? metaDuration : null) ||
         (durationOptions.length > 0 ? durationOptions[0] : 8);
     const [editableDuration, setEditableDuration] = useState(initialDurationHours);
 
     // WhatsApp Menu and Custom Message Modal State
     const [showWhatsappMenu, setShowWhatsappMenu] = useState(false);
     const [previewMessage, setPreviewMessage] = useState(null);
+    useBodyScrollLock();
 
     // Custom extra add form state
     const [showAddCustomExtra, setShowAddCustomExtra] = useState(false);
@@ -273,6 +287,52 @@ const BookingDetailsModal = ({
     const activePrice = Number(editablePrice) || 0;
     const activeDeposit = Number(editableDeposit) || 0;
     const pendingBalance = activePrice - activeDeposit > 0 ? activePrice - activeDeposit : 0;
+    const rentalPayments = Array.isArray(booking.metadata?.payments) ? booking.metadata.payments : [];
+    const rentalPaid = rentalPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    // Once payments are recorded, the balance comes from them instead of the deposit
+    const rentalBalance = rentalPayments.length > 0 ? Math.max(0, activePrice - rentalPaid) : pendingBalance;
+    const saveRentalPayments = (payments, label) => onAction('update_booking', {
+        metadata: { payments },
+        historyLabel: label
+    });
+    // Courts: the balance discounts the deposit already marked as paid, recorded payments and cash register charges.
+    // A deposit charged in the register is one of those charges, so it is not discounted twice.
+    const [depositMode, setDepositMode] = useState(false);
+    const depositPaid = booking.status === 'deposit_paid' || Boolean(booking.deposit_paid_at);
+    const depositMovementId = booking.metadata?.deposit_cash_movement_id;
+    const depositInCash = Boolean(depositMovementId) && bookingCash.movements.some(m => m.id === depositMovementId && !m.voided_at);
+    const sportPriorPaid = (depositPaid && !depositInCash ? activeDeposit : 0) + rentalPaid;
+    const sportCashCharged = bookingCash.movements
+        .filter(m => !m.voided_at)
+        .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+    const sportPending = Math.max(0, activePrice - sportPriorPaid - sportCashCharged);
+    const cashMethodLabel = (movement) => (movement?.payment_method === 'transfer' ? 'Transferencia' : 'Efectivo');
+    const handleCashCharged = (movement) => {
+        Promise.resolve(onAction('update_booking', {
+            historyLabel: `Cobrado en caja: $${Number(movement?.amount || 0).toLocaleString('es-AR')} (${cashMethodLabel(movement)})`
+        })).catch(() => { /* the charge is already in the register; the history line is a nicety */ });
+    };
+    // The deposit went into the register: remember which movement it was and mark the deposit as paid if it was not
+    const handleDepositCharged = async (movement) => {
+        const amount = Number(movement?.amount) || 0;
+        setDepositMode(false);
+        const historyLabel = `Seña cobrada en caja: $${amount.toLocaleString('es-AR')} (${cashMethodLabel(movement)})`;
+        const metadata = { deposit_cash_movement_id: movement.id };
+        try {
+            // One write each, so neither overwrites the other's history line
+            if (booking.status === 'pending') {
+                await onAction('confirm_deposit', { depositAmount: amount, metadata, historyLabel });
+            } else {
+                await onAction('update_booking', { deposit_amount: amount, metadata, historyLabel });
+            }
+        } catch {
+            showToast('La seña quedó en la caja, pero no se pudo actualizar la reserva', 'warning');
+        }
+    };
+    const handleConfirmDepositWithoutCash = () => {
+        setDepositMode(false);
+        onAction('confirm_deposit', { depositAmount: activeDeposit });
+    };
     const extrasSum = editableServices.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
     const baseRentalPrice = Math.max(0, activePrice + discountAmount + promoDiscountAmount + durationDiscountAmount - extrasSum);
 
@@ -419,7 +479,8 @@ const BookingDetailsModal = ({
                 name: catalogItem.name,
                 price: itemPrice,
                 quantity: 1,
-                icon: catalogItem.icon || '✨'
+                icon: catalogItem.icon || '✨',
+                ...(catalogItem.product_id ? { product_id: catalogItem.product_id } : {})
             }];
             setEditableServices(updated);
             setEditablePrice(activePrice + itemPrice);
@@ -507,7 +568,8 @@ const BookingDetailsModal = ({
                     depositAmount: activeDeposit,
                     guestCount: isRental && editableGuests ? parseInt(editableGuests, 10) : null,
                     guest_count: isRental && editableGuests ? parseInt(editableGuests, 10) : null,
-                    duration: isRental && editableDuration ? Number(editableDuration) : (booking.metadata?.duration || null),
+                    duration: isRental && editableDuration ? Number(editableDuration) * 60 : (booking.metadata?.duration || null),
+                    duration_hours: isRental && editableDuration ? Number(editableDuration) : (booking.metadata?.duration_hours || null),
                     durationHours: isRental && editableDuration ? Number(editableDuration) : (booking.metadata?.durationHours || null),
                     event_type: editableEventType || null,
                     eventType: editableEventType || null,
@@ -593,7 +655,7 @@ const BookingDetailsModal = ({
                         fontWeight: '800',
                         color: 'var(--text-primary)'
                     }}>
-                        Fecha Bloqueada
+                        {isSlotBlock ? 'Horario Bloqueado' : 'Fecha Bloqueada'}
                     </h3>
 
                     <div style={{
@@ -603,7 +665,7 @@ const BookingDetailsModal = ({
                         lineHeight: '1.4'
                     }}>
                         <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
-                            📅 {formatDisplayDate(booking.date)}
+                            📅 {formatDisplayDate(booking.date)}{isSlotBlock ? ` · ${booking.time} hs` : ''}
                         </div>
                         {booking.customer_name && booking.customer_name !== 'BLOQUEADO' && (
                             <div style={{ fontSize: '13px', marginTop: '4px', opacity: 0.85 }}>
@@ -617,7 +679,9 @@ const BookingDetailsModal = ({
                         color: 'var(--text-muted, #9CA3AF)',
                         margin: '0 0 24px 0'
                     }}>
-                        ¿Deseas desbloquear esta fecha para que vuelva a estar disponible para reservas?
+                        {isSlotBlock
+                            ? '¿Querés desbloquear este horario para que vuelva a estar disponible?'
+                            : '¿Deseas desbloquear esta fecha para que vuelva a estar disponible para reservas?'}
                     </p>
 
                     <div style={{
@@ -788,6 +852,9 @@ const BookingDetailsModal = ({
                                               booking.booking_source === 'marketplace' || 
                                               booking.bookingSource === 'marketplace' || 
                                               booking.metadata?.source === 'marketplace';
+                        const isManual = booking.metadata?.booking_source === 'manual' ||
+                                         booking.booking_source === 'manual' ||
+                                         booking.bookingSource === 'manual';
                         return (
                             <div style={{
                                 display: 'flex',
@@ -803,6 +870,10 @@ const BookingDetailsModal = ({
                                 {isMarketplace ? (
                                     <span style={{ fontWeight: '800', color: 'var(--primary-paddle)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                         <span>🌐</span> TurnitosLR (Marketplace)
+                                    </span>
+                                ) : isManual ? (
+                                    <span style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span>✍️</span> Cargada en el panel
                                     </span>
                                 ) : (
                                     <span style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -1957,7 +2028,7 @@ const BookingDetailsModal = ({
                                         {booking.status === 'pending' && !isEditing && (
                                             <button
                                                 type="button"
-                                                onClick={() => onAction('confirm_deposit')}
+                                                onClick={() => onAction('confirm_deposit', { depositAmount: activeDeposit })}
                                                 style={{
                                                     width: '100%',
                                                     padding: '7px 8px',
@@ -1985,10 +2056,10 @@ const BookingDetailsModal = ({
                                     <div style={{
                                         padding: '12px',
                                         borderRadius: '12px',
-                                        background: (booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                        background: ((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                             ? 'rgba(0, 230, 118, 0.06)'
                                             : 'rgba(239, 68, 68, 0.06)',
-                                        border: (booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                        border: ((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                             ? '1px solid rgba(0, 230, 118, 0.3)'
                                             : '1px solid rgba(239, 68, 68, 0.25)',
                                         display: 'flex',
@@ -2006,14 +2077,14 @@ const BookingDetailsModal = ({
                                                     fontWeight: '800',
                                                     padding: '2px 6px',
                                                     borderRadius: '4px',
-                                                    background: (booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                                    background: ((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                                         ? 'rgba(0, 230, 118, 0.2)'
                                                         : 'rgba(239, 68, 68, 0.15)',
-                                                    color: (booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                                    color: ((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                                         ? '#00E676'
                                                         : '#E11D48'
                                                 }}>
-                                                    {(booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                                    {((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                                         ? '✓ Liquidado'
                                                         : 'A cobrar el día del evento'}
                                                 </span>
@@ -2022,13 +2093,13 @@ const BookingDetailsModal = ({
                                             <div style={{
                                                 fontSize: '18px',
                                                 fontWeight: '900',
-                                                color: (booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                                color: ((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                                     ? '#00E676'
                                                     : '#E11D48'
                                             }}>
-                                                {(booking.status === 'confirmed' && pendingBalance === 0) || booking.status === 'completed'
+                                                {((booking.status === 'confirmed' || rentalPayments.length > 0) && rentalBalance === 0) || booking.status === 'completed'
                                                     ? '$0'
-                                                    : `$${pendingBalance.toLocaleString('es-AR')}`}
+                                                    : `$${rentalBalance.toLocaleString('es-AR')}`}
                                             </div>
                                             <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
                                                 A cobrar al recibir al cliente al quincho/salón
@@ -2041,6 +2112,13 @@ const BookingDetailsModal = ({
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Payments the business agreed with the client */}
+                            <RentalPaymentsCard
+                                payments={rentalPayments}
+                                total={activePrice}
+                                onSave={saveRentalPayments}
+                            />
 
                             {/* TIMELINE / HISTORY */}
                             <div style={{
@@ -2058,9 +2136,9 @@ const BookingDetailsModal = ({
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
                                             <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>Reserva Creada</span>
                                             <span style={{ color: 'var(--text-secondary)', fontSize: '9px' }}>
-                                                {booking.created_at ? new Date(booking.created_at).toLocaleString('es-AR') :
+                                                {booking.created_at ? formatHistoryTime(booking.created_at) :
                                                     (booking.history?.find(h => h.action === 'creation')?.timestamp ?
-                                                        new Date(booking.history.find(h => h.action === 'creation').timestamp).toLocaleString('es-AR') : '-')}
+                                                        formatHistoryTime(booking.history.find(h => h.action === 'creation').timestamp) : '-')}
                                             </span>
                                         </div>
                                     </div>
@@ -2072,7 +2150,7 @@ const BookingDetailsModal = ({
                                                     {log.label === 'Turno Confirmado' ? 'Reserva Confirmada' : (log.label === 'Turno Cancelado' ? 'Reserva Cancelada' : log.label)}
                                                 </span>
                                                 <span style={{ color: 'var(--text-secondary)', fontSize: '9px' }}>
-                                                    {new Date(log.timestamp).toLocaleString('es-AR')}
+                                                    {formatHistoryTime(log.timestamp)}
                                                 </span>
                                             </div>
                                             {log.reason && (
@@ -2089,7 +2167,7 @@ const BookingDetailsModal = ({
                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <span style={{ color: 'var(--text-secondary)' }}>Confirmado:</span>
                                                     <span style={{ color: '#00E676', fontWeight: '500' }}>
-                                                        {new Date(booking.confirmed_at).toLocaleString('es-AR')}
+                                                        {formatHistoryTime(booking.confirmed_at)}
                                                     </span>
                                                 </div>
                                             )}
@@ -2097,7 +2175,7 @@ const BookingDetailsModal = ({
                                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                     <span style={{ color: 'var(--text-secondary)' }}>Cancelado:</span>
                                                     <span style={{ color: '#ff4444', fontWeight: '500' }}>
-                                                        {new Date(booking.cancelled_at).toLocaleString('es-AR')}
+                                                        {formatHistoryTime(booking.cancelled_at)}
                                                     </span>
                                                 </div>
                                             )}
@@ -2110,7 +2188,7 @@ const BookingDetailsModal = ({
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                                 {(booking.status === 'pending' || booking.status === 'deposit_paid') && (
                                     <button
-                                        onClick={() => booking.status === 'pending' && onAction('confirm_deposit')}
+                                        onClick={() => booking.status === 'pending' && onAction('confirm_deposit', { depositAmount: activeDeposit })}
                                         disabled={booking.status === 'deposit_paid'}
                                         style={{
                                             padding: '11px 14px',
@@ -2242,11 +2320,16 @@ const BookingDetailsModal = ({
 
                                 <div>
                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>
-                                        {isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '🎯 Espacio / Cancha'}
+                                        {isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '💼 Servicio'}
                                     </label>
                                     <div style={{ fontWeight: '800', color: 'var(--primary-paddle)', fontSize: isMobile ? '13px' : '14px' }}>
                                         {resourceName}
                                     </div>
+                                    {specialist && (
+                                        <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                            👤 {specialist.name}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -2449,7 +2532,41 @@ const BookingDetailsModal = ({
                                     <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                                         ✨ Adicionales ({editableServices.length}):
                                     </label>
+                                    {isSport && !isEditing && bookingCash.products.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsEditing(true)}
+                                            style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                                        >
+                                            + Sumar artículos
+                                        </button>
+                                    )}
                                 </div>
+
+                                {/* Courts: add cash register articles (stock is discounted when the booking is charged) */}
+                                {isSport && isEditing && catalogAdditionals.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', paddingBottom: '6px', borderBottom: '1px dashed var(--border)' }}>
+                                        {catalogAdditionals.map(catItem => (
+                                            <button
+                                                key={catItem.id}
+                                                type="button"
+                                                onClick={() => handleToggleCatalogExtra(catItem)}
+                                                style={{
+                                                    padding: '6px 10px',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid var(--border)',
+                                                    background: 'var(--bg-card)',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '12px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                + {catItem.name}{catItem.price > 0 ? ` ($${catItem.price.toLocaleString('es-AR')})` : ''}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {editableServices.length > 0 ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -2460,6 +2577,7 @@ const BookingDetailsModal = ({
                                                     display: 'flex',
                                                     justifyContent: 'space-between',
                                                     alignItems: 'center',
+                                                    gap: '8px',
                                                     padding: '6px 10px',
                                                     borderRadius: '8px',
                                                     background: 'var(--bg-card)',
@@ -2467,12 +2585,19 @@ const BookingDetailsModal = ({
                                                     fontSize: '12px'
                                                 }}
                                             >
-                                                <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-                                                    ✓ {serviceItem.name}
+                                                <span style={{ fontWeight: '600', color: 'var(--text-primary)', minWidth: 0 }}>
+                                                    ✓ {Number(serviceItem.quantity) > 1 ? `${serviceItem.quantity}x ` : ''}{serviceItem.name}
                                                 </span>
-                                                <span style={{ fontWeight: '700', color: 'var(--primary-paddle)' }}>
-                                                    {serviceItem.price > 0 ? `+$${Number(serviceItem.price).toLocaleString('es-AR')}` : 'Incluido'}
-                                                </span>
+                                                {isSport && isEditing ? (
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                        <button type="button" onClick={() => handleQuantityChange(idx, -1)} aria-label={`Quitar ${serviceItem.name}`} style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontWeight: '800', cursor: 'pointer' }}>−</button>
+                                                        <button type="button" onClick={() => handleQuantityChange(idx, 1)} aria-label={`Sumar ${serviceItem.name}`} style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontWeight: '800', cursor: 'pointer' }}>+</button>
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ fontWeight: '700', color: 'var(--primary-paddle)', flexShrink: 0 }}>
+                                                        {serviceItem.price > 0 ? `+$${(Number(serviceItem.price) * (Number(serviceItem.quantity) || 1)).toLocaleString('es-AR')}` : 'Incluido'}
+                                                    </span>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -2566,7 +2691,7 @@ const BookingDetailsModal = ({
                                     fontSize: '12px'
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                                        <span>Alquiler cancha:</span>
+                                        <span>{isPadel || isFutbol ? 'Alquiler cancha:' : 'Servicio:'}</span>
                                         <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>${baseRentalPrice.toLocaleString('es-AR')}</span>
                                     </div>
                                     {discountAmount > 0 && (
@@ -2616,12 +2741,47 @@ const BookingDetailsModal = ({
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
                                         <span style={{ color: 'var(--text-secondary)', fontSize: '11px', display: 'block', marginBottom: '2px' }}>Saldo a Cobrar:</span>
-                                        <span style={{ fontWeight: '700', color: booking.status === 'confirmed' ? '#00E676' : '#E11D48' }}>
-                                            {booking.status === 'confirmed' || booking.status === 'completed' ? '$0 (Pagado Total)' : `$${pendingBalance.toLocaleString('es-AR')}`}
-                                        </span>
+                                        {isSport && bookingCash.canCharge ? (
+                                            <span style={{ fontWeight: '700', color: sportPending > 0 ? '#E11D48' : 'var(--primary-paddle)' }}>
+                                                {sportPending > 0 ? `$${sportPending.toLocaleString('es-AR')}` : '$0 (Pagado)'}
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontWeight: '700', color: booking.status === 'confirmed' ? '#00E676' : '#E11D48' }}>
+                                                {booking.status === 'confirmed' || booking.status === 'completed' ? '$0 (Pagado Total)' : `$${pendingBalance.toLocaleString('es-AR')}`}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
+
+                            {isSport && bookingCash.canCharge && booking.status !== 'cancelled' && (
+                                <BookingCashCharge
+                                    businessId={biz.id}
+                                    bookingId={booking.id}
+                                    description={`Turno ${resourceName} · ${formatDisplayDate(booking.date)}${booking.time ? ` ${String(booking.time).slice(0, 5)} hs` : ''} · ${booking.customer_name || booking.customerName || 'Cliente'}`}
+                                    total={activePrice}
+                                    priorPaid={sportPriorPaid}
+                                    priorPaidLabel={depositPaid && !depositInCash ? (rentalPaid > 0 ? 'seña y pagos' : 'seña') : 'pagos'}
+                                    services={editableServices}
+                                    cash={bookingCash}
+                                    disabled={isEditing}
+                                    onGoToCashRegister={onGoToCashRegister}
+                                    onCharged={handleCashCharged}
+                                    showToast={showToast}
+                                    deposit={{
+                                        active: depositMode,
+                                        amount: activeDeposit,
+                                        // Deposits marked as paid before the register existed can still be registered
+                                        canRegister: depositPaid && !depositInCash && activeDeposit > 0,
+                                        needsConfirm: booking.status === 'pending',
+                                        description: `Seña · ${booking.customer_name || booking.customerName || 'Cliente'} · ${formatDisplayDate(booking.date)}${booking.time ? ` ${String(booking.time).slice(0, 5)} hs` : ''}`,
+                                        onStart: () => setDepositMode(true),
+                                        onCancel: () => setDepositMode(false),
+                                        onCharged: handleDepositCharged,
+                                        onConfirmWithoutCash: handleConfirmDepositWithoutCash
+                                    }}
+                                />
+                            )}
 
                             {/* Shift History */}
                             <div style={{
@@ -2637,9 +2797,9 @@ const BookingDetailsModal = ({
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
                                             <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>Turno Creado</span>
                                             <span style={{ color: 'var(--text-secondary)', fontSize: '9px' }}>
-                                                {booking.created_at ? new Date(booking.created_at).toLocaleString('es-AR') :
+                                                {booking.created_at ? formatHistoryTime(booking.created_at) :
                                                     (booking.history?.find(h => h.action === 'creation')?.timestamp ?
-                                                        new Date(booking.history.find(h => h.action === 'creation').timestamp).toLocaleString('es-AR') : '-')}
+                                                        formatHistoryTime(booking.history.find(h => h.action === 'creation').timestamp) : '-')}
                                             </span>
                                         </div>
                                     </div>
@@ -2649,7 +2809,7 @@ const BookingDetailsModal = ({
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
                                                 <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{log.label}</span>
                                                 <span style={{ color: 'var(--text-secondary)', fontSize: '9px' }}>
-                                                    {new Date(log.timestamp).toLocaleString('es-AR')}
+                                                    {formatHistoryTime(log.timestamp)}
                                                 </span>
                                             </div>
                                             {log.reason && (
@@ -2666,7 +2826,16 @@ const BookingDetailsModal = ({
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                                 {(booking.status === 'pending' || booking.status === 'deposit_paid') && (
                                     <button
-                                        onClick={() => booking.status === 'pending' && onAction('confirm_deposit')}
+                                        onClick={() => {
+                                            if (booking.status !== 'pending') return;
+                                            // Courts with a cash register: the deposit is charged in the register first
+                                            if (isSport && bookingCash.canCharge && !bookingCash.error) {
+                                                setDepositMode(true);
+                                                document.getElementById('booking-cash-charge')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            } else {
+                                                onAction('confirm_deposit', { depositAmount: activeDeposit });
+                                            }
+                                        }}
                                         disabled={booking.status === 'deposit_paid'}
                                         style={{
                                             padding: '10px 14px',
@@ -2875,6 +3044,12 @@ const BookingDetailsModal = ({
             )}
         </div>
     );
+};
+
+// Mount the content only while open so its hooks always run in the same order
+const BookingDetailsModal = ({ isOpen, ...props }) => {
+    if (!isOpen || !props.booking) return null;
+    return <BookingDetailsModalContent {...props} />;
 };
 
 export default BookingDetailsModal;

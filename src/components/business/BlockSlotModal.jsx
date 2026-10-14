@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export default function BlockSlotModal({
     isOpen,
@@ -22,6 +23,7 @@ export default function BlockSlotModal({
         onClose();
     };
 
+    useBodyScrollLock(isOpen);
     if (!isOpen) return null;
 
     return (

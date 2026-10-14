@@ -4,17 +4,24 @@ Esta guía detalla las especificaciones para las imágenes y banners utilizados 
 
 ## 1. Banners de Promociones (Home)
 
-Para el carrusel principal del Home, las imágenes deben seguir estas reglas para adaptarse al diseño responsivo (Split/Inmersivo).
+El banner del Home tiene proporción fija: **3:1 en escritorio** y **3:2 en celular**. Hay dos tipos de banner y cada uno lleva una medida distinta.
 
-### 📏 Dimensiones y Formato
-*   **Proporción de Aspecto**: **16:9** (Panorámico/Horizontal).
-*   **Resolución Recomendada**: `1920 x 1080 px` (Full HD).
-*   **Resolución Mínima**: `1280 x 720 px` (HD).
-*   **Formato de Archivo**: **WebP** (recomendado por rendimiento) o **JPG** (calidad alta, compresión 80-90%).
+### 🌐 Campaña General (sin negocio)
+La imagen ocupa todo el banner y **se muestra completa, sin recortes**. Si la proporción no coincide (por ejemplo en celular), los costados se rellenan con una copia difuminada de la misma imagen.
+*   **Proporción**: **3:1**.
+*   **Resolución Recomendada**: `1500 x 500 px`.
+*   **Texto**: se puede incluir, pero tiene que leerse bien en celular, donde el banner se ve más chico.
 
-### 🎯 Composición
-*   **Sujeto Centrado**: Mantén lo importante en el centro.
-*   **Sin Texto**: No agregues texto promocional en la imagen. La app lo añade automáticamente.
+### 🏢 Promoción de un Negocio
+La app agrega el título, el descuento y el nombre del negocio. La imagen **se recorta** para llenar su espacio: en escritorio ocupa la parte izquierda (aprox. 9:5) y en celular todo el banner (3:2).
+*   **Proporción**: **3:2**.
+*   **Resolución Recomendada**: `1200 x 800 px`.
+*   **Sin Texto**: no agregues texto en la imagen, porque se puede cortar.
+*   **Sujeto Centrado**: mantené lo importante en el centro.
+
+### 📁 Formato
+*   **WebP** (recomendado por rendimiento) o **JPG** (calidad alta, compresión 80-90%).
+*   El formulario de promociones del SuperAdmin muestra una vista previa de cómo queda en compu y en celular.
 
 ---
 

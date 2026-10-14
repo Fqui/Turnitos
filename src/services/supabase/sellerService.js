@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 import { syncBusinessResources } from './resourceService';
 
-function generateTempPassword() {
+export function generateTempPassword() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
     const values = crypto.getRandomValues(new Uint32Array(10));
     return Array.from(values, v => chars[v % chars.length]).join('');
@@ -97,52 +97,48 @@ export async function getSellerBusinesses(sellerId) {
 }
 
 /**
- * Create business by seller
+ * Create a business with its owner login in one server-side step (admin-accounts
+ * function). The server picks a unique slug and access email, the plan for the
+ * business type, and undoes everything if any part fails.
+ * Returns { business: { id, slug, email, type }, credentials: { email, password } }.
  */
-export async function createBusinessBySeller(sellerId, businessData, createBusinessFn) {
-    const requestedCount = parseInt(businessData.resources_count || businessData.initial_resources_count || 1);
-    const bType = businessData.type || 'sport';
+export async function createBusinessWithAccount(businessData) {
+    const subcategoryIds = (Array.isArray(businessData.subcategories) && businessData.subcategories.length > 0
+        ? businessData.subcategories
+        : [businessData.subcategory_id]
+    ).map(s => (typeof s === 'object' && s ? s.id : s)).filter(Boolean);
 
-    let planId = businessData.subscription_plan_id;
-    if (!planId || planId === '1' || planId.length !== 36) {
-        try {
-            const { data: matchedPlans } = await supabase
-                .from('subscription_plans')
-                .select('id, spaces_included')
-                .eq('business_type', bType)
-                .order('spaces_included', { ascending: true });
-
-            if (matchedPlans && matchedPlans.length > 0) {
-                const exactPlan = matchedPlans.find(p => p.spaces_included === requestedCount);
-                planId = exactPlan ? exactPlan.id : (matchedPlans.find(p => p.spaces_included >= requestedCount)?.id || matchedPlans[matchedPlans.length - 1].id);
+    const { data, error } = await supabase.functions.invoke('admin-accounts', {
+        body: {
+            action: 'create_business',
+            business: {
+                name: businessData.name,
+                slug: businessData.slug,
+                category_id: businessData.category_id,
+                subcategory_ids: subcategoryIds,
+                seller_id: businessData.seller_id || null,
+                location: businessData.location,
+                whatsapp: businessData.whatsapp || businessData.phone || null,
+                instagram: businessData.instagram,
+                facebook: businessData.facebook,
+                tiktok: businessData.tiktok,
+                resources_count: businessData.resources_count,
+                subscription_status: businessData.subscription_status
             }
-        } catch (err) {
-            console.warn('Error matching subscription plan:', err);
         }
+    });
+    if (error) {
+        const detail = await error.context?.json?.().catch(() => null);
+        throw new Error(detail?.error || 'No se pudo crear el negocio');
     }
+    return data;
+}
 
-    const sanitizedName = businessData.name
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9-]/g, '');
-
-    const email = `${sanitizedName}@turnitoslr.com`;
-    const password = generateTempPassword();
-
-    const businessWithSellerData = {
-        ...businessData,
-        subscription_plan_id: planId,
-        seller_id: sellerId,
-        email,
-        password,
-        password_changed: false,
-        subscription_status: 'trial'
-    };
-
-    const business = await createBusinessFn(businessWithSellerData);
-    return { ...business, credentials: { email, password } };
+/**
+ * Create business by seller (the server assigns it to the calling seller)
+ */
+export async function createBusinessBySeller(businessData) {
+    return createBusinessWithAccount(businessData);
 }
 
 /**
@@ -647,19 +643,16 @@ export async function getSellerDetailedReport(sellerId) {
  * Update any business as super admin
  */
 export async function updateBusinessAsSuperAdmin(businessId, businessData, syncResourcesFn) {
-    let planId = businessData.subscription_plan_id;
-    if (!planId || planId === '1' || planId === 1) {
-        try {
-            const { data: plans } = await supabase
-                .from('subscription_plans')
-                .select('id')
-                .limit(1);
-            if (plans && plans.length > 0) {
-                planId = plans[0].id;
-            }
-        } catch (e) {
-            console.warn('Could not fetch default plan:', e);
-        }
+    // The plan follows the business type and the number of courts/professionals
+    let planId = businessData.subscription_plan_id || null;
+    try {
+        const { data: pickedPlan } = await supabase.rpc('pick_subscription_plan', {
+            p_business_type: businessData.type,
+            p_spaces: parseInt(businessData.resources_count || 1) || 1
+        });
+        if (pickedPlan) planId = pickedPlan;
+    } catch (e) {
+        console.warn('Could not pick subscription plan:', e);
     }
 
     const sellerId = businessData.seller_id && businessData.seller_id !== '1'
@@ -734,48 +727,31 @@ export async function updateBusinessAsSuperAdmin(businessId, businessData, syncR
  * Update current logged in user password
  */
 export async function updateCurrentPassword(newPassword, userEmail = null, businessId = null) {
-    let updated = false;
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session?.user) {
+        throw new Error('Tu sesión expiró. Volvé a ingresar con la contraseña provisoria.');
+    }
 
-    try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData?.session?.user) {
-            const { error } = await supabase.auth.updateUser({
-                password: newPassword,
-                data: { must_change_password: false }
-            });
-            if (!error) updated = true;
-        }
-    } catch (e) {
-        console.warn('Supabase Auth updateUser exception:', e);
+    // The login password is the source of truth: if it didn't change, say so
+    const { error: authError } = await supabase.auth.updateUser({
+        password: newPassword,
+        data: { must_change_password: false }
+    });
+    if (authError) {
+        const samePassword = /different from the old|same/i.test(authError.message || '');
+        throw new Error(samePassword
+            ? 'La contraseña nueva tiene que ser distinta de la provisoria.'
+            : 'No se pudo cambiar la contraseña. Probá de nuevo.');
     }
 
     try {
-        let targetBusinessId = businessId;
-        let targetEmail = userEmail;
-
-        if (targetBusinessId) {
-            const { data: bizData } = await supabase
-                .from('businesses')
-                .update({ password_changed: true })
-                .eq('id', targetBusinessId)
-                .select();
-            if (bizData && bizData.length > 0) {
-                updated = true;
-                if (!targetEmail) targetEmail = bizData[0].email;
-            }
-        } else if (targetEmail) {
-            const { data: bizData } = await supabase
-                .from('businesses')
-                .update({ password_changed: true })
-                .eq('email', targetEmail)
-                .select();
-            if (bizData && bizData.length > 0) {
-                updated = true;
-                if (!targetBusinessId) targetBusinessId = bizData[0].id;
-            }
+        if (businessId) {
+            await supabase.from('businesses').update({ password_changed: true }).eq('id', businessId);
+        } else if (userEmail) {
+            await supabase.from('businesses').update({ password_changed: true }).eq('email', userEmail);
         }
     } catch (e) {
-        console.warn('Fallback database update error:', e);
+        console.warn('Could not mark password as changed:', e);
     }
 
     return true;
@@ -830,6 +806,39 @@ export async function deleteBusinessAsSuperAdmin(businessId) {
 }
 
 /**
+ * Create a seller as super admin: the login account is created server-side
+ * (admin-accounts function) and the seller row is linked to it.
+ * Returns the temporary password so it can be shared with the seller.
+ */
+export async function createSellerAsSuperAdmin({ firstName, lastName, email, phone }) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!firstName?.trim() || !lastName?.trim() || !cleanEmail) {
+        throw new Error('Nombre, apellido y email son obligatorios.');
+    }
+
+    const tempPassword = generateTempPassword();
+    const { data: account, error: accountError } = await supabase.functions.invoke('admin-accounts', {
+        body: { action: 'create_account', email: cleanEmail, password: tempPassword }
+    });
+    if (accountError) {
+        const detail = await accountError.context?.json?.().catch(() => null);
+        throw new Error(detail?.error || 'No se pudo crear la cuenta del vendedor');
+    }
+
+    const { error } = await supabase.from('sellers').insert({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: cleanEmail,
+        phone: phone?.trim() || null,
+        auth_id: account.user_id,
+        is_active: true
+    });
+    if (error) throw error;
+
+    return { email: cleanEmail, tempPassword };
+}
+
+/**
  * Get global bookings analytics
  */
 export async function getBookingsAnalytics() {
@@ -838,55 +847,58 @@ export async function getBookingsAnalytics() {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    const { data: allBookings } = await supabase
+    // Slots blocked by the business are not customer bookings: leave them out of every metric
+    const { data: rawBookings } = await supabase
         .from('bookings')
         .select('*, businesses(name, categories(name, icon))')
         .order('created_at', { ascending: false });
+    const allBookings = (rawBookings || []).filter(b => b.status !== 'blocked');
 
-    const { data: thisMonthBookings } = await supabase
-        .from('bookings')
-        .select('*')
-        .gte('created_at', startOfMonth.toISOString());
+    const thisMonthBookings = allBookings.filter(b => new Date(b.created_at) >= startOfMonth);
+    const lastMonthBookings = allBookings.filter(b => {
+        const created = new Date(b.created_at);
+        return created >= startOfLastMonth && created <= new Date(endOfLastMonth.getTime() + 86399999);
+    });
 
-    const { data: lastMonthBookings } = await supabase
-        .from('bookings')
-        .select('*')
-        .gte('created_at', startOfLastMonth.toISOString())
-        .lte('created_at', endOfLastMonth.toISOString());
-
-    const totalBookings = allBookings?.length || 0;
-    const thisMonthCount = thisMonthBookings?.length || 0;
-    const lastMonthCount = lastMonthBookings?.length || 0;
+    const totalBookings = allBookings.length;
+    const thisMonthCount = thisMonthBookings.length;
+    const lastMonthCount = lastMonthBookings.length;
     const growthRate = lastMonthCount > 0
         ? (((thisMonthCount - lastMonthCount) / lastMonthCount) * 100).toFixed(1)
         : 0;
 
-    const totalRevenue = allBookings?.reduce((sum, b) => sum + parseFloat(b.price || 0), 0) || 0;
-    const thisMonthRevenue = thisMonthBookings?.reduce((sum, b) => sum + parseFloat(b.price || 0), 0) || 0;
-    const lastMonthRevenue = lastMonthBookings?.reduce((sum, b) => sum + parseFloat(b.price || 0), 0) || 0;
+    // Revenue counts only completed bookings; pending/cancelled ones were never collected
+    const revenueOf = (list) => list
+        .filter(b => b.status === 'completed')
+        .reduce((sum, b) => sum + parseFloat(b.price || 0), 0);
+    const completedCount = allBookings.filter(b => b.status === 'completed').length;
+
+    const totalRevenue = revenueOf(allBookings);
+    const thisMonthRevenue = revenueOf(thisMonthBookings);
+    const lastMonthRevenue = revenueOf(lastMonthBookings);
     const revenueGrowth = lastMonthRevenue > 0
         ? (((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100).toFixed(1)
         : 0;
 
-    const avgBookingValue = totalBookings > 0 ? (totalRevenue / totalBookings).toFixed(2) : 0;
+    const avgBookingValue = completedCount > 0 ? (totalRevenue / completedCount).toFixed(2) : 0;
 
     const statusBreakdown = {};
-    allBookings?.forEach(b => {
+    allBookings.forEach(b => {
         statusBreakdown[b.status] = (statusBreakdown[b.status] || 0) + 1;
     });
 
     const businessBookings = {};
-    allBookings?.forEach(b => {
+    allBookings.forEach(b => {
         if (!businessBookings[b.business_id]) {
             businessBookings[b.business_id] = {
                 count: 0,
                 revenue: 0,
-                name: b.businesses?.name || 'Unknown',
-                category: b.businesses?.categories?.name || 'Unknown'
+                business_name: b.businesses?.name || 'Negocio',
+                category: b.businesses?.categories?.name || 'General'
             };
         }
         businessBookings[b.business_id].count++;
-        businessBookings[b.business_id].revenue += parseFloat(b.price || 0);
+        if (b.status === 'completed') businessBookings[b.business_id].revenue += parseFloat(b.price || 0);
     });
 
     const topBusinesses = Object.values(businessBookings)

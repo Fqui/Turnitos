@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Tag, Check, Copy, ArrowRight, X, Calendar, ShoppingBag } from 'lucide-react';
 import { parsePromotionTarget, calculatePromoDiscount } from '../../utils/promotionUtils';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export default function PromotionModal({
     isOpen,
@@ -14,6 +15,7 @@ export default function PromotionModal({
 }) {
     const [copied, setCopied] = useState(false);
 
+    useBodyScrollLock(isOpen && !!promotion);
     if (!isOpen || !promotion) return null;
 
     const parsed = parsePromotionTarget(promotion);

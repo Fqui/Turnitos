@@ -1,4 +1,5 @@
 import React from 'react';
+import HorizontalScroller from '../HorizontalScroller';
 
 export default function ProfileHighlightsBar({
     permanentHighlights,
@@ -23,7 +24,7 @@ export default function ProfileHighlightsBar({
             id="galeria"
             style={noBorder ? { marginTop: 0, paddingTop: 0, borderTop: 'none' } : {}}
         >
-            <div className="highlights-container">
+            <HorizontalScroller arrows={false} innerClassName="highlights-container">
                 {permanentHighlights.map((highlight, index) => (
                     <div
                         key={highlight.id || index}
@@ -105,7 +106,7 @@ export default function ProfileHighlightsBar({
                         </span>
                     </div>
                 ))}
-            </div>
+            </HorizontalScroller>
         </div>
     );
 }

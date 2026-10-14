@@ -15,7 +15,9 @@ export async function getStoreProducts(businessId, onlyActive = false) {
 
         const { data, error } = await query;
         if (error) {
-            console.error('Error fetching store products:', error);
+            // The store_products table may not exist: products live in business metadata
+            const missingTable = error.code === '42P01' || error.code === 'PGRST205';
+            if (!missingTable) console.error('Error fetching store products:', error);
             return [];
         }
         return data || [];

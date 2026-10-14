@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-export default function MonthCalendar({ selectedDate, onDateSelect, sportColor = '#00E676', maxDays = null }) {
-    const [currentMonth, setCurrentMonth] = useState(new Date());
+export default function MonthCalendar({ selectedDate, onDateSelect, sportColor = '#00E676', maxDays = null, isDateClosed, specialDays = [], limitNavigation = false }) {
+    const [currentMonth, setCurrentMonth] = useState(() => selectedDate ? new Date(selectedDate) : new Date());
 
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -18,6 +18,8 @@ export default function MonthCalendar({ selectedDate, onDateSelect, sportColor =
     today.setHours(0, 0, 0, 0);
 
     const maxAllowedDate = maxDays ? new Date(today.getTime() + (Number(maxDays) * 24 * 60 * 60 * 1000)) : null;
+    const isLastMonth = limitNavigation && Boolean(maxAllowedDate) &&
+        (year > maxAllowedDate.getFullYear() || (year === maxAllowedDate.getFullYear() && month >= maxAllowedDate.getMonth()));
 
     // Generate calendar days
     const calendarDays = [];
@@ -47,7 +49,13 @@ export default function MonthCalendar({ selectedDate, onDateSelect, sportColor =
         compareDate.setHours(0, 0, 0, 0);
         if (compareDate < today) return true;
         if (maxAllowedDate && compareDate > maxAllowedDate) return true;
+        if (typeof isDateClosed === 'function' && isDateClosed(date)) return true;
         return false;
+    };
+
+    const getSpecialDay = (date) => {
+        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        return (specialDays || []).find(sd => sd.date === dateStr);
     };
 
     return (
@@ -87,12 +95,15 @@ export default function MonthCalendar({ selectedDate, onDateSelect, sportColor =
 
                 <button
                     onClick={goToNextMonth}
+                    disabled={isLastMonth}
+                    aria-label="Mes siguiente"
                     style={{
                         background: 'none',
                         border: 'none',
                         fontSize: '24px',
-                        cursor: 'pointer',
+                        cursor: isLastMonth ? 'not-allowed' : 'pointer',
                         color: 'var(--text-primary)',
+                        opacity: isLastMonth ? 0.3 : 1,
                         padding: '4px 8px'
                     }}
                 >
@@ -135,6 +146,8 @@ export default function MonthCalendar({ selectedDate, onDateSelect, sportColor =
                     const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
                     const isToday = date.toDateString() === today.toDateString();
                     const isPast = isPastDate(date);
+                    const special = getSpecialDay(date);
+                    const hasPromo = !isPast && special?.type === 'special_price';
 
                     return (
                         <button
@@ -178,6 +191,17 @@ export default function MonthCalendar({ selectedDate, onDateSelect, sportColor =
                             }}
                         >
                             {date.getDate()}
+                            {hasPromo && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '4px',
+                                    right: '4px',
+                                    width: '6px',
+                                    height: '6px',
+                                    borderRadius: '50%',
+                                    backgroundColor: isSelected ? '#fff' : '#10b981'
+                                }} />
+                            )}
                             {isToday && !isSelected && (
                                 <div style={{
                                     position: 'absolute',

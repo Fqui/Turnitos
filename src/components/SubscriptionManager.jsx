@@ -132,7 +132,7 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
 
         if (onResourcesChange) onResourcesChange(resourceKey, newResources);
         if (onSave) {
-            await onSave({ [resourceKey]: newResources });
+            if (onSave && !(await onSave({ [resourceKey]: newResources }))) return;
         }
     };
 
@@ -144,7 +144,7 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
         applyOverride(index, { active: newActive });
         const newResources = resources.map((r, i) => i === index ? { ...r, active: newActive } : r);
         if (onResourcesChange) onResourcesChange(resourceKey, newResources);
-        if (onSave) await onSave({ [resourceKey]: newResources });
+        if (onSave && !(await onSave({ [resourceKey]: newResources }))) return;
         if (showToast) showToast(`${resourceLabel} ${resources[index].name} ${newActive ? "habilitado" : "deshabilitado"}`, newActive ? "success" : "info");
     };
 
@@ -156,7 +156,7 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
             applyOverride(index, { avatar_url: url });
             const newResources = resources.map((r, i) => i === index ? { ...r, avatar_url: url } : r);
             if (onResourcesChange) onResourcesChange(resourceKey, newResources);
-            if (onSave) await onSave({ [resourceKey]: newResources });
+            if (onSave && !(await onSave({ [resourceKey]: newResources }))) return;
             if (showToast) showToast("Foto guardada correctamente", "success");
         } catch (err) {
             console.error(err);
@@ -173,7 +173,12 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                 <div className="resources-header">
                     <div>
                         <h3 className="resources-title">{isSport ? "Mis Canchas" : "Mis Especialistas"}</h3>
-                        <p className="resources-subtitle">Toca el <span className="pencil-hint">✏️</span> para cambiar el nombre{isSport ? " y precio" : ""}.</p>
+                        <p className="resources-subtitle">Toca el <span className="pencil-hint">✏️</span> para cambiar el nombre{isSport ? " y precio" : " y el rol"}.</p>
+                        {!isSport && (
+                            <p className="resources-subtitle">
+                                La foto, el nombre y el rol se muestran en la card "Nosotros" de tu página. Subí una foto de cada uno para que se vea mejor; los servicios que atiende se toman de la pestaña Servicios.
+                            </p>
+                        )}
                     </div>
                 </div>
                 <div className="resources-list">
@@ -227,9 +232,10 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                 </div>
             </div>
 
+            {/* A row still open for editing is saved too, instead of being dropped */}
             <button
                 className="btn-save-resources"
-                onClick={() => onSave && onSave({ [resourceKey]: resources })}
+                onClick={() => (editingIndex !== null ? confirmEdit() : onSave && onSave({ [resourceKey]: resources }))}
                 disabled={saving}
             >
                 {saving ? "Guardando..." : `Guardar ${resourceLabelPlural}`}

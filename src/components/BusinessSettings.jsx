@@ -17,7 +17,7 @@ import SpecialDaysTab from './business/settings/SpecialDaysTab';
 import GalleryTab from './business/settings/GalleryTab';
 import StoreTab from './business/settings/StoreTab';
 
-export default function BusinessSettings({ business, onUpdate, isMobile }) {
+export default function BusinessSettings({ business, onUpdate, isMobile, initialTab }) {
     const { showToast, showConfirm, showAlert } = useNotification();
     
     // Check business type for initial tab selection
@@ -26,7 +26,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const initType = (business?.type || '').toLowerCase();
     const initIsSport = initType === 'sport' || initCategory.includes('deporte') || initSubcat.includes('futbol') || initSubcat.includes('padel') || ((business?.courts?.length || 0) > 0);
 
-    const [activeTab, setActiveTab] = useState('general');
+    const [activeTab, setActiveTab] = useState(initialTab || 'general');
 
     // Scroll to top of settings page whenever changing active settings tab
     useEffect(() => {
@@ -183,7 +183,16 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
     const handleSave = async (specificUpdates = null) => {
         try {
             setSaving(true);
-            const dataToSave = specificUpdates || formData;
+            const dataToSave = { ...(specificUpdates || formData) };
+
+            // Send only the metadata keys that changed here, so a stale copy doesn't overwrite
+            // values changed elsewhere (coupon usage, store products, etc.)
+            if (dataToSave.metadata && typeof dataToSave.metadata === 'object') {
+                const loadedMeta = business?.metadata || {};
+                dataToSave.metadata = Object.fromEntries(
+                    Object.entries(dataToSave.metadata).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(loadedMeta[k]))
+                );
+            }
 
             // Validate subscription limits for specialists or courts
             if (dataToSave.specialists || dataToSave.courts) {
@@ -195,19 +204,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                     try {
                         const currentSub = await serviceAdapter.getSubscription(targetId);
 
-                        const allowedSpaces = Math.max(
-                            currentSub?.spaces_included || 0,
-                            business?.capacity || 0,
-                            business?.resources_count || 0,
-                            business?.courts?.length || 0,
-                            business?.specialists?.length || 0,
-                            formData?.courts?.length || 0,
-                            formData?.specialists?.length || 0,
-                            resourceCount,
-                            2
-                        );
-
-                        if (currentSub && resourceCount > allowedSpaces) {
+                        // Only the plan decides how many courts/professionals fit
+                        if (currentSub && resourceCount > (Number(currentSub.spaces_included) || 0)) {
                             const plans = await serviceAdapter.getSubscriptionPlans(businessType);
                             const nextPlan = plans.find(p => p.spaces >= resourceCount);
 
@@ -234,7 +232,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                             }
 
                             setSaving(false);
-                            return;
+                            return false;
                         }
                     } catch (error) {
                         console.error('Error checking subscription:', error);
@@ -243,9 +241,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
             }
 
             const targetId = business?.id || formData?.id || formData?.business_id;
-            if (targetId) {
-                await serviceAdapter.patchBusiness(targetId, dataToSave);
-            }
+            if (!targetId) throw new Error('No se encontró el negocio');
+            await serviceAdapter.patchBusiness(targetId, dataToSave);
 
             // Save service-specialist assignments for services that have IDs
             const servicesToProcess = dataToSave.services || formData.services || [];
@@ -291,8 +288,16 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
             }
 
             const updated = freshBiz || { ...(business || {}), ...dataToSave };
+            // Refresh only what was saved: unsaved edits in other tabs stay in the form
+            const savedKeys = new Set(Object.keys(dataToSave));
+            ['logo', 'image', 'logo_url'].some(k => savedKeys.has(k)) && ['logo', 'logo_url'].forEach(k => savedKeys.add(k));
+            ['banner_image', 'banner_url'].some(k => savedKeys.has(k)) && ['banner_image', 'banner_url'].forEach(k => savedKeys.add(k));
+            savedKeys.add('metadata');
+            const updatedSubset = specificUpdates
+                ? Object.fromEntries(Object.entries(updated).filter(([k]) => savedKeys.has(k)))
+                : updated;
             setFormData(prev => {
-                const merged = { ...prev, ...updated };
+                const merged = { ...prev, ...updatedSubset };
                 // Si la actualización no era de servicios, no pisar con array vacío si teníamos datos en memoria
                 if (!('services' in dataToSave) && (!merged.services || merged.services.length === 0) && prev.services && prev.services.length > 0) {
                     merged.services = prev.services;
@@ -308,9 +313,14 @@ export default function BusinessSettings({ business, onUpdate, isMobile }) {
                 onUpdate(updated);
             }
             showToast('Configuración guardada correctamente en la nube', 'success');
+            return true;
         } catch (error) {
             console.error('Error saving settings:', error);
-            showToast(`Error al guardar: ${error.message || 'Verifica la conexión con la base de datos'}`, 'error');
+            const limitReached = /limit exceeded/i.test(error.message || '');
+            showToast(limitReached
+                ? 'Llegaste al máximo de canchas o profesionales de tu plan. Escribinos para ampliarlo.'
+                : `Error al guardar: ${error.message || 'Verifica la conexión con la base de datos'}`, 'error', 6000);
+            return false;
         } finally {
             setSaving(false);
         }

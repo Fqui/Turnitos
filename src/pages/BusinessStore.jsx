@@ -22,9 +22,17 @@ import {
 } from 'lucide-react';
 import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
-import { isFreePlan } from '../utils/subscriptionUtils';
+import PageLoader from '../components/common/PageLoader';
+import SEOHead from '../components/SEOHead';
+import { buildBusinessSeo } from '../utils/seo';
+import { getActiveStoreProducts, isStoreAvailable } from '../utils/storeUtils';
+import { buildWhatsAppUrl } from '../utils/whatsapp';
 import PromotionModal from '../components/promotions/PromotionModal';
+import ShareButton from '../components/common/ShareButton';
+import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
+import { ProductCardImage, ProductDetailImage } from '../components/store/ProductImage';
 import { parsePromotionTarget, calculatePromoDiscount, isPromotionLive } from '../utils/promotionUtils';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 export default function BusinessStore({ overrideSlug }) {
     const { businessSlug: routeSlug } = useParams();
@@ -46,6 +54,11 @@ export default function BusinessStore({ overrideSlug }) {
         return null;
     });
 
+    // Opened from a link shared on TurnitosLR (?via=turnitos): a booking made afterwards counts as marketplace
+    useEffect(() => {
+        markTurnitosVia(business?.id);
+    }, [business?.id]);
+
     const [loading, setLoading] = useState(() => {
         if (location.state?.business) return false;
         try {
@@ -54,7 +67,28 @@ export default function BusinessStore({ overrideSlug }) {
         return true;
     });
 
-    const [cart, setCart] = useState([]);
+    // Cart survives reloads and closing the tab (per business, per browser session)
+    const cartStorageKey = `turnitos_cart_${businessSlug}`;
+    const [cart, setCart] = useState(() => {
+        try {
+            const saved = sessionStorage.getItem(cartStorageKey);
+            const parsed = saved ? JSON.parse(saved) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    });
+    // Set after opening WhatsApp: the cart stays until the customer says the order was sent
+    const [orderSentToWhatsApp, setOrderSentToWhatsApp] = useState(false);
+
+    useEffect(() => {
+        try {
+            if (cart.length > 0) sessionStorage.setItem(cartStorageKey, JSON.stringify(cart));
+            else sessionStorage.removeItem(cartStorageKey);
+        } catch {
+            // Storage unavailable (private mode): the cart just won't survive a reload
+        }
+    }, [cart, cartStorageKey]);
     const [activeCategory, setActiveCategory] = useState('Todos');
     const [searchQuery, setSearchQuery] = useState('');
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -103,6 +137,7 @@ export default function BusinessStore({ overrideSlug }) {
 
     // Product Detail View state (matching Screen 2 from reference)
     const [selectedProductModal, setSelectedProductModal] = useState(null);
+    useBodyScrollLock(isCartOpen || !!selectedProductModal || showLeaveConfirmation || !!itemToDelete);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [modalQty, setModalQty] = useState(1);
     const [selectedSize, setSelectedSize] = useState(null);
@@ -121,32 +156,26 @@ export default function BusinessStore({ overrideSlug }) {
     useEffect(() => {
         const fetchBusiness = async () => {
             try {
-                const allBusinesses = await serviceAdapter.getBusinesses();
-                const foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
+                // Direct lookup first; the full list is only a fallback for slugs saved differently (e.g. spa-3-soles vs spa3soles)
+                let foundBusiness = null;
+                try {
+                    foundBusiness = await serviceAdapter.getBusinessBySlug(businessSlug);
+                } catch {
+                    foundBusiness = null;
+                }
+                if (!foundBusiness) {
+                    const allBusinesses = await serviceAdapter.getBusinesses();
+                    foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
+                }
                 if (foundBusiness) {
-                    if (isFreePlan(foundBusiness.subscription_plan_id || foundBusiness.subscription_plan_name)) {
-                        navigate(`/${foundBusiness.slug || businessSlug}`, { replace: true });
-                        return;
-                    }
                     setBusiness(foundBusiness);
                     try {
                         sessionStorage.setItem(`turnitos_biz_${foundBusiness.slug || businessSlug}`, JSON.stringify(foundBusiness));
                         sessionStorage.setItem(`turnitos_theme_${foundBusiness.slug || businessSlug}`, ((foundBusiness.theme || foundBusiness.metadata?.theme) === 'dark') ? 'dark' : 'light');
                     } catch (e) {}
 
-                    // 1. Check metadata store_products
-                    const customProducts = foundBusiness.metadata?.store_products;
-                    if (Array.isArray(customProducts) && customProducts.length > 0) {
-                        setProducts(customProducts.filter(p => p.is_active !== false));
-                    } else {
-                        // 2. Check store_products table
-                        const dbProducts = await serviceAdapter.getStoreProducts(foundBusiness.id, true);
-                        if (dbProducts && dbProducts.length > 0) {
-                            setProducts(dbProducts);
-                        } else {
-                            setProducts([]);
-                        }
-                    }
+                    // Products live in businesses.metadata.store_products
+                    setProducts(getActiveStoreProducts(foundBusiness));
                 }
             } catch (error) {
                 console.error('Error fetching business for Store:', error);
@@ -188,6 +217,20 @@ export default function BusinessStore({ overrideSlug }) {
             fetchPromo();
         }
     }, [searchParams, business, products.length]);
+
+    // Shared product link (?producto=<id>): open that product's detail
+    const [sharedProductHandled, setSharedProductHandled] = useState(null);
+    useEffect(() => {
+        const productId = searchParams.get('producto');
+        if (!productId || sharedProductHandled === productId || !products?.length) return;
+        const sharedProduct = products.find(p => String(p.id) === String(productId));
+        if (!sharedProduct) return;
+        setSharedProductHandled(productId);
+        setSelectedProductModal(sharedProduct);
+        setActiveImageIndex(0);
+        setModalQty(1);
+        setSelectedSize(sharedProduct.sizes?.[0] || null);
+    }, [searchParams, products, sharedProductHandled]);
 
     // Theme setup matching LinkBio / BusinessProfile with useLayoutEffect for zero-latency dark transition
     useLayoutEffect(() => {
@@ -348,7 +391,7 @@ export default function BusinessStore({ overrideSlug }) {
         if (window.history.state && window.history.state.idx > 0) {
             navigate(-1);
         } else if (overrideSlug) {
-            navigate(`/${overrideSlug}`);
+            navigate('/');
         } else if (businessSlug) {
             navigate(`/${businessSlug}`);
         } else {
@@ -356,19 +399,8 @@ export default function BusinessStore({ overrideSlug }) {
         }
     };
 
-    // Alerta al intentar recargar o cerrar pestaña con carrito activo
-    useEffect(() => {
-        if (cart.length === 0) return;
-        const handleBeforeUnload = (e) => {
-            e.preventDefault();
-            e.returnValue = '';
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [cart.length]);
-
     const handleConfirmOrder = () => {
-        if (!business?.whatsapp) {
+        if (!buildWhatsAppUrl(business?.whatsapp)) {
             alert('El negocio no tiene configurado un número de WhatsApp para pedidos.');
             return;
         }
@@ -385,9 +417,17 @@ export default function BusinessStore({ overrideSlug }) {
 
         const message = `¡Hola ${business.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${productListText}\n${discountText}\n*Total a pagar:* $${totalText}\n\n¿Tienen disponibilidad para coordinar el retiro/entrega? ¡Gracias!`;
 
-        window.open(`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(message)}`, '_blank');
+        window.open(buildWhatsAppUrl(business.whatsapp, message), '_blank');
+        // Keep the cart until the customer confirms the message was actually sent
+        setOrderSentToWhatsApp(true);
+    };
+
+    const handleOrderSent = () => {
         setCart([]);
+        setOrderSentToWhatsApp(false);
         setIsCartOpen(false);
+        setToastMessage('¡Gracias por tu pedido! 🙌');
+        setTimeout(() => setToastMessage(null), 2000);
     };
 
     const getProductImages = (prod) => {
@@ -448,41 +488,30 @@ export default function BusinessStore({ overrideSlug }) {
     const primaryColor = business?.primary_color || business?.button_color || business?.buttonColor || '#10B981';
 
     if (loading) {
-        const isDark = (business?.theme || business?.metadata?.theme) === 'dark' ||
-            (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark') ||
-            (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('turnitos_current_theme') === 'dark');
-
-        return (
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100vh',
-                backgroundColor: isDark ? '#121212' : 'var(--bg-main, #F8FAFC)',
-                color: isDark ? '#EDEDED' : 'var(--text-primary, #0F172A)'
-            }}>
-                <div style={{
-                    width: '40px',
-                    height: '40px',
-                    border: isDark ? '3px solid #2E2E2E' : '3px solid var(--border, #E2E8F0)',
-                    borderTopColor: primaryColor,
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                }} />
-            </div>
-        );
+        const isDarkBusiness = (business?.theme || business?.metadata?.theme) === 'dark';
+        return <PageLoader label="Cargando tienda..." accentColor={primaryColor} dark={isDarkBusiness} />;
     }
 
     if (!business) {
         return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
     }
 
-    const hasStoreProducts = (Array.isArray(products) && products.length > 0) ||
-        (Array.isArray(business.metadata?.store_products) && business.metadata.store_products.length > 0);
+    const storeSeo = buildBusinessSeo(business, 'tienda');
+    const storeHead = (
+        <SEOHead
+            title={storeSeo.title}
+            description={storeSeo.description}
+            image={storeSeo.image}
+            canonical={storeSeo.canonical}
+            robots={storeSeo.robots}
+            brandTitle={false}
+        />
+    );
 
-    if (!business.store_enabled && !hasStoreProducts) {
+    if (!isStoreAvailable(business)) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', gap: '16px', padding: '20px', textAlign: 'center' }}>
+                {storeHead}
                 <div style={{ fontSize: '54px' }}>🏪</div>
                 <h2 style={{ fontSize: '22px', fontWeight: '800', margin: 0 }}>Tienda no disponible</h2>
                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0, maxWidth: '320px', lineHeight: 1.4 }}>
@@ -522,6 +551,7 @@ export default function BusinessStore({ overrideSlug }) {
             boxSizing: 'border-box',
             overflowX: 'hidden'
         }}>
+            {storeHead}
             {/* Centered Mobile/Desktop Shell */}
             <div className="business-store-shell">
 
@@ -990,19 +1020,7 @@ export default function BusinessStore({ overrideSlug }) {
                                         whileHover={{ y: -4, boxShadow: '0 12px 28px rgba(0,0,0,0.08)' }}
                                     >
                                         {/* Top Image Container with Studio Background */}
-                                        <div className="store-card-img-box">
-                                            <img
-                                                src={img}
-                                                alt={prod.name}
-                                                className="store-card-img"
-                                                style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    objectFit: 'contain',
-                                                    transition: 'transform 0.3s ease'
-                                                }}
-                                            />
-
+                                        <ProductCardImage src={img} alt={prod.name}>
                                             {/* Stock / Quality Tag */}
                                             <div style={{
                                                 position: 'absolute',
@@ -1024,7 +1042,7 @@ export default function BusinessStore({ overrideSlug }) {
                                                 <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
                                                 En stock
                                             </div>
-                                        </div>
+                                        </ProductCardImage>
 
                                         {/* Product Details */}
                                         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -1184,48 +1202,59 @@ export default function BusinessStore({ overrideSlug }) {
                                         <CheckCircle2 size={12} color={primaryColor} />
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSelectedProductModal(null);
-                                        setIsCartOpen(true);
-                                    }}
-                                    style={{
-                                        width: '38px',
-                                        height: '38px',
-                                        borderRadius: '50%',
-                                        border: '1px solid var(--border)',
-                                        background: 'var(--bg-main)',
-                                        color: 'var(--text-primary)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: 'pointer',
-                                        position: 'relative'
-                                    }}
-                                    title="Ver carrito"
-                                >
-                                    <ShoppingBag size={17} />
-                                    {getCartCount() > 0 && (
-                                        <span style={{
-                                            position: 'absolute',
-                                            top: '-3px',
-                                            right: '-3px',
-                                            backgroundColor: primaryColor,
-                                            color: '#fff',
-                                            fontSize: '9px',
-                                            fontWeight: '800',
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {business.slug && (
+                                        <ShareButton
+                                            variant="circle"
+                                            label="Compartir producto"
+                                            url={buildBusinessShareUrl(business.slug, '/tienda', { producto: selectedProductModal.id })}
+                                            title={`${selectedProductModal.name} · ${business.name}`}
+                                            text={`Mirá ${selectedProductModal.name} en la tienda de ${business.name}:`}
+                                        />
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedProductModal(null);
+                                            setIsCartOpen(true);
+                                        }}
+                                        style={{
+                                            width: '38px',
+                                            height: '38px',
                                             borderRadius: '50%',
-                                            minWidth: '17px',
-                                            height: '17px',
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--bg-main)',
+                                            color: 'var(--text-primary)',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            justifyContent: 'center'
-                                        }}>
-                                            {getCartCount()}
-                                        </span>
-                                    )}
-                                </button>
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            position: 'relative'
+                                        }}
+                                        title="Ver carrito"
+                                    >
+                                        <ShoppingBag size={17} />
+                                        {getCartCount() > 0 && (
+                                            <span style={{
+                                                position: 'absolute',
+                                                top: '-3px',
+                                                right: '-3px',
+                                                backgroundColor: primaryColor,
+                                                color: '#fff',
+                                                fontSize: '9px',
+                                                fontWeight: '800',
+                                                borderRadius: '50%',
+                                                minWidth: '17px',
+                                                height: '17px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                                {getCartCount()}
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Modal Body */}
@@ -1245,13 +1274,13 @@ export default function BusinessStore({ overrideSlug }) {
                                                         width: '100%',
                                                         height: '270px',
                                                         borderRadius: '20px',
-                                                        background: 'radial-gradient(circle at 50% 50%, #ffffff 0%, #f8fafc 100%)',
+                                                        background: 'radial-gradient(circle at 50% 50%, var(--bg-card) 0%, var(--bg-main) 100%)',
                                                         border: '1px solid var(--border)',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         overflow: 'hidden',
-                                                        padding: '16px',
+                                                        padding: 0,
                                                         boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.02)'
                                                     }}>
                                                         {/* Stock pill */}
@@ -1277,19 +1306,10 @@ export default function BusinessStore({ overrideSlug }) {
                                                             En stock
                                                         </div>
 
-                                                        <motion.img
-                                                            key={activeImageIndex}
-                                                            initial={{ opacity: 0.5, scale: 0.96 }}
-                                                            animate={{ opacity: 1, scale: 1 }}
-                                                            transition={{ duration: 0.22 }}
+                                                        <ProductDetailImage
                                                             src={currentImg}
                                                             alt={selectedProductModal.name}
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '100%',
-                                                                objectFit: 'contain',
-                                                                filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.06))'
-                                                            }}
+                                                            animationKey={activeImageIndex}
                                                         />
                                                     </div>
 
@@ -1529,23 +1549,28 @@ export default function BusinessStore({ overrideSlug }) {
                                         display: 'block',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.4px',
-                                        marginBottom: '2px'
+                                        marginBottom: '2px',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
                                     }}>
-                                        Precio Total {modalQty > 1 ? `(${modalQty} un.)` : ''}
+                                        Total {modalQty > 1 ? `(${modalQty} un.)` : ''}
                                     </span>
                                     <div style={{
-                                        fontSize: '30px',
+                                        fontSize: 'clamp(22px, 6.4vw, 30px)',
                                         fontWeight: '900',
                                         color: 'var(--text-primary)',
                                         letterSpacing: '-0.6px',
-                                        lineHeight: 1.1
+                                        lineHeight: 1.1,
+                                        whiteSpace: 'nowrap',
+                                        fontVariantNumeric: 'tabular-nums'
                                     }}>
                                         ${(Number(selectedProductModal.price || 0) * modalQty).toLocaleString('es-AR')}
                                     </div>
                                 </div>
 
                                 {/* Botón del carrito a la derecha */}
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+                                <div className="store-modal-footer-cta">
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -1567,6 +1592,7 @@ export default function BusinessStore({ overrideSlug }) {
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             gap: '8px',
+                                            whiteSpace: 'nowrap',
                                             boxShadow: `0 6px 20px ${primaryColor}45`,
                                             transition: 'all 0.15s ease'
                                         }}
@@ -1930,9 +1956,34 @@ export default function BusinessStore({ overrideSlug }) {
                                         onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
                                         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                                     >
-                                        <span>Confirmar Pedido vía WhatsApp</span>
+                                        <span>{orderSentToWhatsApp ? 'Abrir WhatsApp de nuevo' : 'Confirmar Pedido vía WhatsApp'}</span>
                                         <span>💬</span>
                                     </button>
+
+                                    {orderSentToWhatsApp && (
+                                        <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                                            <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: '0 0 8px' }}>
+                                                ¿Ya enviaste el mensaje por WhatsApp?
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={handleOrderSent}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '12px',
+                                                    borderRadius: '24px',
+                                                    border: '1px solid var(--border)',
+                                                    backgroundColor: 'transparent',
+                                                    color: 'var(--text-primary)',
+                                                    fontWeight: '700',
+                                                    fontSize: '13.5px',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Sí, ya lo envié · vaciar carrito
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </motion.div>
@@ -2420,7 +2471,7 @@ export default function BusinessStore({ overrideSlug }) {
                 promotion={activePromotion}
                 business={business}
                 onSelectService={() => {
-                    navigate(`/${business.slug}?promoId=${activePromotion?.id}`);
+                    navigate(`${overrideSlug ? '/turnos' : `/${business.slug}`}?promoId=${activePromotion?.id}`);
                 }}
                 onFilterCategory={(cat) => {
                     setActiveCategory(cat);

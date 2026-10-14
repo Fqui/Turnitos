@@ -42,3 +42,6 @@ dist-ssr
 
 # Claude Code (configuración personal)
 .claude/settings.local.json
+
+# Accesos generados por scripts/negocios
+scripts/negocios/salida/

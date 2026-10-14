@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function VenueGalleryTab({
     formData,
@@ -20,6 +21,7 @@ export default function VenueGalleryTab({
     inputStyle,
     buttonStyle
 }) {
+    useBodyScrollLock(!!previewGalleryImage);
     return (
         <div style={cardStyle}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>

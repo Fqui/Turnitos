@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import BookingCard from './BookingCard';
-import { generateTimeSlots, formatDateKey, getBookingsForSlot, timeToMinutes } from '../shared/utils';
+import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSlot, getDayHoursConfig, normalizeDayMinutes } from '../shared/utils';
+import { PADEL_DURATIONS, getDayShiftRanges, fitsInShift } from '../../../utils/courtHours';
+import { getCourtSport } from '../../../utils/sports';
 import ConfirmModal from '../../common/ConfirmModal';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function DayView({
     type,
@@ -23,6 +26,7 @@ export default function DayView({
 }) {
     const [showSlotMenu, setShowSlotMenu] = useState(null);
     const [showBookingMenu, setShowBookingMenu] = useState(null);
+    useBodyScrollLock(!!showSlotMenu || !!showBookingMenu);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
     // Generar slots de tiempo
@@ -113,44 +117,37 @@ export default function DayView({
         }
     };
 
+    // Horario del día que se muestra (las filas de madrugada pertenecen a este día)
+    const dayConfig = getDayHoursConfig(business?.hours, currentDate);
+
     // Verificar si el negocio está abierto en un día/hora específico
     const isBusinessOpen = (time) => {
-        const daysMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const dayKey = daysMap[currentDate.getDay()];
-        const dayConfig = business?.hours?.[dayKey];
-
         if (dayConfig?.isOpen === false) return false;
+        if (!dayConfig?.open || !dayConfig?.close) return true;
 
-        const slotMin = timeToMinutes(time);
+        // Minutos desde la apertura del día: la madrugada de un horario que cruza la medianoche suma 1440
+        const slotMin = normalizeDayMinutes(time, dayConfig);
+        const inShift = (open, close) => {
+            const start = normalizeDayMinutes(open, dayConfig);
+            let end = normalizeDayMinutes(close, dayConfig);
+            if (end <= start) end += 1440; // Cruzado a medianoche
+            return slotMin >= start && slotMin < end;
+        };
 
-        // Verificar si es horario cortado (con open/close/open2/close2)
-        if (dayConfig?.isSplit) {
-            const start1 = timeToMinutes(dayConfig.open);
-            let close1 = timeToMinutes(dayConfig.close);
-            if (close1 < start1) close1 += 1440; // Cruzado a medianoche
-
-            const inFirstShift = slotMin >= start1 && slotMin < close1;
-
-            let inSecondShift = false;
-            if (dayConfig.open2 && dayConfig.close2) {
-                const start2 = timeToMinutes(dayConfig.open2);
-                let close2 = timeToMinutes(dayConfig.close2);
-                if (close2 < start2) close2 += 1440; // Cruzado a medianoche
-                inSecondShift = slotMin >= start2 && slotMin < close2;
-            }
-
-            return inFirstShift || inSecondShift;
+        // Horario cortado (con open/close/open2/close2)
+        if (dayConfig.isSplit && dayConfig.open2 && dayConfig.close2) {
+            return inShift(dayConfig.open, dayConfig.close) || inShift(dayConfig.open2, dayConfig.close2);
         }
 
-        // Horario continuo
-        if (dayConfig?.open && dayConfig?.close) {
-            const start = timeToMinutes(dayConfig.open);
-            let close = timeToMinutes(dayConfig.close);
-            if (close < start) close += 1440; // Cruzado a medianoche
-            return slotMin >= start && slotMin < close;
-        }
+        return inShift(dayConfig.open, dayConfig.close);
+    };
 
-        return true;
+    // Las canchas de pádel solo arrancan si el turno más corto (60 min) termina antes del cierre del turno del día
+    const dayShifts = getDayShiftRanges(dayConfig);
+    const canStartOnResource = (resource, time) => {
+        if (type === 'service' || dayShifts.length === 0) return true;
+        if (type !== 'padel' && getCourtSport(resource, business) !== 'padel') return true;
+        return fitsInShift(time, dayShifts, PADEL_DURATIONS[0]);
     };
 
     // Calcular cuántos slots ocupa una reserva
@@ -161,7 +158,7 @@ export default function DayView({
 
     // Verificar si este es el primer slot de una reserva (para renderizar la tarjeta)
     const isFirstSlotOfBooking = (booking, currentTime) => {
-        return booking.time === currentTime;
+        return bookingStartsInSlot(booking, currentTime, config.slotSize, dayConfig);
     };
 
     return (
@@ -292,6 +289,9 @@ export default function DayView({
                         {/* Resource Columns */}
                         {config.showResourceColumns ? (
                             resources.map((resource, j) => {
+                                // Pádel: no se ofrece un inicio donde no entra el turno más corto antes del cierre
+                                const cellOpen = isOpen && canStartOnResource(resource, time);
+
                                 // Filter bookings for this specific resource
                                 const slotBookings = getBookingsForSlot(
                                     bookings.filter(b => {
@@ -311,7 +311,8 @@ export default function DayView({
                                     }),
                                     currentDate,
                                     time,
-                                    config.slotSize
+                                    config.slotSize,
+                                    dayConfig
                                 );
 
                                 return (
@@ -324,7 +325,10 @@ export default function DayView({
                                             minHeight: `${config.gridRowHeight}px`,
                                             padding: '4px',
                                             position: 'relative',
-                                            background: isCurrentSlot ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
+                                            // Fuera de horario: rayado, igual que la vista de una sola columna
+                                            background: !cellOpen
+                                                ? 'repeating-linear-gradient(45deg, var(--bg-main), var(--bg-main) 10px, var(--border) 10px, var(--border) 11px)'
+                                                : isCurrentSlot ? 'rgba(var(--primary-rgb), 0.15)' : 'transparent',
                                             cursor: 'default',
                                             display: 'flex',
                                             flexDirection: 'column',
@@ -378,7 +382,7 @@ export default function DayView({
                                                     </div>
                                                 );
                                             })
-                                        ) : isOpen && (
+                                        ) : cellOpen && (
                                             <div
                                                 onClick={(e) => {
                                                     if (isRescheduling) {
@@ -433,7 +437,8 @@ export default function DayView({
                                         bookings,
                                         currentDate,
                                         time,
-                                        config.slotSize
+                                        config.slotSize,
+                                        dayConfig
                                     );
 
                                     if (slotBookings.length > 0) {

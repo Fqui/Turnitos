@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function ResetPasswordModal({ credentials, onClose }) {
     const [copied, setCopied] = useState(false);
 
+    useBodyScrollLock(!!credentials);
     if (!credentials) return null;
 
-    const loginUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://www.turnitoslr.com'}/login`;
-    const messageText = `¡Hola! 👋 Tus nuevos datos de acceso para el portal de *${credentials.businessName}* son:\n\n📧 *Email:* ${credentials.email}\n🔑 *Clave Provisoria:* ${credentials.tempPassword}\n\nIngresá en ${loginUrl} para acceder a tu panel. Al iniciar sesión se te solicitará configurar tu contraseña definitiva.`;
+    const loginUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://www.turnitoslr.com'}${credentials.loginPath || '/login'}`;
+    const accessTarget = credentials.accessLabel || `el portal de *${credentials.businessName}*`;
+    const messageText = `¡Hola! 👋 Tus nuevos datos de acceso para ${accessTarget} son:\n\n📧 *Email:* ${credentials.email}\n🔑 *Clave Provisoria:* ${credentials.tempPassword}\n\nIngresá en ${loginUrl} para acceder a tu panel. Al iniciar sesión se te solicitará configurar tu contraseña definitiva.`;
 
     const handleCopy = () => {
         navigator.clipboard.writeText(messageText);

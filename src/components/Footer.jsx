@@ -54,6 +54,7 @@ export default function Footer({ minimal = false }) {
                             <li><Link to="/?category=deportes" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Deportes</Link></li>
                             <li><Link to="/?category=belleza" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Belleza</Link></li>
                             <li><Link to="/?category=alquileres" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Alquileres</Link></li>
+                            <li><Link to="/?category=mascotas" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Mascotas</Link></li>
                             <li><Link to="/?category=salud" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Salud</Link></li>
                         </ul>
                     </div>
@@ -64,7 +65,7 @@ export default function Footer({ minimal = false }) {
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <li><Link to="/ayuda" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Centro de Ayuda</Link></li>
                             <li><Link to="/negocios" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Para Negocios</Link></li>
-                            <li><Link to="/portal" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Iniciar Sesión</Link></li>
+                            <li><Link to="/portal" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Acceso Negocios</Link></li>
                             <li><Link to="/terminos" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Términos y Condiciones</Link></li>
                             <li><Link to="/privacidad" style={{ color: '#A0A0A0', textDecoration: 'none', fontSize: '14px' }}>Política de Privacidad</Link></li>
                         </ul>
@@ -82,7 +83,7 @@ export default function Footer({ minimal = false }) {
 
                         <div style={{ display: 'flex', gap: '12px' }}>
                             {/* Instagram */}
-                            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" style={{
+                            <a href="https://www.instagram.com/turnitoslr" target="_blank" rel="noopener noreferrer" style={{
                                 width: '36px',
                                 height: '36px',
                                 borderRadius: '50%',

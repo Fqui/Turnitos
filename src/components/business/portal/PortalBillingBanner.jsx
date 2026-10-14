@@ -59,8 +59,8 @@ export default function PortalBillingBanner({ business, onOpenSubscription }) {
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: '10px',
-            padding: '12px 16px',
-            marginBottom: '16px',
+            padding: '10px 14px',
+            marginBottom: '12px',
             borderRadius: '12px',
             background: colors.bg,
             border: `1px solid ${colors.border}`
@@ -70,7 +70,6 @@ export default function PortalBillingBanner({ business, onOpenSubscription }) {
                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                     {formatDueText(info)}
                     {info.monthlyPrice ? ` · Abono ${formatMoney(info.monthlyPrice)}/mes` : ''}
-                    {' · '}Coordiná el pago con TurnitosLR para seguir sin interrupciones.
                 </div>
             </div>
             {onOpenSubscription && (

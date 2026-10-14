@@ -1,12 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
+
+const EMPTY_SELLER = { firstName: '', lastName: '', email: '', phone: '' };
+
+const inputStyle = {
+    width: '100%',
+    padding: '10px 14px',
+    background: 'var(--sa-bg)',
+    border: '1px solid var(--sa-border-strong)',
+    borderRadius: '8px',
+    color: 'var(--sa-text)',
+    fontSize: '13px',
+    boxSizing: 'border-box'
+};
 
 export default function SellersTab({
     sellers = [],
     onToggleStatus,
     onViewDetails,
     settledSellers = {},
-    onToggleSettlement
+    onToggleSettlement,
+    onCreateSeller
 }) {
+    const [showForm, setShowForm] = useState(false);
+    const [form, setForm] = useState(EMPTY_SELLER);
+    const [saving, setSaving] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!onCreateSeller) return;
+        setSaving(true);
+        try {
+            const created = await onCreateSeller(form);
+            if (created) {
+                setShowForm(false);
+                setForm(EMPTY_SELLER);
+            }
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <div style={{
             background: 'linear-gradient(145deg, var(--sa-surface), var(--sa-surface))',
@@ -19,7 +52,67 @@ export default function SellersTab({
                 <h3 style={{ fontSize: '17px', fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--sa-text)' }}>
                     <span>👥</span> Red de Vendedores ({sellers.length})
                 </h3>
+                {onCreateSeller && (
+                    <button
+                        type="button"
+                        onClick={() => setShowForm(prev => !prev)}
+                        style={{
+                            padding: '8px 14px',
+                            background: showForm ? 'var(--sa-surface-2)' : 'var(--sa-primary)',
+                            color: showForm ? 'var(--sa-text)' : '#fff',
+                            border: showForm ? '1px solid var(--sa-border-strong)' : 'none',
+                            borderRadius: '8px',
+                            fontSize: '12.5px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        {showForm ? 'Cancelar' : '+ Nuevo vendedor'}
+                    </button>
+                )}
             </div>
+
+            {showForm && (
+                <form
+                    onSubmit={handleSubmit}
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '10px',
+                        padding: '16px',
+                        marginBottom: '16px',
+                        background: 'var(--sa-surface-2)',
+                        border: '1px solid var(--sa-border-strong)',
+                        borderRadius: '12px'
+                    }}
+                >
+                    <input required placeholder="Nombre" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} style={inputStyle} />
+                    <input required placeholder="Apellido" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} style={inputStyle} />
+                    <input required type="email" placeholder="Email (para ingresar)" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} />
+                    <input type="tel" placeholder="WhatsApp (opcional)" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} style={inputStyle} />
+                    <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11.5px', color: 'var(--sa-text-muted)' }}>
+                            Se crea su acceso con una clave provisoria que vas a poder copiar o mandar por WhatsApp.
+                        </span>
+                        <button
+                            type="submit"
+                            disabled={saving}
+                            style={{
+                                padding: '9px 16px',
+                                background: saving ? 'var(--sa-border-strong)' : 'var(--sa-primary)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '12.5px',
+                                fontWeight: '700',
+                                cursor: saving ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {saving ? 'Creando...' : 'Crear vendedor'}
+                        </button>
+                    </div>
+                </form>
+            )}
 
             {sellers.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--sa-text-muted)', fontSize: '13px' }}>

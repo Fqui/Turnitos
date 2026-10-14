@@ -1,12 +1,13 @@
-import React, { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion'; // Added AnimatePresence import
+import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigationType, Navigate } from 'react-router-dom';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { NotificationProvider } from './contexts/NotificationContext';
 import Toast from './components/notifications/Toast';
 import ConfirmDialog from './components/notifications/ConfirmDialog';
 import AlertDialog from './components/notifications/AlertDialog';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import PageLoader from './components/common/PageLoader';
 
 // Helper for lazy loading that auto-reloads if a chunk fails to load after a new deployment
 const lazyWithRetry = (componentImport) =>
@@ -42,7 +43,6 @@ const Admin = lazyWithRetry(() => import('./pages/Admin'));
 const BusinessPortal = lazyWithRetry(() => import('./pages/BusinessPortal'));
 const Ayuda = lazyWithRetry(() => import('./pages/Ayuda'));
 const Negocios = lazyWithRetry(() => import('./pages/Negocios'));
-const Colaboradores = lazyWithRetry(() => import('./pages/Colaboradores'));
 const Terminos = lazyWithRetry(() => import('./pages/Terminos'));
 const Privacidad = lazyWithRetry(() => import('./pages/Privacidad'));
 const BusinessStore = lazyWithRetry(() => import('./pages/BusinessStore'));
@@ -59,40 +59,17 @@ const ProtectedSellerRoute = lazyWithRetry(() => import('./components/seller/Pro
 const ProtectedSuperAdminRoute = lazyWithRetry(() => import('./components/seller/ProtectedSuperAdminRoute'));
 
 // Loading fallback component
-const LoadingFallback = () => {
-  const isDark = typeof document !== 'undefined' && (
-    document.documentElement.getAttribute('data-theme') === 'dark' ||
-    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('turnitos_current_theme') === 'dark')
-  );
+const LoadingFallback = () => <PageLoader />;
 
-  return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      flex: 1,
-      minHeight: '60vh',
-      backgroundColor: isDark ? '#121212' : 'var(--bg-main, #F8FAFC)',
-      color: isDark ? '#EDEDED' : 'var(--text-primary, #0F172A)'
-    }}>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '16px'
-      }}>
-        <div style={{
-          width: '50px',
-          height: '50px',
-          border: isDark ? '4px solid #2E2E2E' : '4px solid var(--border, #E2E8F0)',
-          borderTopColor: 'var(--primary-paddle, #00E676)',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }} />
-        <p style={{ fontSize: '16px', fontWeight: '600' }}>Cargando...</p>
-      </div>
-    </div>
-  );
+// Warm up the chunks of the most visited pages once the browser is idle,
+// so opening a business from the home doesn't wait on a network round trip.
+const prefetchCommonPages = () => {
+  const run = () => {
+    import('./pages/BusinessProfileRouter');
+    import('./pages/BusinessStore');
+  };
+  if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 4000 });
+  else setTimeout(run, 2500);
 };
 
 // Error Boundary Component
@@ -155,9 +132,108 @@ class ErrorBoundary extends React.Component {
 
 import { getSubdomain } from './utils/utils';
 
+// Scroll position per history entry, so going back lands where the user was
+const scrollPositions = new Map();
+
+// Saved position on back/forward, top otherwise. Read it as soon as the
+// location changes: once the old page unmounts, the browser clamps the scroll
+// and that event would overwrite the saved value.
+const getScrollTarget = (key, navigationType) =>
+  (navigationType === 'POP' && scrollPositions.get(key)) || 0;
+
+// Retries for a moment because the page may still be loading its data.
+const applyScroll = (target) => {
+  if (!target) {
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  let cancelled = false;
+  const cancel = () => { cancelled = true; };
+  const stopListening = () => {
+    window.removeEventListener('wheel', cancel);
+    window.removeEventListener('touchstart', cancel);
+  };
+  window.addEventListener('wheel', cancel, { passive: true });
+  window.addEventListener('touchstart', cancel, { passive: true });
+
+  const start = performance.now();
+  const attempt = () => {
+    if (cancelled) return stopListening();
+    const maxY = document.documentElement.scrollHeight - window.innerHeight;
+    window.scrollTo(0, Math.min(target, Math.max(maxY, 0)));
+    if (maxY < target && performance.now() - start < 1500) requestAnimationFrame(attempt);
+    else stopListening();
+  };
+  attempt();
+};
+
+function useScrollMemory() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+  }, []);
+
+  // Updated before the new page scrolls, so the scroll-to-top of a page swapped
+  // in place is never saved as the old entry's position.
+  const activeKey = useRef(location.key);
+  useLayoutEffect(() => {
+    activeKey.current = location.key;
+  }, [location.key]);
+
+  useEffect(() => {
+    const key = location.key;
+    const save = () => {
+      if (activeKey.current === key) scrollPositions.set(key, window.scrollY);
+    };
+    window.addEventListener('scroll', save, { passive: true });
+    return () => window.removeEventListener('scroll', save);
+  }, [location.key]);
+}
+
+// All pages of one business (profile, /turnos, /tienda, /bio) share a key: moving
+// between them swaps the page in place instead of fading the whole screen out
+// and back in, which looked like a flicker. /turnos keeps the profile mounted.
+const getRouteKey = (pathname) =>
+  pathname.replace(/^(\/[^/]+)\/(?:turnos|tienda|bio)\/?$/, '$1').replace(/\/turnos\/?$/, '') || '/';
+
+const pageTransition = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.2, ease: 'easeOut' } },
+  exit: { opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } }
+};
+
 function AppContent() {
   const location = useLocation();
+  const navigationType = useNavigationType();
   const subdomain = getSubdomain();
+  const routeKey = getRouteKey(location.pathname);
+
+  useScrollMemory();
+
+  useEffect(() => {
+    prefetchCommonPages();
+  }, []);
+
+  // Scroll is applied once the old page has faded out, so it never jumps while
+  // still visible. Without a page change (same key) it applies right away,
+  // before paint, so the new page never shows up at the old scroll position.
+  const pendingScroll = useRef(0);
+  const prevRoute = useRef({ pathname: location.pathname, routeKey });
+
+  useLayoutEffect(() => {
+    const prev = prevRoute.current;
+    prevRoute.current = { pathname: location.pathname, routeKey };
+    // Query-only changes (home filters, search) keep the scroll as is
+    if (prev.pathname === location.pathname) return;
+    pendingScroll.current = getScrollTarget(location.key, navigationType);
+    if (prev.routeKey === routeKey || subdomain) applyScroll(pendingScroll.current);
+  }, [location.key, location.pathname, navigationType, routeKey, subdomain]);
+
+  const handleExitComplete = useCallback(() => {
+    applyScroll(pendingScroll.current);
+  }, []);
 
   const isHome = location.pathname === '/';
   const isBusinessPortal = location.pathname.startsWith('/portal');
@@ -174,7 +250,6 @@ function AppContent() {
         flexDirection: 'column',
         backgroundColor: 'var(--bg-main)'
       }}>
-        {!isBio && <Header showSearch={false} />}
         <main style={{ 
           flex: 1, 
           display: 'flex', 
@@ -194,6 +269,7 @@ function AppContent() {
             </Suspense>
           </ErrorBoundary>
         </main>
+        {/* On the business's own link: no TurnitosLR banner, only the small footer */}
         <Footer minimal={true} />
         <Toast />
         <ConfirmDialog />
@@ -218,13 +294,20 @@ function AppContent() {
         width: '100%'
       }}>
         <ErrorBoundary>
-          <Suspense fallback={<LoadingFallback />}>
-            <AnimatePresence mode="wait">
-              <Routes location={location} key={location.pathname}>
+          <AnimatePresence mode="wait" initial={false} onExitComplete={handleExitComplete}>
+            <motion.div
+              key={routeKey}
+              variants={pageTransition}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}
+            >
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes location={location}>
                 <Route path="/" element={<Home />} />
                 <Route path="/ayuda" element={<Ayuda />} />
                 <Route path="/negocios" element={<Negocios />} />
-                <Route path="/colaboradores" element={<Colaboradores />} />
                 <Route path="/terminos" element={<Terminos />} />
                 <Route path="/privacidad" element={<Privacidad />} />
                 {/* Static routes must come BEFORE /:businessSlug to take precedence */}
@@ -235,8 +318,8 @@ function AppContent() {
                 <Route path="/review/:token" element={<SubmitReview />} />
                 {import.meta.env.DEV && <Route path="/dev/promos" element={<Suspense fallback={<LoadingFallback />}><PromosPreview /></Suspense>} />}
                 {/* /:businessSlug now goes directly to the reservation / booking page */}
-                <Route path="/:businessSlug" element={<BusinessProfileRouter />} />
-                <Route path="/:businessSlug/turnos" element={<BusinessProfileRouter />} />
+                {/* One route for both URLs so moving between them keeps the page mounted */}
+                <Route path="/:businessSlug/turnos?" element={<BusinessProfileRouter />} />
                 <Route path="/:businessSlug/tienda" element={<BusinessStore />} />
                 <Route path="/:businessSlug/bio" element={<LinkBio />} />
                 <Route path="/admin" element={<Navigate to="/login" replace />} />
@@ -250,8 +333,9 @@ function AppContent() {
                 <Route path="/admin/businesses/:id/edit" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerBusinessForm /></ProtectedSellerRoute></Suspense>} />
                 <Route path="/admin/commissions" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerCommissionsReport /></ProtectedSellerRoute></Suspense>} />
               </Routes>
-            </AnimatePresence>
-          </Suspense>
+            </Suspense>
+            </motion.div>
+          </AnimatePresence>
         </ErrorBoundary>
       </main>
 
@@ -265,23 +349,14 @@ function AppContent() {
   );
 }
 
-function ScrollToTop() {
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-
-  return null;
-}
-
 export default function App() {
   return (
     <Router>
-      <ScrollToTop />
-      <NotificationProvider>
-        <AppContent />
-      </NotificationProvider>
+      <MotionConfig reducedMotion="user">
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
+      </MotionConfig>
     </Router>
   );
 }

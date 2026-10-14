@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const ConfirmDialog = () => {
     const { confirmDialog } = useNotification();
     const prefersReducedMotion = useReducedMotion();
+    useBodyScrollLock(!!confirmDialog);
 
     useEffect(() => {
         if (!confirmDialog) return;

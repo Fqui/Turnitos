@@ -7,9 +7,12 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
 import SEOHead from '../components/SEOHead';
+import { buildBusinessSeo } from '../utils/seo';
 import { findBusinessBySlug } from '../utils/utils';
 import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerModal';
-import ProfileHighlightsBar from '../components/profile/ProfileHighlightsBar';
+import { isStoreAvailable } from '../utils/storeUtils';
+import { buildWhatsAppUrl } from '../utils/whatsapp';
+import PageLoader from '../components/common/PageLoader';
 
 // Fix for default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -39,11 +42,6 @@ const formatSocialUrl = (type, handle) => {
     }
 };
 
-const formatWhatsAppUrl = (phone) => {
-    if (!phone) return '';
-    const clean = String(phone).replace(/\D/g, '');
-    return `https://wa.me/${clean}`;
-};
 
 const LinkBio = ({ overrideSlug = null }) => {
     const { businessSlug: routeSlug } = useParams();
@@ -141,24 +139,7 @@ const LinkBio = ({ overrideSlug = null }) => {
     }, [business]);
 
     if (loading) {
-        return (
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100vh',
-                backgroundColor: 'var(--bg-main)'
-            }}>
-                <div className="spinner" style={{
-                    width: '40px',
-                    height: '40px',
-                    border: '4px solid var(--border)',
-                    borderTopColor: 'var(--primary-paddle)',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                }} />
-            </div>
-        );
+        return <PageLoader />;
     }
 
     if (!business) {
@@ -200,7 +181,6 @@ const LinkBio = ({ overrideSlug = null }) => {
         return true;
     });
 
-    const permanentHighlights = (highlights || []).filter(item => !item.is_story && ((item.images && item.images.length > 0) || !!item.cover_image));
 
     // Parse custom buttons created by the business
     const customLinks = (business.custom_links || business.metadata?.custom_links || [])
@@ -222,18 +202,17 @@ const LinkBio = ({ overrideSlug = null }) => {
             isColored = true;
         }
 
+        let target = link.file_url || link.url || '';
+        if (!target.startsWith('http://') && !target.startsWith('https://')) {
+            target = `https://${target}`;
+        }
+
         return {
             title: link.title || 'Enlace',
             subtitle: link.subtitle || (link.file_name ? `Archivo: ${link.file_name}` : null),
             icon: link.icon || (isPdf ? '📄' : '🔗'),
-            action: () => {
-                let target = link.file_url || link.url || '';
-                if (!target) return;
-                if (!target.startsWith('http://') && !target.startsWith('https://')) {
-                    target = `https://${target}`;
-                }
-                window.open(target, '_blank', 'noopener,noreferrer');
-            },
+            href: target,
+            external: true,
             bgColor: btnBg,
             textColor: btnColor,
             highlight: isColored
@@ -247,15 +226,15 @@ const LinkBio = ({ overrideSlug = null }) => {
                 business.type === 'venue' ? 'Ver Disponibilidad' : 'Reservar Turno',
             subtitle: 'Reserva tu lugar en segundos',
             icon: '📅',
-            action: () => navigate(getBookingPath()),
+            href: getBookingPath(),
             highlight: true
         },
         ...customButtons,
-        ...(business.store_enabled ? [{
+        ...(isStoreAvailable(business) ? [{
             title: 'Tienda',
             subtitle: business.metadata?.store_banner_title || business.metadata?.store_banner_subtitle || 'Conocé nuestros productos',
             icon: '🛒',
-            action: () => navigate(getStorePath()),
+            href: getStorePath(),
             highlight: false
         }] : [])
     ];
@@ -285,14 +264,18 @@ const LinkBio = ({ overrideSlug = null }) => {
     const linkTitleFontSize = isCompact ? '14.5px' : '15.5px';
     const linkSubtitleFontSize = isCompact ? '11.5px' : '12px';
 
+    const bioSeo = buildBusinessSeo(business, 'bio');
+
     return (
         <div className="linkbio-main-container">
             <SEOHead
-                title={business ? `${business.name} | Enlaces y Turnos` : 'TurnitosLR'}
-                description={business?.description || `Accedé a los enlaces oficiales, redes sociales, turnos y tienda de ${business?.name || 'este negocio'}.`}
-                keywords={`${business?.name}, link in bio, turnos ${business?.name}, turnitos`}
-                image={bannerUrl || business?.logo || business?.image || 'https://www.turnitoslr.com/logo-turnitos.png'}
-                url={window.location.href}
+                title={bioSeo.title}
+                description={bioSeo.description}
+                image={bannerUrl || bioSeo.image}
+                url={bioSeo.url}
+                canonical={bioSeo.canonical}
+                robots={bioSeo.robots}
+                brandTitle={false}
             />
 
             {/* Top Cover Banner */}
@@ -382,6 +365,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                         <a
                             className="linkbio-social-btn"
                             href={formatSocialUrl('instagram', business.instagram)}
+                            aria-label={`Instagram de ${business.name}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -408,6 +392,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                         <a
                             className="linkbio-social-btn"
                             href={formatSocialUrl('facebook', business.facebook)}
+                            aria-label={`Facebook de ${business.name}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -434,6 +419,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                         <a
                             className="linkbio-social-btn"
                             href={formatSocialUrl('tiktok', business.tiktok)}
+                            aria-label={`TikTok de ${business.name}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -469,38 +455,29 @@ const LinkBio = ({ overrideSlug = null }) => {
                 activeStories={activeStories}
             />
 
-            {/* Permanent Highlights (Destacadas) */}
-            {permanentHighlights && permanentHighlights.length > 0 && (
-                <div style={{
-                    width: '100%',
-                    maxWidth: isDesktop ? '420px' : '480px',
-                    marginBottom: '16px',
-                    padding: '0 8px',
-                    flexShrink: 0
-                }}>
-                    <ProfileHighlightsBar
-                        permanentHighlights={permanentHighlights}
-                        onSelectHighlight={(index) => {
-                            setStoryViewerList(permanentHighlights);
-                            setSelectedHighlight(index);
-                            setSelectedPhotoIndex(0);
-                        }}
-                        noBorder={true}
-                    />
-                </div>
-            )}
-
             {/* Main Links Section */}
             <div className="linkbio-links-section" style={{ width: '100%', maxWidth: isDesktop ? '420px' : '480px', display: 'flex', flexDirection: 'column', gap: linkGap, marginBottom: '6px', padding: '0 16px', flexShrink: 0 }}>
                 {mainLinks.map((link, index) => (
-                    <motion.button
+                    <motion.a
                         key={index}
                         className="linkbio-link-btn"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        onClick={link.action}
+                        href={link.href}
+                        {...(link.external
+                            ? { target: '_blank', rel: 'noopener noreferrer' }
+                            : {
+                                // Real link (long-press/copy works) but navigate inside the app on tap
+                                onClick: (e) => {
+                                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                                    e.preventDefault();
+                                    navigate(link.href);
+                                }
+                            })}
                         style={{
+                            boxSizing: 'border-box',
+                            textDecoration: 'none',
                             width: '100%',
                             padding: linkBtnPadding,
                             borderRadius: '16px',
@@ -551,18 +528,22 @@ const LinkBio = ({ overrideSlug = null }) => {
                                 <path d="M9 18l6-6-6-6" />
                             </svg>
                         )}
-                    </motion.button>
+                    </motion.a>
                 ))}
 
                 {/* WhatsApp Button */}
-                {business.whatsapp && (
-                    <motion.button
+                {buildWhatsAppUrl(business.whatsapp) && (
+                    <motion.a
                         className="linkbio-link-btn"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.2 }}
-                        onClick={() => window.open(formatWhatsAppUrl(business.whatsapp), '_blank')}
+                        href={buildWhatsAppUrl(business.whatsapp)}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
+                            boxSizing: 'border-box',
+                            textDecoration: 'none',
                             width: '100%',
                             padding: linkBtnPadding,
                             borderRadius: '16px',
@@ -613,17 +594,21 @@ const LinkBio = ({ overrideSlug = null }) => {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M9 18l6-6-6-6" />
                         </svg>
-                    </motion.button>
+                    </motion.a>
                 )}
                 {/* Location Button */}
                 {locationStr && (
-                    <motion.button
+                    <motion.a
                         className="linkbio-link-btn"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.3 }}
-                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationStr)}`, '_blank')}
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationStr)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
+                            boxSizing: 'border-box',
+                            textDecoration: 'none',
                             width: '100%',
                             padding: linkBtnPadding,
                             borderRadius: '16px',
@@ -676,7 +661,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M9 18l6-6-6-6" />
                         </svg>
-                    </motion.button>
+                    </motion.a>
                 )}
                 </div>
             </div>

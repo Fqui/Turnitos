@@ -14,9 +14,9 @@ import VenueAmenitiesTab from './settings/VenueAmenitiesTab';
 import VenueStoreTab from './settings/VenueStoreTab';
 import VenueWhatsappTab from './settings/VenueWhatsappTab';
 
-export default function VenueSettings({ business, onUpdate, isMobile }) {
+export default function VenueSettings({ business, onUpdate, isMobile, initialTab }) {
     const { showToast } = useNotification();
-    const [activeTab, setActiveTab] = useState('general');
+    const [activeTab, setActiveTab] = useState(initialTab || 'general');
     const [saving, setSaving] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -278,10 +278,7 @@ export default function VenueSettings({ business, onUpdate, isMobile }) {
             showToast('Cambios guardados correctamente', 'success');
         } catch (error) {
             console.error('Error saving venue settings:', error);
-            if (onUpdate && typeof onUpdate === 'function') {
-                onUpdate({ ...business, ...formData });
-            }
-            showToast('Error al guardar en el servidor', 'error');
+            showToast(`Error al guardar: ${error?.message || 'revisá tu conexión'}`, 'error');
         } finally {
             setSaving(false);
         }

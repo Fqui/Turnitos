@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { getBillingInfo, formatDueText, formatMoney } from '../../../utils/billingUtils';
+import { getBillingInfo, getBillingRows, needsAttention, formatDueText, formatMoney } from '../../../utils/billingUtils';
 import { useNotification } from '../../../contexts/NotificationContext';
+
+const isUpToDate = (info) => info?.status === 'active' || info?.status === 'due_soon';
 
 export default function BusinessesTab({
     businesses = [],
@@ -19,17 +21,22 @@ export default function BusinessesTab({
     const [search, setSearch] = useState('');
     const [quickStatusLoading, setQuickStatusLoading] = useState(null);
 
-    const activeCount = businesses.filter(b => b.subscription_status === 'active').length;
-    const attentionCount = businesses.filter(b => b.subscription_status === 'trial' || b.subscription_status === 'inactive').length;
+    // Same billing rule as the dashboard: "Activos" = up to date, "Atención" = needs follow-up
+    const billingById = useMemo(() => new Map(
+        getBillingRows(businesses, billing).map(r => [r.business.id, r.info])
+    ), [businesses, billing]);
+    const activeCount = businesses.filter(b => isUpToDate(billingById.get(b.id))).length;
+    const attentionCount = businesses.filter(b => needsAttention(billingById.get(b.id))).length;
 
     // Filter and search
     const filteredBusinesses = useMemo(() => {
         return businesses.filter(b => {
+            const info = billingById.get(b.id);
             const matchesFilter = filter === 'all'
                 ? true
                 : filter === 'active'
-                    ? b.subscription_status === 'active'
-                    : b.subscription_status === 'trial' || b.subscription_status === 'inactive';
+                    ? isUpToDate(info)
+                    : needsAttention(info);
 
             const query = search.toLowerCase();
             const matchesSearch = !query ||
@@ -40,7 +47,7 @@ export default function BusinessesTab({
 
             return matchesFilter && matchesSearch;
         });
-    }, [businesses, filter, search]);
+    }, [businesses, filter, search, billingById]);
 
     // Handle "Login As" / Impersonation
     const handleLoginAs = (business) => {
@@ -122,7 +129,7 @@ export default function BusinessesTab({
                                 cursor: 'pointer'
                             }}
                         >
-                            ✓ Activos ({activeCount})
+                            ✓ Al día ({activeCount})
                         </button>
                         <button
                             onClick={() => setFilter && setFilter('attention')}

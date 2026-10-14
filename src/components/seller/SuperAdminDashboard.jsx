@@ -9,6 +9,7 @@ import './superadmin.css';
 import OverviewTab from './tabs/OverviewTab';
 import BusinessesTab from './tabs/BusinessesTab';
 import SellersTab from './tabs/SellersTab';
+import LeadsTab from './tabs/LeadsTab';
 import CategoriesTab from './tabs/CategoriesTab';
 import PromotionsTab from './tabs/PromotionsTab';
 import GlobalSearchModal from './tabs/GlobalSearchModal';
@@ -18,6 +19,7 @@ import ReviewsTab from './ReviewsTab';
 import BusinessFormModal from './BusinessFormModal';
 import SellerDetailModal from './SellerDetailModal';
 import RegisterPaymentModal from './RegisterPaymentModal';
+import { getBillingRows, needsAttention } from '../../utils/billingUtils';
 
 export default function SuperAdminDashboard() {
     const navigate = useNavigate();
@@ -172,6 +174,26 @@ export default function SuperAdminDashboard() {
         }
     };
 
+    const handleCreateSeller = async (form) => {
+        try {
+            const creds = await supabaseService.createSellerAsSuperAdmin(form);
+            setResetCredentialsModal({
+                ...creds,
+                businessName: `${form.firstName} ${form.lastName}`.trim(),
+                accessLabel: 'el *panel de vendedores de TurnitosLR*',
+                loginPath: '/admin/login',
+                whatsapp: form.phone || ''
+            });
+            showToast('Vendedor creado', 'success');
+            loadData();
+            return true;
+        } catch (err) {
+            console.error('Error creating seller:', err);
+            showToast(`Error al crear vendedor: ${err.message}`, 'error', 6000);
+            return false;
+        }
+    };
+
     const handleDeleteBusiness = async (businessId) => {
         const confirmed = await showConfirm(
             '¿Eliminar Negocio?',
@@ -290,7 +312,7 @@ export default function SuperAdminDashboard() {
         document.body.removeChild(link);
     };
 
-    const alertCount = businesses.filter(b => b.subscription_status === 'trial' || b.subscription_status === 'inactive').length;
+    const alertCount = getBillingRows(businesses, billing).filter(r => needsAttention(r.info)).length;
 
     const activeNavItem = SUPERADMIN_NAV.flatMap(g => g.items).find(i => i.id === activeTab);
 
@@ -388,6 +410,8 @@ export default function SuperAdminDashboard() {
                         />
                     )}
 
+                    {activeTab === 'leads' && <LeadsTab />}
+
                     {activeTab === 'sellers' && (
                         <SellersTab
                             sellers={sellers}
@@ -395,6 +419,7 @@ export default function SuperAdminDashboard() {
                             onViewDetails={handleViewSellerDetails}
                             settledSellers={settledSellers}
                             onToggleSettlement={toggleSellerSettlement}
+                            onCreateSeller={handleCreateSeller}
                         />
                     )}
 

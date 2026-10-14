@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, Marker } from 'react-leaflet';
+import L from 'leaflet';
 import { TurnitosTileLayer, createTurnitosMarkerIcon } from '../components/common/TurnitosMap';
 import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
 import SEOHead from '../components/SEOHead';
+import { buildBusinessSeo } from '../utils/seo';
 import { parseAmenity } from '../components/common/AmenityIcon';
-import { pushService } from '../services/pushService';
 import { supabase } from '../services/supabaseClient';
 import 'leaflet/dist/leaflet.css';
+import PageLoader from '../components/common/PageLoader';
 
 import VenueHeroBanner from '../components/venue/profile/VenueHeroBanner';
 import VenueGallerySection from '../components/venue/profile/VenueGallerySection';
@@ -18,6 +20,7 @@ import VenueCalendarSection from '../components/venue/profile/VenueCalendarSecti
 import VenueBookingPanel from '../components/venue/profile/VenueBookingPanel';
 import VenueBookingWizardModal from '../components/venue/profile/VenueBookingWizardModal';
 import VenueLightboxModal from '../components/venue/profile/VenueLightboxModal';
+import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
 
 // Fix Leaflet default icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -35,6 +38,11 @@ export default function VenueProfile({ business: initialBusiness }) {
 
     const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
     const [loading, setLoading] = useState(!business);
+    // Opened from a link shared on TurnitosLR (?via=turnitos): the booking counts as marketplace
+    useEffect(() => {
+        markTurnitosVia(business?.id);
+    }, [business?.id]);
+
     const [selectedDate, setSelectedDate] = useState(null);
     const [guestCount, setGuestCount] = useState(30);
     const [duration, setDuration] = useState(4);
@@ -426,33 +434,12 @@ export default function VenueProfile({ business: initialBusiness }) {
 
             await serviceAdapter.createBooking(bookingData);
 
-            try {
-                if (pushService?.notifyBusinessNewBooking) {
-                    pushService.notifyBusinessNewBooking(business.id, {
-                        customerName: bookingDetails.customerName,
-                        date: bookingDetails.date,
-                        businessName: business.name
-                    });
-                }
-            } catch (pushErr) {
-                console.warn('[VenueProfile] Push notification failed but booking created:', pushErr);
-            }
-
             setShowBookingModal(false);
             await showAlert('¡Reserva Confirmada!', 'Tu reserva ha sido creada exitosamente. Te contactaremos pronto para confirmar los detalles.', 'success', 'Aceptar');
             navigate('/');
         } catch (error) {
             console.error('Error creating booking:', error);
-            if (error.message && error.message.includes('cupo mensual')) {
-                showAlert(
-                    'Cupo Mensual Completado',
-                    'Este negocio ha completado su cupo mensual de turnos online. Por favor, contactalo directamente por WhatsApp para coordinar tu lugar.',
-                    'warning',
-                    'Entendido'
-                );
-            } else {
-                showAlert('Error', error.message || 'No pudimos procesar tu reserva. Por favor intenta nuevamente.', 'error', 'Reintentar');
-            }
+            showAlert('Error', error.message || 'No pudimos procesar tu reserva. Por favor intenta nuevamente.', 'error', 'Reintentar');
         }
     };
 
@@ -509,65 +496,21 @@ export default function VenueProfile({ business: initialBusiness }) {
     const daysInMonth = getDaysInMonth(currentMonth);
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 
-    const venueSchema = useMemo(() => {
-        if (!business) return null;
-        const ratingVal = Number(business.rating_avg || business.rating || business.metadata?.rating_avg || 5.0);
-        const reviewsNum = Number(business.reviews_count || business.metadata?.reviews_count || 1);
-
-        const schemaObj = {
-            '@context': 'https://schema.org',
-            '@type': 'EventVenue',
-            'name': business.name,
-            'image': business.banner_image || business.banner_url || business.logo || 'https://www.turnitoslr.com/logo-turnitos.png',
-            'url': `https://www.turnitoslr.com/${business.slug || ''}`,
-            'telephone': business.whatsapp ? `+54${business.whatsapp}` : undefined,
-            'priceRange': '$$',
-            'maximumAttendeeCapacity': business.max_capacity || business.capacity || 100,
-            'address': {
-                '@type': 'PostalAddress',
-                'addressLocality': business.location || 'La Rioja',
-                'addressRegion': 'La Rioja',
-                'addressCountry': 'AR'
-            }
-        };
-
-        if (business.latitude && business.longitude) {
-            schemaObj.geo = {
-                '@type': 'GeoCoordinates',
-                'latitude': Number(business.latitude),
-                'longitude': Number(business.longitude)
-            };
-        }
-
-        if (ratingVal && reviewsNum > 0) {
-            schemaObj.aggregateRating = {
-                '@type': 'AggregateRating',
-                'ratingValue': ratingVal.toFixed(1),
-                'reviewCount': reviewsNum,
-                'bestRating': '5',
-                'worstRating': '1'
-            };
-        }
-
-        return schemaObj;
-    }, [business]);
-
-    if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando espacio...</div>;
+    if (loading) return <PageLoader label="Cargando espacio..." />;
     if (!business) return <div style={{ padding: 40, textAlign: 'center' }}>Espacio no encontrado</div>;
 
-    const pageTitle = `${business.name} - Alquiler de Quincho y Eventos en ${business.location || 'La Rioja'}`;
-    const pageDescription = `Alquilá ${business.name} en ${business.location || 'La Rioja'}. Consultá disponibilidad, precios por hora o por día y reservá online.`;
-    const pageImage = business?.banner_image || business?.banner_url || business?.logo || 'https://www.turnitoslr.com/logo-turnitos.png';
+    const seo = buildBusinessSeo(business, 'turnos');
 
     return (
         <div style={{ background: pageBg, color: textColor, minHeight: '100vh', width: '100%', overflowX: 'clip', transition: 'background 0.3s' }}>
             <SEOHead
-                title={pageTitle}
-                description={pageDescription}
-                keywords={`${business?.name}, alquiler quincho ${business?.name}, eventos la rioja, quinchos la rioja, turnitos`}
-                image={pageImage}
-                url={`https://www.turnitoslr.com/${business?.slug || ''}`}
-                schema={venueSchema}
+                title={seo.title}
+                description={seo.description}
+                image={seo.image}
+                canonical={seo.canonical}
+                robots={seo.robots}
+                schema={seo.schema}
+                brandTitle={false}
             />
 
             {/* 1. Hero Section */}
@@ -575,6 +518,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                 business={business}
                 galleryImages={galleryImages}
                 windowWidth={windowWidth}
+                shareUrl={buildBusinessShareUrl(business.slug, '/turnos')}
             />
 
             {/* 2. Main Content Grid */}
@@ -699,7 +643,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                                             right: 0,
                                             height: '60px',
                                             background: isDark
-                                                ? 'linear-gradient(to bottom, transparent, #1E293B)'
+                                                ? 'linear-gradient(to bottom, transparent, #1E1E1E)'
                                                 : 'linear-gradient(to bottom, transparent, white)',
                                             pointerEvents: 'none'
                                         }} />

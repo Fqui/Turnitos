@@ -99,6 +99,9 @@ export const useBookingsStore = create((set, get) => {
 
             const handleNewBookingAlert = (bookingData, customTitle) => {
                 if (!bookingData) return;
+                // Bookings the business loads itself are not news
+                const source = bookingData?.metadata?.booking_source || bookingData?.booking_source || bookingData?.bookingSource;
+                if (source === 'manual') return;
                 const isBlocked = bookingData?.status === 'blocked' ||
                     bookingData?.is_blocked ||
                     bookingData?.isBlocked ||
@@ -117,17 +120,7 @@ export const useBookingsStore = create((set, get) => {
                     if (typeof onAlertToast === 'function') {
                         onAlertToast(customTitle || `🔔 ¡Nueva reserva web de ${customerName}!`, 'success', 8000);
                     }
-
-                    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                        try {
-                            new Notification('🔔 ¡Nueva Reserva Web Recibida!', {
-                                body: `${customerName} solicitó una reserva para el ${bookingData.date || 'día indicado'}`,
-                                icon: '/logo-turnitos.png'
-                            });
-                        } catch {
-                            // Ignored if notifications blocked
-                        }
-                    }
+                    // System notifications come only from Web Push (sw-v2.js), never from the page
                 }
             };
 

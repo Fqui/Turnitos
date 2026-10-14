@@ -9,7 +9,8 @@ export default function UpcomingRemindersCard({
     isMobile = false
 }) {
     const { showToast } = useNotification();
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    // Collapsed on phones so the calendar is visible without scrolling
+    const [isCollapsed, setIsCollapsed] = useState(isMobile);
     const [processingId, setProcessingId] = useState(null);
     const [activeTab, setActiveTab] = useState('all'); // 'all' | 'deposits' | 'events'
 
@@ -42,7 +43,9 @@ export default function UpcomingRemindersCard({
             const reminderSent = b.metadata?.reminder_sent_at || b.reminder_sent_at || b.metadata?.reminderSent;
 
             // 1. RECLAMO DE SEÑA: Reserva Pendiente creada hace más de 1 hora
+            // (solo turnos de hoy en adelante: no tiene sentido pedir seña de un turno que ya pasó)
             if (b.status === 'pending') {
+                if (bDate && bDate < todayStr) return;
                 const createdAtTime = b.created_at ? new Date(b.created_at).getTime() : 0;
                 const hoursElapsed = createdAtTime > 0 ? (nowTime - createdAtTime) / (1000 * 60 * 60) : 2;
 

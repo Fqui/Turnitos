@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function VenueStoreTab({
     formData,
@@ -15,6 +16,7 @@ export default function VenueStoreTab({
 }) {
     const [editingProduct, setEditingProduct] = useState(null);
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    useBodyScrollLock(isProductModalOpen && !!editingProduct);
     const [uploadingProductImage, setUploadingProductImage] = useState(false);
     const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
 

@@ -6,7 +6,7 @@
  *   - trial  → due date is trial_end_date
  *   - active → due date is subscriptions.next_billing_date
  */
-export const GRACE_DAYS = 5;
+export const GRACE_DAYS = 10;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -52,6 +52,31 @@ export function getBillingInfo(business, subscription, today = new Date()) {
     }
 
     return { status, ...BILLING_STATUS[status], dueDate, daysToDue, monthlyPrice };
+}
+
+// Statuses that pay a monthly fee (used for "Activos" and expected income)
+export const PAYING_STATUSES = new Set(['active', 'due_soon', 'grace', 'overdue']);
+
+// Order of urgency for the "Requieren atención" lists
+export const ATTENTION_ORDER = { overdue: 0, trial_expired: 1, grace: 2, due_soon: 3, trial: 4 };
+
+/**
+ * Single rule for "this business needs attention", shared by the dashboard,
+ * the business list filter and the sidebar badge: overdue, expired trial,
+ * late payment, due in 3 days, or a trial ending within 7 days.
+ */
+export function needsAttention(info) {
+    if (!info) return false;
+    if (info.status === 'trial') return info.daysToDue !== null && info.daysToDue <= 7;
+    return info.status in ATTENTION_ORDER;
+}
+
+export function getBillingRows(businesses = [], billing) {
+    const subByBusiness = new Map((billing?.subscriptions || []).map(s => [String(s.business_id), s]));
+    return businesses.map(b => ({
+        business: b,
+        info: getBillingInfo(b, subByBusiness.get(String(b.id)))
+    }));
 }
 
 export function formatMoney(value) {
