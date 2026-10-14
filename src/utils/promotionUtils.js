@@ -128,3 +128,42 @@ export function calculatePromoDiscount(basePrice, promo) {
     const finalPrice = Math.max(0, numPrice - discountAmount);
     return { finalPrice, discountAmount };
 }
+
+/**
+ * Fecha de hoy en Argentina como 'YYYY-MM-DD' (comparable con start_date / end_date)
+ */
+export function todayAR() {
+    try {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Argentina/Buenos_Aires',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(new Date());
+    } catch {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+}
+
+const toDay = (value) => (value ? String(value).slice(0, 10) : null);
+
+/**
+ * Estado de una publicidad: 'paused' | 'scheduled' | 'expired' | 'live'
+ */
+export function getPromotionStatus(promo, today = todayAR()) {
+    if (!promo) return 'expired';
+    if (promo.active === false) return 'paused';
+    const start = toDay(promo.start_date);
+    const end = toDay(promo.end_date || promo.expires_at);
+    if (start && start > today) return 'scheduled';
+    if (end && end < today) return 'expired';
+    return 'live';
+}
+
+/**
+ * True si la publicidad debe mostrarse hoy en el Home
+ */
+export function isPromotionLive(promo, today = todayAR()) {
+    return getPromotionStatus(promo, today) === 'live';
+}

@@ -106,6 +106,20 @@ export default function BookingCard({
                     fontSize: isCompact ? '12px' : '13px',
                     letterSpacing: '-0.01em'
                 }}>
+                    {booking.promo_id && booking.status !== 'blocked' && (
+                        <span title="Reserva que vino por la publicidad del Home" style={{
+                            display: 'inline-block',
+                            marginRight: '4px',
+                            padding: '0 4px',
+                            borderRadius: '4px',
+                            background: 'rgba(255, 255, 255, 0.85)',
+                            color: '#E91E63',
+                            fontSize: '9px',
+                            fontWeight: '800',
+                            letterSpacing: '0.3px',
+                            verticalAlign: 'middle'
+                        }}>PROMO</span>
+                    )}
                     {getLabel()}
                 </span>
 

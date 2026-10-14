@@ -2,7 +2,60 @@ import React, { useState, useEffect, useRef } from 'react';
 import supabaseService from '../../../services/supabaseService';
 import { useNotification } from '../../../contexts/NotificationContext';
 import { supabase } from '../../../services/supabaseClient';
-import { parsePromotionTarget } from '../../../utils/promotionUtils';
+import { parsePromotionTarget, getPromotionStatus, todayAR } from '../../../utils/promotionUtils';
+import { getPromotionStats } from '../../../services/supabase/promotionService';
+
+const STATUS_META = {
+    live: { label: 'Vigente', color: '#10b981' },
+    paused: { label: 'Pausada', color: '#f59e0b' },
+    expired: { label: 'Vencida', color: '#ef4444' },
+    scheduled: { label: 'Programada', color: '#38bdf8' }
+};
+
+const formatNumber = (n) => Number(n || 0).toLocaleString('es-AR');
+const formatMoney = (n) => `$${Math.round(Number(n || 0)).toLocaleString('es-AR')}`;
+// 'YYYY-MM-DD' -> 'dd/mm/aaaa' sin correr el día por la zona horaria
+const formatDay = (value) => {
+    const [y, m, d] = String(value).slice(0, 10).split('-');
+    return d && m && y ? `${d}/${m}/${y}` : String(value);
+};
+
+function PromoStats({ stats }) {
+    const s = stats || { views: 0, clicks: 0, bookings: 0, revenue: 0 };
+    const ctr = s.views > 0 ? (s.clicks / s.views) * 100 : 0;
+    const items = [
+        { label: 'Vistas', value: formatNumber(s.views) },
+        { label: 'Clics', value: formatNumber(s.clicks) },
+        { label: 'CTR', value: `${ctr.toLocaleString('es-AR', { maximumFractionDigits: 1 })}%` },
+        { label: 'Reservas', value: formatNumber(s.bookings) },
+        { label: 'Facturación', value: formatMoney(s.revenue) }
+    ];
+    return (
+        <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(76px, 1fr))',
+            gap: '6px',
+            marginTop: '10px'
+        }}>
+            {items.map(item => (
+                <div key={item.label} style={{
+                    background: 'var(--sa-bg)',
+                    border: '1px solid var(--sa-border)',
+                    borderRadius: '8px',
+                    padding: '6px 8px',
+                    minWidth: 0
+                }}>
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                        {item.label}
+                    </div>
+                    <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--sa-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.value}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
 
 function PromoModal({ title, children, onClose }) {
     return (
@@ -61,6 +114,9 @@ function PromoModal({ title, children, onClose }) {
 export default function PromotionsTab({ businesses = [] }) {
     const { showToast, showConfirm } = useNotification();
     const [promotions, setPromotions] = useState([]);
+    const [promoStats, setPromoStats] = useState({});
+    const [statsError, setStatsError] = useState(false);
+    const [togglingId, setTogglingId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingPromo, setEditingPromo] = useState(null);
@@ -173,8 +229,16 @@ export default function PromotionsTab({ businesses = [] }) {
     const loadPromotions = async () => {
         setLoading(true);
         try {
-            const data = await supabaseService.getPromotions();
+            const [data, stats] = await Promise.all([
+                supabaseService.getPromotions(),
+                getPromotionStats().catch(err => {
+                    console.warn('No se pudieron cargar las métricas de publicidades:', err);
+                    return null;
+                })
+            ]);
             setPromotions(data || []);
+            setPromoStats(stats || {});
+            setStatsError(!stats);
         } catch (err) {
             console.error('Error al cargar promociones:', err);
             showToast('Error al cargar promociones', 'error');
@@ -332,7 +396,8 @@ export default function PromotionsTab({ businesses = [] }) {
                 discount_type: form.discount_type || 'percentage',
                 discount_value: Number(form.discount_value || 0),
                 end_date: form.end_date ? form.end_date : null,
-                active: true
+                // Al editar se respeta si estaba pausada; las nuevas salen activas
+                active: editingPromo ? editingPromo.active !== false : true
             };
 
             if (editingPromo) {
@@ -350,6 +415,21 @@ export default function PromotionsTab({ businesses = [] }) {
             showToast(`Error al guardar: ${err.message}`, 'error');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleToggleActive = async (promo) => {
+        const nextActive = promo.active === false;
+        setTogglingId(promo.id);
+        try {
+            await supabaseService.updatePromotion(promo.id, { active: nextActive });
+            setPromotions(prev => prev.map(p => (p.id === promo.id ? { ...p, active: nextActive } : p)));
+            showToast(nextActive ? 'Publicidad activada' : 'Publicidad pausada: ya no se muestra en el Home', 'success');
+        } catch (err) {
+            console.error('Error cambiando estado de la publicidad:', err);
+            showToast(`Error al cambiar el estado: ${err.message}`, 'error');
+        } finally {
+            setTogglingId(null);
         }
     };
 
@@ -372,6 +452,9 @@ export default function PromotionsTab({ businesses = [] }) {
         }
     };
 
+    const today = todayAR();
+    const liveCount = promotions.filter(p => getPromotionStatus(p, today) === 'live').length;
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Header / Actions */}
@@ -384,7 +467,7 @@ export default function PromotionsTab({ businesses = [] }) {
             }}>
                 <div>
                     <h3 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 4px 0', color: 'var(--sa-text)' }}>
-                        🔥 Publicidades & Banners del Home ({promotions.length})
+                        🔥 Publicidades & Banners del Home ({liveCount} vigentes de {promotions.length})
                     </h3>
                     <p style={{ margin: 0, fontSize: '13px', color: 'var(--sa-text-muted)' }}>
                         Gestioná las tarjetas destacadas que ven todos los usuarios arriba en el inicio de Turnitos.
@@ -411,6 +494,12 @@ export default function PromotionsTab({ businesses = [] }) {
                     <span>Nueva Publicidad</span>
                 </button>
             </div>
+
+            {statsError && !loading && promotions.length > 0 && (
+                <div style={{ fontSize: '12px', color: 'var(--sa-text-muted)' }}>
+                    ⚠️ No se pudieron cargar las métricas (vistas, clics, reservas). Probá recargar.
+                </div>
+            )}
 
             {/* Grid of Promotions */}
             {loading ? (
@@ -454,6 +543,9 @@ export default function PromotionsTab({ businesses = [] }) {
                     gap: '20px'
                 }}>
                     {promotions.map((promo) => {
+                        const status = getPromotionStatus(promo, today);
+                        const statusMeta = STATUS_META[status];
+                        const isOn = promo.active !== false;
                         const linkedBiz = businesses.find(b => b.id === promo.business_id) || promo.businesses;
                         const isExternal = promo.description?.startsWith('http://') || promo.description?.startsWith('https://') || promo.description?.startsWith('/');
 
@@ -478,7 +570,9 @@ export default function PromotionsTab({ businesses = [] }) {
                                         style={{
                                             width: '100%',
                                             height: '100%',
-                                            objectFit: 'cover'
+                                            objectFit: 'cover',
+                                            filter: status === 'live' ? 'none' : 'grayscale(0.7)',
+                                            opacity: status === 'live' ? 1 : 0.65
                                         }}
                                         onError={(e) => {
                                             e.target.src = 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=600&q=80';
@@ -499,6 +593,21 @@ export default function PromotionsTab({ businesses = [] }) {
                                         textTransform: 'uppercase'
                                     }}>
                                         {promo.discount || 'PROMO'}
+                                    </div>
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '12px',
+                                        left: '12px',
+                                        background: 'rgba(0, 0, 0, 0.65)',
+                                        color: statusMeta.color,
+                                        border: `1px solid ${statusMeta.color}`,
+                                        fontSize: '11px',
+                                        fontWeight: '800',
+                                        padding: '4px 9px',
+                                        borderRadius: '8px',
+                                        backdropFilter: 'blur(4px)'
+                                    }}>
+                                        ● {statusMeta.label}
                                     </div>
                                 </div>
 
@@ -596,9 +705,63 @@ export default function PromotionsTab({ businesses = [] }) {
 
                                         {(promo.end_date || promo.expires_at) && (
                                             <p style={{ margin: '0 0 10px 0', fontSize: '11.5px', color: 'var(--sa-text-muted)' }}>
-                                                ⏳ Vence: {new Date(promo.end_date || promo.expires_at).toLocaleDateString('es-AR')}
+                                                ⏳ {status === 'expired' ? 'Venció' : 'Vence'}: {formatDay(promo.end_date || promo.expires_at)}
                                             </p>
                                         )}
+                                        {status === 'scheduled' && promo.start_date && (
+                                            <p style={{ margin: '0 0 10px 0', fontSize: '11.5px', color: 'var(--sa-text-muted)' }}>
+                                                🗓️ Empieza: {formatDay(promo.start_date)}
+                                            </p>
+                                        )}
+
+                                        <PromoStats stats={promoStats[promo.id]} />
+
+                                        {/* Pausar / activar */}
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: '10px',
+                                            marginTop: '12px',
+                                            fontSize: '12.5px',
+                                            fontWeight: '700',
+                                            color: 'var(--sa-text-2)'
+                                        }}>
+                                            <span>{isOn ? 'Activa (se muestra si está vigente)' : 'Pausada (no se muestra en el Home)'}</span>
+                                            <button
+                                                type="button"
+                                                role="switch"
+                                                aria-checked={isOn}
+                                                aria-label={isOn ? 'Pausar publicidad' : 'Activar publicidad'}
+                                                disabled={togglingId === promo.id}
+                                                onClick={() => handleToggleActive(promo)}
+                                                style={{
+                                                    position: 'relative',
+                                                    width: '42px',
+                                                    height: '24px',
+                                                    flexShrink: 0,
+                                                    borderRadius: '999px',
+                                                    border: 'none',
+                                                    padding: 0,
+                                                    background: isOn ? '#10b981' : 'var(--sa-border-strong)',
+                                                    cursor: togglingId === promo.id ? 'wait' : 'pointer',
+                                                    transition: 'background 0.2s',
+                                                    opacity: togglingId === promo.id ? 0.6 : 1
+                                                }}
+                                            >
+                                                <span style={{
+                                                    position: 'absolute',
+                                                    top: '3px',
+                                                    left: isOn ? '21px' : '3px',
+                                                    width: '18px',
+                                                    height: '18px',
+                                                    borderRadius: '50%',
+                                                    background: '#fff',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                                    transition: 'left 0.2s'
+                                                }} />
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Action Buttons */}

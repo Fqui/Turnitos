@@ -19,7 +19,7 @@ import BookingSuccessModal from '../components/BookingSuccessModal';
 import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import SEOHead from '../components/SEOHead';
 import PromotionModal from '../components/promotions/PromotionModal';
-import { parsePromotionTarget } from '../utils/promotionUtils';
+import { parsePromotionTarget, isPromotionLive } from '../utils/promotionUtils';
 
 import ProfileHeroBanner from '../components/profile/ProfileHeroBanner';
 import ProfileHighlightsAndStore from '../components/profile/ProfileHighlightsAndStore';
@@ -349,7 +349,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
             const fetchPromotion = async () => {
                 try {
                     const promo = await serviceAdapter.getPromotionById(promoId);
-                    if (promo && promo.business_id === business.id) {
+                    if (promo && promo.business_id === business.id && isPromotionLive(promo)) {
                         setActivePromotion(promo);
                         setShowPromoModal(true);
 
@@ -578,13 +578,16 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
             let finalPrice = finalDetails.price;
             let discountApplied = finalDetails.discount || 0;
-            if (activePromotion && activePromotion.discount_value > 0 && discountApplied === 0) {
+            // El resumen ya calcula el descuento de la promo (solo si aplica al servicio elegido)
+            let promoDiscountApplied = Number(finalDetails.promoDiscount || 0);
+            if (finalDetails.promoDiscount === undefined && activePromotion && activePromotion.discount_value > 0 && discountApplied === 0) {
                 if (activePromotion.discount_type === 'fixed') {
                     discountApplied = Math.min(activePromotion.discount_value, finalPrice);
                 } else {
                     discountApplied = Math.round(finalPrice * (activePromotion.discount_value / 100));
                 }
                 finalPrice = finalPrice - discountApplied;
+                promoDiscountApplied = discountApplied;
             }
 
             const selectedExtrasList = finalDetails.extras || [];
@@ -611,7 +614,9 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     extras: selectedExtrasList,
                     deposit_amount: finalDetails.depositAmount || null,
                     coupon_code: finalDetails.coupon_code || finalDetails.coupon?.code || null,
-                    coupon_title: finalDetails.coupon?.gift_title || finalDetails.coupon?.description || null
+                    coupon_title: finalDetails.coupon?.gift_title || finalDetails.coupon?.description || null,
+                    promo_title: activePromotion?.title || null,
+                    promo_discount: activePromotion ? promoDiscountApplied : null
                 },
                 coupon_code: finalDetails.coupon_code || finalDetails.coupon?.code || null,
                 promo_id: activePromotion?.id || null,

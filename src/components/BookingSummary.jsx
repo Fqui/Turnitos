@@ -246,7 +246,9 @@ export default function BookingSummary({ bookingDetails, sportColor, onClose, on
             price: finalPrice,
             coupon: appliedCoupon?.coupon || null,
             coupon_code: appliedCoupon?.coupon?.code || null,
-            discount: totalDiscount
+            discount: totalDiscount,
+            promoDiscount,
+            couponDiscount
         });
     };
 

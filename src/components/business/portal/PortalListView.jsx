@@ -315,6 +315,9 @@ export default function PortalListView({
                                             <>
                                                 <div style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '3px', fontSize: '15px' }}>
                                                     {booking.customer_name || booking.customerName || '-'}
+                                                    {booking.promo_id && (
+                                                        <span title="Reserva que vino por la publicidad del Home" style={{ marginLeft: '6px', padding: '1px 6px', borderRadius: '6px', background: 'rgba(233, 30, 99, 0.12)', color: '#E91E63', fontSize: '10px', fontWeight: '800', verticalAlign: 'middle' }}>PROMO</span>
+                                                    )}
                                                 </div>
                                                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
                                                     {booking.customer_phone || booking.customerPhone || ''}
@@ -393,6 +396,9 @@ export default function PortalListView({
                                                     <div style={{ whiteSpace: 'nowrap' }}>
                                                         <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '15px' }}>
                                                             {booking.customer_name || booking.customerName || '-'}
+                                                            {booking.promo_id && (
+                                                                <span title="Reserva que vino por la publicidad del Home" style={{ marginLeft: '6px', padding: '1px 6px', borderRadius: '6px', background: 'rgba(233, 30, 99, 0.12)', color: '#E91E63', fontSize: '10px', fontWeight: '800', verticalAlign: 'middle' }}>PROMO</span>
+                                                            )}
                                                         </div>
                                                         <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                                                             {booking.customer_phone || booking.customerPhone || '-'}

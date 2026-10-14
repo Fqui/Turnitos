@@ -161,6 +161,17 @@ const BookingDetailsModal = ({
     const durationDiscountPct = Number(booking.metadata?.durationDiscountPct || booking.metadata?.duration_discount_pct || 0);
     const durationDiscountAmount = Number(booking.metadata?.durationDiscountAmount || booking.metadata?.duration_discount_amount || 0);
 
+    // Reserva que vino por una publicidad del Home (promo_id). Las reservas nuevas guardan el
+    // descuento de la promo aparte (metadata.promo_discount); en las viejas discount_applied
+    // incluye también el cupón, así que solo lo tomamos si no hubo cupón.
+    const promoId = booking.promo_id || booking.promoId || null;
+    const promoTitle = booking.metadata?.promo_title || booking.promo_title || null;
+    const promoDiscountAmount = promoId
+        ? Math.max(0, Number(
+            booking.metadata?.promo_discount ?? (couponCode || discountAmount > 0 ? 0 : (booking.discount_applied || 0))
+        ) || 0)
+        : 0;
+
     // Event type and schedule detection
     const initialEventType = booking.metadata?.event_type ||
         booking.metadata?.eventType ||
@@ -219,7 +230,7 @@ const BookingDetailsModal = ({
     const defaultTotalPrice = Number(booking.price || booking.total_price || booking.totalPrice || 0);
     const initialServices = parseBookingServices(booking);
     const initialExtrasSum = initialServices.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
-    const initialBasePrice = Number(booking.base_price || booking.basePrice || Math.max(0, defaultTotalPrice + discountAmount + durationDiscountAmount - initialExtrasSum));
+    const initialBasePrice = Number(booking.base_price || booking.basePrice || Math.max(0, defaultTotalPrice + discountAmount + promoDiscountAmount + durationDiscountAmount - initialExtrasSum));
 
     const paymentSettings = biz?.payment_settings || biz?.paymentSettings || {};
     const depositSettings = paymentSettings.deposit || { enabled: false, type: 'percentage', percentage: 30, fixed_amount: 0 };
@@ -263,7 +274,7 @@ const BookingDetailsModal = ({
     const activeDeposit = Number(editableDeposit) || 0;
     const pendingBalance = activePrice - activeDeposit > 0 ? activePrice - activeDeposit : 0;
     const extrasSum = editableServices.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.quantity) || 1)), 0);
-    const baseRentalPrice = Math.max(0, activePrice + discountAmount + durationDiscountAmount - extrasSum);
+    const baseRentalPrice = Math.max(0, activePrice + discountAmount + promoDiscountAmount + durationDiscountAmount - extrasSum);
 
     // Helpers for Rental Event Details Tile Grid
     const getDateDetails = (dateStr) => {
@@ -801,6 +812,33 @@ const BookingDetailsModal = ({
                             </div>
                         );
                     })()}
+
+                    {/* Reserva originada por una publicidad del Home */}
+                    {promoId && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '10px',
+                            padding: '8px 12px',
+                            background: 'rgba(233, 30, 99, 0.08)',
+                            border: '1px solid rgba(233, 30, 99, 0.3)',
+                            borderRadius: '10px',
+                            fontSize: '12px'
+                        }}>
+                            <span style={{ fontWeight: '800', color: '#E91E63', display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+                                <span>📢</span>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    Promo: {promoTitle || 'Publicidad TurnitosLR'}
+                                </span>
+                            </span>
+                            {promoDiscountAmount > 0 && (
+                                <span style={{ fontWeight: '800', color: '#E91E63', whiteSpace: 'nowrap' }}>
+                                    −${promoDiscountAmount.toLocaleString('es-AR')}
+                                </span>
+                            )}
+                        </div>
+                    )}
 
                     {/* BRANCH: RENTAL SPECIALIZED VIEW VS SPORTS COURT VIEW */}
                     {isRental ? (
@@ -1808,6 +1846,13 @@ const BookingDetailsModal = ({
                                         </div>
                                     )}
 
+                                    {promoDiscountAmount > 0 && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#E91E63' }}>
+                                            <span>📢 Descuento Promo{promoTitle ? ` ("${promoTitle}")` : ''}:</span>
+                                            <span style={{ fontWeight: '700' }}>-${promoDiscountAmount.toLocaleString('es-AR')}</span>
+                                        </div>
+                                    )}
+
                                     {giftBenefit && (
                                         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#38BDF8', fontSize: '11px' }}>
                                             <span>🎁 Beneficio de Cupón:</span>
@@ -2524,6 +2569,18 @@ const BookingDetailsModal = ({
                                         <span>Alquiler cancha:</span>
                                         <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>${baseRentalPrice.toLocaleString('es-AR')}</span>
                                     </div>
+                                    {discountAmount > 0 && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#00E676' }}>
+                                            <span>🏷️ Descuento Cupón {couponCode ? `("${couponCode}")` : ''}:</span>
+                                            <span style={{ fontWeight: '700' }}>-${discountAmount.toLocaleString('es-AR')}</span>
+                                        </div>
+                                    )}
+                                    {promoDiscountAmount > 0 && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#E91E63' }}>
+                                            <span>📢 Descuento Promo{promoTitle ? ` ("${promoTitle}")` : ''}:</span>
+                                            <span style={{ fontWeight: '700' }}>-${promoDiscountAmount.toLocaleString('es-AR')}</span>
+                                        </div>
+                                    )}
                                     {editableServices.length > 0 && (
                                         <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                                             <span>+ Adicionales ({editableServices.length}):</span>

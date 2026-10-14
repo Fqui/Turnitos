@@ -24,7 +24,7 @@ import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
 import { isFreePlan } from '../utils/subscriptionUtils';
 import PromotionModal from '../components/promotions/PromotionModal';
-import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
+import { parsePromotionTarget, calculatePromoDiscount, isPromotionLive } from '../utils/promotionUtils';
 
 export default function BusinessStore({ overrideSlug }) {
     const { businessSlug: routeSlug } = useParams();
@@ -164,7 +164,7 @@ export default function BusinessStore({ overrideSlug }) {
             const fetchPromo = async () => {
                 try {
                     const promo = await serviceAdapter.getPromotionById(promoId);
-                    if (promo && promo.business_id === business.id) {
+                    if (promo && promo.business_id === business.id && isPromotionLive(promo)) {
                         setActivePromotion(promo);
                         setShowPromoModal(true);
                         const parsed = parsePromotionTarget(promo);

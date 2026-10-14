@@ -1,6 +1,8 @@
 import { supabase } from '../supabaseClient';
 import { calculateBookingCommission, isFreePlan } from '../../utils/subscriptionUtils';
 
+const isUuid = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
 // Helper function to convert Date to YYYY-MM-DD in local timezone (not UTC)
 export const formatDateLocal = (date) => {
     if (!date) return null;
@@ -341,7 +343,10 @@ export async function createBooking(bookingData) {
         guest_count: bookingData.guestCount || bookingData.guest_count || null,
         selected_services: bookingData.selectedServices || bookingData.selected_services || [],
         services_total: bookingData.servicesTotal || bookingData.services_total || 0,
-        base_price: bookingData.basePrice || bookingData.base_price || null
+        base_price: bookingData.basePrice || bookingData.base_price || null,
+        // Publicidad del Home que originó la reserva (para métricas y para que el negocio lo vea)
+        promo_id: isUuid(bookingData.promo_id || bookingData.promoId) ? (bookingData.promo_id || bookingData.promoId) : null,
+        discount_applied: Math.max(0, Number(bookingData.discount_applied ?? bookingData.discountApplied ?? 0) || 0)
     };
 
     const { error } = await supabase

@@ -2,6 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { generateSlug } from '../utils/utils';
+import { trackPromotionEvent } from '../services/supabase/promotionService';
+
+const VIEWED_KEY = 'turnitos_promo_views';
+
+// Registra una 'view' la primera vez que se muestra cada slide en la sesión
+function trackViewOnce(promoId) {
+    if (!promoId) return;
+    try {
+        const seen = JSON.parse(sessionStorage.getItem(VIEWED_KEY) || '[]');
+        if (Array.isArray(seen) && seen.includes(promoId)) return;
+        sessionStorage.setItem(VIEWED_KEY, JSON.stringify([...(Array.isArray(seen) ? seen : []), promoId]));
+    } catch {
+        // sin sessionStorage (modo privado, etc.): registramos igual
+    }
+    trackPromotionEvent(promoId, 'view');
+}
 
 export default function PromotionsHero({ promotions, businesses }) {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -48,6 +64,11 @@ export default function PromotionsHero({ promotions, businesses }) {
         }, 5000);
         return () => clearInterval(timer);
     }, [promotions]);
+
+    const currentPromoId = promotions?.[currentIndex]?.id;
+    useEffect(() => {
+        trackViewOnce(currentPromoId);
+    }, [currentPromoId]);
 
     if (!promotions || promotions.length === 0) {
         return (
@@ -268,6 +289,7 @@ export default function PromotionsHero({ promotions, businesses }) {
                                 return (
                                     <a
                                         href={targetUrl}
+                                        onClick={() => trackPromotionEvent(currentPromo.id, 'click')}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         style={{
@@ -286,6 +308,7 @@ export default function PromotionsHero({ promotions, businesses }) {
                                 <Link
                                     to={targetUrl}
                                     state={{ business, activePromo: currentPromo }}
+                                    onClick={() => trackPromotionEvent(currentPromo.id, 'click')}
                                     style={{
                                         textDecoration: 'none',
                                         display: 'block',

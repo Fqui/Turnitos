@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
+import { isPromotionLive } from '../utils/promotionUtils';
 import SEOHead from '../components/SEOHead';
 import { generateSlug } from '../utils/utils';
 
@@ -19,6 +20,7 @@ export default function Home() {
     const [selectedSubCategory, setSelectedSubCategory] = useState('all');
     const [businesses, setBusinesses] = useState([]);
     const [promotions, setPromotions] = useState([]);
+    const [promotionsLoaded, setPromotionsLoaded] = useState(false);
     const [categoriesData, setCategoriesData] = useState(() => {
         try {
             const cached = localStorage.getItem('turnitos_categories_cache');
@@ -129,7 +131,10 @@ export default function Home() {
                     serviceAdapter.getCategories() // ✅ Fetch categories
                 ]);
                 if (businessesData && businessesData.length > 0) setBusinesses(businessesData);
-                if (promotionsData && promotionsData.length > 0) setPromotions(promotionsData);
+                // Solo publicidades vigentes: activas y dentro de su rango de fechas (hora AR)
+                const livePromotions = (promotionsData || []).filter(p => isPromotionLive(p));
+                setPromotions(livePromotions);
+                setPromotionsLoaded(true);
                 if (categoriesResult && categoriesResult.length > 0) {
                     setCategoriesData(categoriesResult);
                     try {
@@ -457,7 +462,9 @@ export default function Home() {
             <div className="container" style={{ padding: '20px 20px 80px' }}>
 
                 {/* 1. Hero / Promotions */}
-                <PromotionsHero promotions={promotions} businesses={businesses} />
+                {(!promotionsLoaded || promotions.length > 0) && (
+                    <PromotionsHero promotions={promotions} businesses={businesses} />
+                )}
 
                 {/* 2. Search Bar with Autocomplete */}
                 <section style={{ marginBottom: '30px', display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 50 }}>
