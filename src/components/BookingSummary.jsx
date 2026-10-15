@@ -137,9 +137,6 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
     // 🎫 Calculate promo discount (based on slot base price only)
     let promoDiscount = 0;
     let promoLabel = '';
-    // Si la promo es de este servicio pero el turno no cumple las reglas (día, horario, anticipación)
-    let promoSlotIssue = '';
-    let promoIfEligible = 0;
     if (activePromotion && promoGivesDiscount(activePromotion)) {
         const parsed = parsePromotionTarget(activePromotion);
         let applies = true;
@@ -148,11 +145,9 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                       bookingDetails.serviceName?.toLowerCase().trim() === parsed.target_name?.toLowerCase().trim();
         }
         if (applies) {
-            const { discountAmount } = calculatePromoDiscount(basePrice, activePromotion);
-            promoSlotIssue = getPromoSlotIssue(activePromotion, date, time);
-            if (promoSlotIssue) {
-                promoIfEligible = discountAmount;
-            } else {
+            // Fuera de los días/horario de la promo el resumen queda normal, sin descuento ni aviso
+            if (!getPromoSlotIssue(activePromotion, date, time)) {
+                const { discountAmount } = calculatePromoDiscount(basePrice, activePromotion);
                 promoDiscount = discountAmount;
                 const kind = activePromotion.promo_kind;
                 const suffix = kind === 'schedule' ? ' por horario' : (kind === 'weekday' ? ' por día' : (kind === 'advance' ? ' por reservar antes' : ''));
@@ -170,8 +165,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
     const totalDiscount = promoDiscount + couponDiscount;
     const price = basePrice + extrasTotal;
     const finalPrice = Math.max(0, price - totalDiscount);
-    // También mostramos el bloque de descuentos para avisar que el horario no entra en la promo
-    const hasAnyDiscount = hasSpecialDiscount || totalDiscount > 0 || (Boolean(promoSlotIssue) && promoIfEligible > 0);
+    const hasAnyDiscount = hasSpecialDiscount || totalDiscount > 0;
 
     // Calculate deposit: (Base price percentage) + 100% of additional services
     const basePriceAfterDiscount = Math.max(0, basePrice - totalDiscount);
@@ -717,7 +711,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                             fontSize: '14px',
                                                             fontWeight: '600',
                                                             color: 'var(--text-secondary)',
-                                                            textDecoration: (hasSpecialDiscount || totalDiscount > 0) ? 'line-through' : 'none'
+                                                            textDecoration: 'line-through'
                                                         }}>
                                                             ${subtotalBeforeDiscounts.toLocaleString('es-AR')}
                                                         </span>
@@ -767,21 +761,6 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                         </div>
                                                     )}
 
-                                                    {/* El turno elegido no entra en la promo */}
-                                                    {promoSlotIssue && promoIfEligible > 0 && (
-                                                        <div style={{
-                                                            padding: '9px 12px',
-                                                            borderRadius: '10px',
-                                                            backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                                                            border: '1px solid rgba(245, 158, 11, 0.35)',
-                                                            color: '#B45309',
-                                                            fontSize: '12.5px',
-                                                            fontWeight: '600',
-                                                            lineHeight: 1.45
-                                                        }}>
-                                                            Este horario no entra en la promo: {promoSlotIssue}. Elegí un horario marcado en verde para pagar ${Math.max(0, basePrice - promoIfEligible).toLocaleString('es-AR')}.
-                                                        </div>
-                                                    )}
 
                                                     {/* Applied Coupon Row */}
                                                     {appliedCoupon && (
