@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import TimeSlotGrid from './TimeSlotGrid';
+import { promoSlotStyle, promoTagStyle, shortPromoLabel } from './promotions/promoSlotStyles';
 import CourtSelector from './CourtSelector';
 
 const TimeSlotPicker = ({
@@ -18,6 +19,7 @@ const TimeSlotPicker = ({
     maxCapacity,
     businessCapacity, // ✅ Total capacity of the business (fallback)
     serviceDuration, // 🆕 Duration of the service for validation
+    slotPromo = null, // Promo activa: marca los horarios que entran
     minAdvanceHours = 0, // 🆕 Minimum hours of advance booking required
     bufferMinutes = 0 // 🆕 Buffer/cleaning time between bookings
 }) => {
@@ -455,6 +457,12 @@ const TimeSlotPicker = ({
                     <h4 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px' }}>
                         Horarios disponibles
                     </h4>
+                    {slotPromo && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', margin: '-4px 0 12px' }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '3px', ...promoSlotStyle }} />
+                            En verde: horarios con {slotPromo.label}
+                        </div>
+                    )}
 
                     {/* Time slots grid: 4 columns on phones, as many as fit on desktop */}
                     <div style={{
@@ -464,6 +472,9 @@ const TimeSlotPicker = ({
                     }}>
                         {allSlots.filter(slot => slot.status === 'available').map((slot) => {
                             const isSelected = selectedTime?.time === slot.time;
+                            const inPromo = Boolean(slotPromo) && slotPromo.isValid(slot.time);
+                            const restBorder = inPromo ? promoSlotStyle.border.replace('1px', '2px') : '2px solid var(--border)';
+                            const restBg = inPromo ? promoSlotStyle.backgroundColor : 'var(--card-bg)';
 
                             return (
                                 <button
@@ -472,8 +483,8 @@ const TimeSlotPicker = ({
                                     style={{
                                         padding: '10px 4px',
                                         borderRadius: '10px',
-                                        border: isSelected ? `2px solid ${sportColor}` : '2px solid var(--border)',
-                                        background: isSelected ? `${sportColor}15` : 'var(--card-bg)',
+                                        border: isSelected ? `2px solid ${sportColor}` : restBorder,
+                                        background: isSelected ? `${sportColor}15` : restBg,
                                         color: isSelected ? sportColor : 'var(--text-primary)',
                                         cursor: 'pointer',
                                         fontSize: '14px',
@@ -489,12 +500,13 @@ const TimeSlotPicker = ({
                                     }}
                                     onMouseLeave={(e) => {
                                         if (!isSelected) {
-                                            e.target.style.borderColor = 'var(--border)';
-                                            e.target.style.background = 'var(--card-bg)';
+                                            e.currentTarget.style.border = restBorder;
+                                            e.currentTarget.style.background = restBg;
                                         }
                                     }}
                                 >
                                     {slot.time}
+                                    {inPromo && <span style={{ ...promoTagStyle, display: 'block', marginTop: '2px' }}>{shortPromoLabel(slotPromo.label)}</span>}
                                 </button>
                             );
                         })}
@@ -533,6 +545,7 @@ const TimeSlotPicker = ({
                         selectedTimeSlot={selectedTimeSlot}
                         onTimeSlotSelect={handleTimeSlotSelect}
                         sportColor={sportColor}
+                        slotPromo={slotPromo}
                     />
 
                     {/* Court Selector (shows when time is selected) */}

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { promoSlotStyle, promoTagStyle, shortPromoLabel, PROMO_GREEN } from './promotions/promoSlotStyles';
 
 export default function TimeSlotGrid({
     availableSlots,
     selectedTimeSlot,
     onTimeSlotSelect,
-    sportColor = '#00e676'
+    sportColor = '#00e676',
+    slotPromo = null
 }) {
     return (
         <div style={{ marginBottom: '24px' }}>
@@ -17,6 +19,12 @@ export default function TimeSlotGrid({
             }}>
                 Horarios Disponibles
             </h3>
+            {slotPromo && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', margin: '-8px 0 12px' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '3px', ...promoSlotStyle }} />
+                    En verde: horarios con {slotPromo.label}
+                </div>
+            )}
 
             <div style={{
                 display: 'grid',
@@ -26,6 +34,7 @@ export default function TimeSlotGrid({
                 {availableSlots.map((slot) => {
                     const isSelected = selectedTimeSlot === slot.time;
                     const isAvailable = slot.availableCourts.length > 0;
+                    const inPromo = Boolean(slotPromo) && isAvailable && slotPromo.isValid(slot.time);
 
                     return (
                         <motion.button
@@ -39,12 +48,14 @@ export default function TimeSlotGrid({
                                 borderRadius: '16px',
                                 border: isSelected
                                     ? `2px solid ${sportColor}`
-                                    : '1px solid var(--border)',
+                                    : (inPromo ? promoSlotStyle.border : '1px solid var(--border)'),
                                 backgroundColor: isSelected
                                     ? `${sportColor}15`
-                                    : isAvailable
-                                        ? 'var(--bg-card)'
-                                        : 'var(--bg-main)',
+                                    : inPromo
+                                        ? promoSlotStyle.backgroundColor
+                                        : isAvailable
+                                            ? 'var(--bg-card)'
+                                            : 'var(--bg-main)',
                                 color: isAvailable
                                     ? 'var(--text-primary)'
                                     : 'var(--text-muted)',
@@ -65,6 +76,7 @@ export default function TimeSlotGrid({
                             <span style={{ fontSize: '16px', fontWeight: '700' }}>
                                 {slot.time}
                             </span>
+                            {inPromo && <span style={promoTagStyle}>{shortPromoLabel(slotPromo.label)}</span>}
                         </motion.button>
                     );
                 })}

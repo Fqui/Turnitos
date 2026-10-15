@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import supabaseService from '../../../services/supabaseService';
 import { useNotification } from '../../../contexts/NotificationContext';
 import { supabase } from '../../../services/supabaseClient';
-import { parsePromotionTarget, getPromotionStatus, todayAR } from '../../../utils/promotionUtils';
+import { parsePromotionTarget, getPromotionStatus, todayAR, PROMO_KINDS, getPromoKindMeta, getPromoConditionChips, DAY_SHORT, WEEK_ORDER } from '../../../utils/promotionUtils';
 import { getPromotionStats } from '../../../services/supabase/promotionService';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
@@ -29,6 +29,37 @@ const daysBetween = (a, b) => {
 };
 
 const PERIOD_PRESETS = [7, 15, 30];
+
+// Columnas de reglas según el tipo de promo
+function buildRulesPayload(form) {
+    const kind = form.promo_kind || 'general';
+    const usesDays = kind === 'schedule' || kind === 'weekday';
+    const days = usesDays && Array.isArray(form.valid_days) && form.valid_days.length > 0 && form.valid_days.length < 7
+        ? [...form.valid_days].sort((a, b) => a - b)
+        : null;
+    return {
+        promo_kind: kind,
+        valid_days: days,
+        time_from: kind === 'schedule' && form.time_from ? form.time_from : null,
+        time_to: kind === 'schedule' && form.time_to ? form.time_to : null,
+        min_advance_days: kind === 'advance' && Number(form.min_advance_days) > 0 ? Number(form.min_advance_days) : null,
+        first_visit_only: kind === 'first_visit',
+        max_uses_per_customer: kind !== 'visibility' && Number(form.max_uses_per_customer) > 0 ? Number(form.max_uses_per_customer) : null
+    };
+}
+
+// Texto que explica la regla, para la vista previa del formulario
+function describeRule(form, chipsText) {
+    switch (form.promo_kind) {
+        case 'schedule': return `El descuento se aplica solo a turnos que empiecen ${chipsText || 'en los días y horario elegidos'}. Fuera de eso, el cliente ve el precio normal.`;
+        case 'weekday': return `El descuento se aplica solo ${chipsText || 'los días elegidos'}, todo el día.`;
+        case 'service': return 'El descuento se aplica solo al servicio, cancha o categoría que elijas en "Alcance".';
+        case 'first_visit': return 'Se aplica si el teléfono del cliente nunca reservó en este negocio (lo controla la base al guardar).';
+        case 'advance': return `Se aplica si la reserva se hace con ${form.min_advance_days || '—'} días o más de anticipación.`;
+        case 'visibility': return 'No cambia ningún precio: el banner lleva al perfil del negocio.';
+        default: return 'Descuento en cualquier turno, sin condiciones.';
+    }
+}
 
 const FILTERS = [
     { id: 'all', label: 'Todas' },
@@ -185,7 +216,13 @@ export default function PromotionsTab({ businesses = [] }) {
         discount_type: 'percentage',
         discount_value: '',
         code: '',
-        cta_text: ''
+        cta_text: '',
+        promo_kind: 'general',
+        valid_days: [],
+        time_from: '',
+        time_to: '',
+        min_advance_days: '',
+        max_uses_per_customer: ''
     });
 
     const [bizServices, setBizServices] = useState([]);
@@ -315,7 +352,13 @@ export default function PromotionsTab({ businesses = [] }) {
             discount_type: 'percentage',
             discount_value: '',
             code: '',
-            cta_text: ''
+            cta_text: '',
+            promo_kind: 'general',
+            valid_days: [],
+            time_from: '',
+            time_to: '',
+            min_advance_days: '',
+            max_uses_per_customer: ''
         });
         setShowModal(true);
     };
@@ -340,6 +383,12 @@ export default function PromotionsTab({ businesses = [] }) {
             discount_value: parsed.discount_value || '',
             code: parsed.code || '',
             cta_text: parsed.cta_text || '',
+            promo_kind: promo.promo_kind || 'general',
+            valid_days: Array.isArray(promo.valid_days) ? promo.valid_days.map(Number) : [],
+            time_from: promo.time_from && String(promo.time_from).slice(0, 5) !== '00:00' ? String(promo.time_from).slice(0, 5) : '',
+            time_to: promo.time_to ? String(promo.time_to).slice(0, 5) : '',
+            min_advance_days: promo.min_advance_days || '',
+            max_uses_per_customer: promo.max_uses_per_customer || '',
             ...overrides
         });
         setShowModal(true);
@@ -466,7 +515,8 @@ export default function PromotionsTab({ businesses = [] }) {
                 description: finalDescription,
                 service_id: (form.target_type === 'service' && form.target_id) ? form.target_id : null,
                 discount_type: form.discount_type || 'percentage',
-                discount_value: Number(form.discount_value || 0),
+                discount_value: form.promo_kind === 'visibility' ? 0 : Number(form.discount_value || 0),
+                ...buildRulesPayload(form),
                 start_date: form.start_date || todayAR(),
                 end_date: form.end_date ? form.end_date : null,
                 // Al editar se respeta si estaba pausada; las nuevas y las renovadas salen activas
@@ -743,10 +793,20 @@ export default function PromotionsTab({ businesses = [] }) {
                                                         background: 'rgba(56, 189, 248, 0.15)',
                                                         color: '#38bdf8'
                                                     }}>
-                                                        {parsedTarget.target_type === 'service' ? '💆 SERVICIO' :
-                                                         parsedTarget.target_type === 'category' ? '🏷️ CATEGORÍA' :
-                                                         parsedTarget.target_type === 'store' ? '🛍️ TIENDA' : '🌐 GENERAL'}
+                                                        {getPromoKindMeta(promo.promo_kind).icon} {getPromoKindMeta(promo.promo_kind).label.toUpperCase()}
                                                     </span>
+                                                    {getPromoConditionChips(promo).filter(c => !c.startsWith('⏳')).map(chip => (
+                                                        <span key={chip} style={{
+                                                            fontSize: '10.5px',
+                                                            fontWeight: '700',
+                                                            padding: '3px 8px',
+                                                            borderRadius: '6px',
+                                                            background: 'var(--sa-hover)',
+                                                            color: 'var(--sa-text-2)'
+                                                        }}>
+                                                            {chip}
+                                                        </span>
+                                                    ))}
                                                     {parsedTarget.code && (
                                                         <span style={{
                                                             fontSize: '10.5px',
@@ -1123,6 +1183,205 @@ export default function PromotionsTab({ businesses = [] }) {
                             </div>
 
                         </div>
+
+                        {/* Tipo de promo y sus reglas */}
+                        {(() => {
+                            const kind = form.promo_kind || 'general';
+                            const previewPromo = {
+                                ...buildRulesPayload(form),
+                                discount_value: Number(form.discount_value || 0),
+                                end_date: form.end_date || null,
+                                description: JSON.stringify({ target_type: form.target_type, target_name: form.target_name })
+                            };
+                            const chips = getPromoConditionChips(previewPromo);
+                            const ruleChips = chips.filter(c => c.startsWith('📅') || c.startsWith('🕐')).map(c => c.slice(2).trim()).join(', ').toLowerCase();
+                            const discountText = kind === 'visibility'
+                                ? 'Publicidad'
+                                : (form.discount_type === 'fixed'
+                                    ? `$${Number(form.discount_value || 0).toLocaleString('es-AR')} OFF`
+                                    : `${form.discount_value || 0}% OFF`);
+                            const toggleDay = (d) => {
+                                const current = Array.isArray(form.valid_days) ? form.valid_days : [];
+                                setForm({ ...form, valid_days: current.includes(d) ? current.filter(x => x !== d) : [...current, d] });
+                            };
+                            return (
+                                <div style={{
+                                    background: 'var(--sa-hover)',
+                                    border: '1px solid var(--sa-border)',
+                                    borderRadius: '12px',
+                                    padding: '12px 14px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '12px'
+                                }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>Tipo de promo</label>
+                                        <select
+                                            value={kind}
+                                            onChange={(e) => {
+                                                const next = e.target.value;
+                                                const presetDays = next === 'schedule' ? [1, 2, 3, 4, 5] : (next === 'weekday' ? [2] : []);
+                                                setForm({
+                                                    ...form,
+                                                    promo_kind: next,
+                                                    valid_days: (next === 'schedule' || next === 'weekday') && (!form.valid_days || form.valid_days.length === 0) ? presetDays : form.valid_days,
+                                                    time_to: next === 'schedule' && !form.time_to ? '18:00' : form.time_to,
+                                                    min_advance_days: next === 'advance' && !form.min_advance_days ? 30 : form.min_advance_days
+                                                });
+                                            }}
+                                            style={{
+                                            width: '100%',
+                                            padding: '9px 12px',
+                                            background: 'var(--sa-bg)',
+                                            border: '1px solid var(--sa-border-strong)',
+                                            borderRadius: '8px',
+                                            color: 'var(--sa-text)',
+                                            fontSize: '13px',
+                                            boxSizing: 'border-box'
+                                        }}
+                                        >
+                                            {PROMO_KINDS.map(k => (
+                                                <option key={k.id} value={k.id}>{k.icon} {k.label}</option>
+                                            ))}
+                                        </select>
+                                        <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--sa-text-muted)', marginTop: '5px' }}>
+                                            {getPromoKindMeta(kind).help}
+                                        </span>
+                                    </div>
+
+                                    {(kind === 'schedule' || kind === 'weekday') && (
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>Días</label>
+                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                {WEEK_ORDER.map(d => {
+                                                    const on = (form.valid_days || []).includes(d);
+                                                    return (
+                                                        <button
+                                                            key={d}
+                                                            type="button"
+                                                            onClick={() => toggleDay(d)}
+                                                            aria-pressed={on}
+                                                            style={{
+                                                                width: '44px',
+                                                                height: '34px',
+                                                                borderRadius: '8px',
+                                                                border: `1px solid ${on ? 'var(--sa-primary)' : 'var(--sa-border-strong)'}`,
+                                                                background: on ? 'var(--sa-primary)' : 'var(--sa-bg)',
+                                                                color: on ? '#fff' : 'var(--sa-text-2)',
+                                                                fontSize: '12px',
+                                                                fontWeight: '700',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            {DAY_SHORT[d]}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {kind === 'schedule' && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>Desde (inicio del turno)</label>
+                                                <input type="time" value={form.time_from} onChange={(e) => setForm({ ...form, time_from: e.target.value })} style={{
+                                            width: '100%',
+                                            padding: '9px 12px',
+                                            background: 'var(--sa-bg)',
+                                            border: '1px solid var(--sa-border-strong)',
+                                            borderRadius: '8px',
+                                            color: 'var(--sa-text)',
+                                            fontSize: '13px',
+                                            boxSizing: 'border-box'
+                                        }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>Hasta (no incluido)</label>
+                                                <input type="time" value={form.time_to} onChange={(e) => setForm({ ...form, time_to: e.target.value })} style={{
+                                            width: '100%',
+                                            padding: '9px 12px',
+                                            background: 'var(--sa-bg)',
+                                            border: '1px solid var(--sa-border-strong)',
+                                            borderRadius: '8px',
+                                            color: 'var(--sa-text)',
+                                            fontSize: '13px',
+                                            boxSizing: 'border-box'
+                                        }} />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {kind === 'advance' && (
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>Días de anticipación mínimos</label>
+                                            <input type="number" min="1" value={form.min_advance_days} onChange={(e) => setForm({ ...form, min_advance_days: e.target.value })} style={{
+                                            width: '100%',
+                                            padding: '9px 12px',
+                                            background: 'var(--sa-bg)',
+                                            border: '1px solid var(--sa-border-strong)',
+                                            borderRadius: '8px',
+                                            color: 'var(--sa-text)',
+                                            fontSize: '13px',
+                                            boxSizing: 'border-box'
+                                        }} />
+                                        </div>
+                                    )}
+
+                                    {kind !== 'visibility' && (
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>Usos por cliente</label>
+                                            <select
+                                                value={form.max_uses_per_customer || ''}
+                                                onChange={(e) => setForm({ ...form, max_uses_per_customer: e.target.value })}
+                                                style={{
+                                            width: '100%',
+                                            padding: '9px 12px',
+                                            background: 'var(--sa-bg)',
+                                            border: '1px solid var(--sa-border-strong)',
+                                            borderRadius: '8px',
+                                            color: 'var(--sa-text)',
+                                            fontSize: '13px',
+                                            boxSizing: 'border-box'
+                                        }}
+                                            >
+                                                <option value="">Sin tope</option>
+                                                <option value="1">Una vez</option>
+                                                <option value="2">Dos veces</option>
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {/* Vista previa de las condiciones */}
+                                    <div style={{
+                                        background: 'var(--sa-surface)',
+                                        border: '1px solid var(--sa-border)',
+                                        borderRadius: '10px',
+                                        padding: '12px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '8px'
+                                    }}>
+                                        <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--sa-text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                                            Así lo va a ver el cliente
+                                        </span>
+                                        <div style={{ fontSize: '26px', fontWeight: '800', color: 'var(--sa-text)', lineHeight: 1 }}>{discountText}</div>
+                                        {chips.length > 0 && (
+                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                {chips.map(chip => (
+                                                    <span key={chip} style={{ fontSize: '11.5px', fontWeight: '700', borderRadius: '999px', padding: '3px 9px', background: 'var(--sa-hover)', color: 'var(--sa-text)' }}>
+                                                        {chip}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <span style={{ fontSize: '12px', color: 'var(--sa-text-2)', lineHeight: 1.45 }}>
+                                            {describeRule(form, ruleChips)}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* Período contratado (lo que se le vende al negocio) */}
                         <div style={{

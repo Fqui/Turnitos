@@ -10,7 +10,8 @@ const PadelBookingFlow = ({
     closingTime,
     timeRanges, // 🆕 Add timeRanges for split shifts
     onSlotSelect,
-    sportColor = '#00e676'
+    sportColor = '#00e676',
+    slotPromo = null
 }) => {
     const [isMobile, setIsMobile] = useState(false);
 
@@ -42,6 +43,7 @@ const PadelBookingFlow = ({
                 timeRanges={timeRanges} // 🆕 Pass timeRanges
                 onSlotSelect={handleSlotSelect}
                 sportColor={sportColor}
+                slotPromo={slotPromo}
             />
         );
     }
@@ -57,6 +59,7 @@ const PadelBookingFlow = ({
             timeRanges={timeRanges} // 🆕 Pass timeRanges
             onSlotSelect={handleSlotSelect}
             sportColor={sportColor}
+            slotPromo={slotPromo}
         />
     );
 };

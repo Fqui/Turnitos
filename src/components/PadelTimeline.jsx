@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import DurationSelector from './DurationSelector';
 import { PADEL_DURATIONS, buildShiftRanges, findShift } from '../utils/courtHours';
+import { promoSlotStyle, promoTagStyle, shortPromoLabel } from './promotions/promoSlotStyles';
 
 const PadelTimeline = ({
     courts,
@@ -11,7 +12,8 @@ const PadelTimeline = ({
     closingTime,
     timeRanges, // 🆕 Add timeRanges for split shifts
     onSlotSelect,
-    sportColor = '#00e676'
+    sportColor = '#00e676',
+    slotPromo = null
 }) => {
     const [selectedSlot, setSelectedSlot] = useState(null);
     const [showDurationModal, setShowDurationModal] = useState(false);
@@ -371,6 +373,8 @@ const PadelTimeline = ({
                                     const is00Available = isWithinOperatingHours(hourMinutes) && getAvailableDurations(court.id, slot00Time).length > 0;
                                     const is30Available = isWithinOperatingHours(hourMinutes + 30) && getAvailableDurations(court.id, slot30Time).length > 0;
 
+                                    const promo00 = Boolean(slotPromo) && is00Available && slotPromo.isValid(slot00Time);
+                                    const promo30 = Boolean(slotPromo) && is30Available && slotPromo.isValid(slot30Time);
                                     const borderBottom = isLastCourt ? 'none' : '1px solid var(--border)';
                                     const borderRight = '1px solid var(--border)';
 
@@ -424,6 +428,7 @@ const PadelTimeline = ({
                                                     width: '50%',
                                                     cursor: is00Available ? 'pointer' : 'not-allowed',
                                                     borderRight: '1px dashed rgba(255, 255, 255, 0.05)',
+                                                    backgroundColor: promo00 ? promoSlotStyle.backgroundColor : undefined,
                                                     zIndex: booking ? 1 : 2
                                                 }}
                                             />
@@ -439,6 +444,7 @@ const PadelTimeline = ({
                                                     bottom: 0,
                                                     width: '50%',
                                                     cursor: is30Available ? 'pointer' : 'not-allowed',
+                                                    backgroundColor: promo30 ? promoSlotStyle.backgroundColor : undefined,
                                                     zIndex: booking ? 1 : 2
                                                 }}
                                             />
@@ -463,6 +469,12 @@ const PadelTimeline = ({
             }}>
                 {/* Legend Badges */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {slotPromo && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '14px', height: '14px', borderRadius: '4px', ...promoSlotStyle }} />
+                            <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{shortPromoLabel(slotPromo.label)}</span>
+                        </div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{
                             width: '14px',
@@ -497,7 +509,10 @@ const PadelTimeline = ({
                         setSelectedSlot(null);
                     }}
                     sportColor={sportColor}
-                    getPrice={(duration) => getPrice(selectedSlot.court, duration)}
+                    getPrice={(duration) => {
+                        const price = getPrice(selectedSlot.court, duration);
+                        return slotPromo && slotPromo.isValid(selectedSlot.hour) ? slotPromo.apply(price) : price;
+                    }}
                 />
             )}
         </div>

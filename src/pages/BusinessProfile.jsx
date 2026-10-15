@@ -20,7 +20,7 @@ import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import SEOHead from '../components/SEOHead';
 import { buildBusinessSeo } from '../utils/seo';
 import PromotionModal from '../components/promotions/PromotionModal';
-import { parsePromotionTarget, isPromotionLive } from '../utils/promotionUtils';
+import { parsePromotionTarget, isPromotionLive, promoGivesDiscount, doesPromoApplyToService, isPromoValidForSlot, calculatePromoDiscount, describePromoSchedule } from '../utils/promotionUtils';
 import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
 
 import ProfileHeroBanner from '../components/profile/ProfileHeroBanner';
@@ -767,6 +767,21 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
     const seo = buildBusinessSeo(business, 'turnos');
 
+    // Promo activa: qué horarios entran (se marcan en verde con su precio)
+    const promoWithDiscount = activePromotion && promoGivesDiscount(activePromotion) ? activePromotion : null;
+    const selectedDateStr = selectedDate instanceof Date
+        ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+        : selectedDate;
+    const promoFitsItem = promoWithDiscount && (business.type !== 'service' || !selectedItem || doesPromoApplyToService(promoWithDiscount, selectedItem));
+    const slotPromo = promoFitsItem && selectedDateStr ? {
+        label: parsePromotionTarget(promoWithDiscount).discount_label,
+        isValid: (time) => isPromoValidForSlot(promoWithDiscount, selectedDateStr, time),
+        apply: (price) => calculatePromoDiscount(price, promoWithDiscount).finalPrice
+    } : null;
+    // Precio de referencia para el popup (cancha más barata, 60 min)
+    const courtPrices = (business.courts || []).map(c => Number(c.price) || 0).filter(n => n > 0);
+    const promoReferencePrice = business.type === 'sport' && courtPrices.length > 0 ? Math.min(...courtPrices) : null;
+
     return (
         <div
             className="business-profile-page"
@@ -829,7 +844,56 @@ export default function BusinessProfile({ business: initialBusiness }) {
                         onSelectService={handlePromoSelectService}
                         onFilterCategory={handlePromoFilterCategory}
                         onGoToStore={handlePromoGoToStore}
+                        referencePrice={promoReferencePrice}
+                        referenceLabel="por turno de 60 min"
                     />
+
+                    {/* Barra fija con la promo mientras se elige el turno */}
+                    {promoWithDiscount && !showPromoModal && !showModal && (
+                        <div style={{
+                            position: 'fixed',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+                            zIndex: 900,
+                            width: 'min(560px, calc(100% - 24px))',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 12px',
+                            borderRadius: '14px',
+                            background: 'var(--bg-card)',
+                            border: '1px solid rgba(16, 185, 129, 0.5)',
+                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)',
+                            fontSize: '13px',
+                            color: 'var(--text-primary)'
+                        }}>
+                            <span>🏷️</span>
+                            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <b style={{ color: '#10B981' }}>{parsePromotionTarget(promoWithDiscount).discount_label}</b>
+                                {' '}{describePromoSchedule(promoWithDiscount) || promoWithDiscount.title}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setShowPromoModal(true)}
+                                style={{
+                                    marginLeft: 'auto',
+                                    flexShrink: 0,
+                                    background: 'transparent',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid rgba(16, 185, 129, 0.5)',
+                                    borderRadius: '999px',
+                                    padding: '5px 12px',
+                                    fontSize: '12px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    fontFamily: 'inherit'
+                                }}
+                            >
+                                Ver promo
+                            </button>
+                        </div>
+                    )}
 
                     {/* Service Selector (Only for Service businesses) */}
                     {business.type === 'service' && (
@@ -1169,6 +1233,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                     setShowModal(true);
                                                 }}
                                                 sportColor={primaryColor}
+                                                slotPromo={slotPromo}
                                             />
                                         );
                                     }
@@ -1275,6 +1340,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 }
                                             }}
                                             sportColor={primaryColor}
+                                            slotPromo={slotPromo}
                                             type={business.type}
                                             resources={resources}
                                             specialists={qualifiedSpecialists}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDisplayDate, formatFriendlyDate, calculateEndTime } from '../utils/dateUtils';
-import { parsePromotionTarget, calculatePromoDiscount } from '../utils/promotionUtils';
+import { parsePromotionTarget, calculatePromoDiscount, getPromoSlotIssue, promoGivesDiscount, getPromoKindMeta } from '../utils/promotionUtils';
 import CouponInput from './common/CouponInput';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
 import { Info, ShoppingCart, Check } from 'lucide-react';
@@ -137,7 +137,10 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
     // 🎫 Calculate promo discount (based on slot base price only)
     let promoDiscount = 0;
     let promoLabel = '';
-    if (activePromotion) {
+    // Si la promo es de este servicio pero el turno no cumple las reglas (día, horario, anticipación)
+    let promoSlotIssue = '';
+    let promoIfEligible = 0;
+    if (activePromotion && promoGivesDiscount(activePromotion)) {
         const parsed = parsePromotionTarget(activePromotion);
         let applies = true;
         if (parsed.target_type === 'service' && parsed.target_id) {
@@ -146,10 +149,18 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
         }
         if (applies) {
             const { discountAmount } = calculatePromoDiscount(basePrice, activePromotion);
-            promoDiscount = discountAmount;
-            promoLabel = parsed.discount_label ? `Cupón ${parsed.discount_label}` : 'Descuento';
+            promoSlotIssue = getPromoSlotIssue(activePromotion, date, time);
+            if (promoSlotIssue) {
+                promoIfEligible = discountAmount;
+            } else {
+                promoDiscount = discountAmount;
+                const kind = activePromotion.promo_kind;
+                const suffix = kind === 'schedule' ? ' por horario' : (kind === 'weekday' ? ' por día' : (kind === 'advance' ? ' por reservar antes' : ''));
+                promoLabel = `Promo ${parsed.discount_label || ''}${suffix}`.trim();
+            }
         }
     }
+    const promoKindIcon = activePromotion ? getPromoKindMeta(activePromotion.promo_kind).icon : '🏷️';
 
     // 🏷️ Calculate user-entered coupon discount
     const couponDiscount = (appliedCoupon && appliedCoupon.coupon?.type !== 'gift')
@@ -159,7 +170,8 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
     const totalDiscount = promoDiscount + couponDiscount;
     const price = basePrice + extrasTotal;
     const finalPrice = Math.max(0, price - totalDiscount);
-    const hasAnyDiscount = hasSpecialDiscount || totalDiscount > 0;
+    // También mostramos el bloque de descuentos para avisar que el horario no entra en la promo
+    const hasAnyDiscount = hasSpecialDiscount || totalDiscount > 0 || (Boolean(promoSlotIssue) && promoIfEligible > 0);
 
     // Calculate deposit: (Base price percentage) + 100% of additional services
     const basePriceAfterDiscount = Math.max(0, basePrice - totalDiscount);
@@ -705,7 +717,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                             fontSize: '14px',
                                                             fontWeight: '600',
                                                             color: 'var(--text-secondary)',
-                                                            textDecoration: 'line-through'
+                                                            textDecoration: (hasSpecialDiscount || totalDiscount > 0) ? 'line-through' : 'none'
                                                         }}>
                                                             ${subtotalBeforeDiscounts.toLocaleString('es-AR')}
                                                         </span>
@@ -747,11 +759,27 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                             border: '1px dashed #10b981'
                                                         }}>
                                                             <span style={{ fontSize: '12px', fontWeight: '700', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                🎫 {promoLabel}
+                                                                {promoKindIcon} {promoLabel}
                                                             </span>
                                                             <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>
                                                                 -${promoDiscount.toLocaleString('es-AR')}
                                                             </span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* El turno elegido no entra en la promo */}
+                                                    {promoSlotIssue && promoIfEligible > 0 && (
+                                                        <div style={{
+                                                            padding: '9px 12px',
+                                                            borderRadius: '10px',
+                                                            backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                                                            border: '1px solid rgba(245, 158, 11, 0.35)',
+                                                            color: '#B45309',
+                                                            fontSize: '12.5px',
+                                                            fontWeight: '600',
+                                                            lineHeight: 1.45
+                                                        }}>
+                                                            Este horario no entra en la promo: {promoSlotIssue}. Elegí un horario marcado en verde para pagar ${Math.max(0, basePrice - promoIfEligible).toLocaleString('es-AR')}.
                                                         </div>
                                                     )}
 

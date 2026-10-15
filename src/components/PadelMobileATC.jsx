@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PADEL_DURATIONS, buildShiftRanges, findShift, fitsInShift } from '../utils/courtHours';
+import { promoSlotStyle, promoTagStyle, shortPromoLabel, PROMO_GREEN } from './promotions/promoSlotStyles';
 
 const PadelMobileATC = ({
     courts,
@@ -10,7 +11,8 @@ const PadelMobileATC = ({
     closingTime,
     timeRanges, // 🆕 Add timeRanges for split shifts
     onSlotSelect,
-    sportColor = '#00e676'
+    sportColor = '#00e676',
+    slotPromo = null
 }) => {
     const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
     const [selectedSelection, setSelectedSelection] = useState(null); // { court, duration, price }
@@ -240,6 +242,7 @@ const PadelMobileATC = ({
                 }}>
                     {availableTimeSlots.map(time => {
                         const isSelected = selectedTimeSlot === time;
+                        const inPromo = Boolean(slotPromo) && slotPromo.isValid(time);
                         return (
                             <motion.button
                                 key={time}
@@ -248,16 +251,21 @@ const PadelMobileATC = ({
                                 style={{
                                     padding: '10px 4px',
                                     borderRadius: '8px',
-                                    border: isSelected ? `2px solid ${sportColor}` : '1px solid var(--border)',
-                                    backgroundColor: isSelected ? `${sportColor}15` : 'var(--bg-card)',
-                                    color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                    border: isSelected ? `2px solid ${sportColor}` : (inPromo ? promoSlotStyle.border : '1px solid var(--border)'),
+                                    backgroundColor: isSelected ? `${sportColor}15` : (inPromo ? promoSlotStyle.backgroundColor : 'var(--bg-card)'),
+                                    color: isSelected || inPromo ? 'var(--text-primary)' : 'var(--text-secondary)',
                                     fontSize: '14px',
                                     fontWeight: isSelected ? '700' : '500',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    transition: 'all 0.2s',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '2px'
                                 }}
                             >
                                 {time}
+                                {inPromo && <span style={promoTagStyle}>{shortPromoLabel(slotPromo.label)}</span>}
                             </motion.button>
                         );
                     })}
@@ -329,6 +337,7 @@ const PadelMobileATC = ({
                                             {[60, 90, 120].map(duration => {
                                                 const isAvailable = validDurations.includes(duration);
                                                 const price = getPrice(court, duration);
+                                                const promoPrice = slotPromo && slotPromo.isValid(selectedTimeSlot) ? slotPromo.apply(price) : null;
                                                 const isSelected = selectedSelection?.court.id === court.id && selectedSelection?.duration === duration;
 
                                                 if (!isAvailable) {
@@ -371,11 +380,17 @@ const PadelMobileATC = ({
                                                             transition: 'all 0.2s ease'
                                                         }}
                                                     >
+                                                        {promoPrice !== null && promoPrice < price && (
+                                                            <s style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                                                                ${price.toLocaleString('es-AR')}
+                                                            </s>
+                                                        )}
                                                         <span style={{
                                                             fontSize: '13px',
-                                                            fontWeight: '700'
+                                                            fontWeight: '700',
+                                                            color: promoPrice !== null && promoPrice < price ? PROMO_GREEN : undefined
                                                         }}>
-                                                            ${price.toLocaleString()}
+                                                            ${(promoPrice !== null ? promoPrice : price).toLocaleString('es-AR')}
                                                         </span>
                                                         <span style={{
                                                             fontSize: '10px',
