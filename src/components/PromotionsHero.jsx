@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { generateSlug } from '../utils/utils';
+import { generateSlug, getSubdomain } from '../utils/utils';
+import { SITE_URL } from '../utils/seo';
 import { trackPromotionEvent } from '../services/supabase/promotionService';
 
 const VIEWED_KEY = 'turnitos_promo_views';
@@ -140,6 +141,19 @@ export default function PromotionsHero({ promotions, businesses }) {
 
         const isExternal = actionUrl?.startsWith('http://') || actionUrl?.startsWith('https://');
         const targetUrl = actionUrl || (business?.slug ? `/${business.slug}?promoId=${promo.id}` : (business?.name ? `/${generateSlug(business.name)}?promoId=${promo.id}` : '/negocios'));
+        // En el subdominio de un negocio, las rutas del sitio general (ej. /negocios) van al dominio principal
+        const mainSiteHref = isGeneralCampaign && !isExternal && targetUrl.startsWith('/') && getSubdomain()
+            ? `${SITE_URL}${targetUrl}`
+            : null;
+
+        // Campaña general con texto: se dibuja como tarjeta, igual que las de negocio.
+        // Solo la que no tiene texto (imagen ya diseñada) queda como banner completo.
+        const ctaText = (meta?.cta_text || '').trim();
+        const hasCardText = Boolean(promo.title) && Boolean(ctaText || (meta?.text || '').trim());
+        const showAsBanner = isGeneralCampaign && !hasCardText;
+        const badgeText = promo.discount
+            ? `${promo.discount}${/%\s*$/.test(String(promo.discount)) ? ' OFF' : ''}`
+            : '';
 
         const placeholder = (
             <div style={{
@@ -155,7 +169,7 @@ export default function PromotionsHero({ promotions, businesses }) {
             </div>
         );
 
-        const content = isGeneralCampaign ? (
+        const content = showAsBanner ? (
             /* 🌐 Campaña General: Banner total sin división */
             <div className="promo-card promo-card--general">
                 <div className="promo-image-container promo-image-container--general" style={{ overflow: 'hidden' }}>
@@ -212,18 +226,19 @@ export default function PromotionsHero({ promotions, businesses }) {
                         animate={isVisible ? { y: 0, opacity: 1 } : { y: 15, opacity: 0 }}
                         transition={{ delay: isActive ? 0.15 : 0, duration: isVisible ? 0.35 : 0 }}
                     >
-                        <div className="promo-badge" style={{
-                            display: 'inline-flex',
-                            padding: '4px 10px',
-                            backdropFilter: 'blur(4px)',
-                            borderRadius: '50px',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            marginBottom: '8px',
-                        }}>
-                            {promo.discount}
-                            {promo.discount && promo.discount.toString().trim().endsWith('%') && ' OFF'}
-                        </div>
+                        {badgeText && (
+                            <div className="promo-badge" style={{
+                                display: 'inline-flex',
+                                padding: '4px 10px',
+                                backdropFilter: 'blur(4px)',
+                                borderRadius: '50px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                marginBottom: '8px',
+                            }}>
+                                {badgeText}
+                            </div>
+                        )}
                         <h2 className="promo-title-mobile" style={{
                             fontSize: 'clamp(18px, 4.5vw, 36px)',
                             fontWeight: '800',
@@ -232,12 +247,20 @@ export default function PromotionsHero({ promotions, businesses }) {
                         }}>
                             {promo.title}
                         </h2>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '16px' }}>{business?.name ? '📍' : '⚡'}</span>
-                            <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'var(--font-title)' }}>
-                                {business?.name || 'Ver Negocio'}
-                            </span>
-                        </div>
+                        {isGeneralCampaign ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '700', fontFamily: 'var(--font-title)' }}>
+                                    {ctaText || 'Ver más'} →
+                                </span>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '16px' }}>{business?.name ? '📍' : '⚡'}</span>
+                                <span className="promo-business-name" style={{ fontSize: '16px', fontWeight: '600', fontFamily: 'var(--font-title)' }}>
+                                    {business?.name || 'Ver Negocio'}
+                                </span>
+                            </div>
+                        )}
                     </motion.div>
                 </div>
             </div>
@@ -249,6 +272,19 @@ export default function PromotionsHero({ promotions, businesses }) {
             height: '100%',
             pointerEvents: 'auto'
         };
+
+        if (mainSiteHref) {
+            return (
+                <a
+                    href={mainSiteHref}
+                    onClick={() => trackPromotionEvent(promo.id, 'click')}
+                    tabIndex={isActive ? 0 : -1}
+                    style={linkStyle}
+                >
+                    {content}
+                </a>
+            );
+        }
 
         if (isExternal) {
             return (

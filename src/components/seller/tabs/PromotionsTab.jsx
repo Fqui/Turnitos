@@ -375,7 +375,9 @@ export default function PromotionsTab({ businesses = [] }) {
             action_url: parsed.action_url || (isUrl ? promo.description : ''),
             start_date: promo.start_date ? String(promo.start_date).slice(0, 10) : '',
             end_date: promo.end_date || (promo.expires_at ? promo.expires_at.split('T')[0] : ''),
-            description: parsed.text || (isUrl ? '' : (promo.description || '')),
+            description: (typeof promo.description === 'string' && promo.description.trim().startsWith('{'))
+                ? (typeof parsed.text === 'string' && !parsed.text.trim().startsWith('{') ? parsed.text : '')
+                : (isUrl ? '' : (promo.description || '')),
             target_type: parsed.target_type || 'general',
             target_id: parsed.target_id || '',
             target_name: parsed.target_name || '',
@@ -475,6 +477,17 @@ export default function PromotionsTab({ businesses = [] }) {
             let cleanActionUrl = form.action_url?.trim() || '';
             if (cleanActionUrl && !cleanActionUrl.startsWith('/') && !cleanActionUrl.startsWith('http://') && !cleanActionUrl.startsWith('https://')) {
                 cleanActionUrl = `https://${cleanActionUrl}`;
+            }
+            // Un link a localhost o al propio TurnitosLR se guarda como ruta, para que funcione en producción
+            try {
+                if (/^https?:\/\//.test(cleanActionUrl)) {
+                    const u = new URL(cleanActionUrl);
+                    if (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === 'turnitoslr.com' || u.hostname === 'www.turnitoslr.com') {
+                        cleanActionUrl = `${u.pathname}${u.search}` || '/';
+                    }
+                }
+            } catch {
+                // URL inválida: se guarda como la escribió
             }
 
             // Si es publicidad general y tiene action_url, lo guardamos en description para que el Home lo use como link
@@ -1932,6 +1945,57 @@ export default function PromotionsTab({ businesses = [] }) {
                                 </div>
                             );
                         })()}
+
+                        {/* Campaña general: texto y botón (se muestran en la tarjeta del Home) */}
+                        {!form.business_id && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
+                                        Texto del botón
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: Sumate hoy"
+                                        value={form.cta_text}
+                                        onChange={(e) => setForm({ ...form, cta_text: e.target.value })}
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 14px',
+                                            background: 'var(--sa-bg)',
+                                            border: '1px solid var(--sa-border-strong)',
+                                            borderRadius: '8px',
+                                            color: 'var(--sa-text)',
+                                            fontSize: '13px',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2)', marginBottom: '6px' }}>
+                                        Texto corto (opcional)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: Recibí reservas online"
+                                        value={form.description}
+                                        onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 14px',
+                                            background: 'var(--sa-bg)',
+                                            border: '1px solid var(--sa-border-strong)',
+                                            borderRadius: '8px',
+                                            color: 'var(--sa-text)',
+                                            fontSize: '13px',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
+                                </div>
+                                <span style={{ gridColumn: '1 / -1', fontSize: '11px', color: 'var(--sa-text-muted)' }}>
+                                    Con texto, se ve como tarjeta igual que las promos de negocio ("Sumate hoy →"). Sin texto, se muestra la imagen como banner completo.
+                                </span>
+                            </div>
+                        )}
 
                         {/* Campo condicional: Si es General, botón de acción / URL de destino */}
                         {!form.business_id && (
