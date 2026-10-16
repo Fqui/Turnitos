@@ -133,15 +133,16 @@ export default function ProfileInfoSection({
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: '20px'
+                gap: '20px',
+                alignItems: 'stretch'
             }}>
                 {/* Map */}
                 {business.latitude && business.longitude && (
-                    <div style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border)', height: '300px', position: 'relative' }}>
+                    <div style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border)', minHeight: '300px', height: '100%', position: 'relative' }}>
                         <MapContainer
                             center={[business.latitude, business.longitude]}
                             zoom={15}
-                            style={{ height: '100%', width: '100%' }}
+                            style={{ position: 'absolute', inset: 0 }}
                             dragging={false}
                             scrollWheelZoom={false}
                         >
