@@ -428,7 +428,8 @@ export default function GalleryTab({
                                             <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--bg-main)', overflow: 'hidden' }}>
                                                 {isVideo(mediaUrl) ? (
                                                     <video
-                                                        src={mediaUrl}
+                                                        src={`${mediaUrl}#t=0.1`}
+                                                        preload="metadata"
                                                         muted
                                                         playsInline
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -556,7 +557,8 @@ export default function GalleryTab({
                                             <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--bg-main)', overflow: 'hidden' }}>
                                                 {isVideo(mediaUrl) ? (
                                                     <video
-                                                        src={mediaUrl}
+                                                        src={`${mediaUrl}#t=0.1`}
+                                                        preload="metadata"
                                                         muted
                                                         playsInline
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -737,7 +739,8 @@ export default function GalleryTab({
                                         <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--bg-main)', overflow: 'hidden' }}>
                                             {isVideo(mediaUrl) ? (
                                                 <video
-                                                    src={mediaUrl}
+                                                    src={`${mediaUrl}#t=0.1`}
+                                                    preload="metadata"
                                                     muted
                                                     playsInline
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -1020,7 +1023,8 @@ export default function GalleryTab({
                                         >
                                             {isVideo(url) ? (
                                                 <video
-                                                    src={url}
+                                                    src={`${url}#t=0.1`}
+                                                    preload="metadata"
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
                                                     onClick={() => setEditingHighlight({ ...editingHighlight, cover_image: url })}
                                                     muted
@@ -1246,7 +1250,8 @@ export default function GalleryTab({
                                         >
                                             {isVideo(url) ? (
                                                 <video
-                                                    src={url}
+                                                    src={`${url}#t=0.1`}
+                                                    preload="metadata"
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
                                                     onClick={() => setEditingStory({ ...editingStory, cover_image: url })}
                                                     muted

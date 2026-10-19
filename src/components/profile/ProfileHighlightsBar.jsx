@@ -62,7 +62,8 @@ export default function ProfileHighlightsBar({
                             }}>
                                 {/\.(mp4|webm|mov|ogg|m4v)(\?|$)/i.test(highlight.cover_image || highlight.images[0]) ? (
                                     <video
-                                        src={highlight.cover_image || highlight.images[0]}
+                                        src={`${highlight.cover_image || highlight.images[0]}#t=0.1`}
+                                        preload="metadata"
                                         muted
                                         playsInline
                                         style={{

@@ -37,8 +37,10 @@ export default function ProfileStoryViewerModal({
 }) {
     const [progress, setProgress] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
-    const [isMuted, setIsMuted] = useState(true);
+    const [isMuted, setIsMuted] = useState(false);
     const [videoDuration, setVideoDuration] = useState(null);
+    // Vertical videos fill the screen like Instagram; horizontal ones stay whole
+    const [portraitVideos, setPortraitVideos] = useState({});
 
     const timerRef = useRef(null);
     const progressRef = useRef(0);
@@ -107,6 +109,31 @@ export default function ProfileStoryViewerModal({
             img.src = url;
         });
     }, [preloadUrls]);
+
+    // Only the next video is preloaded, to keep mobile data low
+    const nextItem = isOpen
+        ? (items[selectedPhotoIndex + 1] || nextHighlight?.images?.[0] || nextHighlight?.cover_image)
+        : null;
+    const preloadVideoUrl = nextItem && isVideoUrl(nextItem) ? getUrl(nextItem) : '';
+
+    const rememberOrientation = (e, url) => {
+        const { videoWidth, videoHeight } = e.target;
+        if (!videoWidth || !videoHeight) return;
+        const isPortrait = videoWidth < videoHeight;
+        setPortraitVideos(prev => (prev[url] === isPortrait ? prev : { ...prev, [url]: isPortrait }));
+    };
+
+    // Starts with sound; if the browser blocks autoplay with sound, falls back to muted
+    const playCurrentVideo = useCallback(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.play().catch((err) => {
+            if (err?.name !== 'NotAllowedError' || video.muted) return;
+            video.muted = true;
+            setIsMuted(true);
+            video.play().catch(() => {});
+        });
+    }, []);
 
     const markLoaded = (url) => setLoadedUrl(url);
     const imgRefFor = (url) => (node) => {
@@ -205,6 +232,15 @@ export default function ProfileStoryViewerModal({
         setVideoDuration(null);
     }, [selectedPhotoIndex, selectedHighlight]);
 
+    // The same video twice in a row reuses its element: restart it instead of staying stuck at the end
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !currentIsVideo || video.currentTime === 0) return;
+        video.currentTime = 0;
+        if (!isPaused) playCurrentVideo();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedPhotoIndex, selectedHighlight]);
+
     // Video events
     const handleVideoTimeUpdate = (e) => {
         if (isPaused) return;
@@ -220,9 +256,8 @@ export default function ProfileStoryViewerModal({
         if (dur && isFinite(dur)) {
             setVideoDuration(dur);
         }
-        if (!isPaused && videoRef.current) {
-            videoRef.current.play().catch(() => {});
-        }
+        rememberOrientation(e, currentUrl);
+        if (!isPaused) playCurrentVideo();
     };
 
     // Pause/resume control for video
@@ -231,9 +266,9 @@ export default function ProfileStoryViewerModal({
         if (isPaused) {
             videoRef.current.pause();
         } else {
-            videoRef.current.play().catch(() => {});
+            playCurrentVideo();
         }
-    }, [isPaused, currentIsVideo]);
+    }, [isPaused, currentIsVideo, playCurrentVideo]);
 
     // Hold-to-pause logic
     const handlePointerDown = () => {
@@ -645,7 +680,7 @@ export default function ProfileStoryViewerModal({
                                     style={{
                                         width: '100%',
                                         height: '100%',
-                                        objectFit: 'contain',
+                                        objectFit: portraitVideos[layer.url] ? 'cover' : 'contain',
                                         pointerEvents: 'none'
                                     }}
                                 />
@@ -667,6 +702,18 @@ export default function ProfileStoryViewerModal({
                             )}
                         </div>
                     ))}
+
+                    {preloadVideoUrl && (
+                        <video
+                            key={`preload-${preloadVideoUrl}`}
+                            src={preloadVideoUrl}
+                            preload="auto"
+                            muted
+                            playsInline
+                            onLoadedMetadata={(e) => rememberOrientation(e, preloadVideoUrl)}
+                            style={{ display: 'none' }}
+                        />
+                    )}
 
                     {/* ═══ PAUSE INDICATOR ═══ */}
                     <AnimatePresence>
