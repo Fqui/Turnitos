@@ -137,7 +137,7 @@ export default function CourtSelector({
                                                         fontWeight: '600',
                                                         marginTop: '2px'
                                                     }}>
-                                                        ${court.price.toLocaleString()}
+                                                        ${court.price.toLocaleString('es-AR')}
                                                     </span>
                                                 )}
                                             </div>

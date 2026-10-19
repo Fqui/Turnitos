@@ -14,6 +14,8 @@ export default function VenueBookingWizardModal({
     maxCapacity,
     duration,
     setDuration,
+    startTime,
+    setStartTime,
     durationOptions,
     durationDiscountPct,
     durationDiscountAmount,
@@ -324,6 +326,31 @@ export default function VenueBookingWizardModal({
                                                 </motion.button>
                                             </div>
                                         </div>
+
+                                        {/* Start time */}
+                                        <div>
+                                            <label htmlFor="venueStartTime" style={{ display: 'block', fontSize: '14px', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
+                                                Hora de inicio
+                                            </label>
+                                            <input
+                                                type="time"
+                                                id="venueStartTime"
+                                                value={startTime}
+                                                onChange={(e) => setStartTime(e.target.value)}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '14px 16px',
+                                                    borderRadius: '16px',
+                                                    border: `1px solid ${borderColor}`,
+                                                    background: subCardBg,
+                                                    color: textColor,
+                                                    fontSize: '16px',
+                                                    fontWeight: '700',
+                                                    fontFamily: 'inherit',
+                                                    boxSizing: 'border-box'
+                                                }}
+                                            />
+                                        </div>
                                     </div>
                                 </motion.div>
                             )}
@@ -383,7 +410,7 @@ export default function VenueBookingWizardModal({
                                                                     {service.name}
                                                                 </div>
                                                                 <div style={{ fontSize: '14px', fontWeight: '700', color: primaryColor, marginTop: '2px' }}>
-                                                                    +${service.price?.toLocaleString()}
+                                                                    +${service.price?.toLocaleString('es-AR')}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -421,6 +448,9 @@ export default function VenueBookingWizardModal({
                                                 <div style={{ fontSize: '15px', fontWeight: '700', color: textColor, textTransform: 'capitalize' }}>
                                                     {selectedDate?.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                                                 </div>
+                                                {startTime && (
+                                                    <div style={{ fontSize: '13px', color: secondaryTextColor, marginTop: '2px' }}>desde las {startTime} hs</div>
+                                                )}
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
                                                 <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>INVITADOS</div>
@@ -531,10 +561,6 @@ export default function VenueBookingWizardModal({
                                         <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Teléfono (WhatsApp)</label>
                                         <input type="tel" id="customerPhone" placeholder="3804..." style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
                                     </div>
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: textColor }}>Email (Opcional)</label>
-                                        <input type="email" id="customerEmail" placeholder="tucorreo@ejemplo.com" style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${borderColor}`, background: subCardBg, color: textColor }} />
-                                    </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -566,11 +592,14 @@ export default function VenueBookingWizardModal({
                                 whileTap={{ scale: 0.97 }}
                                 whileHover={{ scale: 1.01 }}
                                 onClick={() => {
+                                    if (bookingStep === 1 && !startTime) {
+                                        showAlert('Falta la hora', 'Elegí a qué hora empieza el evento.', 'warning', 'Entendido');
+                                        return;
+                                    }
                                     if (bookingStep === 4) {
                                         const firstName = document.getElementById('customerFirstName')?.value;
                                         const lastName = document.getElementById('customerLastName')?.value;
                                         const phone = document.getElementById('customerPhone')?.value;
-                                        const email = document.getElementById('customerEmail')?.value;
 
                                         const cleanDigits = (phone || '').replace(/\D/g, '');
                                         if (!firstName?.trim() || !lastName?.trim() || cleanDigits.length < 10) {
@@ -580,8 +609,7 @@ export default function VenueBookingWizardModal({
 
                                         handleConfirmBooking({
                                             customerName: `${firstName} ${lastName}`,
-                                            customerPhone: phone,
-                                            customerEmail: email
+                                            customerPhone: phone
                                         });
                                     } else if (bookingStep === 2 && additionalServices.length === 0) {
                                         setBookingStep(prev => prev + 1);

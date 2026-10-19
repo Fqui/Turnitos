@@ -1219,8 +1219,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                 closingTime={close}
                                                 timeRanges={ranges}
                                                 onSlotSelect={(slotData) => {
+                                                    // The court price is the 60 min base (without the day discount): scale it to the chosen duration (90 = x1.5, 120 = x2)
                                                     const courtItem = (business.courts || []).find(c => c.id === slotData.courtId);
-                                                    const rawPrice = courtItem?.price !== undefined ? courtItem.price : (slotData.price || 0);
+                                                    const rawPrice = courtItem?.price !== undefined
+                                                        ? Math.round(Number(courtItem.price) * ((slotData.duration || 60) / 60))
+                                                        : (slotData.price || 0);
                                                     setSelectedTime({
                                                         time: slotData.time,
                                                         courtId: slotData.courtId,

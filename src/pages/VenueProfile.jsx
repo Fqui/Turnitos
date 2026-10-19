@@ -46,6 +46,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const [selectedDate, setSelectedDate] = useState(null);
     const [guestCount, setGuestCount] = useState(30);
     const [duration, setDuration] = useState(4);
+    const [startTime, setStartTime] = useState('');
     const [selectedServices, setSelectedServices] = useState([]);
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [venueBookings, setVenueBookings] = useState([]);
@@ -400,7 +401,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                 businessId: business.id,
                 business_id: business.id,
                 date: selectedDate,
-                time: '00:00',
+                time: startTime,
                 duration: duration * 60,
                 price: totalPrice,
                 totalPrice: totalPrice,
@@ -420,8 +421,6 @@ export default function VenueProfile({ business: initialBusiness }) {
                 customer_name: bookingDetails.customerName,
                 customerPhone: bookingDetails.customerPhone,
                 customer_phone: bookingDetails.customerPhone,
-                customerEmail: bookingDetails.customerEmail,
-                customer_email: bookingDetails.customerEmail,
                 notes: bookingDetails.notes,
                 metadata: {
                     coupon_code: appliedCoupon?.coupon?.code || null,
@@ -773,6 +772,8 @@ export default function VenueProfile({ business: initialBusiness }) {
                 maxCapacity={maxCapacity}
                 duration={duration}
                 setDuration={setDuration}
+                startTime={startTime}
+                setStartTime={setStartTime}
                 durationOptions={durationOptions}
                 durationDiscountPct={durationDiscountPct}
                 durationDiscountAmount={durationDiscountAmount}

@@ -214,6 +214,9 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
     const hasDeposit = depositSettings.enabled !== false && depositAmount > 0;
     const amountToTransfer = hasDeposit ? depositAmount : finalPrice;
     const isPartial = hasDeposit && depositAmount < finalPrice;
+    // Without a deposit nothing is transferred: the client pays at the venue (or at home on a home visit)
+    const payAtVenue = !hasDeposit;
+    const payWhereLabel = isHomeVisit ? 'el día del turno' : 'en el lugar';
 
     // Bank details
     const bankDetails = {
@@ -258,7 +261,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
         const homeText = isHomeVisit
             ? `\n🚗 A domicilio: ${homeAddress.trim()}${homeReference.trim() ? ` (${homeReference.trim()})` : ''}`
             : '';
-        const message = `Hola, mi nombre es ${customerName}. Reservé ${displayServiceName}${specialistText}, el día ${formattedDate} a las ${time}.${extrasText}${couponText}${homeText}\n\nA continuación le envío una captura del comprobante.`;
+        const message = `Hola, mi nombre es ${customerName}. Reservé ${displayServiceName}${specialistText}, el día ${formattedDate} a las ${time}.${extrasText}${couponText}${homeText}${payAtVenue ? `\n\nPago ${payWhereLabel}.` : '\n\nA continuación le envío una captura del comprobante.'}`;
 
         // WhatsApp opens only after the booking is saved (from the success modal)
         const whatsappUrl = buildWhatsAppUrl(bookingDetails.businessPhone, message);
@@ -449,10 +452,10 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                             color: 'var(--text-primary)',
                             marginBottom: '2px'
                         }}>
-                            {currentStep === 1 ? 'Sumá a tu reserva' : (currentStep === 2 ? 'Tus Datos' : 'Datos de Pago')}
+                            {currentStep === 1 ? 'Sumá a tu reserva' : (currentStep === 2 ? 'Tus Datos' : (payAtVenue ? 'Confirmá tu turno' : 'Datos de Pago'))}
                         </h2>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
-                            {currentStep === 1 ? '¿Querés agregar algún adicional?' : (currentStep === 2 ? 'Completá tus datos para continuar' : (isPartial ? 'Transferí la seña para confirmar' : 'Realizá la transferencia para confirmar'))}
+                            {currentStep === 1 ? '¿Querés agregar algún adicional?' : (currentStep === 2 ? 'Completá tus datos para continuar' : (payAtVenue ? `Pagás ${payWhereLabel}, sin transferir nada ahora` : (isPartial ? 'Transferí la seña para confirmar' : 'Realizá la transferencia para confirmar')))}
                         </p>
                     </div>
                 </div>
@@ -1170,7 +1173,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                         letterSpacing: '0.8px',
                                         marginBottom: '4px'
                                     }}>
-                                        {isPartial ? 'Monto de la Seña a Transferir' : 'Monto a Transferir'}
+                                        {payAtVenue ? `Total a pagar ${payWhereLabel}` : (isPartial ? 'Monto de la Seña a Transferir' : 'Monto a Transferir')}
                                     </div>
                                     <div style={{
                                         fontSize: '32px',
@@ -1180,13 +1183,17 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                         margin: '4px 0',
                                         lineHeight: 1.1
                                     }}>
-                                        ${amountToTransfer.toLocaleString('es-AR')}
+                                        ${(payAtVenue ? finalPrice : amountToTransfer).toLocaleString('es-AR')}
                                     </div>
-                                    {isPartial ? (
+                                    {payAtVenue ? (
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                            No hace falta seña. Confirmá y el negocio te espera.
+                                        </div>
+                                    ) : isPartial ? (
                                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
                                             Total del servicio: <strong>${finalPrice.toLocaleString('es-AR')}</strong>
                                             <span style={{ margin: '0 6px', opacity: 0.4 }}>•</span>
-                                            Resta abonar en el local: <strong>${Math.max(0, finalPrice - amountToTransfer).toLocaleString('es-AR')}</strong>
+                                            Resta abonar {payWhereLabel}: <strong>${Math.max(0, finalPrice - amountToTransfer).toLocaleString('es-AR')}</strong>
                                         </div>
                                     ) : (
                                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -1196,6 +1203,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                 </div>
 
                                 {/* Bank Details */}
+                                {!payAtVenue && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
                                     {hasBankDetails ? (
                                         <div style={{
@@ -1245,7 +1253,9 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                             fontWeight: '600',
                                                             color: 'var(--text-primary)',
                                                             fontFamily: 'monospace',
-                                                            letterSpacing: '0.5px'
+                                                            letterSpacing: '0.5px',
+                                                            minWidth: 0,
+                                                            overflowWrap: 'anywhere'
                                                         }}>
                                                             {bankDetails.alias}
                                                         </div>
@@ -1261,7 +1271,8 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                                 fontWeight: '600',
                                                                 cursor: 'pointer',
                                                                 transition: 'all 0.2s',
-                                                                minWidth: '80px'
+                                                                minWidth: '80px',
+                                                                flexShrink: 0
                                                             }}
                                                         >
                                                             {copiedField === 'alias' ? '✓ Copiado' : 'Copiar'}
@@ -1286,7 +1297,9 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                             fontSize: '16px',
                                                             fontWeight: '600',
                                                             color: 'var(--text-primary)',
-                                                            fontFamily: 'monospace'
+                                                            fontFamily: 'monospace',
+                                                            minWidth: 0,
+                                                            overflowWrap: 'anywhere'
                                                         }}>
                                                             {bankDetails.cbu}
                                                         </div>
@@ -1302,7 +1315,8 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                                 fontWeight: '600',
                                                                 cursor: 'pointer',
                                                                 transition: 'all 0.2s',
-                                                                minWidth: '80px'
+                                                                minWidth: '80px',
+                                                                flexShrink: 0
                                                             }}
                                                         >
                                                             {copiedField === 'cbu' ? '✓ Copiado' : 'Copiar'}
@@ -1318,6 +1332,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                     )}
 
                                 </div>
+                                )}
 
                                 {/* Action Buttons */}
                                 <div style={{ display: 'flex', gap: '12px' }}>

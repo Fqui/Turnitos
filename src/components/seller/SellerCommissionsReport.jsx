@@ -129,7 +129,7 @@ const SellerCommissionsReport = () => {
                 <SummaryCard
                     icon="💰"
                     title="Total del Período"
-                    value={`$${commissions.total?.toLocaleString() || 0}`}
+                    value={`$${commissions.total?.toLocaleString('es-AR') || 0}`}
                     subtitle={`${commissions.commissions?.length || 0} comisiones`}
                     highlight
                 />
@@ -139,13 +139,13 @@ const SellerCommissionsReport = () => {
                         <SummaryCard
                             icon="📊"
                             title="Proyección Mensual"
-                            value={`$${parseFloat(projection.projectedTotal).toLocaleString()}`}
+                            value={`$${parseFloat(projection.projectedTotal).toLocaleString('es-AR')}`}
                             subtitle={`Basado en ${projection.daysPassed} días`}
                         />
                         <SummaryCard
                             icon="📈"
                             title="Promedio Diario"
-                            value={`$${parseFloat(projection.dailyAverage).toLocaleString()}`}
+                            value={`$${parseFloat(projection.dailyAverage).toLocaleString('es-AR')}`}
                             subtitle={`${projection.daysRemaining} días restantes`}
                         />
                     </>
@@ -203,7 +203,7 @@ const SellerCommissionsReport = () => {
                                             Mes {commission.subscription_month}
                                         </td>
                                         <td style={{ padding: '16px', textAlign: 'right' }}>
-                                            ${parseFloat(commission.payment_amount).toLocaleString()}
+                                            ${parseFloat(commission.payment_amount).toLocaleString('es-AR')}
                                         </td>
                                         <td style={{ padding: '16px', textAlign: 'right' }}>
                                             {commission.base_commission_rate}%
@@ -220,7 +220,7 @@ const SellerCommissionsReport = () => {
                                             color: 'var(--primary-paddle)',
                                             fontSize: '16px'
                                         }}>
-                                            ${parseFloat(commission.commission_amount).toLocaleString()}
+                                            ${parseFloat(commission.commission_amount).toLocaleString('es-AR')}
                                         </td>
                                         <td style={{ padding: '16px', textAlign: 'center' }}>
                                             {commission.volume_bonus > 0 ? '🎉' : '-'}
@@ -240,7 +240,7 @@ const SellerCommissionsReport = () => {
                                         color: 'var(--primary-paddle)',
                                         fontSize: '18px'
                                     }}>
-                                        ${commissions.total?.toLocaleString() || 0}
+                                        ${commissions.total?.toLocaleString('es-AR') || 0}
                                     </td>
                                     <td></td>
                                 </tr>

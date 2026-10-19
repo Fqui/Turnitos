@@ -81,7 +81,7 @@ export default function ProfileVenueBookingSection({
                                         </div>
                                         <div style={{ textAlign: 'right' }}>
                                             <div style={{ fontSize: '20px', fontWeight: '800', color: primaryColor }}>
-                                                ${parseFloat(business.price_per_day || 0).toLocaleString()}
+                                                ${parseFloat(business.price_per_day || 0).toLocaleString('es-AR')}
                                             </div>
                                             {isSelected && (
                                                 <div style={{ fontSize: '12px', fontWeight: '700', color: primaryColor, marginTop: '4px' }}>

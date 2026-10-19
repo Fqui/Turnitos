@@ -92,7 +92,7 @@ export default function VenueServicesTab({
                                 <span style={{ fontSize: '18px', lineHeight: 1 }}>{preset.icon}</span>
                                 <span>{preset.name}</span>
                                 <span style={{ fontSize: '11px', color: 'var(--primary-paddle, #84CC16)', fontWeight: '800' }}>
-                                    ${preset.price.toLocaleString()}
+                                    ${preset.price.toLocaleString('es-AR')}
                                 </span>
                                 {alreadyAdded && <span style={{ fontSize: '11px', color: '#10B981' }}>✓</span>}
                             </button>

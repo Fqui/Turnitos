@@ -139,7 +139,7 @@ const SellerDashboard = () => {
                 <StatCard
                     icon="💰"
                     title="Comisiones del Mes"
-                    value={`$${stats?.monthlyCommissions?.toLocaleString() || 0}`}
+                    value={`$${stats?.monthlyCommissions?.toLocaleString('es-AR') || 0}`}
                     subtitle="Acumulado hasta hoy"
                     highlight
                 />

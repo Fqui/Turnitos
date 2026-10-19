@@ -108,7 +108,7 @@ export default function VenueAdditionalServicesSection({
                                         padding: '4px 10px',
                                         borderRadius: '8px'
                                     }}>
-                                        +${Number(service.price).toLocaleString()}
+                                        +${Number(service.price).toLocaleString('es-AR')}
                                     </div>
                                 </div>
                             </div>

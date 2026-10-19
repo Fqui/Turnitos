@@ -183,7 +183,7 @@ const DurationSelector = ({
                                         fontWeight: '700',
                                         color: isAvailable ? sportColor : 'var(--text-secondary)'
                                     }}>
-                                        ${price.toLocaleString()}
+                                        ${price.toLocaleString('es-AR')}
                                     </div>
                                 </button>
                             );

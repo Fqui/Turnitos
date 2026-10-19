@@ -41,7 +41,7 @@ export default function VenueBookingPanel({
                 <div style={{ fontSize: '13px', color: secondaryTextColor, marginBottom: '4px' }}>Desde</div>
                 <div>
                     <span style={{ fontSize: '32px', fontWeight: '900', color: textColor }}>
-                        ${pricePerHour.toLocaleString()}
+                        ${pricePerHour.toLocaleString('es-AR')}
                     </span>
                     <span style={{ fontSize: '16px', color: secondaryTextColor, marginLeft: '4px' }}>/hora</span>
                 </div>
@@ -194,19 +194,19 @@ export default function VenueBookingPanel({
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                     <span style={{ fontSize: '14px', color: secondaryTextColor }}>Precio por hora</span>
                     <span style={{ fontSize: '14px', fontWeight: '600', color: textColor }}>
-                        ${pricePerHour.toLocaleString()}
+                        ${pricePerHour.toLocaleString('es-AR')}
                     </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                     <span style={{ fontSize: '14px', color: secondaryTextColor }}>Duración ({duration} horas)</span>
                     <span style={{ fontSize: '14px', fontWeight: '600', color: textColor }}>
-                        ${(rawBasePrice || (pricePerHour * duration)).toLocaleString()}
+                        ${(rawBasePrice || (pricePerHour * duration)).toLocaleString('es-AR')}
                     </span>
                 </div>
                 {durationDiscountPct > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#10B981', fontWeight: '600', fontSize: '14px' }}>
                         <span>Descuento por {duration}hs ({durationDiscountPct}% OFF)</span>
-                        <span>-${durationDiscountAmount?.toLocaleString()}</span>
+                        <span>-${durationDiscountAmount?.toLocaleString('es-AR')}</span>
                     </div>
                 )}
                 <div style={{
@@ -217,7 +217,7 @@ export default function VenueBookingPanel({
                 }}>
                     <span style={{ fontSize: '15px', fontWeight: '700', color: textColor }}>Total</span>
                     <span style={{ fontSize: '18px', fontWeight: '900', color: business?.primary_color || business?.button_color || '#84CC16' }}>
-                        ${totalPrice.toLocaleString()}
+                        ${totalPrice.toLocaleString('es-AR')}
                     </span>
                 </div>
             </div>
