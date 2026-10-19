@@ -911,7 +911,8 @@ export async function updateBusiness(businessId, businessData) {
                 price: parseFloat(s.price) || 0,
                 image_url: s.image || s.image_url,
                 description: s.description,
-                category: s.category
+                category: s.category,
+                location_mode: ['local', 'home', 'both'].includes(s.location_mode) ? s.location_mode : 'local'
             };
 
             if (isNew) {
@@ -1102,7 +1103,7 @@ export async function patchBusiness(businessId, updates) {
         'gallery_images', 'max_capacity', 'capacity', 'capacity_limit',
         'pricing_tiers', 'blocked_dates',
         'service_categories', 'time_ranges', 'payment_settings', 'booking_rules', 'auth_id', 'metadata',
-        'store_enabled', 'description', 'password_changed',
+        'store_enabled', 'description', 'password_changed', 'home_service',
         'subscription_status', 'trial_end_date'
     ]);
 
@@ -1375,7 +1376,8 @@ export async function patchBusiness(businessId, updates) {
                 duration: Number(s.duration) || 60,
                 description: s.description || '',
                 category: s.category || '',
-                image_url: s.image_url || s.image || null
+                image_url: s.image_url || s.image || null,
+                location_mode: ['local', 'home', 'both'].includes(s.location_mode) ? s.location_mode : 'local'
             }));
 
             const { error: upsertServicesErr } = await supabase.from('services').upsert(servicesToUpsert);

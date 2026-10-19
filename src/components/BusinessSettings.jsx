@@ -16,6 +16,7 @@ import PoliciesAndPaymentsTab from './business/settings/PoliciesAndPaymentsTab';
 import SpecialDaysTab from './business/settings/SpecialDaysTab';
 import GalleryTab from './business/settings/GalleryTab';
 import StoreTab from './business/settings/StoreTab';
+import HomeServiceTab from './business/settings/HomeServiceTab';
 
 export default function BusinessSettings({ business, onUpdate, isMobile, initialTab }) {
     const { showToast, showConfirm, showAlert } = useNotification();
@@ -339,6 +340,7 @@ export default function BusinessSettings({ business, onUpdate, isMobile, initial
         { id: 'appearance', label: 'Apariencia y Colores', icon: '🎨' },
         { id: 'subscription', label: isServiceBusiness ? 'Profesionales' : isSport ? 'Canchas' : 'Suscripción', icon: isServiceBusiness ? '👤' : isSport ? '🏟️' : '💳' },
         ...(isServiceBusiness ? [{ id: 'services', label: 'Servicios', icon: '💼' }] : []),
+        ...(isServiceBusiness ? [{ id: 'home_service', label: 'Atención a domicilio', icon: '🚗' }] : []),
         ...(isRentalBusiness ? [{ id: 'rental', label: 'Alquiler', icon: '🔑' }] : []),
         { id: 'schedule', label: 'Horarios', icon: '⏰' },
         { id: 'policies_and_payments', label: 'Políticas y Pagos', icon: '📜' },
@@ -421,6 +423,19 @@ export default function BusinessSettings({ business, onUpdate, isMobile, initial
                         labelStyle={labelStyle}
                         inputStyle={inputStyle}
                         buttonSecondaryStyle={buttonSecondaryStyle}
+                        saveButtonStyle={saveButtonStyle}
+                    />
+                );
+
+            case 'home_service':
+                return (
+                    <HomeServiceTab
+                        formData={formData}
+                        handleSave={handleSave}
+                        saving={saving}
+                        onGoToGeneral={() => setActiveTab('general')}
+                        labelStyle={labelStyle}
+                        inputStyle={inputStyle}
                         saveButtonStyle={saveButtonStyle}
                     />
                 );

@@ -6,6 +6,8 @@ import CouponInput from './common/CouponInput';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
 import { Info, ShoppingCart, Check } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import HomeVisitSection from './booking/HomeVisitSection';
+import { getLocationMode, getHomeRings, findRing, formatKm } from '../utils/homeService';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
 const globalCachedPaymentData = {
@@ -122,6 +124,20 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
 
     const extrasTotal = selectedExtras.reduce((sum, e) => sum + (Number(e.price) * (e.quantity || 1)), 0);
 
+    // 🚗 Home visit: the service decides if it can be done at the client's home
+    const serviceLocationMode = getLocationMode(bookingDetails?.service);
+    const homeRings = getHomeRings(incomingBusiness);
+    const homeVisitAvailable = serviceLocationMode !== 'local' && homeRings.length > 0
+        && isFinite(Number(incomingBusiness?.latitude)) && incomingBusiness?.latitude != null;
+    const [visitMode, setVisitMode] = useState(homeVisitAvailable && serviceLocationMode === 'home' ? 'home' : 'local');
+    const [homePin, setHomePin] = useState(null);
+    const [homeAddress, setHomeAddress] = useState('');
+    const [homeReference, setHomeReference] = useState('');
+    const isHomeVisit = homeVisitAvailable && visitMode === 'home';
+    const homeCoverage = isHomeVisit && homePin ? findRing(incomingBusiness, homePin.lat, homePin.lng) : null;
+    const travelFee = isHomeVisit && homeCoverage?.ring ? homeCoverage.ring.fee : 0;
+    const isHomeVisitValid = !isHomeVisit || (!!homeCoverage?.ring && homeAddress.trim().length >= 4);
+
     // Special Day Discount details
     const hasSpecialDiscount = specialDayDiscount && specialDayDiscount.discountAmount > 0;
     const specialDiscount = hasSpecialDiscount ? specialDayDiscount.discountAmount : 0;
@@ -130,7 +146,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
         : (hasSpecialDiscount ? basePrice + specialDiscount : basePrice);
 
     // Total before discounts
-    const subtotalBeforeDiscounts = effectiveOriginalBasePrice + extrasTotal;
+    const subtotalBeforeDiscounts = effectiveOriginalBasePrice + extrasTotal + travelFee;
 
     const [appliedCoupon, setAppliedCoupon] = useState(null);
 
@@ -163,7 +179,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
         : 0;
 
     const totalDiscount = promoDiscount + couponDiscount;
-    const price = basePrice + extrasTotal;
+    const price = basePrice + extrasTotal + travelFee;
     const finalPrice = Math.max(0, price - totalDiscount);
     const hasAnyDiscount = hasSpecialDiscount || totalDiscount > 0;
 
@@ -183,14 +199,14 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
         const useFixed = depositSettings.type === 'fixed'
             ? hasValidFixed
             : (!depositSettings.type && !hasValidPercentage && hasValidFixed);
-        const extrasSuffix = extrasTotal > 0 ? ' + Adicionales' : '';
+        const extrasSuffix = (extrasTotal > 0 ? ' + Adicionales' : '') + (travelFee > 0 ? ' + Traslado' : '');
 
         if (useFixed) {
-            depositAmount = Math.min(fixed + extrasTotal, finalPrice);
+            depositAmount = Math.min(fixed + extrasTotal + travelFee, finalPrice);
             depositLabel = 'Seña' + extrasSuffix;
         } else {
             const pct = hasValidPercentage ? percentage : 30;
-            depositAmount = Math.round(basePriceAfterDiscount * (pct / 100)) + extrasTotal;
+            depositAmount = Math.round(basePriceAfterDiscount * (pct / 100)) + extrasTotal + travelFee;
             depositLabel = `Seña (${pct}%)` + extrasSuffix;
         }
     }
@@ -214,7 +230,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
     const isLastNameValid = lastName.trim().length >= 2;
     const cleanCustomerPhone = customerPhone.replace(/\D/g, '');
     const isPhoneValid = cleanCustomerPhone.length >= 10 && cleanCustomerPhone.length <= 15;
-    const isFormValid = isFirstNameValid && isLastNameValid && isPhoneValid;
+    const isFormValid = isFirstNameValid && isLastNameValid && isPhoneValid && isHomeVisitValid;
 
     const handleConfirmPayment = () => {
         const customerName = `${firstName} ${lastName}`;
@@ -239,7 +255,10 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                 : `\n🎟️ Cupón aplicado: ${appliedCoupon.coupon?.code} (-$${couponDiscount.toLocaleString('es-AR')})`)
             : '';
             
-        const message = `Hola, mi nombre es ${customerName}. Reservé ${displayServiceName}${specialistText}, el día ${formattedDate} a las ${time}.${extrasText}${couponText}\n\nA continuación le envío una captura del comprobante.`;
+        const homeText = isHomeVisit
+            ? `\n🚗 A domicilio: ${homeAddress.trim()}${homeReference.trim() ? ` (${homeReference.trim()})` : ''}`
+            : '';
+        const message = `Hola, mi nombre es ${customerName}. Reservé ${displayServiceName}${specialistText}, el día ${formattedDate} a las ${time}.${extrasText}${couponText}${homeText}\n\nA continuación le envío una captura del comprobante.`;
 
         // WhatsApp opens only after the booking is saved (from the success modal)
         const whatsappUrl = buildWhatsAppUrl(bookingDetails.businessPhone, message);
@@ -255,7 +274,20 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
             discount: totalDiscount,
             promoDiscount,
             couponDiscount,
-            whatsappUrl
+            whatsappUrl,
+            metadata: {
+                ...(bookingDetails.metadata || {}),
+                ...(isHomeVisit ? {
+                    home_visit: {
+                        address: homeAddress.trim(),
+                        reference: homeReference.trim() || null,
+                        lat: homePin.lat,
+                        lng: homePin.lng,
+                        distance_km: Math.round(homeCoverage.distanceKm * 10) / 10,
+                        fee: travelFee
+                    }
+                } : {})
+            }
         });
     };
 
@@ -674,7 +706,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                             </div>
 
                                             {/* Base Price & Extras Breakdown */}
-                                            {selectedExtras && selectedExtras.length > 0 && (
+                                            {((selectedExtras && selectedExtras.length > 0) || travelFee > 0) && (
                                                 <div style={{
                                                     display: 'flex',
                                                     flexDirection: 'column',
@@ -697,6 +729,12 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                             </div>
                                                         );
                                                     })}
+                                                    {travelFee > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                            <span>+ Traslado ({formatKm(homeCoverage.distanceKm)})</span>
+                                                            <span>${travelFee.toLocaleString('es-AR')}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 
@@ -863,6 +901,24 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                         </div>
                                     )}
                                 </div>
+
+                                {homeVisitAvailable && (
+                                    <HomeVisitSection
+                                        business={incomingBusiness}
+                                        mode={visitMode}
+                                        allowLocal={serviceLocationMode === 'both'}
+                                        onModeChange={setVisitMode}
+                                        rings={homeRings}
+                                        pin={homePin}
+                                        onPinChange={setHomePin}
+                                        coverage={homeCoverage}
+                                        address={homeAddress}
+                                        onAddressChange={setHomeAddress}
+                                        reference={homeReference}
+                                        onReferenceChange={setHomeReference}
+                                        accentColor={sportColor}
+                                    />
+                                )}
 
                                 {/* User Inputs */}
                                 <div style={{ marginBottom: '16px' }}>

@@ -5,6 +5,7 @@ import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { isRentalBusiness, isSportBusiness } from '../../utils/businessUtils';
 import { getCourtSport } from '../../utils/sports';
 import RentalPaymentsCard from './RentalPaymentsCard';
+import HomeVisitCard from './HomeVisitCard';
 import BookingCashCharge from './canteen/BookingCashCharge';
 import { useBookingCash } from './canteen/useBookingCash';
 
@@ -2627,6 +2628,8 @@ const BookingDetailsModalContent = ({
                                     </div>
                                 )}
                             </div>
+
+                            <HomeVisitCard booking={booking} businessName={biz?.name} />
 
                             {/* Notes */}
                             {(notes || isEditing) && (

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import LocationModePicker from './LocationModePicker';
+import { getLocationMode } from '../../../utils/homeService';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
@@ -26,7 +28,8 @@ export default function ServicesTab({
         description: '',
         category: '',
         image_url: null,
-        specialist_ids: []
+        specialist_ids: [],
+        location_mode: 'local'
     });
     const [editingService, setEditingService] = useState(null);
     useBodyScrollLock(!!editingService);
@@ -71,7 +74,8 @@ export default function ServicesTab({
             category: newService.category || '',
             description: (newService.description || '').trim(),
             image_url: newService.image_url || null,
-            specialist_ids: selectedSpecs
+            specialist_ids: selectedSpecs,
+            location_mode: getLocationMode(newService)
         };
 
         const updatedServices = [...services, serviceToAdd];
@@ -89,7 +93,8 @@ export default function ServicesTab({
             description: '',
             category: serviceCategories[0] || '',
             image_url: null,
-            specialist_ids: []
+            specialist_ids: [],
+            location_mode: 'local'
         });
 
         showToast('Servicio agregado. Haz click en "Guardar y Publicar Servicios" para confirmar.', 'success');
@@ -386,6 +391,12 @@ export default function ServicesTab({
                     />
                 </div>
 
+                <LocationModePicker
+                    value={newService.location_mode}
+                    onChange={mode => setNewService(prev => ({ ...prev, location_mode: mode }))}
+                    labelStyle={labelStyle}
+                />
+
                 {/* SPECIALIST ASSIGNMENT SECTION */}
                 <div style={{
                     background: 'var(--bg-card)',
@@ -608,6 +619,11 @@ export default function ServicesTab({
                                                 ${Number(service.price || 0).toLocaleString('es-AR')}
                                             </span>
                                             <span>⏱️ {service.duration || 60} min</span>
+                                            {getLocationMode(service) !== 'local' && (
+                                                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(37, 99, 235, 0.12)', color: 'var(--status-completed, #2563eb)' }}>
+                                                    {getLocationMode(service) === 'home' ? 'SOLO DOMICILIO' : 'LOCAL Y DOMICILIO'}
+                                                </span>
+                                            )}
                                         </div>
 
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -787,6 +803,12 @@ export default function ServicesTab({
                                 />
                             </div>
 
+                            <LocationModePicker
+                                value={editingService.location_mode}
+                                onChange={mode => setEditingService(prev => ({ ...prev, location_mode: mode }))}
+                                labelStyle={labelStyle}
+                            />
+
                             {/* Photo / Image in Edit Modal */}
                             <div>
                                 <label style={labelStyle}>Foto / Imagen del Servicio (Opcional)</label>
@@ -938,7 +960,8 @@ export default function ServicesTab({
                                                     category: editingService.category,
                                                     description: editingService.description,
                                                     image_url: editingService.image_url,
-                                                    specialist_ids: editingService.specialist_ids || []
+                                                    specialist_ids: editingService.specialist_ids || [],
+                                                    location_mode: getLocationMode(editingService)
                                                 };
                                             }
                                             return s;

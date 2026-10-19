@@ -1464,6 +1464,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                 bookingDetails={{
                                     businessName: business.name,
                                     serviceId: business.type === 'service' ? selectedItem?.id : null,
+                                    service: business.type === 'service' ? selectedItem : null,
                                     serviceName: business.type === 'venue' ? `Alquiler ${selectedDuration}hs` : (business.type === 'service' ? selectedItem?.name : selectedItem),
                                     specialistName: selectedSpecialist?.name,
                                     date: selectedDate instanceof Date
