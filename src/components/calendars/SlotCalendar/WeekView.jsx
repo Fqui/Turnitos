@@ -4,6 +4,7 @@ import { generateTimeSlots, formatDateKey, getBookingsForSlot, bookingStartsInSl
 import { PADEL_DURATIONS, getDayShiftRanges, fitsInShift } from '../../../utils/courtHours';
 import { getCourtSport } from '../../../utils/sports';
 import ConfirmModal from '../../common/ConfirmModal';
+import SlotActionMenu from '../shared/SlotActionMenu';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function WeekView({
@@ -61,7 +62,8 @@ export default function WeekView({
             time,
             resource,
             x: rect.left + rect.width / 2,
-            y: rect.top
+            y: rect.top,
+            bottom: rect.bottom
         });
     };
 
@@ -346,7 +348,8 @@ export default function WeekView({
                                                                         setShowBookingMenu({
                                                                             booking,
                                                                             x: rect.left + rect.width / 2,
-                                                                            y: rect.top
+                                                                            y: rect.top,
+                                                                            bottom: rect.bottom
                                                                         });
                                                                     } else {
                                                                         onBookingClick && onBookingClick(booking);
@@ -404,220 +407,48 @@ export default function WeekView({
 
             {/* Slot Menu */}
             {showSlotMenu && (
-                <>
-                    <div
-                        className="slot-menu-overlay"
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 999,
-                            background: 'transparent'
-                        }}
-                        onClick={() => setShowSlotMenu(null)}
-                    />
-                    <div
-                        className="slot-menu"
-                        style={{
-                            position: 'fixed',
-                            left: showSlotMenu.x - 75,
-                            top: showSlotMenu.y - 120,
-                            width: '200px',
-                            background: 'var(--bg-card)',
-                            borderRadius: '16px',
-                            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-                            border: '1px solid var(--border)',
-                            zIndex: 1000,
-                            overflow: 'hidden'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div style={{
-                            padding: '12px 16px',
-                            borderBottom: '1px solid var(--border)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            background: 'rgba(0,0,0,0.02)'
-                        }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                                {showSlotMenu.time} hs
-                            </span>
-                            <button
-                                onClick={() => setShowSlotMenu(null)}
-                                style={{
-                                    border: 'none',
-                                    background: 'none',
-                                    padding: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '18px',
-                                    color: 'var(--text-secondary)'
-                                }}
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <button
-                            onClick={handleCreateBooking}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                width: '100%',
-                                padding: '12px 16px',
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                color: 'var(--text-primary)',
-                                borderBottom: '1px solid var(--border)',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >
-                            <span style={{ fontSize: '18px' }}>📝</span>
-                            Crear Reserva
-                        </button>
-                        <button
-                            onClick={handleBlockSlot}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                width: '100%',
-                                padding: '12px 16px',
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                color: 'var(--text-primary)',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >
-                            <span style={{ fontSize: '18px' }}>🚫</span>
-                            Bloquear Horario
-                        </button>
-                    </div>
-                </>
+                <SlotActionMenu
+                    className="slot-menu"
+                    anchor={showSlotMenu}
+                    title={`${showSlotMenu.time} hs`}
+                    isMobile={isMobile}
+                    onClose={() => setShowSlotMenu(null)}
+                    items={[
+                        { icon: '📝', label: 'Crear Reserva', onClick: handleCreateBooking },
+                        { icon: '🚫', label: 'Bloquear Horario', onClick: handleBlockSlot }
+                    ]}
+                />
             )}
 
             {/* Booking Menu */}
             {showBookingMenu && (
-                <>
-                    <div
-                        className="booking-menu-overlay"
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            zIndex: 999,
-                            background: 'transparent'
-                        }}
-                        onClick={() => setShowBookingMenu(null)}
-                    />
-                    <div
-                        className="booking-menu"
-                        style={{
-                            position: 'fixed',
-                            left: showBookingMenu.x - 75,
-                            top: showBookingMenu.y - 120,
-                            width: '200px',
-                            background: 'var(--bg-card)',
-                            borderRadius: '16px',
-                            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-                            border: '1px solid var(--border)',
-                            zIndex: 1000,
-                            overflow: 'hidden'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div style={{
-                            padding: '12px 16px',
-                            borderBottom: '1px solid var(--border)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            background: 'rgba(0,0,0,0.02)'
-                        }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                                Opciones
-                            </span>
-                            <button
-                                onClick={() => setShowBookingMenu(null)}
-                                style={{
-                                    border: 'none',
-                                    background: 'none',
-                                    padding: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '18px',
-                                    color: 'var(--text-secondary)'
-                                }}
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <button
-                            onClick={() => {
+                <SlotActionMenu
+                    className="booking-menu"
+                    anchor={showBookingMenu}
+                    title="Opciones"
+                    isMobile={isMobile}
+                    onClose={() => setShowBookingMenu(null)}
+                    items={[
+                        {
+                            icon: '🔄',
+                            label: 'Reprogramar',
+                            color: 'var(--primary-paddle)',
+                            fontWeight: '600',
+                            onClick: () => {
                                 onStartReschedule && onStartReschedule(showBookingMenu.booking);
                                 setShowBookingMenu(null);
-                            }}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                width: '100%',
-                                padding: '12px 16px',
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                color: 'var(--primary-paddle)',
-                                borderBottom: '1px solid var(--border)',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >
-                            <span style={{ fontSize: '18px' }}>🔄</span>
-                            Reprogramar
-                        </button>
-                        <button
-                            onClick={() => {
+                            }
+                        },
+                        {
+                            icon: 'ℹ️',
+                            label: 'Información',
+                            onClick: () => {
                                 onBookingClick && onBookingClick(showBookingMenu.booking);
                                 setShowBookingMenu(null);
-                            }}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                width: '100%',
-                                padding: '12px 16px',
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                color: 'var(--text-primary)',
-                                transition: 'background 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-main)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >
-                            <span style={{ fontSize: '18px' }}>ℹ️</span>
-                            Información
-                        </button>
-                    </div>
-                </>
+                            }
+                        }
+                    ]}
+                />
             )}
             </div>
 
