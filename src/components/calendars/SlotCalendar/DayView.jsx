@@ -29,6 +29,13 @@ export default function DayView({
     const [showBookingMenu, setShowBookingMenu] = useState(null);
     useBodyScrollLock(!!showSlotMenu || !!showBookingMenu);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+    const [mobileResourceId, setMobileResourceId] = useState(null);
+
+    // En celular con varias canchas/profesionales se ve una a la vez, elegida con pestañas
+    const useResourceTabs = isMobile && config.showResourceColumns && resources.length > 1;
+    const tabResource = resources.find(r => String(r.id) === String(mobileResourceId)) || resources[0];
+    const visibleResources = useResourceTabs ? [tabResource] : resources;
+    const resourceIcon = type === 'service' ? '👤' : (type === 'padel' ? '🎾' : '⚽');
 
     // Generar slots de tiempo
     const timeSlots = generateTimeSlots(businessHours.start, businessHours.end, config.slotSize);
@@ -164,27 +171,82 @@ export default function DayView({
     };
 
     return (
+        <>
+        {useResourceTabs && (
+            <div
+                role="tablist"
+                aria-label={type === 'service' ? 'Profesionales' : 'Canchas'}
+                style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 25,
+                    display: 'flex',
+                    gap: '8px',
+                    padding: '8px 12px',
+                    overflowX: 'auto',
+                    background: 'var(--bg-card)',
+                    borderBottom: '1px solid var(--border)',
+                    scrollbarWidth: 'none'
+                }}
+            >
+                {resources.map(r => {
+                    const selected = String(r.id) === String(tabResource.id);
+                    return (
+                        <button
+                            key={r.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={selected}
+                            onClick={() => setMobileResourceId(r.id)}
+                            style={{
+                                flexShrink: 0,
+                                minHeight: '44px',
+                                padding: '0 16px',
+                                borderRadius: '22px',
+                                border: `1px solid ${selected ? 'var(--primary-paddle)' : 'var(--border)'}`,
+                                background: selected ? 'var(--primary-paddle)' : 'var(--bg-main)',
+                                color: selected ? '#0B1F14' : 'var(--text-primary)',
+                                fontWeight: '700',
+                                fontSize: '14px',
+                                fontFamily: 'inherit',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                opacity: r.active === false && !selected ? 0.6 : 1
+                            }}
+                        >
+                            <span>{resourceIcon}</span>
+                            <span style={{ whiteSpace: 'nowrap' }}>{r.name}</span>
+                            {r.active === false && (
+                                <span style={{ fontSize: '11px', opacity: 0.8 }}>(Inactivo)</span>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+        )}
         <div style={{
             display: 'grid',
             gridTemplateColumns: config.showResourceColumns
-                ? `70px repeat(${resources.length}, minmax(0, 1fr))`
-                : '70px minmax(0, 1fr)',
+                ? `${isMobile ? '56px' : '70px'} repeat(${visibleResources.length}, minmax(0, 1fr))`
+                : `${isMobile ? '56px' : '70px'} minmax(0, 1fr)`,
             gridAutoRows: `${config.gridRowHeight}px`,
             minWidth: isMobile ? 'auto' : '900px',
             width: '100%'
         }}>
             {/* Header Row */}
-            <div style={{
+            {!useResourceTabs && <div style={{
                 position: 'sticky',
                 top: 0,
                 zIndex: 20,
                 background: 'var(--bg-card)',
                 borderBottom: '1px solid var(--border)',
                 borderRight: '1px solid var(--border)'
-            }}></div>
+            }}></div>}
 
             {/* Resource Headers (Canchas/Especialistas) */}
-            {config.showResourceColumns && resources.map((resource, i) => (
+            {config.showResourceColumns && !useResourceTabs && resources.map((resource, i) => (
                 <div key={resource.id} style={{
                     padding: '16px 12px',
                     textAlign: 'center',
@@ -290,7 +352,7 @@ export default function DayView({
 
                         {/* Resource Columns */}
                         {config.showResourceColumns ? (
-                            resources.map((resource, j) => {
+                            visibleResources.map((resource, j) => {
                                 // Pádel: no se ofrece un inicio donde no entra el turno más corto antes del cierre
                                 const cellOpen = isOpen && canStartOnResource(resource, time);
 
@@ -323,7 +385,7 @@ export default function DayView({
                                         style={{
                                             borderBottom: isCurrentSlot ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
                                             borderTop: isCurrentSlot ? '2px solid var(--primary-paddle)' : 'none',
-                                            borderRight: j < resources.length - 1 ? '1px solid var(--border)' : 'none',
+                                            borderRight: j < visibleResources.length - 1 ? '1px solid var(--border)' : 'none',
                                             minHeight: `${config.gridRowHeight}px`,
                                             padding: '4px',
                                             position: 'relative',
@@ -381,6 +443,8 @@ export default function DayView({
                                                             showTimeRange={type === 'padel'}
                                                             isRescheduling={isRescheduling}
                                                             isSelected={reschedulingBooking?.id === booking.id}
+
+                                                            isMobile={isMobile}
                                                         />
                                                     </div>
                                                 );
@@ -485,6 +549,8 @@ export default function DayView({
                                                         showTimeRange={true}
                                                         isRescheduling={isRescheduling}
                                                         isSelected={reschedulingBooking?.id === booking.id}
+
+                                                        isMobile={isMobile}
                                                     />
                                                 </div>
                                             );
@@ -600,5 +666,6 @@ export default function DayView({
                 onClose={() => setConfirmModal({ isOpen: false })}
             />
         </div>
+        </>
     );
 }

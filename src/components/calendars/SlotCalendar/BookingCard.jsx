@@ -10,7 +10,8 @@ export default function BookingCard({
     showTimeRange = true,
     isRescheduling = false,
     isSelected = false,
-    isDark = false
+    isDark = false,
+    isMobile = false
 }) {
     const color = getBookingColor(booking.status, isDark);
     const slotSpan = calculateSlotSpan(booking.duration || 60, slotSize);
@@ -31,6 +32,8 @@ export default function BookingCard({
     }
 
     const isCompact = slotSpan <= 1;
+    // En celular la letra no baja de 12px para que se pueda leer
+    const textSize = (desktop, mobile) => `${isMobile ? mobile : desktop}px`;
 
     // Label de la reserva
     const getLabel = () => {
@@ -57,7 +60,7 @@ export default function BookingCard({
                 minHeight: isCompact ? 'auto' : '50px',
                 borderRadius: '6px',
                 padding: isCompact ? '2px 6px' : '8px 10px',
-                fontSize: isCompact ? '11px' : '12px',
+                fontSize: isCompact ? textSize(11, 12) : textSize(12, 13),
                 overflow: 'hidden',
                 cursor: booking.status === 'blocked' ? 'default' : 'pointer',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
@@ -103,7 +106,7 @@ export default function BookingCard({
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     maxWidth: '100%', // Asegura que no rompa el layout
-                    fontSize: isCompact ? '12px' : '13px',
+                    fontSize: isCompact ? textSize(12, 13) : textSize(13, 14),
                     letterSpacing: '-0.01em'
                 }}>
                     {booking.promo_id && booking.status !== 'blocked' && (
@@ -114,7 +117,7 @@ export default function BookingCard({
                             borderRadius: '4px',
                             background: 'rgba(255, 255, 255, 0.85)',
                             color: '#E91E63',
-                            fontSize: '9px',
+                            fontSize: textSize(9, 10),
                             fontWeight: '800',
                             letterSpacing: '0.3px',
                             verticalAlign: 'middle'
@@ -131,7 +134,7 @@ export default function BookingCard({
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         maxWidth: '100%',
-                        fontSize: isCompact ? '10px' : '11px',
+                        fontSize: isCompact ? textSize(10, 12) : textSize(11, 12),
                         fontWeight: '500'
                     }}>
                         {isCompact && getLabel() ? '• ' : ''}{getSubLabel()}
@@ -143,12 +146,12 @@ export default function BookingCard({
             {!isCompact && (
                 <>
                     {showDuration && booking.status !== 'blocked' && (
-                        <span style={{ opacity: 0.9, fontSize: '11px', fontWeight: '700' }}>
+                        <span style={{ opacity: 0.9, fontSize: textSize(11, 12), fontWeight: '700' }}>
                             {booking.duration} min
                         </span>
                     )}
                     {showTimeRange && booking.status !== 'blocked' && (
-                        <span style={{ opacity: 0.85, fontSize: '10px', fontWeight: '600' }}>
+                        <span style={{ opacity: 0.85, fontSize: textSize(10, 12), fontWeight: '600' }}>
                             {booking.time} - {endTime}
                         </span>
                     )}
@@ -157,7 +160,7 @@ export default function BookingCard({
 
             {/* Modo compacto: Mostrar duración/hora solo si hay espacio o simplificado */}
             {isCompact && booking.status !== 'blocked' && (
-                <div style={{ display: 'flex', gap: '4px', opacity: 0.9, fontSize: '10px' }}>
+                <div style={{ display: 'flex', gap: '4px', opacity: 0.9, fontSize: textSize(10, 12) }}>
                     {showDuration && <span>{booking.duration}m</span>}
                     {showTimeRange && <span>{booking.time}</span>}
                 </div>
