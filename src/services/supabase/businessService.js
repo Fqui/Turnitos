@@ -3,6 +3,13 @@ import { createDefaultSubscription } from './subscriptionService';
 import { syncBusinessResources } from './resourceService';
 import { updateServiceSpecialists } from './bookingService';
 
+// The full row (owner email, coupons, account data) is only readable by the business's
+// owner, its seller or the SuperAdmin; everyone else reads the public view.
+async function readableBusinessSources() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session ? ['businesses', 'businesses_public'] : ['businesses_public'];
+}
+
 export function processBusinessData(data) {
     if (!data) return data;
     if (Array.isArray(data)) {
@@ -143,7 +150,7 @@ export function processBusinessData(data) {
 
 export async function getBusinesses() {
     const { data, error } = await supabase
-        .from('businesses')
+        .from('businesses_public')
         .select(`
             *,
             categories (
@@ -241,23 +248,30 @@ export async function getNearbyBusinesses(lat, lng, radius = 5000) {
 }
 
 export async function getBusinessById(id) {
-    const { data, error } = await supabase
-        .from('businesses')
-        .select(`
-            *,
-            services (
+    let data = null;
+    for (const source of await readableBusinessSources()) {
+        const { data: row, error } = await supabase
+            .from(source)
+            .select(`
                 *,
-                service_specialists (
-                    specialists (*)
-                )
-            ),
-            courts (*),
-            bookable_resources:resources (id, name, type, base_price, active, metadata)
-        `)
-        .eq('id', id)
-        .single();
-
-    if (error) throw error;
+                services (
+                    *,
+                    service_specialists (
+                        specialists (*)
+                    )
+                ),
+                courts (*),
+                bookable_resources:resources (id, name, type, base_price, active, metadata)
+            `)
+            .eq('id', id)
+            .maybeSingle();
+        if (error) throw error;
+        if (row) {
+            data = row;
+            break;
+        }
+    }
+    if (!data) throw new Error(`Business not found: ${id}`);
 
     const { data: specialists } = await supabase
         .from('specialists')
@@ -328,47 +342,52 @@ export async function getBusinessBySlug(slug) {
     const cleanSlug = String(slug).trim().toLowerCase();
     const cleanNoHyphens = cleanSlug.replace(/[-_]/g, '');
 
-    let query = supabase
-        .from('businesses')
-        .select(`
-            *,
-            categories (
-                id,
-                name,
-                slug,
-                icon
-            ),
-            business_subcategories (
-                subcategories (
+    let data = null;
+    for (const source of await readableBusinessSources()) {
+        let query = supabase
+            .from(source)
+            .select(`
+                *,
+                categories (
                     id,
                     name,
                     slug,
-                    icon,
-                    category_id
-                )
-            ),
-            services (
-                *,
-                service_specialists (
-                    specialist_id,
-                    specialists (*)
-                )
-            ),
-            courts (*),
-            specialists (*),
-            bookable_resources:resources (id, name, type, base_price, active, metadata)
-        `);
+                    icon
+                ),
+                business_subcategories (
+                    subcategories (
+                        id,
+                        name,
+                        slug,
+                        icon,
+                        category_id
+                    )
+                ),
+                services (
+                    *,
+                    service_specialists (
+                        specialist_id,
+                        specialists (*)
+                    )
+                ),
+                courts (*),
+                specialists (*),
+                bookable_resources:resources (id, name, type, base_price, active, metadata)
+            `);
 
-    if (cleanSlug === cleanNoHyphens) {
-        query = query.eq('slug', cleanSlug);
-    } else {
-        query = query.or(`slug.eq.${cleanSlug},slug.eq.${cleanNoHyphens}`);
+        if (cleanSlug === cleanNoHyphens) {
+            query = query.eq('slug', cleanSlug);
+        } else {
+            query = query.or(`slug.eq.${cleanSlug},slug.eq.${cleanNoHyphens}`);
+        }
+
+        const { data: results, error } = await query.limit(1);
+        if (error) throw error;
+        if (results?.[0]) {
+            data = results[0];
+            break;
+        }
     }
-
-    const { data: results, error } = await query.limit(1);
-
-    if (error) throw error;
-    const data = results?.[0] || null;
     if (!data) {
         throw new Error(`Business not found for slug: ${slug}`);
     }
@@ -548,7 +567,7 @@ export async function createBusiness(businessData) {
         
         try {
             const { data: existing } = await supabase
-                .from('businesses')
+                .from('businesses_public')
                 .select('id')
                 .eq('slug', baseSlug)
                 .limit(1);
@@ -1124,7 +1143,7 @@ export async function patchBusiness(businessId, updates) {
             const dbCoupons = Array.isArray(currentBiz.metadata.coupons) ? currentBiz.metadata.coupons : [];
             metadataUpdates = { ...currentBiz.metadata, ...metadataUpdates };
             // The form holds a stale copy of the coupons: never move used_count backwards
-            // (increment_coupon_usage raises it when a customer books with a coupon)
+            // (the database raises it when a customer books with a coupon)
             if (Array.isArray(metadataUpdates.coupons) && dbCoupons.length > 0) {
                 metadataUpdates.coupons = metadataUpdates.coupons.map(c => {
                     const dbCoupon = dbCoupons.find(d => d?.code && c?.code && d.code.toUpperCase() === c.code.toUpperCase());

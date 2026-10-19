@@ -5,7 +5,7 @@ export async function getPromotions() {
         .from('promotions')
         .select(`
             *,
-            businesses (name)
+            businesses:businesses_public (name)
         `)
         .order('created_at', { ascending: false });
 
@@ -18,7 +18,7 @@ export async function getPromotionById(promoId) {
         .from('promotions')
         .select(`
             *,
-            businesses (id, name, slug)
+            businesses:businesses_public (id, name, slug)
         `)
         .eq('id', promoId)
         .single();

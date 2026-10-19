@@ -76,9 +76,9 @@ class ServiceAdapter {
         return this.service.getPublicBookings(businessId, date);
     }
 
-    async incrementCouponUsage(businessId, code) {
-        if (this.isDemoMode) return;
-        return this.service.incrementCouponUsage(businessId, code);
+    async findBusinessCoupon(businessId, code) {
+        if (this.isDemoMode) return null;
+        return this.service.findBusinessCoupon(businessId, code);
     }
 
     async countCustomerBookings(businessId, phone, fromDate, toDate) {

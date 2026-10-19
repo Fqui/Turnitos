@@ -78,8 +78,8 @@ class SupabaseService {
         return bookingService.getPublicBookings(businessId, date);
     }
 
-    async incrementCouponUsage(businessId, code) {
-        return bookingService.incrementCouponUsage(businessId, code);
+    async findBusinessCoupon(businessId, code) {
+        return bookingService.findBusinessCoupon(businessId, code);
     }
 
     async countCustomerBookings(businessId, phone, fromDate, toDate) {

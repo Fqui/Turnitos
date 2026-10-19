@@ -710,12 +710,6 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
             await serviceAdapter.createBooking(bookingData);
 
-            // If a business coupon was applied, increment used_count
-            if (finalDetails.coupon?.code && business.id) {
-                serviceAdapter.incrementCouponUsage(business.id, finalDetails.coupon.code)
-                    .catch(e => console.warn('Could not increment coupon used_count:', e));
-            }
-
             setShowModal(false);
             setSuccessWhatsappUrl(finalDetails.whatsappUrl || '');
             setShowSuccessModal(true);

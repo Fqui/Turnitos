@@ -849,6 +849,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                     {price > 0 && !appliedCoupon && (
                                         <div style={{ marginTop: '2px' }}>
                                             <CouponInput
+                                                businessId={incomingBusiness?.id || null}
                                                 coupons={incomingBusiness?.coupons || incomingBusiness?.metadata?.coupons || []}
                                                 totalAmount={basePrice}
                                                 bookingDate={date}

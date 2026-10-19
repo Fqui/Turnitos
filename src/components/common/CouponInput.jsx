@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import serviceAdapter from '../../services/serviceAdapter';
 
 /**
  * Validates and calculates discount for a given coupon
@@ -132,6 +133,7 @@ export const validateCoupon = ({
 };
 
 export default function CouponInput({
+    businessId = null,
     coupons = [],
     totalAmount = 0,
     bookingDate = '',
@@ -152,13 +154,24 @@ export default function CouponInput({
 
     const brandColor = primaryColor || 'var(--primary-paddle, #84CC16)';
 
-    const handleApply = (e) => {
+    const handleApply = async (e) => {
         if (e) e.preventDefault();
         setErrorMsg('');
 
+        // Public pages don't receive the business's coupon list; look the code up instead
+        let candidates = coupons;
+        if (businessId && inputCode.trim()) {
+            try {
+                const found = await serviceAdapter.findBusinessCoupon(businessId, inputCode);
+                if (found) candidates = [found];
+            } catch (err) {
+                console.warn('Could not look up coupon:', err);
+            }
+        }
+
         const result = validateCoupon({
             code: inputCode,
-            coupons,
+            coupons: candidates,
             bookingDate,
             totalAmount,
             customerPhone,

@@ -478,6 +478,7 @@ export default function VenueBookingWizardModal({
 
                                             {/* Coupon Component */}
                                             <CouponInput
+                                                businessId={business?.id || null}
                                                 coupons={business?.coupons || business?.metadata?.coupons || []}
                                                 totalAmount={subtotalPrice}
                                                 bookingDate={selectedDate}

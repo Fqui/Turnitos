@@ -70,14 +70,15 @@ export async function getPublicBookings(businessId, date = null) {
 }
 
 /**
- * Suma un uso al cupón del negocio (sin tocar el resto de la metadata).
+ * Cupón del negocio con ese código, o null. El uso lo suma la base al crear la reserva.
  */
-export async function incrementCouponUsage(businessId, code) {
-    const { error } = await supabase.rpc('increment_coupon_usage', {
+export async function findBusinessCoupon(businessId, code) {
+    const { data, error } = await supabase.rpc('find_business_coupon', {
         p_business_id: businessId,
         p_code: code
     });
     if (error) throw error;
+    return data || null;
 }
 
 /**
@@ -236,7 +237,7 @@ export async function createBooking(bookingData) {
     if (targetBusinessId) {
         try {
             const { data: bData } = await supabase
-                .from('businesses')
+                .from('businesses_public')
                 .select('subscription_plan_id, type')
                 .eq('id', targetBusinessId)
                 .single();
