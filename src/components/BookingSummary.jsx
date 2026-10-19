@@ -301,6 +301,48 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
         }
     };
 
+    // A gift coupon has no discount amount: its row must still show, with or without other discounts
+    const appliedCouponRow = appliedCoupon && (
+        <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '8px 12px',
+            borderRadius: '10px',
+            backgroundColor: appliedCoupon.coupon?.type === 'gift' ? 'rgba(59, 130, 246, 0.12)' : `${sportColor}15`,
+            border: appliedCoupon.coupon?.type === 'gift' ? '1px dashed #3B82F6' : `1px dashed ${sportColor}60`
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: '700', color: appliedCoupon.coupon?.type === 'gift' ? '#2563EB' : sportColor, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    {appliedCoupon.coupon?.type === 'gift' ? '🎁' : '🏷️'} Cupón {appliedCoupon.coupon?.code}
+                    {appliedCoupon.coupon?.type === 'gift' && ` (${appliedCoupon.giftBenefit})`}
+                </span>
+                <button
+                    type="button"
+                    onClick={() => setAppliedCoupon(null)}
+                    style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        color: '#EF4444',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        padding: '2px 7px',
+                        borderRadius: '5px'
+                    }}
+                    title="Quitar cupón"
+                >
+                    ✕ Quitar
+                </button>
+            </div>
+            {appliedCoupon.coupon?.type !== 'gift' && (
+                <span style={{ fontSize: '13px', fontWeight: '800', color: sportColor }}>
+                    -${couponDiscount.toLocaleString('es-AR')}
+                </span>
+            )}
+        </div>
+    );
+
     return (
         <div
             style={{
@@ -801,46 +843,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
 
 
                                                     {/* Applied Coupon Row */}
-                                                    {appliedCoupon && (
-                                                        <div style={{
-                                                            display: 'flex',
-                                                            justifyContent: 'space-between',
-                                                            alignItems: 'center',
-                                                            padding: '8px 12px',
-                                                            borderRadius: '10px',
-                                                            backgroundColor: appliedCoupon.coupon?.type === 'gift' ? 'rgba(59, 130, 246, 0.12)' : `${sportColor}15`,
-                                                            border: appliedCoupon.coupon?.type === 'gift' ? '1px dashed #3B82F6' : `1px dashed ${sportColor}60`
-                                                        }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <span style={{ fontSize: '12.5px', fontWeight: '700', color: appliedCoupon.coupon?.type === 'gift' ? '#2563EB' : sportColor, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                                    {appliedCoupon.coupon?.type === 'gift' ? '🎁' : '🏷️'} Cupón {appliedCoupon.coupon?.code}
-                                                                    {appliedCoupon.coupon?.type === 'gift' && ` (${appliedCoupon.giftBenefit})`}
-                                                                </span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setAppliedCoupon(null)}
-                                                                    style={{
-                                                                        background: 'rgba(239, 68, 68, 0.1)',
-                                                                        border: '1px solid rgba(239, 68, 68, 0.25)',
-                                                                        color: '#EF4444',
-                                                                        fontSize: '11px',
-                                                                        fontWeight: '700',
-                                                                        cursor: 'pointer',
-                                                                        padding: '2px 7px',
-                                                                        borderRadius: '5px'
-                                                                    }}
-                                                                    title="Quitar cupón"
-                                                                >
-                                                                    ✕ Quitar
-                                                                </button>
-                                                            </div>
-                                                            {appliedCoupon.coupon?.type !== 'gift' && (
-                                                                <span style={{ fontSize: '13px', fontWeight: '800', color: sportColor }}>
-                                                                    -${couponDiscount.toLocaleString('es-AR')}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                    {appliedCouponRow}
 
                                                     {/* Total a pagar con descuento */}
                                                     <div style={{
@@ -856,13 +859,16 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                     </div>
                                                 </>
                                             ) : (
-                                                /* No discounts: plain Total a pagar */
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Total a pagar</span>
-                                                    <span style={{ fontSize: '18px', fontWeight: '900', color: sportColor }}>
-                                                        ${finalPrice.toLocaleString('es-AR')}
-                                                    </span>
-                                                </div>
+                                                /* No discounts: plain Total a pagar (plus a gift coupon, if any) */
+                                                <>
+                                                    {appliedCouponRow}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Total a pagar</span>
+                                                        <span style={{ fontSize: '18px', fontWeight: '900', color: sportColor }}>
+                                                            ${finalPrice.toLocaleString('es-AR')}
+                                                        </span>
+                                                    </div>
+                                                </>
                                             )}
 
                                             {/* Deposit */}
