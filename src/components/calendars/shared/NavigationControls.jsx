@@ -19,7 +19,9 @@ export default function NavigationControls({
                 style={{
                     border: 'none',
                     background: 'transparent',
-                    padding: isMobile ? '6px 12px' : '6px 12px',
+                    padding: '6px 12px',
+                    minHeight: isMobile ? '44px' : 'auto',
+                    minWidth: isMobile ? '48px' : 'auto',
                     cursor: 'pointer',
                     borderRadius: '6px',
                     color: 'var(--text-secondary)',
@@ -37,7 +39,8 @@ export default function NavigationControls({
                 style={{
                     border: 'none',
                     background: 'white',
-                    padding: isMobile ? '6px 16px' : '6px 16px',
+                    padding: '6px 16px',
+                    minHeight: isMobile ? '44px' : 'auto',
                     cursor: 'pointer',
                     borderRadius: '6px',
                     fontWeight: '700',
@@ -57,7 +60,9 @@ export default function NavigationControls({
                 style={{
                     border: 'none',
                     background: 'transparent',
-                    padding: isMobile ? '6px 12px' : '6px 12px',
+                    padding: '6px 12px',
+                    minHeight: isMobile ? '44px' : 'auto',
+                    minWidth: isMobile ? '48px' : 'auto',
                     cursor: 'pointer',
                     borderRadius: '6px',
                     color: 'var(--text-secondary)',

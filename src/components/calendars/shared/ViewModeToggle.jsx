@@ -24,6 +24,7 @@ export default function ViewModeToggle({ viewMode, setViewMode, availableViews =
                         border: 'none',
                         background: viewMode === view ? 'white' : 'transparent',
                         padding: isMobile ? '6px 16px' : '8px 20px',
+                        minHeight: isMobile ? '44px' : 'auto',
                         cursor: 'pointer',
                         borderRadius: '8px',
                         fontWeight: viewMode === view ? '700' : '500',

@@ -85,8 +85,8 @@ export default function CalendarHeader({
                     type="button"
                     onClick={onPrevious}
                     style={{
-                        width: '34px',
-                        height: '34px',
+                        width: isMobile ? '44px' : '34px',
+                        height: isMobile ? '44px' : '34px',
                         borderRadius: '10px',
                         border: '1px solid var(--border)',
                         background: 'var(--bg-main)',
@@ -119,8 +119,8 @@ export default function CalendarHeader({
                     type="button"
                     onClick={onNext}
                     style={{
-                        width: '34px',
-                        height: '34px',
+                        width: isMobile ? '44px' : '34px',
+                        height: isMobile ? '44px' : '34px',
                         borderRadius: '10px',
                         border: '1px solid var(--border)',
                         background: 'var(--bg-main)',
@@ -143,6 +143,7 @@ export default function CalendarHeader({
                     onClick={onToday}
                     style={{
                         padding: '6px 12px',
+                        minHeight: isMobile ? '44px' : 'auto',
                         borderRadius: '10px',
                         border: '1px solid var(--border)',
                         background: 'var(--bg-main)',
