@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import TimeSlotGrid from './TimeSlotGrid';
 import { promoSlotStyle, promoTagStyle, shortPromoLabel } from './promotions/promoSlotStyles';
 import CourtSelector from './CourtSelector';
@@ -25,6 +25,16 @@ const TimeSlotPicker = ({
 }) => {
     // Use selectedTime.time directly from props
     const selectedTimeSlot = selectedTime?.time || null;
+    const courtListRef = useRef(null);
+
+    // Sports: after picking a time, bring the court list into view
+    useEffect(() => {
+        if (type === 'service' || !selectedTimeSlot) return;
+        const timer = setTimeout(() => {
+            courtListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+        return () => clearTimeout(timer);
+    }, [selectedTimeSlot, type]);
 
     // 🔍 Debug: Log resources and business capacity
     // console.log('📊 TimeSlotPicker received:', {
@@ -550,17 +560,19 @@ const TimeSlotPicker = ({
 
                     {/* Court Selector (shows when time is selected) */}
                     {selectedTimeSlot && (
-                        <CourtSelector
-                            availableCourts={getCourtsForSelectedTime()}
-                            selectedCourt={selectedTime?.courtId}
-                            onCourtSelect={handleCourtSelect}
-                            timeSlot={selectedTimeSlot}
-                            sportColor={sportColor}
-                            existingBookings={existingBookings}
-                            selectedDate={selectedDate}
-                            closingTime={closingTime}
-                            getAvailableDurations={getAvailableDurations}
-                        />
+                        <div ref={courtListRef} style={{ scrollMarginTop: '80px' }}>
+                            <CourtSelector
+                                availableCourts={getCourtsForSelectedTime()}
+                                selectedCourt={selectedTime?.courtId}
+                                onCourtSelect={handleCourtSelect}
+                                timeSlot={selectedTimeSlot}
+                                sportColor={sportColor}
+                                existingBookings={existingBookings}
+                                selectedDate={selectedDate}
+                                closingTime={closingTime}
+                                getAvailableDurations={getAvailableDurations}
+                            />
+                        </div>
                     )}
                 </>
             ) : (

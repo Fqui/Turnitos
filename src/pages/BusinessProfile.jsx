@@ -102,6 +102,9 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const timeRef = useRef(null);
     const specialistRef = useRef(null);
     const confirmRef = useRef(null);
+    // Plain (non-sticky) marker where the Continue button sits in the page flow.
+    // The button itself is sticky, so scrolling to it never moves the page.
+    const confirmAnchorRef = useRef(null);
 
     // Helper to parse business hours
     const getBusinessHours = (date) => {
@@ -242,6 +245,10 @@ export default function BusinessProfile({ business: initialBusiness }) {
         if (hashChanged) window.scrollTo(0, 0);
     }, [location.hash, loading]);
 
+    const scrollToConfirm = () => {
+        confirmAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    };
+
     // Auto-scroll when slot/specialist is selected
     useEffect(() => {
         if (selectedTime && business?.type === 'service') {
@@ -251,9 +258,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                 }, 100);
                 return () => clearTimeout(timer);
             } else if (availableSpecialists.length === 1 || availableSpecialists.length === 0) {
-                const timer = setTimeout(() => {
-                    confirmRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 100);
+                const timer = setTimeout(scrollToConfirm, 100);
                 return () => clearTimeout(timer);
             }
         }
@@ -1255,6 +1260,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                                         price: calculateSpecialDayPrice(rawCourtPrice),
                                                         duration: duration || (business.type === 'service' ? selectedItem?.duration : 60)
                                                     });
+                                                    // Football and other non-padel courts: court chosen, go to Continue
+                                                    if (!showPadelFlow) setTimeout(scrollToConfirm, 100);
                                                 } else {
                                                     const rawPrice = selectedItem?.price || 0;
                                                     setSelectedTime({
@@ -1425,6 +1432,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             </button>
                         </div>
                     )}
+                    <div ref={confirmAnchorRef} aria-hidden="true" style={{ height: 0, scrollMarginBottom: '24px' }} />
 
                     {/* General Info: Map & Grouped Hours */}
                     <ProfileInfoSection
