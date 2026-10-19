@@ -2079,3 +2079,8 @@ textarea {
     font-size: 16px !important;
   }
 }
+
+/* Barra de acción fija de los modales de reserva en celular: botones cómodos para el dedo */
+.booking-action-bar--mobile button {
+  min-height: 48px;
+}

@@ -580,13 +580,13 @@ const NewBookingModal = ({
         }} onClick={onClose}>
             <div style={{
                 background: 'var(--bg-card)',
-                padding: isMobile ? '20px 16px 36px 16px' : '24px 28px',
+                padding: isMobile ? '20px 16px 0 16px' : '24px 28px',
                 borderRadius: isMobile ? '24px 24px 0 0' : '20px',
                 width: '100%',
                 maxWidth: isMobile ? '100%' : '650px',
                 boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
                 border: '1px solid var(--border)',
-                maxHeight: isMobile ? '92vh' : '90vh',
+                maxHeight: isMobile ? '92dvh' : '90vh',
                 overflowY: 'auto'
             }} onClick={e => e.stopPropagation()}>
                 {/* Header */}
@@ -601,12 +601,17 @@ const NewBookingModal = ({
                     </div>
                     <button
                         onClick={onClose}
+                        aria-label="Cerrar"
                         style={{
                             background: 'transparent',
                             border: 'none',
-                            fontSize: '24px',
+                            fontSize: isMobile ? '28px' : '24px',
                             cursor: 'pointer',
-                            color: 'var(--text-secondary)'
+                            color: 'var(--text-secondary)',
+                            width: isMobile ? '44px' : 'auto',
+                            height: isMobile ? '44px' : 'auto',
+                            flexShrink: 0,
+                            padding: 0
                         }}
                     >
                         &times;
@@ -1580,13 +1585,24 @@ const NewBookingModal = ({
                         </div>
                     </div>
 
-                    {/* Submit Button */}
+                    {/* Submit Button: en celular queda fijo abajo del modal */}
+                    <div style={isMobile ? {
+                        position: 'sticky',
+                        bottom: 0,
+                        zIndex: 5,
+                        background: 'var(--bg-card)',
+                        margin: '0 -16px',
+                        padding: '10px 16px calc(14px + env(safe-area-inset-bottom, 0px))',
+                        borderTop: '1px solid var(--border)',
+                        boxShadow: '0 -6px 16px rgba(0,0,0,0.08)'
+                    } : undefined}>
                     <button
                         type="submit"
                         disabled={!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status)}
                         style={{
                             width: '100%',
                             padding: '12px',
+                            minHeight: isMobile ? '48px' : 'auto',
                             background: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'var(--border)'
                                 : 'var(--primary-paddle)',
@@ -1600,7 +1616,7 @@ const NewBookingModal = ({
                             cursor: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'not-allowed'
                                 : 'pointer',
-                            marginTop: '6px',
+                            marginTop: isMobile ? 0 : '6px',
                             transition: 'all 0.2s',
                             boxShadow: (!newBookingData.date || !['available', 'past'].includes(selectedDateAvailability.status))
                                 ? 'none'
@@ -1614,6 +1630,7 @@ const NewBookingModal = ({
                                 : 'Crear Reserva'
                         }
                     </button>
+                    </div>
                 </form>
             </div>
         </div>

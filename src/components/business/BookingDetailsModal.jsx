@@ -30,6 +30,19 @@ const BookingDetailsModalContent = ({
     const { showToast } = useNotification();
 
     const biz = businesses?.find(b => String(b.id) === String(selectedBusinessId || booking.business_id || booking.businessId));
+    // En celular la acción principal (seña, confirmar, finalizar) queda fija abajo del modal
+    const hasPrimaryAction = ['pending', 'deposit_paid', 'confirmed', 'attended'].includes(booking.status);
+    const actionBarStyle = isMobile ? {
+        position: 'sticky',
+        bottom: 0,
+        zIndex: 5,
+        background: 'var(--bg-card)',
+        margin: '4px -16px 0',
+        padding: '10px 16px calc(10px + env(safe-area-inset-bottom, 0px))',
+        borderTop: '1px solid var(--border)',
+        boxShadow: '0 -6px 16px rgba(0,0,0,0.08)'
+    } : { marginTop: '4px' };
+
     const isRental = biz
         ? isRentalBusiness(biz)
         : (booking.business_type === 'venue' || booking.metadata?.business_type === 'venue' || Boolean(booking.guest_count || booking.guestCount));
@@ -748,13 +761,13 @@ const BookingDetailsModalContent = ({
         }} onClick={onClose}>
             <div style={{
                 background: 'var(--bg-card)',
-                padding: isMobile ? '16px 16px 24px 16px' : '22px 28px',
+                padding: isMobile ? '16px 16px 0 16px' : '22px 28px',
                 borderRadius: isMobile ? '24px 24px 0 0' : '20px',
                 width: '100%',
                 maxWidth: isMobile ? '100%' : '680px',
                 boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
                 border: '1px solid var(--border)',
-                maxHeight: isMobile ? '92vh' : '90vh',
+                maxHeight: isMobile ? '92dvh' : '90vh',
                 overflowY: 'auto'
             }} onClick={e => e.stopPropagation()}>
                 {/* Header */}
@@ -793,6 +806,7 @@ const BookingDetailsModalContent = ({
                                     alignItems: 'center',
                                     gap: '4px',
                                     padding: '6px 12px',
+                                    minHeight: isMobile ? '40px' : 'auto',
                                     borderRadius: '8px',
                                     border: '1px solid var(--border)',
                                     background: 'var(--bg-main)',
@@ -811,6 +825,7 @@ const BookingDetailsModalContent = ({
                                     onClick={handleCancelEdit}
                                     style={{
                                         padding: '6px 12px',
+                                        minHeight: isMobile ? '40px' : 'auto',
                                         borderRadius: '8px',
                                         border: '1px solid var(--border)',
                                         background: 'var(--bg-main)',
@@ -827,6 +842,7 @@ const BookingDetailsModalContent = ({
                                     disabled={isSaving}
                                     style={{
                                         padding: '6px 14px',
+                                        minHeight: isMobile ? '40px' : 'auto',
                                         borderRadius: '8px',
                                         border: 'none',
                                         background: 'var(--primary-paddle)',
@@ -841,7 +857,7 @@ const BookingDetailsModalContent = ({
                                 </button>
                             </div>
                         )}
-                        <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: '22px', cursor: 'pointer', color: 'var(--text-secondary)', marginLeft: '4px' }}>&times;</button>
+                        <button onClick={onClose} aria-label="Cerrar" style={{ background: 'transparent', border: 'none', fontSize: isMobile ? '28px' : '22px', cursor: 'pointer', color: 'var(--text-secondary)', marginLeft: '4px', width: isMobile ? '44px' : 'auto', height: isMobile ? '44px' : 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>&times;</button>
                     </div>
                 </div>
 
@@ -2185,7 +2201,8 @@ const BookingDetailsModalContent = ({
                             </div>
 
                             {/* BOTTOM ACTION BUTTONS FOR RENTALS */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                            {hasPrimaryAction && (
+                            <div className={isMobile ? 'booking-action-bar--mobile' : undefined} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', ...actionBarStyle }}>
                                 {(booking.status === 'pending' || booking.status === 'deposit_paid') && (
                                     <button
                                         onClick={() => booking.status === 'pending' && onAction('confirm_deposit', { depositAmount: activeDeposit })}
@@ -2255,6 +2272,9 @@ const BookingDetailsModalContent = ({
                                     </button>
                                 )}
 
+                            </div>
+                            )}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingBottom: isMobile ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : 0 }}>
                                 {booking.status !== 'cancelled' && booking.status !== 'completed' && (
                                     <button
                                         onClick={(e) => {
@@ -2823,7 +2843,8 @@ const BookingDetailsModalContent = ({
                             </div>
 
                             {/* Action Buttons Grid for Sports */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                            {hasPrimaryAction && (
+                            <div className={isMobile ? 'booking-action-bar--mobile' : undefined} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', ...actionBarStyle }}>
                                 {(booking.status === 'pending' || booking.status === 'deposit_paid') && (
                                     <button
                                         onClick={() => {
@@ -2901,6 +2922,9 @@ const BookingDetailsModalContent = ({
                                         <span>✓</span> Finalizar Turno
                                     </button>
                                 )}
+                            </div>
+                            )}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingBottom: isMobile ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : 0 }}>
                                 {booking.status !== 'cancelled' && booking.status !== 'completed' && (
                                     <button
                                         onClick={(e) => {
