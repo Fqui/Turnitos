@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
 import usePushAlerts, { PUSH_HELP } from '../../hooks/usePushAlerts';
 import { isSportBusiness } from '../../utils/businessUtils';
+import { BOTTOM_NAV_HEIGHT } from './BusinessPortalBottomNav';
 
 const BusinessPortalSidebar = ({
     isVisible,
@@ -134,7 +135,7 @@ const BusinessPortalSidebar = ({
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: isMobile ? 'calc(100vh - 60px)' : '100vh',
+                height: isMobile ? 'calc(100dvh - 60px)' : '100vh',
                 zIndex: 99,
                 overflowY: isVisible ? 'auto' : 'hidden',
                 overflowX: 'hidden',
@@ -421,7 +422,8 @@ const BusinessPortalSidebar = ({
                 flexDirection: 'column',
                 width: '100%',
                 alignItems: 'center',
-                paddingBottom: isMobile ? '20px' : 0
+                // En celular la barra de secciones queda encima: el final del menú no se tapa
+                paddingBottom: isMobile ? `calc(${BOTTOM_NAV_HEIGHT + 20}px + env(safe-area-inset-bottom, 0px))` : 0
             }}>
                 <div style={{
                     background: 'var(--bg-main)',

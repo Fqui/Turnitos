@@ -12,6 +12,8 @@ import { formatDisplayDate } from '../utils/dateUtils';
 import { isRentalBusiness as isRentalBiz } from '../utils/businessUtils';
 import BusinessLogin from '../components/business/BusinessLogin';
 import BusinessPortalSidebar from '../components/business/BusinessPortalSidebar';
+import BusinessPortalBottomNav, { BOTTOM_NAV_HEIGHT } from '../components/business/BusinessPortalBottomNav';
+import { isSportBusiness } from '../utils/businessUtils';
 import BookingDetailsModal from '../components/business/BookingDetailsModal';
 import NewBookingModal from '../components/business/NewBookingModal';
 import BlockSlotModal from '../components/business/BlockSlotModal';
@@ -1062,7 +1064,9 @@ export default function BusinessPortal() {
             {/* Mobile Header */}
             {isMobile && (
                 <div style={{
-                    padding: '12px 20px',
+                    padding: '8px 16px 8px 20px',
+                    minHeight: '60px',
+                    boxSizing: 'border-box',
                     background: 'var(--bg-card)',
                     borderBottom: '1px solid var(--border)',
                     display: 'flex',
@@ -1087,12 +1091,14 @@ export default function BusinessPortal() {
                     </div>
                     <button
                         onClick={() => setShowSidebar(!showSidebar)}
+                        aria-label={showSidebar ? 'Cerrar menú' : 'Abrir menú'}
+                        aria-expanded={showSidebar}
                         style={{
                             background: 'var(--bg-main)',
                             border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            width: '36px',
-                            height: '36px',
+                            borderRadius: '10px',
+                            width: '44px',
+                            height: '44px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -1125,10 +1131,22 @@ export default function BusinessPortal() {
                 }}
             />
 
+            {isMobile && (
+                <BusinessPortalBottomNav
+                    viewMode={viewMode}
+                    setViewMode={setViewMode}
+                    isSport={isSportBusiness(currentBusiness)}
+                    pendingCount={bookings.filter(b => b.status === 'pending').length}
+                    isMenuOpen={showSidebar}
+                    onToggleMenu={setShowSidebar}
+                />
+            )}
+
             {/* Main Content Area */}
             <div ref={contentRef} style={{
                 flex: 1,
-                padding: isMobile ? '16px' : '24px 40px',
+                // En celular deja lugar abajo para la barra de secciones
+                padding: isMobile ? `16px 16px calc(${BOTTOM_NAV_HEIGHT + 16}px + env(safe-area-inset-bottom, 0px))` : '24px 40px',
                 maxWidth: '1600px',
                 width: '100%',
                 height: isMobile ? 'auto' : '100vh',
