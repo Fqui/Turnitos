@@ -1582,7 +1582,7 @@ const buildAccessMessage = ({ name, email, password, slug }) => [
     `Contraseña provisoria: ${password}`,
     '',
     'Al entrar te vamos a pedir que elijas una contraseña nueva. Después completá tu perfil (logo, horarios y servicios o precios) para que aparezca en la página.',
-    slug ? `Tu página: https://www.turnitoslr.com/${slug}` : ''
+    slug ? `Tu página: https://${slug}.turnitoslr.com` : ''
 ].filter((line, i, arr) => line !== '' || arr[i - 1] !== '').join('\n').trim();
 
 const CredentialsRow = ({ label, value }) => {
