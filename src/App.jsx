@@ -198,9 +198,11 @@ function useScrollMemory() {
 const getRouteKey = (pathname) =>
   pathname.replace(/^(\/[^/]+)\/(?:turnos|tienda|bio)\/?$/, '$1').replace(/\/turnos\/?$/, '') || '/';
 
+// The new page shows up at full opacity, with no fade-in: when the browser pauses
+// animations the fade-in never ran and the page stayed invisible, showing only
+// the background until a reload. Only the old page fades out.
 const pageTransition = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { duration: 0.2, ease: 'easeOut' } },
+  animate: { opacity: 1 },
   exit: { opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } }
 };
 
@@ -320,7 +322,7 @@ function AppContent() {
             <motion.div
               key={routeKey}
               variants={pageTransition}
-              initial="initial"
+              initial={false}
               animate="animate"
               exit="exit"
               style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}
