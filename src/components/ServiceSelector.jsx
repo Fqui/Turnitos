@@ -639,8 +639,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                     <ShareButton
                                         variant="compact"
                                         label="Compartir servicio"
-                                        menuPlacement="up"
-                                        menuAlign="left"
+                                        image={detailPhotos[0]}
                                         url={getShareUrl(detailService)}
                                         title={`${detailService.name} · ${businessName}`}
                                         text={`Mirá ${detailService.name} en ${businessName}. Reservá tu turno online:`}

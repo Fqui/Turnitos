@@ -1207,6 +1207,7 @@ export default function BusinessStore({ overrideSlug }) {
                                         <ShareButton
                                             variant="circle"
                                             label="Compartir producto"
+                                            image={getProductImages(selectedProductModal)[0]}
                                             url={buildBusinessShareUrl(business.slug, '/tienda', { producto: selectedProductModal.id })}
                                             title={`${selectedProductModal.name} · ${business.name}`}
                                             text={`Mirá ${selectedProductModal.name} en la tienda de ${business.name}:`}

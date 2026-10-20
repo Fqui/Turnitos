@@ -85,6 +85,7 @@ export default function ProfileHeroBanner({
                 <ShareButton
                     variant="icon"
                     label="Compartir negocio"
+                    image={business.banner_image || business.image || business.logo}
                     url={shareUrl}
                     title={business.name}
                     text={`Reservá tu turno online en ${business.name}:`}

@@ -45,6 +45,7 @@ export default function VenueHeroBanner({
             <ShareButton
                 variant="icon"
                 label="Compartir"
+                image={business.banner_image || business.banner_url || business.image || galleryImages[0]?.url}
                 url={shareUrl}
                 title={business.name}
                 text={`Mirá ${business.name} y reservá tu fecha online:`}

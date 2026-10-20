@@ -10,15 +10,38 @@ export function buildBusinessShareUrl(slug, path = '', params = {}) {
     return `https://${slug}.turnitoslr.com${path}${query ? `?${query}` : ''}`;
 }
 
-// Phones get the native share sheet (WhatsApp, Instagram, etc.). Desktops get our own menu,
-// because the Windows/macOS share dialog is unfamiliar and doesn't always list WhatsApp.
-export function canUseNativeShare() {
-    if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return false;
-    return window.matchMedia?.('(pointer: coarse)').matches ?? false;
+// "Más opciones" in our share menu opens the system share sheet, only where the browser has one
+export function hasNativeShare() {
+    return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+}
+
+// Touch phones and narrow windows get the bottom sheet; desktops get the centered modal
+export function isPhoneLayout() {
+    if (typeof window === 'undefined') return false;
+    return (window.matchMedia?.('(pointer: coarse)').matches ?? false) || window.innerWidth < 640;
 }
 
 export function buildWhatsAppShareUrl(text, url) {
     return `https://wa.me/?text=${encodeURIComponent(text ? `${text}\n${url}` : url)}`;
+}
+
+export function buildFacebookShareUrl(url) {
+    return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+}
+
+// Link shown in the share preview: no protocol, no trailing slash
+export function displayShareUrl(url) {
+    return (url || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+}
+
+// Returns false when the clipboard is blocked (old browser or no permission)
+export async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 // Booking source: a business opened on the TurnitosLR site itself (www.turnitoslr.com/negocio)
