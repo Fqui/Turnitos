@@ -63,10 +63,11 @@ function renderHead({ title, description, image, canonical, url, robots, schema 
 
 async function findBusiness(slug) {
     const supabase = createClient(supabaseUrl, supabaseKey);
+    // Anonymous visitors can only read the public view (the businesses table is locked to managers).
     // Same lookup as the app: "spa-3-soles" also finds "spa3soles"
     const noHyphens = slug.replace(/-/g, '');
     let query = supabase
-        .from('businesses')
+        .from('businesses_public')
         .select('id, name, slug, type, description, location, latitude, longitude, whatsapp, instagram, facebook, tiktok, hours, rating, banner_image, banner_url, logo, logo_url, metadata, store_enabled, time_ranges, categories(name), services(*), specialists(*), courts(*), bookable_resources:resources(id, name, type, base_price, active)');
     query = slug === noHyphens ? query.eq('slug', slug) : query.or(`slug.eq.${slug},slug.eq.${noHyphens}`);
     const { data, error } = await query.limit(1).maybeSingle();

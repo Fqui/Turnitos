@@ -22,7 +22,7 @@ export default async function handler(req, res) {
         const supabase = createClient(supabaseUrl, supabaseKey);
         // Same data the profile checklist needs to decide if a business is listed
         const { data, error } = await supabase
-            .from('businesses')
+            .from('businesses_public')
             .select('slug, type, logo, logo_url, banner_image, banner_url, location, description, hours, time_ranges, metadata, store_enabled, categories(name), services(*), specialists(*), courts(*), bookable_resources:resources(id, name, type, base_price, active)')
             .not('slug', 'is', null)
             .order('created_at', { ascending: true });
