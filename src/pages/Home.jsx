@@ -37,8 +37,6 @@ export default function Home() {
     const [loading, setLoading] = useState(true);
     const [isNearMeActive, setIsNearMeActive] = useState(false); // ✅ New state for Near Me
     const [visibleCount, setVisibleCount] = useState(20);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const loadMoreRef = useRef(null);
     const resultsRef = useRef(null);
     const searchTimeoutRef = useRef(null);
     const syncedSearchRef = useRef(null);
@@ -328,31 +326,10 @@ export default function Home() {
         setVisibleCount(20);
     }, [searchTerm, selectedCategory, selectedSubCategory]);
 
-    // Infinite scroll observer
-    useEffect(() => {
-        if (!loadMoreRef.current) return;
-
-        const observer = new IntersectionObserver((entries) => {
-            const first = entries[0];
-            if (first.isIntersecting && visibleCount < filteredBusinesses.length && !isLoadingMore) {
-                setIsLoadingMore(true);
-                setTimeout(() => {
-                    setVisibleCount(prev => Math.min(prev + 20, filteredBusinesses.length));
-                    setIsLoadingMore(false);
-                }, 300);
-            }
-        }, {
-            root: null,
-            rootMargin: '200px',
-            threshold: 0.1
-        });
-
-        observer.observe(loadMoreRef.current);
-
-        return () => {
-            observer.disconnect();
-        };
-    }, [visibleCount, filteredBusinesses.length, isLoadingMore]);
+    const PAGE_SIZE = 20;
+    const handleShowMore = () => {
+        setVisibleCount(prev => Math.min(prev + PAGE_SIZE, filteredBusinesses.length));
+    };
 
     const paginatedBusinesses = useMemo(() => {
         return filteredBusinesses.slice(0, visibleCount);
@@ -1057,10 +1034,9 @@ export default function Home() {
                                 </div>
                             )}
 
-                            {/* Infinite Scroll Sentinel & Loader */}
+                            {/* Mostrar más: carga de a 20 para que el footer quede alcanzable */}
                             {visibleCount < filteredBusinesses.length && (
                                 <div
-                                    ref={loadMoreRef}
                                     style={{
                                         display: 'flex',
                                         flexDirection: 'column',
@@ -1070,16 +1046,25 @@ export default function Home() {
                                         gap: '10px'
                                     }}
                                 >
-                                    <div style={{
-                                        width: '28px',
-                                        height: '28px',
-                                        border: '3px solid var(--border)',
-                                        borderTopColor: 'var(--primary)',
-                                        borderRadius: '50%',
-                                        animation: 'spin 0.8s linear infinite'
-                                    }} />
+                                    <button
+                                        type="button"
+                                        onClick={handleShowMore}
+                                        style={{
+                                            padding: '12px 28px',
+                                            minHeight: '44px',
+                                            borderRadius: '999px',
+                                            border: '2px solid var(--primary)',
+                                            background: 'transparent',
+                                            color: 'var(--primary)',
+                                            fontSize: '15px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Mostrar más
+                                    </button>
                                     <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                                        Cargando más negocios... ({paginatedBusinesses.length} de {filteredBusinesses.length})
+                                        {paginatedBusinesses.length} de {filteredBusinesses.length} negocios
                                     </span>
                                 </div>
                             )}
