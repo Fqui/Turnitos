@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigationType, Navigate } from 'react-router-dom';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -231,7 +231,29 @@ function AppContent() {
     if (prev.routeKey === routeKey || subdomain) applyScroll(pendingScroll.current);
   }, [location.key, location.pathname, navigationType, routeKey, subdomain]);
 
+  // Safety net: the new page waits for the old one's fade-out, and if that
+  // animation never finishes (browsers that pause animation frames, e.g. some
+  // in-app browsers) the URL changes but the old page stays until a reload.
+  // Remounting the presence drops the stuck page and shows the new one.
+  const [presenceKey, setPresenceKey] = useState(0);
+  const exitPending = useRef(false);
+  const shownRouteKey = useRef(routeKey);
+
+  useEffect(() => {
+    if (shownRouteKey.current === routeKey) return;
+    shownRouteKey.current = routeKey;
+    exitPending.current = true;
+    const timer = setTimeout(() => {
+      if (!exitPending.current) return;
+      exitPending.current = false;
+      setPresenceKey(k => k + 1);
+      applyScroll(pendingScroll.current);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [routeKey]);
+
   const handleExitComplete = useCallback(() => {
+    exitPending.current = false;
     applyScroll(pendingScroll.current);
   }, []);
 
@@ -294,7 +316,7 @@ function AppContent() {
         width: '100%'
       }}>
         <ErrorBoundary>
-          <AnimatePresence mode="wait" initial={false} onExitComplete={handleExitComplete}>
+          <AnimatePresence key={presenceKey} mode="wait" initial={false} onExitComplete={handleExitComplete}>
             <motion.div
               key={routeKey}
               variants={pageTransition}
