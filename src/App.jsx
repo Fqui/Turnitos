@@ -268,8 +268,8 @@ function AppContent() {
   if (subdomain && (location.pathname === '/' || location.pathname === '/turnos' || location.pathname === '/tienda')) {
     const isBio = location.pathname === '/';
     return (
-      <div className="app-container" style={{ 
-        minHeight: '100dvh', 
+      <div className={`app-container${isBio ? ' linkbio-page' : ''}`} style={{
+        minHeight: '100dvh',
         display: 'flex', 
         flexDirection: 'column',
         backgroundColor: 'var(--bg-main)'
@@ -303,8 +303,8 @@ function AppContent() {
   }
 
   return (
-    <div className="app-container" style={{ 
-      minHeight: '100dvh', 
+    <div className={`app-container${isLinkBio ? ' linkbio-page' : ''}`} style={{
+      minHeight: '100dvh',
       display: 'flex', 
       flexDirection: 'column',
       backgroundColor: 'var(--bg-main)'

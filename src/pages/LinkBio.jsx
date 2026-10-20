@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
@@ -52,6 +52,7 @@ const LinkBio = ({ overrideSlug = null }) => {
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
     const [selectedHighlight, setSelectedHighlight] = useState(null);
     const [storyViewerList, setStoryViewerList] = useState(null);
+    const bodyWrapperRef = useRef(null);
 
     const getBookingPath = (hash = '') => {
         if (overrideSlug) {
@@ -137,6 +138,31 @@ const LinkBio = ({ overrideSlug = null }) => {
             root.style.removeProperty('--border');
         };
     }, [business]);
+
+    // Fit the whole bio on screen: the banner shrinks first (CSS); if it
+    // still overflows, scale the content down a little instead of scrolling.
+    useLayoutEffect(() => {
+        const wrapper = bodyWrapperRef.current;
+        const scroller = wrapper?.closest('main');
+        if (!wrapper || !scroller) return;
+
+        const fit = () => {
+            wrapper.style.zoom = '';
+            let zoom = 1;
+            // A few passes: the negative top margin also scales, so one pass falls short.
+            for (let i = 0; i < 3 && zoom > 0.78; i++) {
+                const overflow = scroller.scrollHeight - scroller.clientHeight;
+                if (overflow <= 0) break;
+                zoom = Math.max(0.78, zoom * (1 - (overflow + 1) / wrapper.getBoundingClientRect().height));
+                wrapper.style.zoom = String(zoom);
+            }
+        };
+
+        fit();
+        document.fonts?.ready.then(fit);
+        window.addEventListener('resize', fit);
+        return () => window.removeEventListener('resize', fit);
+    }, [business, loading]);
 
     if (loading) {
         return <PageLoader />;
@@ -289,7 +315,7 @@ const LinkBio = ({ overrideSlug = null }) => {
             </div>
 
             {/* Main Unified Content Body */}
-            <div className="linkbio-body-wrapper" style={{ marginTop: logoOverlap }}>
+            <div ref={bodyWrapperRef} className="linkbio-body-wrapper" style={{ marginTop: logoOverlap }}>
                 {/* Profile Section */}
                 <motion.div
                     className="linkbio-profile-card"
