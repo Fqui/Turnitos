@@ -15,10 +15,17 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload();
 });
 
+const BUSINESS_ROUTES = ['/portal', '/business-portal', '/login', '/seller', '/admin'];
+const isBusinessPath = (path) => BUSINESS_ROUTES.some(route => path.startsWith(route));
+
+// The app is installable only for businesses: block the browser's install banner on public pages
+window.addEventListener('beforeinstallprompt', (event) => {
+  if (!isBusinessPath(window.location.pathname)) event.preventDefault();
+});
+
 // Register Service Worker for PWA ONLY on business/seller/admin routes
 if ('serviceWorker' in navigator) {
-  const path = window.location.pathname;
-  const isBusinessRoute = path.startsWith('/portal') || path.startsWith('/seller') || path.startsWith('/admin');
+  const isBusinessRoute = isBusinessPath(window.location.pathname);
 
   if (isBusinessRoute) {
     // Inject PWA manifest only for business routes
