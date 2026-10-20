@@ -2,6 +2,21 @@ import { supabase } from '../supabaseClient';
 import { createDefaultSubscription } from './subscriptionService';
 import { syncBusinessResources } from './resourceService';
 import { updateServiceSpecialists } from './bookingService';
+import { serviceImageColumns } from '../../utils/serviceImages';
+
+// New services always get `images` (seeded from image_url), so a bulk insert never sends null.
+const withInsertImages = (row) => ('images' in row ? row : { ...row, images: row.image_url ? [row.image_url] : [] });
+
+// Rows without `images` (older forms) go in their own batch so the column is left untouched for them.
+async function upsertServiceRows(rows) {
+    const batches = [rows.filter(r => 'images' in r), rows.filter(r => !('images' in r))];
+    for (const batch of batches) {
+        if (batch.length === 0) continue;
+        const { error } = await supabase.from('services').upsert(batch);
+        if (error) return { error };
+    }
+    return { error: null };
+}
 
 // The full row (owner email, coupons, account data) is only readable by the business's
 // owner, its seller or the SuperAdmin; everyone else reads the public view.
@@ -661,12 +676,12 @@ export async function createBusiness(businessData) {
     if (businessData.services && businessData.services.length > 0) {
         await supabase.from('services').delete().eq('business_id', business.id);
 
-        const servicesToInsert = businessData.services.map(s => ({
+        const servicesToInsert = businessData.services.map(s => withInsertImages({
             business_id: business.id,
             name: s.name,
             duration: s.duration,
             price: s.price,
-            image_url: s.image || s.image_url,
+            ...serviceImageColumns(s),
             description: s.description,
             category: s.category
         }));
@@ -909,14 +924,14 @@ export async function updateBusiness(businessId, businessData) {
                 name: s.name,
                 duration: parseInt(s.duration) || 60,
                 price: parseFloat(s.price) || 0,
-                image_url: s.image || s.image_url,
+                ...serviceImageColumns(s),
                 description: s.description,
                 category: s.category,
                 location_mode: ['local', 'home', 'both'].includes(s.location_mode) ? s.location_mode : 'local'
             };
 
             if (isNew) {
-                servicesToInsert.push(serviceData);
+                servicesToInsert.push(withInsertImages(serviceData));
                 newServiceSpecialists.push(specIds);
             } else {
                 serviceData.id = s.id;
@@ -926,7 +941,7 @@ export async function updateBusiness(businessId, businessData) {
         });
 
         if (servicesToUpdate.length > 0) {
-            await supabase.from('services').upsert(servicesToUpdate);
+            await upsertServiceRows(servicesToUpdate);
         }
 
         if (servicesToInsert.length > 0) {
@@ -1376,11 +1391,11 @@ export async function patchBusiness(businessId, updates) {
                 duration: Number(s.duration) || 60,
                 description: s.description || '',
                 category: s.category || '',
-                image_url: s.image_url || s.image || null,
+                ...serviceImageColumns(s),
                 location_mode: ['local', 'home', 'both'].includes(s.location_mode) ? s.location_mode : 'local'
             }));
 
-            const { error: upsertServicesErr } = await supabase.from('services').upsert(servicesToUpsert);
+            const { error: upsertServicesErr } = await upsertServiceRows(servicesToUpsert);
             if (upsertServicesErr) throw upsertServicesErr;
 
             for (const s of updates.services) {

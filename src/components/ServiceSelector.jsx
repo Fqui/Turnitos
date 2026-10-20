@@ -4,6 +4,8 @@ import { Clock, Info, X, Calendar, CalendarCheck, CheckCircle2, ArrowRight, Spar
 import { doesPromoApplyToService, calculatePromoDiscount, parsePromotionTarget } from '../utils/promotionUtils';
 import HorizontalScroller from './HorizontalScroller';
 import ShareButton from './common/ShareButton';
+import ServicePhotoCarousel from './ServicePhotoCarousel';
+import { getServiceImages } from '../utils/serviceImages';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 // Display-only: category names come from each business ("combos" → "Combos")
@@ -38,6 +40,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
     const filteredServices = activeCategory === 'Todos'
         ? services
         : services.filter(s => s.category === activeCategory);
+    const detailPhotos = detailService ? getServiceImages(detailService) : [];
 
     return (
         <div>
@@ -77,6 +80,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                     const promoApplies = doesPromoApplyToService(activePromotion, service);
                     const promoInfo = promoApplies ? calculatePromoDiscount(service.price, activePromotion) : null;
                     const promoParsed = promoApplies ? parsePromotionTarget(activePromotion) : null;
+                    const photos = getServiceImages(service);
                     return (
                         <div
                             key={service.id}
@@ -169,9 +173,9 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                     backgroundColor: '#f1f5f9',
                                     border: '1px solid var(--border)'
                                 }}>
-                                    {service.image || service.image_url ? (
+                                    {photos.length > 0 ? (
                                         <img
-                                            src={service.image || service.image_url}
+                                            src={photos[0]}
                                             alt={service.name}
                                             style={{
                                                 width: '100%',
@@ -214,6 +218,24 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                             zIndex: 2
                                         }}>
                                             {service.category}
+                                        </div>
+                                    )}
+
+                                    {photos.length > 1 && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: '10px',
+                                            left: '10px',
+                                            padding: '4px 8px',
+                                            borderRadius: '8px',
+                                            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                                            backdropFilter: 'blur(6px)',
+                                            color: '#ffffff',
+                                            fontSize: '10px',
+                                            fontWeight: '700',
+                                            zIndex: 2
+                                        }}>
+                                            {photos.length} fotos
                                         </div>
                                     )}
 
@@ -420,9 +442,11 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 overflow: 'hidden',
                                 flexShrink: 0
                             }}>
-                                {detailService.image || detailService.image_url ? (
+                                {detailPhotos.length > 1 ? (
+                                    <ServicePhotoCarousel images={detailPhotos} alt={detailService.name} color={color} />
+                                ) : detailPhotos.length === 1 ? (
                                     <img
-                                        src={detailService.image || detailService.image_url}
+                                        src={detailPhotos[0]}
                                         alt={detailService.name}
                                         style={{
                                             width: '100%',

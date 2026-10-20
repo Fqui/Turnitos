@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import LocationModePicker from './LocationModePicker';
+import ServicePhotosEditor from './ServicePhotosEditor';
 import { getLocationMode } from '../../../utils/homeService';
+import { getServiceImages } from '../../../utils/serviceImages';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
@@ -27,7 +29,7 @@ export default function ServicesTab({
         duration: 60,
         description: '',
         category: '',
-        image_url: null,
+        images: [],
         specialist_ids: [],
         location_mode: 'local'
     });
@@ -73,7 +75,8 @@ export default function ServicesTab({
             duration: Number(newService.duration) || 60,
             category: newService.category || '',
             description: (newService.description || '').trim(),
-            image_url: newService.image_url || null,
+            image_url: newService.images[0] || null,
+            images: newService.images,
             specialist_ids: selectedSpecs,
             location_mode: getLocationMode(newService)
         };
@@ -92,7 +95,7 @@ export default function ServicesTab({
             duration: 60,
             description: '',
             category: serviceCategories[0] || '',
-            image_url: null,
+            images: [],
             specialist_ids: [],
             location_mode: 'local'
         });
@@ -319,7 +322,7 @@ export default function ServicesTab({
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                    <div>
+                    <div style={{ gridColumn: '1 / -1' }}>
                         <label style={labelStyle}>Categoría</label>
                         <select
                             style={inputStyle}
@@ -333,52 +336,17 @@ export default function ServicesTab({
                         </select>
                     </div>
 
-                    <div>
-                        <label style={labelStyle}>Foto / Imagen del Servicio (Opcional)</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {newService.image_url && (
-                                <img
-                                    src={newService.image_url}
-                                    alt="Preview"
-                                    style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }}
-                                />
-                            )}
-                            <input
-                                type="file"
-                                id="new-service-file-input"
-                                style={{ display: 'none' }}
-                                accept="image/*"
-                                onChange={async (e) => {
-                                    const file = e.target.files[0];
-                                    if (!file) return;
-                                    try {
-                                        showToast('Subiendo imagen...', 'info');
-                                        const url = await serviceAdapter.uploadImage(file);
-                                        setNewService(prev => ({ ...prev, image_url: url }));
-                                        showToast('Imagen cargada', 'success');
-                                    } catch (err) {
-                                        console.error(err);
-                                        showToast('Error al subir imagen', 'error');
-                                    }
-                                }}
-                            />
-                            <label
-                                htmlFor="new-service-file-input"
-                                style={{ ...buttonSecondaryStyle, padding: '8px 14px', fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                            >
-                                📷 {newService.image_url ? 'Cambiar Foto' : 'Subir Foto'}
-                            </label>
-                            {newService.image_url && (
-                                <button
-                                    type="button"
-                                    onClick={() => setNewService(prev => ({ ...prev, image_url: null }))}
-                                    style={{ border: 'none', background: 'transparent', color: '#ef4444', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
-                                >
-                                    Quitar
-                                </button>
-                            )}
-                        </div>
-                    </div>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                    <ServicePhotosEditor
+                        inputId="new-service-file-input"
+                        images={newService.images}
+                        onChange={images => setNewService(prev => ({ ...prev, images }))}
+                        showToast={showToast}
+                        labelStyle={labelStyle}
+                        buttonSecondaryStyle={buttonSecondaryStyle}
+                    />
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
@@ -560,6 +528,7 @@ export default function ServicesTab({
                         {services.map((service, index) => {
                             const assignedSpecIds = serviceSpecialists[service.id] || [];
                             const assignedSpecs = specialistsList.filter(s => assignedSpecIds.includes(s.id));
+                            const photos = getServiceImages(service);
 
                             return (
                                 <div
@@ -586,12 +555,22 @@ export default function ServicesTab({
                                         flexShrink: 0,
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center'
+                                        justifyContent: 'center',
+                                        position: 'relative'
                                     }}>
-                                        {service.image_url ? (
-                                            <img src={service.image_url} alt={service.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        {photos.length > 0 ? (
+                                            <img src={photos[0]} alt={service.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
                                             <span style={{ fontSize: '28px' }}>💆‍♀️</span>
+                                        )}
+                                        {photos.length > 1 && (
+                                            <span style={{
+                                                position: 'absolute', right: '4px', bottom: '4px',
+                                                background: 'rgba(0,0,0,0.7)', color: '#fff',
+                                                fontSize: '10px', fontWeight: 800, borderRadius: '8px', padding: '1px 6px'
+                                            }}>
+                                                {photos.length} 📷
+                                            </span>
                                         )}
                                     </div>
 
@@ -660,6 +639,7 @@ export default function ServicesTab({
                                             type="button"
                                             onClick={() => setEditingService({
                                                 ...service,
+                                                images: photos,
                                                 specialist_ids: serviceSpecialists[service.id] || []
                                             })}
                                             style={{ ...buttonSecondaryStyle, padding: '8px 14px', fontSize: '13px' }}
@@ -810,72 +790,15 @@ export default function ServicesTab({
                             />
 
                             {/* Photo / Image in Edit Modal */}
-                            <div>
-                                <label style={labelStyle}>Foto / Imagen del Servicio (Opcional)</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: 'var(--bg-main)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                    {editingService.image_url ? (
-                                        <img
-                                            src={editingService.image_url}
-                                            alt="Preview"
-                                            style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '10px', border: '1px solid var(--border)' }}
-                                        />
-                                    ) : (
-                                        <div style={{
-                                            width: '56px',
-                                            height: '56px',
-                                            borderRadius: '10px',
-                                            background: 'var(--border)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '24px',
-                                            color: 'var(--text-secondary)'
-                                        }}>
-                                            🖼️
-                                        </div>
-                                    )}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                            <input
-                                                type="file"
-                                                id="edit-service-file-input"
-                                                style={{ display: 'none' }}
-                                                accept="image/*"
-                                                onChange={async (e) => {
-                                                    const file = e.target.files[0];
-                                                    if (!file) return;
-                                                    try {
-                                                        showToast('Subiendo imagen...', 'info');
-                                                        const url = await serviceAdapter.uploadImage(file);
-                                                        setEditingService(prev => ({ ...prev, image_url: url }));
-                                                        showToast('Imagen cargada correctamente', 'success');
-                                                    } catch (err) {
-                                                        console.error(err);
-                                                        showToast('Error al subir la imagen', 'error');
-                                                    }
-                                                }}
-                                            />
-                                            <label
-                                                htmlFor="edit-service-file-input"
-                                                style={{ ...buttonSecondaryStyle, padding: '6px 14px', fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                                            >
-                                                📷 {editingService.image_url ? 'Cambiar Foto' : 'Subir Foto'}
-                                            </label>
-                                            {editingService.image_url && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setEditingService(prev => ({ ...prev, image_url: null }))}
-                                                    style={{ border: 'none', background: 'transparent', color: '#ef4444', fontSize: '12px', fontWeight: '600', cursor: 'pointer', padding: '6px' }}
-                                                >
-                                                    🗑️ Quitar Foto
-                                                </button>
-                                            )}
-                                        </div>
-                                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                            {editingService.image_url ? 'Esta imagen se mostrará en tu catálogo público' : 'Sube una foto representativa (PNG, JPG o WebP)'}
-                                        </span>
-                                    </div>
-                                </div>
+                            <div style={{ background: 'var(--bg-main)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                <ServicePhotosEditor
+                                    inputId="edit-service-file-input"
+                                    images={editingService.images}
+                                    onChange={images => setEditingService(prev => ({ ...prev, images }))}
+                                    showToast={showToast}
+                                    labelStyle={labelStyle}
+                                    buttonSecondaryStyle={buttonSecondaryStyle}
+                                />
                             </div>
 
                             {/* Specialists in Modal */}
@@ -959,7 +882,8 @@ export default function ServicesTab({
                                                     duration: Number(editingService.duration),
                                                     category: editingService.category,
                                                     description: editingService.description,
-                                                    image_url: editingService.image_url,
+                                                    image_url: editingService.images?.[0] || null,
+                                                    images: editingService.images || [],
                                                     specialist_ids: editingService.specialist_ids || [],
                                                     location_mode: getLocationMode(editingService)
                                                 };
