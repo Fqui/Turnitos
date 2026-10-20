@@ -96,9 +96,9 @@ export default function HomeVisitSection({
                         type="button"
                         onClick={useMyLocation}
                         disabled={locating}
-                        style={{ minHeight: '44px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontWeight: 600, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit' }}
+                        style={{ minHeight: '44px', borderRadius: '12px', border: 0, background: accentColor || 'var(--primary)', color: '#0e1411', fontWeight: 700, fontSize: '14px', cursor: locating ? 'default' : 'pointer', opacity: locating ? 0.7 : 1, fontFamily: 'inherit' }}
                     >
-                        {locating ? 'Buscando tu ubicación...' : 'Usar mi ubicación'}
+                        {locating ? 'Buscando tu ubicación...' : '📍 Usar mi ubicación'}
                     </button>
                     {locError && <span style={{ fontSize: '12px', color: '#d97706' }}>{locError}</span>}
 
