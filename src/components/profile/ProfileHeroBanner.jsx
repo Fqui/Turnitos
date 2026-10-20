@@ -107,6 +107,7 @@ export default function ProfileHeroBanner({
                     {/* Business Profile Avatar with Instagram Story Gradient Ring */}
                     <div
                         onClick={onStoryClick}
+                        data-story-origin
                         className="business-avatar-container"
                         style={{
                             width: '106px',

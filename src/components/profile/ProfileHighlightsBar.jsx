@@ -29,6 +29,8 @@ export default function ProfileHighlightsBar({
                     <div
                         key={highlight.id || index}
                         className="highlight-item"
+                        data-story-origin
+                        data-highlight-index={index}
                         onClick={() => onSelectHighlight(index)}
                         style={{
                             flexShrink: 0,
@@ -40,7 +42,7 @@ export default function ProfileHighlightsBar({
                             gap: '8px'
                         }}
                     >
-                        <div style={{
+                        <div data-story-bubble style={{
                             width: '84px',
                             height: '84px',
                             borderRadius: '50%',

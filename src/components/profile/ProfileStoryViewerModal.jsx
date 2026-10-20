@@ -1,10 +1,31 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const STORY_DURATION = 5000; // 5 seconds per image slide
 const PROGRESS_INTERVAL = 30; // Update progress every 30ms
 const MEDIA_FADE_MS = 180; // Crossfade between stories
+const OPEN_EASE = [0.2, 0.8, 0.2, 1];
+
+/**
+ * Center of the bubble the viewer opens from / shrinks back into.
+ * Bubbles mark themselves with data-story-origin; highlight bubbles also carry
+ * data-highlight-index so closing returns to the highlight currently shown.
+ */
+function getOriginPoint(originEl, highlightIndex) {
+    if (!originEl || !originEl.isConnected) return null;
+    let el = originEl;
+    if (originEl.dataset.highlightIndex !== undefined && highlightIndex !== null) {
+        const row = originEl.parentElement;
+        el = row?.querySelector(`[data-highlight-index="${highlightIndex}"]`) || originEl;
+    }
+    const target = el.querySelector('[data-story-bubble]') || el;
+    const rect = target.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return null;
+    return { x, y };
+}
 
 /**
  * Detect if a URL points to a video file
@@ -299,6 +320,27 @@ export default function ProfileStoryViewerModal({
 
     useBodyScrollLock(isOpen);
 
+    // Remember which bubble was tapped so the viewer grows out of it
+    const originElRef = useRef(null);
+    const isOpenRef = useRef(isOpen);
+    isOpenRef.current = isOpen;
+    useEffect(() => {
+        const remember = (e) => {
+            const el = e.target?.closest?.('[data-story-origin]');
+            if (el) originElRef.current = el;
+            else if (!isOpenRef.current) originElRef.current = null;
+        };
+        window.addEventListener('pointerdown', remember, true);
+        return () => window.removeEventListener('pointerdown', remember, true);
+    }, []);
+    // The exit uses the last rendered props, so this already points at the
+    // bubble of the highlight being shown when the viewer closes
+    const origin = useMemo(
+        () => (isOpen ? getOriginPoint(originElRef.current, selectedHighlight) : null),
+        [isOpen, selectedHighlight]
+    );
+    const hiddenState = origin ? { opacity: 0, scale: 0.12 } : { opacity: 0, scale: 0.94 };
+
     // Previous media stays under the new one until it has faded in
     const mediaLayers = [];
     if (isOpen) {
@@ -315,11 +357,11 @@ export default function ProfileStoryViewerModal({
             {isOpen && (
             <motion.div
                 key="story-viewer"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                initial={hiddenState}
+                animate={{ opacity: 1, scale: 1, transition: { duration: 0.32, ease: OPEN_EASE, opacity: { duration: 0.14 } } }}
+                exit={{ ...hiddenState, transition: { duration: 0.26, ease: [0.4, 0, 0.6, 1], opacity: { duration: 0.12, delay: 0.14 } } }}
                 style={{
+                    transformOrigin: origin ? `${origin.x}px ${origin.y}px` : '50% 50%',
                     position: 'fixed',
                     inset: 0,
                     backgroundColor: 'rgba(0,0,0,0.92)',

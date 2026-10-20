@@ -314,6 +314,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                         }
                     }}
                     className="linkbio-logo"
+                    data-story-origin
                     style={{
                         width: logoSize,
                         height: logoSize,
