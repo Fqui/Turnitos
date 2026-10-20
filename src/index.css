@@ -1308,10 +1308,15 @@ textarea {
 
 .highlight-item {
   transition: transform 0.2s ease, opacity 0.2s ease;
+  /* Sin el recuadro azul que Android pinta al tocar */
+  -webkit-tap-highlight-color: transparent;
 }
 
-.highlight-item:hover {
-  transform: translateY(-4px);
+/* Solo con mouse: en el celu el hover queda "pegado" al tocar y la burbuja salta */
+@media (hover: hover) {
+  .highlight-item:hover {
+    transform: translateY(-4px);
+  }
 }
 
 @media (min-width: 769px) {
