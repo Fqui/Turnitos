@@ -482,9 +482,8 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                     flexDirection: 'column',
                                     gap: '8px'
                                 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Detalle del Turno</span>
-                                        <span style={{ fontSize: '13px', fontWeight: '800', color: sportColor }}>{courtName || serviceName}</span>
+                                    <div style={{ fontSize: '14px', fontWeight: '800', color: sportColor, lineHeight: 1.3, overflowWrap: 'anywhere' }}>
+                                        {courtName || serviceName}
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-primary)', fontWeight: '700' }}>
                                         <span>{formatFriendlyDate(date)}</span>
