@@ -23,6 +23,10 @@ import BusinessSubscriptionView from '../components/business/BusinessSubscriptio
 import UpcomingRemindersCard from '../components/business/UpcomingRemindersCard';
 import PortalAnalyticsView from '../components/business/portal/PortalAnalyticsView';
 import PortalListView from '../components/business/portal/PortalListView';
+import PortalListMobile from '../components/business/portal/mobile/PortalListMobile';
+import { PHONE_MAX_WIDTH } from '../components/business/portal/mobile/bookingMobileUtils';
+import { Plus } from 'lucide-react';
+import '../styles/portalMobile.css';
 import PortalNewBookingAlert from '../components/business/portal/PortalNewBookingAlert';
 import PortalBillingBanner from '../components/business/portal/PortalBillingBanner';
 import PortalPushPrompt from '../components/business/portal/PortalPushPrompt';
@@ -175,12 +179,15 @@ export default function BusinessPortal() {
 
     // Responsive state
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+    // Phones get their own layout for some views; tablets keep the mobile one
+    const [isPhone, setIsPhone] = useState(window.innerWidth <= PHONE_MAX_WIDTH);
     const [showSidebar, setShowSidebar] = useState(window.innerWidth > 1024);
 
     useEffect(() => {
         const handleResize = () => {
             const mobile = window.innerWidth <= 1024;
             setIsMobile(mobile);
+            setIsPhone(window.innerWidth <= PHONE_MAX_WIDTH);
             if (!mobile) setShowSidebar(true);
         };
         window.addEventListener('resize', handleResize);
@@ -999,6 +1006,9 @@ export default function BusinessPortal() {
         }
     };
 
+    // Phone: floating "Nueva reserva" over the bottom bar in Calendario and Reservas
+    const showFab = isPhone && !showSidebar && (viewMode === 'calendar' || viewMode === 'list');
+
     if (requirePasswordChange) {
         const targetBusinessId = currentBusinessId || selectedBusinessId;
         const targetEmail = loginEmail || (businesses.find(b => b.id === targetBusinessId)?.email) || '';
@@ -1146,7 +1156,7 @@ export default function BusinessPortal() {
             <div ref={contentRef} style={{
                 flex: 1,
                 // En celular deja lugar abajo para la barra de secciones
-                padding: isMobile ? `16px 16px calc(${BOTTOM_NAV_HEIGHT + 16}px + env(safe-area-inset-bottom, 0px))` : '24px 40px',
+                padding: isMobile ? `16px 16px calc(${BOTTOM_NAV_HEIGHT + (showFab ? 80 : 16)}px + env(safe-area-inset-bottom, 0px))` : '24px 40px',
                 maxWidth: '1600px',
                 width: '100%',
                 height: isMobile ? 'auto' : '100vh',
@@ -1332,6 +1342,15 @@ export default function BusinessPortal() {
                                     }}
                                 />
                             )
+                        ) : isPhone ? (
+                            <PortalListMobile
+                                bookings={bookings}
+                                business={currentBusiness}
+                                isRentalBusiness={isRentalBusiness}
+                                listFilters={listFilters}
+                                setListFilters={setListFilters}
+                                onBookingClick={handleBookingClick}
+                            />
                         ) : (
                             <PortalListView
                                 bookings={bookings}
@@ -1351,6 +1370,13 @@ export default function BusinessPortal() {
                     </div>
                 )}
             </div>
+
+            {showFab && (
+                <button type="button" className="pm-fab" onClick={(e) => handleCreateBooking(e)}>
+                    <Plus size={20} strokeWidth={2.6} aria-hidden="true" />
+                    Nueva reserva
+                </button>
+            )}
 
             {/* Booking Details Modal */}
             <BookingDetailsModal
