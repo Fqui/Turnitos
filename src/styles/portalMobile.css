@@ -140,3 +140,40 @@
 .pm-btn--wa { background: var(--pm-wa); color: #FFFFFF; padding: 0; }
 .pm-sheet-foot.is-single .pm-btn--wa { padding: 0 16px; }
 .pm-btn--soft { background: var(--bg-input); color: var(--text-primary); }
+
+/* Agenda del día en celular */
+.pm-daynav { display: flex; align-items: center; gap: 6px; position: relative; }
+.pm-nav-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary); display: grid; place-items: center; cursor: pointer; flex: none; }
+.pm-daynav-lbl { flex: 1; min-width: 0; min-height: 44px; border: 0; background: transparent; color: var(--text-primary); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+.pm-daynav-lbl span { font-weight: 800; font-size: 16px; }
+.pm-daynav-lbl small { font-size: 12px; color: var(--text-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.pm-date-input { position: absolute; left: 50%; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+.pm-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.pm-wd { height: 62px; border: 0; border-radius: 14px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--text-secondary); cursor: pointer; padding: 0; }
+.pm-wd span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.pm-wd b { font-size: 17px; font-weight: 800; }
+.pm-wd i { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); opacity: 0; }
+.pm-wd.has i { opacity: 1; }
+.pm-wd.is-today b { color: var(--pm-ok); }
+.pm-wd[aria-pressed="true"] { background: var(--pm-ink); color: var(--pm-on-ink); }
+.pm-wd[aria-pressed="true"] b, .pm-wd[aria-pressed="true"] span { color: inherit; }
+.pm-wd[aria-pressed="true"] i { background: currentColor; }
+.pm-summary { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 16px; box-shadow: var(--pm-card-shadow); }
+[data-theme="dark"] .pm-summary { border-color: var(--border); }
+.pm-summary > div { padding: 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pm-summary > div + div { border-left: 1px solid var(--border-light); }
+.pm-summary b { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; }
+.pm-summary b.is-warn { color: var(--pm-warn); }
+.pm-summary span { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.pm-hint { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--primary-bg); color: var(--pm-ok); font-size: 13px; font-weight: 700; }
+.pm-timeline { display: flex; flex-direction: column; gap: 8px; }
+.pm-slot { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 10px; align-items: stretch; }
+.pm-slot-h { font-size: 13px; font-weight: 700; color: var(--text-muted); padding-top: 14px; }
+.pm-free { min-height: 48px; border-radius: 14px; border: 1.5px dashed var(--border); background: transparent; display: flex; align-items: center; gap: 8px; padding: 0 14px; color: var(--text-muted); font-weight: 600; font-size: 13px; width: 100%; cursor: pointer; }
+.pm-free:active, .pm-free:hover { border-color: var(--primary); color: var(--pm-ok); background: var(--primary-bg); }
+.pm-ev { position: relative; overflow: hidden; width: 100%; text-align: left; border-radius: 14px; padding: 11px 14px 11px 16px; display: flex; flex-direction: column; gap: 3px; border: 1px solid var(--border-light); background: var(--bg-card); box-shadow: var(--pm-card-shadow); color: var(--text-primary); cursor: pointer; }
+[data-theme="dark"] .pm-ev { border-color: var(--border); }
+.pm-ev::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--pm-c); }
+.pm-ev.is-moving { outline: 2px solid var(--primary); }
+.pm-ev-svc { font-size: 12.5px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-ev-when { font-size: 12px; color: var(--text-muted); font-weight: 600; }

@@ -1284,6 +1284,7 @@ export default function BusinessPortal() {
                                         bookings={bookings}
                                         business={currentBusiness}
                                         isMobile={isMobile}
+                                        isPhone={isPhone}
                                         onBlockSlot={handleBlockSlot}
                                         onUnblockSlot={handleUnblockSlot}
                                         onBlockDate={handleBlockDate}

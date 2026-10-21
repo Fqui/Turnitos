@@ -44,14 +44,14 @@ export function StatusPill({ statusKey }) {
     return <span className={`pm-st pm-st--${meta.tone}`}>{meta.label}</span>;
 }
 
-export function BlockRow({ booking, onClick, showResource = true, business }) {
+export function BlockRow({ booking, onClick, showResource = true, hideTime = false, business }) {
     const time = bookingTime(booking);
     const end = time ? addMinutesToTime(time, bookingDuration(booking)) : '';
     const resource = showResource ? bookingResourceName(booking, business) : '';
     return (
         <button type="button" className="pm-blk" onClick={() => onClick(booking)}>
             <Lock size={16} aria-hidden="true" />
-            {time && <b className="pm-tnum">{time}</b>}
+            {time && !hideTime && <b className="pm-tnum">{time}</b>}
             <span>
                 {blockReason(booking)}{end ? ` · hasta ${end}` : ''}{resource ? ` · ${resource}` : ''}
             </span>

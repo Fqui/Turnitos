@@ -15,7 +15,8 @@ export default function CalendarWrapper({
     isRescheduling,
     reschedulingBooking,
     onStartReschedule,
-    isMobile
+    isMobile,
+    isPhone = false
 }) {
     const calendarType = getCalendarType(business);
     const [activeTab, setActiveTab] = useState(calendarType === 'mixed' ? 'padel' : calendarType);
@@ -30,6 +31,7 @@ export default function CalendarWrapper({
                 onBookingClick={onBookingClick}
                 onBlockDate={onBlockDate}
                 isMobile={isMobile}
+                isPhone={isPhone}
             />
         );
     }
@@ -128,6 +130,7 @@ export default function CalendarWrapper({
                         reschedulingBooking={reschedulingBooking}
                         onStartReschedule={onStartReschedule}
                         isMobile={isMobile}
+                        isPhone={isPhone}
                     />
                 </div>
             </div>
@@ -149,6 +152,7 @@ export default function CalendarWrapper({
             reschedulingBooking={reschedulingBooking}
             onStartReschedule={onStartReschedule}
             isMobile={isMobile}
+            isPhone={isPhone}
         />
     );
 }

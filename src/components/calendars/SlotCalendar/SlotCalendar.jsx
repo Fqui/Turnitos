@@ -3,6 +3,7 @@ import CalendarHeader from '../shared/CalendarHeader';
 import DayView from './DayView';
 import WeekView from './WeekView';
 import MonthView from './MonthView';
+import PhoneDayAgenda from './PhoneDayAgenda';
 import { getSlotConfig, getResourcesByType } from '../shared/config';
 import { formatDateKey, generateWeekDays, generateMonthDays, normalizeDayMinutes } from '../shared/utils';
 import { formatLongDate } from '../../../utils/dateUtils';
@@ -19,7 +20,8 @@ export default function SlotCalendar({
     isRescheduling = false,
     reschedulingBooking = null,
     onStartReschedule,
-    isMobile = false
+    isMobile = false,
+    isPhone = false
 }) {
     const config = getSlotConfig(type);
     const [fetchedSpecialists, setFetchedSpecialists] = useState(business?.specialists || []);
@@ -250,6 +252,28 @@ export default function SlotCalendar({
         if (type === 'service') return 'Servicios';
         return 'Calendario';
     };
+
+    // Phone: day agenda as a list (no week grid)
+    if (isPhone) {
+        return (
+            <PhoneDayAgenda
+                type={type}
+                config={config}
+                business={business}
+                businessHours={dayBusinessHours}
+                resources={resources}
+                bookings={bookings}
+                currentDate={currentDate}
+                setCurrentDate={setCurrentDate}
+                onCreateBooking={onCreateBooking}
+                onBookingClick={onBookingClick}
+                onBlockSlot={onBlockSlot}
+                onMoveBooking={onMoveBooking}
+                isRescheduling={isRescheduling}
+                reschedulingBooking={reschedulingBooking}
+            />
+        );
+    }
 
     return (
         <div style={{
