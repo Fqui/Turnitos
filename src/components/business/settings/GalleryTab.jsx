@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import { isPhoneWidth } from '../portal/mobile/bookingMobileUtils';
 
 export default function GalleryTab({
     formData,
@@ -847,7 +848,14 @@ export default function GalleryTab({
                                         <img src={item.url} alt={`Foto ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         <button
                                             type="button"
-                                            onClick={() => {
+                                            className="pm-photo-del"
+                                            aria-label={`Borrar foto ${idx + 1}`}
+                                            onClick={async () => {
+                                                // Phone: a bigger button is easy to hit by accident, so it asks first
+                                                if (isPhoneWidth()) {
+                                                    const ok = await showConfirm('¿Borrar esta foto?', 'Se quita de la galería de tu página.', 'Borrar', 'Cancelar');
+                                                    if (!ok) return;
+                                                }
                                                 const updated = currentVenueGallery.filter((_, i) => i !== idx);
                                                 const newMetadata = { ...(formData.metadata || {}), venue_gallery: updated };
                                                 setFormData(prev => ({

@@ -1372,6 +1372,7 @@ export default function BusinessPortal() {
                                 <BusinessSettings
                                     business={currentBusiness}
                                     isMobile={isMobile}
+                                    isPhone={isPhone}
                                     initialTab={settingsTab}
                                     onUpdate={(updated) => {
                                         setBusinesses(prev => {

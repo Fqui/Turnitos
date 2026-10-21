@@ -4,6 +4,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import SubscriptionManager from './SubscriptionManager';
 import LinkBioButtonsSettings from './venue/LinkBioButtonsSettings';
 import CouponsSettings from './venue/CouponsSettings';
+import SettingsListPhone, { SettingsBackButton } from './business/portal/mobile/SettingsListPhone';
 
 // Modular Settings Tabs
 import GeneralTab from './business/settings/GeneralTab';
@@ -18,7 +19,7 @@ import GalleryTab from './business/settings/GalleryTab';
 import StoreTab from './business/settings/StoreTab';
 import HomeServiceTab from './business/settings/HomeServiceTab';
 
-export default function BusinessSettings({ business, onUpdate, isMobile, initialTab }) {
+export default function BusinessSettings({ business, onUpdate, isMobile, isPhone = false, initialTab }) {
     const { showToast, showConfirm, showAlert } = useNotification();
     
     // Check business type for initial tab selection
@@ -27,7 +28,10 @@ export default function BusinessSettings({ business, onUpdate, isMobile, initial
     const initType = (business?.type || '').toLowerCase();
     const initIsSport = initType === 'sport' || initCategory.includes('deporte') || initSubcat.includes('futbol') || initSubcat.includes('padel') || ((business?.courts?.length || 0) > 0);
 
-    const [activeTab, setActiveTab] = useState(initialTab || 'general');
+    // On phones nothing is open until a row is tapped
+    const [activeTab, setActiveTab] = useState(initialTab || (isPhone ? null : 'general'));
+    // Phone inputs at 16px so iOS doesn't zoom in
+    const inputStyle = isPhone ? { ...baseInputStyle, fontSize: '16px' } : baseInputStyle;
 
     // Scroll to top of settings page whenever changing active settings tab
     useEffect(() => {
@@ -598,6 +602,21 @@ export default function BusinessSettings({ business, onUpdate, isMobile, initial
         }
     };
 
+    // Phone: grouped list, and each section on its own screen with a way back
+    if (isPhone) {
+        const current = tabs.find(t => t.id === activeTab);
+        if (!current) {
+            return <SettingsListPhone tabs={tabs} formData={formData} onOpen={setActiveTab} />;
+        }
+        return (
+            <div className="pm-stack pm-set-section">
+                <SettingsBackButton onClick={() => setActiveTab(null)} />
+                <h2 className="pm-h2">{current.label}</h2>
+                <div className="pm-set-body">{renderTabContent()}</div>
+            </div>
+        );
+    }
+
     return (
         <div style={{
             display: 'flex',
@@ -742,7 +761,7 @@ const labelStyle = {
     letterSpacing: '0.5px'
 };
 
-const inputStyle = {
+const baseInputStyle = {
     width: '100%',
     padding: '12px 16px',
     borderRadius: '12px',

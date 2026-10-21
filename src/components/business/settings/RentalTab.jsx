@@ -193,7 +193,7 @@ export default function RentalTab({
                     ) : (
                         <div style={{ display: 'grid', gap: '12px' }}>
                             {(formData.pricing_tiers || []).map((tier, index) => (
-                                <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '12px', alignItems: 'center', padding: '12px', background: 'var(--bg-main)', borderRadius: '12px' }}>
+                                <div key={index} className="pm-tier-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '12px', alignItems: 'center', padding: '12px', background: 'var(--bg-main)', borderRadius: '12px' }}>
                                     <div>
                                         <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Mínimo</label>
                                         <input
