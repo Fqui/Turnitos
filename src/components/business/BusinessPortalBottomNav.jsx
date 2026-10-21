@@ -1,4 +1,5 @@
 import React from 'react';
+import { CalendarDays, ClipboardList, Users, Settings, LayoutGrid, Wallet } from 'lucide-react';
 
 // Alto de la barra sin contar la zona segura del iPhone; el contenido deja este espacio abajo
 export const BOTTOM_NAV_HEIGHT = 64;
@@ -10,7 +11,8 @@ const BusinessPortalBottomNav = ({
     isSport,
     pendingCount = 0,
     isMenuOpen,
-    onToggleMenu
+    onToggleMenu,
+    isPhone = false
 }) => {
     const items = [
         { id: 'calendar', icon: '📅', label: 'Calendario' },
@@ -21,6 +23,47 @@ const BusinessPortalBottomNav = ({
         { id: 'settings', icon: '⚙️', label: 'Ajustes' }
     ];
     const inBar = items.some(item => item.id === viewMode);
+
+    // Phone: SVG icons, green pill on the active tab and a red badge on Reservas
+    if (isPhone) {
+        const phoneItems = [
+            { id: 'calendar', Icon: CalendarDays, label: 'Calendario' },
+            { id: 'list', Icon: ClipboardList, label: 'Reservas', badge: pendingCount > 0 ? pendingCount : null },
+            isSport ? { id: 'caja', Icon: Wallet, label: 'Caja' } : { id: 'customers', Icon: Users, label: 'Clientes' },
+            { id: 'settings', Icon: Settings, label: 'Ajustes' },
+            { id: 'more', Icon: LayoutGrid, label: 'Más' }
+        ];
+        return (
+            <nav aria-label="Secciones del panel" className="pm-nav">
+                {phoneItems.map(({ id, Icon, label, badge }) => {
+                    const isMore = id === 'more';
+                    const isActive = isMore ? (isMenuOpen || !inBar) : (!isMenuOpen && viewMode === id);
+                    return (
+                        <button
+                            key={id}
+                            type="button"
+                            className={`pm-tab${isActive ? ' is-active' : ''}`}
+                            aria-current={isActive && !isMore ? 'page' : undefined}
+                            aria-expanded={isMore ? !!isMenuOpen : undefined}
+                            aria-label={badge ? `${label} (${badge} esperan confirmación)` : label}
+                            onClick={() => {
+                                if (isMore) {
+                                    onToggleMenu(!isMenuOpen);
+                                    return;
+                                }
+                                setViewMode(id);
+                                if (isMenuOpen) onToggleMenu(false);
+                            }}
+                        >
+                            <span className="pm-tab-pill"><Icon size={22} strokeWidth={2} aria-hidden="true" /></span>
+                            {label}
+                            {badge && <span className="pm-tab-badge pm-tnum" aria-hidden="true">{badge > 99 ? '99+' : badge}</span>}
+                        </button>
+                    );
+                })}
+            </nav>
+        );
+    }
 
     const renderButton = ({ key, icon, label, badge, isActive, onClick, ariaExpanded }) => (
         <button

@@ -5,7 +5,7 @@ import { getPlanDetails, calculateSubscriptionPrice } from '../../utils/subscrip
 import { getBillingInfo, formatDueText } from '../../utils/billingUtils';
 import { isRentalBusiness } from '../../utils/businessUtils';
 
-export default function BusinessSubscriptionView({ business, isMobile }) {
+export default function BusinessSubscriptionView({ business, isMobile, isPhone = false }) {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [subscription, setSubscription] = useState(
@@ -366,6 +366,24 @@ export default function BusinessSubscriptionView({ business, isMobile }) {
                             fontSize: '14px'
                         }}>
                             No hay reservas originadas desde el buscador público de TurnitosLR este mes. Todas tus reservas fueron directas ($0 comisión).
+                        </div>
+                    ) : isPhone ? (
+                        // Phone: one card per booking instead of a wide table
+                        <div className="pm-list">
+                            {filteredMarketplaceList.map((item, idx) => (
+                                <div key={item.id || idx} className="pm-comm">
+                                    <div className="pm-comm-l">
+                                        <b>{item.customer_name || 'Cliente'}</b>
+                                        <span className="pm-tnum">
+                                            {item.date}{item.time ? ` · ${String(item.time).slice(0, 5)}` : ''} · ${Number(item.price || 0).toLocaleString('es-AR')}
+                                        </span>
+                                    </div>
+                                    <div className="pm-comm-r">
+                                        <span>Comisión</span>
+                                        <b className="pm-tnum">${getItemCommission(item).toLocaleString('es-AR')}</b>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>

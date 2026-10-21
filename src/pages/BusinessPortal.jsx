@@ -25,7 +25,7 @@ import PortalAnalyticsView from '../components/business/portal/PortalAnalyticsVi
 import PortalListView from '../components/business/portal/PortalListView';
 import PortalListMobile from '../components/business/portal/mobile/PortalListMobile';
 import PhoneAlertsStrip from '../components/business/portal/mobile/PhoneAlertsStrip';
-import { PHONE_MAX_WIDTH } from '../components/business/portal/mobile/bookingMobileUtils';
+import { PHONE_MAX_WIDTH, needsAction, bookingDateKey, todayKey } from '../components/business/portal/mobile/bookingMobileUtils';
 import { Plus } from 'lucide-react';
 import '../styles/portalMobile.css';
 import PortalNewBookingAlert from '../components/business/portal/PortalNewBookingAlert';
@@ -1011,6 +1011,8 @@ export default function BusinessPortal() {
     const showFab = isPhone && !showSidebar && (viewMode === 'calendar' || viewMode === 'list');
     // Phone: the notices on top go together in one collapsible strip
     const phoneAlerts = isPhone && viewMode !== 'subscription';
+    // Phone badge: upcoming bookings still waiting to be confirmed (same count as the Reservas subtitle)
+    const phoneWaitingCount = isPhone ? bookings.filter(b => needsAction(b) && bookingDateKey(b) >= todayKey()).length : 0;
 
     if (requirePasswordChange) {
         const targetBusinessId = currentBusinessId || selectedBusinessId;
@@ -1129,6 +1131,7 @@ export default function BusinessPortal() {
                 viewMode={viewMode}
                 setViewMode={setViewMode}
                 isMobile={isMobile}
+                isPhone={isPhone}
                 isVisible={showSidebar}
                 onToggleSidebar={setShowSidebar}
                 toggleTheme={toggleTheme}
@@ -1149,7 +1152,8 @@ export default function BusinessPortal() {
                     viewMode={viewMode}
                     setViewMode={setViewMode}
                     isSport={isSportBusiness(currentBusiness)}
-                    pendingCount={bookings.filter(b => b.status === 'pending').length}
+                    pendingCount={isPhone ? phoneWaitingCount : bookings.filter(b => b.status === 'pending').length}
+                    isPhone={isPhone}
                     isMenuOpen={showSidebar}
                     onToggleMenu={setShowSidebar}
                 />
@@ -1258,6 +1262,7 @@ export default function BusinessPortal() {
                             <BusinessSubscriptionView
                                 business={currentBusiness}
                                 isMobile={isMobile}
+                                isPhone={isPhone}
                             />
                         ) : viewMode === 'customers' ? (
                             <ClientManagement

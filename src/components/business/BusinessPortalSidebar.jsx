@@ -3,10 +3,12 @@ import { useNotification } from '../../contexts/NotificationContext';
 import usePushAlerts, { PUSH_HELP } from '../../hooks/usePushAlerts';
 import { isSportBusiness } from '../../utils/businessUtils';
 import { BOTTOM_NAV_HEIGHT } from './BusinessPortalBottomNav';
+import PhoneMoreMenu from './portal/mobile/PhoneMoreMenu';
 
 const BusinessPortalSidebar = ({
     isVisible,
     isMobile,
+    isPhone = false,
     currentBusiness,
     viewMode,
     setViewMode,
@@ -108,6 +110,28 @@ const BusinessPortalSidebar = ({
     };
 
     const isSport = isSportBusiness(currentBusiness);
+
+    // Phone: the "Más" menu is its own screen (link, sections in rows), not the sidebar
+    if (isPhone) {
+        if (!isVisible) return null;
+        return (
+            <div className="pm-more-panel" role="dialog" aria-label="Más opciones">
+                <PhoneMoreMenu
+                    business={currentBusiness}
+                    isSport={isSport}
+                    theme={theme}
+                    toggleTheme={toggleTheme}
+                    onNavigate={handleNavigation}
+                    onLogout={onLogout}
+                    showToast={showToast}
+                    notifGranted={notifGranted}
+                    onToggleNotifications={handleToggleNotifications}
+                    canInstall={!isPwaInstalled}
+                    onInstall={handleInstallPwa}
+                />
+            </div>
+        );
+    }
 
     const navItems = [
         { id: 'calendar', icon: '📅', label: 'Calendario' },
