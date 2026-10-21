@@ -1009,8 +1009,8 @@ export default function BusinessPortal() {
 
     // Phone: floating "Nueva reserva" over the bottom bar in Calendario and Reservas
     const showFab = isPhone && !showSidebar && (viewMode === 'calendar' || viewMode === 'list');
-    // Phone: the notices on top of Calendario and Reservas go together in one collapsible strip
-    const phoneAlerts = isPhone && (viewMode === 'calendar' || viewMode === 'list');
+    // Phone: the notices on top go together in one collapsible strip
+    const phoneAlerts = isPhone && viewMode !== 'subscription';
 
     if (requirePasswordChange) {
         const targetBusinessId = currentBusinessId || selectedBusinessId;
@@ -1189,14 +1189,16 @@ export default function BusinessPortal() {
                                     onOpenSubscription={() => setViewMode('subscription')}
                                 />
                                 <PortalPushPrompt business={currentBusiness} />
-                                <PortalProfileChecklist
-                                    business={currentBusiness}
-                                    isMobile={isMobile}
-                                    onOpenSettings={(tab) => {
-                                        setSettingsTab(tab);
-                                        setViewMode('settings');
-                                    }}
-                                />
+                                {viewMode !== 'settings' && (
+                                    <PortalProfileChecklist
+                                        business={currentBusiness}
+                                        isMobile={isMobile}
+                                        onOpenSettings={(tab) => {
+                                            setSettingsTab(tab);
+                                            setViewMode('settings');
+                                        }}
+                                    />
+                                )}
                                 {viewMode === 'calendar' && (
                                     <PortalPastBookingsCard
                                         bookings={bookings}
@@ -1261,6 +1263,7 @@ export default function BusinessPortal() {
                             <ClientManagement
                                 businessId={selectedBusinessId}
                                 isMobile={isMobile}
+                                isPhone={isPhone}
                                 bookings={bookings}
                             />
                         ) : viewMode === 'calendar' ? (

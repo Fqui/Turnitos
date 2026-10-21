@@ -3,8 +3,9 @@ import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
 import { formatDisplayDate } from '../utils/dateUtils';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import ClientCardsPhone from './business/portal/mobile/ClientCardsPhone';
 
-export default function ClientManagement({ businessId, isMobile, bookings = [] }) {
+export default function ClientManagement({ businessId, isMobile, isPhone = false, bookings = [] }) {
     const { showToast } = useNotification();
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -204,6 +205,15 @@ export default function ClientManagement({ businessId, isMobile, bookings = [] }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '20px' }}>
+            {isPhone ? (
+                <ClientCardsPhone
+                    customers={filteredCustomers}
+                    bookings={bookings}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    onOpen={handleCustomerClick}
+                />
+            ) : (<>
             <div style={{
                 padding: '24px',
                 background: 'var(--bg-card)',
@@ -324,6 +334,7 @@ export default function ClientManagement({ businessId, isMobile, bookings = [] }
                     </div>
                 )}
             </div>
+            </>)}
 
             {showModal && selectedCustomer && (
                 <div style={{
