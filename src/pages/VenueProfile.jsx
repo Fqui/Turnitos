@@ -11,6 +11,8 @@ import { parseAmenity } from '../components/common/AmenityIcon';
 import { supabase } from '../services/supabaseClient';
 import 'leaflet/dist/leaflet.css';
 import PageLoader from '../components/common/PageLoader';
+import BookingSuccessModal from '../components/BookingSuccessModal';
+import { isDemoBusiness } from '../utils/businessUtils';
 
 import VenueHeroBanner from '../components/venue/profile/VenueHeroBanner';
 import VenueGallerySection from '../components/venue/profile/VenueGallerySection';
@@ -53,6 +55,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [venueBookings, setVenueBookings] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [showDemoSuccess, setShowDemoSuccess] = useState(false);
     const [bookingStep, setBookingStep] = useState(1);
     const [showLightbox, setShowLightbox] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -456,6 +459,10 @@ export default function VenueProfile({ business: initialBusiness }) {
             await serviceAdapter.createBooking(bookingData);
 
             setShowBookingModal(false);
+            if (isDemoBusiness(business)) {
+                setShowDemoSuccess(true);
+                return;
+            }
             await showAlert('¡Reserva Confirmada!', 'Tu reserva ha sido creada exitosamente. Te contactaremos pronto para confirmar los detalles.', 'success', 'Aceptar');
             navigate('/');
         } catch (error) {
@@ -869,6 +876,11 @@ export default function VenueProfile({ business: initialBusiness }) {
                 setStoryViewerList={setStoryViewerList}
                 activeStories={activeStories}
             />
+
+            {/* Demo businesses: explain that the booking was only an example */}
+            {showDemoSuccess && (
+                <BookingSuccessModal isDemo onClose={() => setShowDemoSuccess(false)} />
+            )}
         </div>
     );
 }

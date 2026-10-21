@@ -2,8 +2,10 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
-export default function BookingSuccessModal({ onClose, whatsappUrl }) {
+export default function BookingSuccessModal({ onClose, whatsappUrl, isDemo = false }) {
     useBodyScrollLock();
+    // On a demo page the WhatsApp step would message the prospect, so it's hidden
+    if (isDemo) whatsappUrl = '';
     return (
         <div
             style={{
@@ -81,10 +83,20 @@ export default function BookingSuccessModal({ onClose, whatsappUrl }) {
                         marginBottom: '12px'
                     }}
                 >
-                    ¡Turno reservado!
+                    {isDemo ? '¡Así reservan tus clientes!' : '¡Turno reservado!'}
                 </h2>
 
                 {/* Message */}
+                {isDemo ? (
+                    <div style={{ marginBottom: '28px' }}>
+                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.5', margin: '0 0 10px' }}>
+                            Esta es una muestra de cómo quedaría la página de tu negocio en TurnitosLR. La reserva que acabás de hacer es de prueba: no es un turno real.
+                        </p>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>
+                            Cuando el negocio esté activo, tus clientes ven la confirmación de siempre y este cartel no aparece.
+                        </p>
+                    </div>
+                ) : (
                 <p
                     style={{
                         fontSize: '15px',
@@ -97,6 +109,7 @@ export default function BookingSuccessModal({ onClose, whatsappUrl }) {
                         ? 'Tu turno quedó registrado. Mandale el mensaje al negocio por WhatsApp (con el comprobante si pagaste seña) para que lo confirme.'
                         : 'Tu turno quedó registrado. El negocio se va a comunicar con vos para confirmarlo.'}
                 </p>
+                )}
 
                 {whatsappUrl && (
                     <a
@@ -138,7 +151,7 @@ export default function BookingSuccessModal({ onClose, whatsappUrl }) {
                         cursor: 'pointer'
                     }}
                 >
-                    Listo
+                    {isDemo ? 'Entendido' : 'Listo'}
                 </button>
             </motion.div>
         </div>

@@ -111,3 +111,13 @@ export function isSportBusiness(business) {
         category.includes('cancha') ||
         (business.courts?.length || 0) > 0;
 }
+
+/**
+ * Demo businesses: new businesses start in "trial" (En prueba) and the seeded
+ * prospect demos carry metadata.simulacion. Their public bookings are only examples.
+ */
+export function isDemoBusiness(business) {
+    if (!business) return false;
+    const simulated = business.metadata?.simulacion;
+    return business.subscription_status === 'trial' || simulated === true || simulated === 'true';
+}

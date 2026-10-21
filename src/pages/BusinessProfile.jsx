@@ -16,6 +16,7 @@ import TimeSlotPicker from '../components/TimeSlotPicker';
 import PadelBookingFlow from '../components/PadelBookingFlow';
 import BookingSummary from '../components/BookingSummary';
 import BookingSuccessModal from '../components/BookingSuccessModal';
+import { isDemoBusiness } from '../utils/businessUtils';
 import BusinessReviewsSection from '../components/BusinessReviewsSection';
 import SEOHead from '../components/SEOHead';
 import { buildBusinessSeo } from '../utils/seo';
@@ -1514,6 +1515,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     {showSuccessModal && (
                         <BookingSuccessModal
                             whatsappUrl={successWhatsappUrl}
+                            isDemo={isDemoBusiness(business)}
                             onClose={() => {
                                 setShowSuccessModal(false);
                                 setSuccessWhatsappUrl('');
