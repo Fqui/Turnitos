@@ -10,42 +10,48 @@ export default function VenueHeroBanner({
 }) {
     const fullAddress = [business.address, business.city || business.location].filter(Boolean).join(', ');
 
+    const isMobile = windowWidth < 768;
+    const coverSrc = business.banner_image || business.banner_url || business.image || galleryImages[0]?.url;
+
+    // Same framing as the Home card: on mobile the cover keeps a 2:1 box and the
+    // text goes below it; on desktop the box follows the 12:5 cover proportion.
     return (
         <div style={{
             position: 'relative',
-            height: '50vh',
-            minHeight: '400px',
             background: 'linear-gradient(135deg, #2D3748 0%, #1A202C 100%)',
             overflow: 'hidden',
             display: 'flex',
-            alignItems: 'flex-end'
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            ...(isMobile ? {} : { height: 'min(calc(100vw * 5 / 12), 70vh)', minHeight: '400px' })
         }}>
-            <img
-                src={business.banner_image || business.banner_url || business.image || galleryImages[0]?.url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200'}
-                alt={business.name}
-                style={{
+            <div style={isMobile
+                ? { position: 'relative', width: '100%', aspectRatio: '2 / 1', overflow: 'hidden' }
+                : { position: 'absolute', inset: 0 }
+            }>
+                <img
+                    src={coverSrc || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200'}
+                    alt={business.name}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center',
+                        display: 'block'
+                    }}
+                />
+                <div style={{
                     position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    objectPosition: 'center',
-                    opacity: 0.8
-                }}
-            />
-            <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 100%)'
-            }} />
+                    inset: 0,
+                    background: isMobile
+                        ? 'linear-gradient(to bottom, rgba(0,0,0,0) 70%, rgba(26,32,44,0.6) 100%)'
+                        : 'linear-gradient(to bottom, rgba(0,0,0,0) 45%, rgba(0,0,0,0.75) 100%)'
+                }} />
+            </div>
             <ShareButton
                 variant="icon"
                 label="Compartir"
-                image={business.banner_image || business.banner_url || business.image || galleryImages[0]?.url}
+                image={coverSrc}
                 url={shareUrl}
                 title={business.name}
                 text={`Mirá ${business.name} y reservá tu fecha online:`}
@@ -59,14 +65,14 @@ export default function VenueHeroBanner({
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'flex-end',
-                padding: windowWidth < 768 ? '24px 16px' : '36px 32px',
+                padding: isMobile ? '16px 16px 20px' : '36px 32px',
                 color: 'white',
                 maxWidth: '1400px',
                 width: '100%',
                 margin: '0 auto'
             }}>
                 <h1 style={{
-                    fontSize: windowWidth < 768 ? '36px' : '56px',
+                    fontSize: isMobile ? '30px' : '56px',
                     fontWeight: '900',
                     marginBottom: '8px',
                     lineHeight: '1.1',
