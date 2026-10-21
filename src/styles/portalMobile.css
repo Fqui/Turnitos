@@ -102,3 +102,41 @@
 @media (prefers-reduced-motion: reduce) {
   .pm-stack *, .pm-sheet *, .pm-nav * { transition: none !important; animation: none !important; }
 }
+
+/* Hoja inferior (detalle del turno y acciones de un horario) */
+@keyframes pm-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pm-up { from { transform: translateY(100%); } to { transform: none; } }
+.pm-scrim { position: fixed; inset: 0; z-index: 1000; background: rgba(14, 20, 17, 0.45); display: flex; align-items: flex-end; animation: pm-fade 0.2s ease-out; }
+[data-theme="dark"] .pm-scrim { background: rgba(0, 0, 0, 0.6); }
+.pm-sheet { position: relative; width: 100%; max-height: 88dvh; background: var(--bg-card); color: var(--text-primary); border-radius: 24px 24px 0 0; box-shadow: 0 -10px 40px rgba(15, 23, 42, 0.18); display: flex; flex-direction: column; animation: pm-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.pm-grab { width: 40px; height: 5px; border-radius: 3px; background: var(--border); margin: 10px auto 2px; flex: none; }
+.pm-sheet-close { position: absolute; top: 6px; right: 8px; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--text-muted); display: grid; place-items: center; cursor: pointer; }
+.pm-sheet-body { overflow-y: auto; overscroll-behavior: contain; padding: 10px 18px 16px; display: flex; flex-direction: column; gap: 14px; }
+.pm-sheet-foot { flex: none; display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border-light); background: var(--bg-card); }
+[data-theme="dark"] .pm-sheet-foot { border-color: var(--border); }
+.pm-sheet-foot.is-single { grid-template-columns: 1fr; }
+.pm-d-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-right: 40px; }
+.pm-d-head h3 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.pm-d-head p { margin: 3px 0 0; font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.pm-d-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-light); border-radius: 14px; overflow: hidden; border: 1px solid var(--border-light); }
+[data-theme="dark"] .pm-d-grid { background: var(--border); border-color: var(--border); }
+.pm-d-grid > div { background: var(--bg-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pm-d-grid span { font-size: 11.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.pm-d-grid b { font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.pm-pay { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-radius: 14px; border: 1px solid var(--border-light); }
+[data-theme="dark"] .pm-pay { border-color: var(--border); }
+.pm-pay-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pm-pay-l b { font-size: 15px; font-weight: 800; }
+.pm-pay-l span { font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+.pm-note { background: var(--bg-input); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.45; overflow-wrap: anywhere; }
+.pm-note--row { display: flex; align-items: flex-start; gap: 8px; }
+.pm-note--row svg { flex: none; margin-top: 2px; }
+.pm-minor { display: grid; gap: 8px; }
+.pm-minor button { height: 64px; border: 0; border-radius: 12px; background: var(--bg-input); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--text-secondary); cursor: pointer; }
+.pm-minor button.is-danger { color: var(--pm-bad); }
+.pm-link-row { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 44px; border: 0; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 700; cursor: pointer; }
+.pm-btn { height: 52px; border: 0; border-radius: 14px; padding: 0 16px; font-weight: 800; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.pm-btn--primary { background: var(--primary); color: var(--pm-on-primary); }
+.pm-btn--wa { background: var(--pm-wa); color: #FFFFFF; padding: 0; }
+.pm-sheet-foot.is-single .pm-btn--wa { padding: 0 16px; }
+.pm-btn--soft { background: var(--bg-input); color: var(--text-primary); }

@@ -8,6 +8,7 @@ import RentalPaymentsCard from './RentalPaymentsCard';
 import HomeVisitCard from './HomeVisitCard';
 import BookingCashCharge from './canteen/BookingCashCharge';
 import { useBookingCash } from './canteen/useBookingCash';
+import BookingSheetPhone from './portal/mobile/BookingSheetPhone';
 
 // Booking history in Argentina time, 24 h, whatever the device settings
 const formatHistoryTime = (iso) => new Date(iso).toLocaleString('es-AR', {
@@ -20,13 +21,15 @@ const CANTEEN_CATEGORY_ICONS ={ Bebidas: '🥤', Snacks: '🍫', Equipamiento: '
 const BookingDetailsModalContent = ({
     onClose,
     isMobile,
+    isPhone = false,
     booking,
     businesses,
     selectedBusinessId,
     onAction,
     formatDisplayDate,
     getStatusLabel,
-    onGoToCashRegister
+    onGoToCashRegister,
+    onReschedule
 }) => {
     const { showToast } = useNotification();
 
@@ -312,6 +315,8 @@ const BookingDetailsModalContent = ({
     // Courts: the balance discounts the deposit already marked as paid, recorded payments and cash register charges.
     // A deposit charged in the register is one of those charges, so it is not discounted twice.
     const [depositMode, setDepositMode] = useState(false);
+    // Phone: compact sheet first; the full view stays one tap away (history, cash register, extras)
+    const [showFullDetails, setShowFullDetails] = useState(false);
     const depositPaid = booking.status === 'deposit_paid' || Boolean(booking.deposit_paid_at);
     const depositMovementId = booking.metadata?.deposit_cash_movement_id;
     const depositInCash = Boolean(depositMovementId) && bookingCash.movements.some(m => m.id === depositMovementId && !m.voided_at);
@@ -621,7 +626,47 @@ const BookingDetailsModalContent = ({
         setIsEditing(false);
     };
 
-    if (booking.status === 'blocked' || booking.is_blocked) {
+    const isBlockedBooking = booking.status === 'blocked' || booking.is_blocked;
+    if (isPhone && !isRental && !isBlockedBooking && !isEditing && !showFullDetails) {
+        const chargeDepositInCash = isSport && bookingCash.canCharge && !bookingCash.error;
+        const handlePrimary = () => {
+            if (booking.status === 'pending' && activeDeposit > 0) {
+                // Courts with a cash register: the deposit is charged in the register (full view)
+                if (chargeDepositInCash) {
+                    setShowFullDetails(true);
+                    setDepositMode(true);
+                    setTimeout(() => document.getElementById('booking-cash-charge')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+                } else {
+                    onAction('confirm_deposit', { depositAmount: activeDeposit });
+                }
+            } else if (booking.status === 'pending' || booking.status === 'deposit_paid') {
+                onAction('confirm_booking');
+            } else if (booking.status === 'confirmed' || booking.status === 'attended') {
+                onAction('complete_booking');
+            }
+        };
+        return (
+            <BookingSheetPhone
+                booking={booking}
+                serviceName={service?.name || resourceName}
+                resourceLabel={specialist ? 'Profesional' : (court ? 'Cancha' : 'Profesional')}
+                resourceName={specialist?.name || (court ? court.name : '')}
+                price={activePrice}
+                deposit={activeDeposit}
+                depositPaid={depositPaid}
+                notes={notes}
+                onClose={onClose}
+                onWhatsapp={() => handleSendWhatsapp('direct')}
+                onPrimary={handlePrimary}
+                onReschedule={onReschedule ? () => onReschedule(booking) : null}
+                onEdit={() => setIsEditing(true)}
+                onCancel={() => onAction('cancel')}
+                onShowFull={() => setShowFullDetails(true)}
+            />
+        );
+    }
+
+    if (isBlockedBooking) {
         return (
             <div style={{
                 position: 'fixed',

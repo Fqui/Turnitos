@@ -1387,6 +1387,12 @@ export default function BusinessPortal() {
                 selectedBusinessId={selectedBusinessId}
                 onAction={handleBookingAction}
                 isMobile={isMobile}
+                isPhone={isPhone}
+                onReschedule={(booking) => {
+                    setShowBookingModal(false);
+                    setReschedulingBooking(booking);
+                    setViewMode('calendar');
+                }}
                 formatDisplayDate={formatDisplayDate}
                 getStatusLabel={getStatusLabel}
                 onGoToCashRegister={() => {
