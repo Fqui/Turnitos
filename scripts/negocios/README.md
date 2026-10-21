@@ -24,6 +24,9 @@ node scripts/negocios/cargar-negocios.mjs --borrar-simulacion                   
 | `whatsapp`, `direccion`, `descripcion`, `instagram`, `facebook`, `tiktok` | no | |
 | `latitud`, `longitud` | no | Para el mapa |
 | `logo`, `portada` | no | URL de imagen. Sin logo el perfil queda incompleto |
+| `portada_foco` | no | Parte de la portada que queda a la vista: `{ "x": 50, "y": 40 }` en % (como en Apariencia) |
+| `sena` | no | Porcentaje (`30`; `0` la desactiva) o `{ "monto": 5000 }`. Los de `simulacion` van con 30 % si no viene |
+| `transferencia` | no | `{ "alias", "cbu", "banco", "titular" }`. Los de `simulacion` con seña llevan datos de ejemplo |
 | `tema`, `color` | no | `light` o `dark`, y el color de los botones (`#D4A373`) |
 | `horarios` | no | Mismo formato que `businesses.hours`. Si falta se usa uno típico del rubro |
 | `profesionales` | belleza/salud | `[{ "nombre", "rol", "foto" }]`. Define la cantidad (y el plan) |
@@ -31,6 +34,7 @@ node scripts/negocios/cargar-negocios.mjs --borrar-simulacion                   
 | `canchas` | canchas | `[{ "nombre", "precio", "deporte" }]`. Define la cantidad (y el plan) |
 | `precio_hora`, `capacidad` | alquileres | La página pública cobra por hora |
 | `duraciones`, `tarifas` | alquileres | Horas a elegir (`[4, 6, 8]`) y precio por hora según invitados: `[{ "desde", "hasta", "precio" }]` |
+| `horarios_ingreso` | alquileres | Horarios de ingreso por día y tope de salida: `{ "vie": ["10:00", "18:00"], "sab": ["11:00"], "salida": "02:00" }` (días `lun`…`dom`; una salida de madrugada es del día siguiente). Va a `metadata.rental_schedule` |
 | `descripcion_larga`, `galeria` | alquileres | `galeria`: `[{ "url", "titulo", "categoria", "destacada" }]` |
 | `comodidades` | no | `[{ "nombre", "icono" }]`, con un icono de `src/components/common/AmenityIcon.jsx` (`Wifi`, `Car`, `Flame`…) |
 | `destacados` | no | Círculos del perfil: `[{ "titulo", "fotos": [urls] }]` |
