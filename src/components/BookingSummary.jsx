@@ -122,6 +122,9 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
         duration
     } = bookingDetails;
 
+    // Con un solo profesional el chip "con X" sobra y le quita lugar al nombre del servicio
+    const hasSeveralSpecialists = (incomingBusiness?.specialists || []).length > 1;
+
     const extrasTotal = selectedExtras.reduce((sum, e) => sum + (Number(e.price) * (e.quantity || 1)), 0);
 
     // 🚗 Home visit: the service decides if it can be done at the client's home
@@ -725,7 +728,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                     }}>
                                                         {courtName || serviceName || 'Servicio'}
                                                     </span>
-                                                    {specialistName && (
+                                                    {specialistName && hasSeveralSpecialists && (
                                                         <span style={{
                                                             fontSize: '11px',
                                                             fontWeight: '700',
