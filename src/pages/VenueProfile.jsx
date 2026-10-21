@@ -20,6 +20,7 @@ import VenueCalendarSection from '../components/venue/profile/VenueCalendarSecti
 import VenueBookingPanel from '../components/venue/profile/VenueBookingPanel';
 import VenueBookingWizardModal from '../components/venue/profile/VenueBookingWizardModal';
 import VenueLightboxModal from '../components/venue/profile/VenueLightboxModal';
+import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerModal';
 import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
 
 // Fix Leaflet default icon issue
@@ -54,6 +55,9 @@ export default function VenueProfile({ business: initialBusiness }) {
     const [bookingStep, setBookingStep] = useState(1);
     const [showLightbox, setShowLightbox] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(0);
+    const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
+    const [selectedHighlight, setSelectedHighlight] = useState(null);
+    const [storyViewerList, setStoryViewerList] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [showServicesExpanded, setShowServicesExpanded] = useState(false);
     const [showAllAmenities, setShowAllAmenities] = useState(false);
@@ -495,6 +499,17 @@ export default function VenueProfile({ business: initialBusiness }) {
     const daysInMonth = getDaysInMonth(currentMonth);
     const durationOptions = business?.rental_duration_options || [4, 6, 8, 12, 24];
 
+    // Stories (24 h) and highlights from Configuración > Galería; expired stories are hidden
+    const now = new Date();
+    const validHighlights = (business?.gallery_highlights || []).filter(item => {
+        if (item.is_story && item.expires_at) {
+            return new Date(item.expires_at) > now;
+        }
+        return true;
+    });
+    const activeStories = validHighlights.filter(h => h.is_story);
+    const permanentHighlights = validHighlights.filter(h => !h.is_story);
+
     if (loading) return <PageLoader label="Cargando espacio..." />;
     if (!business) return <div style={{ padding: 40, textAlign: 'center' }}>Espacio no encontrado</div>;
 
@@ -518,6 +533,14 @@ export default function VenueProfile({ business: initialBusiness }) {
                 galleryImages={galleryImages}
                 windowWidth={windowWidth}
                 shareUrl={buildBusinessShareUrl(business.slug, '/turnos')}
+                activeStories={activeStories}
+                onStoryClick={() => {
+                    if (activeStories.length > 0) {
+                        setStoryViewerList(activeStories);
+                        setSelectedPhotoIndex(0);
+                        setSelectedHighlight(0);
+                    }
+                }}
             />
 
             {/* 2. Main Content Grid */}
@@ -540,6 +563,12 @@ export default function VenueProfile({ business: initialBusiness }) {
                     {/* Gallery Section */}
                     <VenueGallerySection
                         galleryImages={galleryImages}
+                        permanentHighlights={permanentHighlights}
+                        onSelectHighlight={(index) => {
+                            setStoryViewerList(permanentHighlights);
+                            setSelectedPhotoIndex(0);
+                            setSelectedHighlight(index);
+                        }}
                         onOpenLightbox={(idx) => {
                             setLightboxIndex(idx);
                             setShowLightbox(true);
@@ -807,6 +836,18 @@ export default function VenueProfile({ business: initialBusiness }) {
                 lightboxIndex={lightboxIndex}
                 setLightboxIndex={setLightboxIndex}
                 galleryImages={galleryImages}
+            />
+
+            {/* Stories & highlights viewer */}
+            <ProfileStoryViewerModal
+                business={business}
+                selectedHighlight={selectedHighlight}
+                setSelectedHighlight={setSelectedHighlight}
+                selectedPhotoIndex={selectedPhotoIndex}
+                setSelectedPhotoIndex={setSelectedPhotoIndex}
+                storyViewerList={storyViewerList}
+                setStoryViewerList={setStoryViewerList}
+                activeStories={activeStories}
             />
         </div>
     );

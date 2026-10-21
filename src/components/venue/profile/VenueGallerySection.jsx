@@ -1,7 +1,10 @@
 import React from 'react';
+import ProfileHighlightsBar from '../../profile/ProfileHighlightsBar';
 
 export default function VenueGallerySection({
     galleryImages,
+    permanentHighlights = [],
+    onSelectHighlight,
     onOpenLightbox,
     windowWidth,
     cardBg,
@@ -9,7 +12,9 @@ export default function VenueGallerySection({
     borderColor,
     primaryColor
 }) {
-    if (!galleryImages || galleryImages.length === 0) return null;
+    const hasPhotos = galleryImages && galleryImages.length > 0;
+    const hasHighlights = permanentHighlights.length > 0;
+    if (!hasPhotos && !hasHighlights) return null;
 
     return (
         <div style={{
@@ -21,21 +26,36 @@ export default function VenueGallerySection({
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '20px', fontWeight: '700', color: textColor }}>Galería</h2>
-                <button
-                    onClick={() => onOpenLightbox(0)}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        color: primaryColor,
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Ver todas →
-                </button>
+                {hasPhotos && (
+                    <button
+                        onClick={() => onOpenLightbox(0)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: primaryColor,
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Ver todas →
+                    </button>
+                )}
             </div>
-            <div style={{
+
+            {/* Highlights row first, then the photo grid. width 0 + minWidth 100%
+                keeps the bubbles from widening the card; they scroll instead */}
+            {hasHighlights && (
+                <div className="venue-gallery-highlights" style={{ width: 0, minWidth: '100%', marginBottom: hasPhotos ? '16px' : 0 }}>
+                    <ProfileHighlightsBar
+                        permanentHighlights={permanentHighlights}
+                        onSelectHighlight={onSelectHighlight}
+                        noBorder
+                    />
+                </div>
+            )}
+
+            {hasPhotos && <div style={{
                 display: 'grid',
                 gridTemplateColumns: windowWidth < 768 ? '1fr' : (galleryImages.length > 1 ? '1fr 1fr' : '1fr'),
                 gap: '12px'
@@ -122,7 +142,7 @@ export default function VenueGallerySection({
                         </div>
                     );
                 })()}
-            </div>
+            </div>}
         </div>
     );
 }

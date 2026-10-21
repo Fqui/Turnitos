@@ -6,9 +6,14 @@ export default function VenueHeroBanner({
     business,
     galleryImages,
     windowWidth,
-    shareUrl = ''
+    shareUrl = '',
+    activeStories = [],
+    onStoryClick
 }) {
     const fullAddress = [business.address, business.city || business.location].filter(Boolean).join(', ');
+    const hasStories = activeStories.length > 0;
+    const avatarSrc = business.logo || (hasStories ? business.image || galleryImages[0]?.url : null);
+    const avatarSize = windowWidth < 768 ? 76 : 96;
 
     return (
         <div style={{
@@ -65,6 +70,46 @@ export default function VenueHeroBanner({
                 width: '100%',
                 margin: '0 auto'
             }}>
+                {/* Logo with Instagram-style ring while there are 24 h stories */}
+                {avatarSrc && (
+                    <div
+                        onClick={hasStories ? onStoryClick : undefined}
+                        onKeyDown={hasStories ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onStoryClick?.(); } } : undefined}
+                        role={hasStories ? 'button' : undefined}
+                        tabIndex={hasStories ? 0 : undefined}
+                        aria-label={hasStories ? 'Ver historias (24 h)' : undefined}
+                        title={hasStories ? 'Ver historias (24 h)' : business.name}
+                        data-story-origin
+                        style={{
+                            width: `${avatarSize}px`,
+                            height: `${avatarSize}px`,
+                            borderRadius: '50%',
+                            padding: '3px',
+                            background: hasStories
+                                ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
+                                : 'rgba(255,255,255,0.35)',
+                            marginBottom: '14px',
+                            cursor: hasStories ? 'pointer' : 'default',
+                            boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+                            flexShrink: 0
+                        }}
+                    >
+                        <div data-story-bubble style={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: '50%',
+                            padding: '3px',
+                            background: 'var(--bg-card)'
+                        }}>
+                            <img
+                                src={avatarSrc}
+                                alt={business.name}
+                                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+                            />
+                        </div>
+                    </div>
+                )}
+
                 <h1 style={{
                     fontSize: windowWidth < 768 ? '36px' : '56px',
                     fontWeight: '900',

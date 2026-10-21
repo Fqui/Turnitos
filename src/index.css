@@ -2115,3 +2115,23 @@ textarea {
 .booking-action-bar--mobile button {
   min-height: 48px;
 }
+
+/* Highlights row inside the venue (alquiler) gallery card */
+.venue-gallery-highlights .instagram-stories-bar {
+  margin-top: 0 !important;
+  padding: 0 !important;
+  border-top: none !important;
+  background: transparent !important;
+}
+
+.venue-gallery-highlights .highlights-container {
+  justify-content: flex-start !important;
+  padding: 4px 2px 8px !important;
+  gap: 16px !important;
+}
+
+@media (min-width: 769px) {
+  .venue-gallery-highlights .highlights-container {
+    gap: 20px !important;
+  }
+}
