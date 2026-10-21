@@ -3,6 +3,7 @@ import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import ShareButton from '../common/ShareButton';
+import { getCoverPosition } from '../../utils/imageUtils';
 
 export default function ProfileHeroBanner({
     business,
@@ -37,7 +38,7 @@ export default function ProfileHeroBanner({
             {/* Header / Banner */}
             <div className="business-profile-banner" style={{
                 position: 'relative',
-                height: window.innerWidth <= 768 ? '25vh' : '320px',
+                aspectRatio: '16 / 10',
                 minHeight: '180px',
                 maxHeight: '300px',
                 overflow: 'hidden'
@@ -46,13 +47,14 @@ export default function ProfileHeroBanner({
                     layoutId={`business-image-${business.id}`}
                     src={business.banner_image || business.image || selectedItem?.image_url}
                     alt={business.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: getCoverPosition(business, 'center 25%') }}
                     transition={{ duration: 0.5, ease: "circOut" }}
                 />
                 <div style={{
                     position: 'absolute',
                     top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)'
+                    // Only a soft shade at the top so the back/share buttons read; the photo keeps its colors
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 35%)'
                 }}></div>
 
                 <button

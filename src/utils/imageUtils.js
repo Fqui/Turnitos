@@ -219,3 +219,16 @@ export function validateImageFile(file) {
 
     return { valid: true, error: null };
 }
+
+/**
+ * object-position for a business cover. The owner picks the point that must stay
+ * visible (metadata.banner_focus = { x, y } in %); otherwise use the given fallback.
+ */
+export function getCoverPosition(business, fallback = 'center') {
+    const focus = business?.metadata?.banner_focus;
+    const x = Number(focus?.x);
+    const y = Number(focus?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return fallback;
+    const clamp = (v) => Math.min(100, Math.max(0, Math.round(v)));
+    return `${clamp(x)}% ${clamp(y)}%`;
+}

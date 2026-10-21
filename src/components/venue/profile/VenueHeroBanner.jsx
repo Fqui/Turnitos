@@ -1,6 +1,7 @@
 import React from 'react';
 import { buildWhatsAppUrl } from '../../../utils/whatsapp';
 import ShareButton from '../../common/ShareButton';
+import { getCoverPosition } from '../../../utils/imageUtils';
 
 export default function VenueHeroBanner({
     business,
@@ -32,7 +33,7 @@ export default function VenueHeroBanner({
                         width: '100%',
                         height: '100%',
                         objectFit: 'cover',
-                        objectPosition: 'center',
+                        objectPosition: getCoverPosition(business),
                         display: 'block',
                         opacity: isMobile ? 0.8 : 1
                     }}

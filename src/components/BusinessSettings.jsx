@@ -176,6 +176,8 @@ export default function BusinessSettings({ business, onUpdate, isMobile, isPhone
             setUploadingBanner(true);
             const publicUrl = await serviceAdapter.uploadImage(file);
             handleInputChange('banner_image', publicUrl);
+            // A new photo starts centered; the owner picks its point again
+            handleMetadataChange('banner_focus', null);
             showToast('Banner subido correctamente', 'success');
         } catch (error) {
             console.error('Error uploading banner:', error);

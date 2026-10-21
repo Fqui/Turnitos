@@ -1,4 +1,6 @@
 import React from 'react';
+import CoverFocusPicker from '../../common/CoverFocusPicker';
+import { getCoverPosition } from '../../../utils/imageUtils';
 
 export default function AppearanceTab({
     formData,
@@ -32,7 +34,7 @@ export default function AppearanceTab({
                     onClick={() => document.getElementById('banner-upload-appearance')?.click()}
                 >
                     {formData.banner_image ? (
-                        <img src={formData.banner_image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={formData.banner_image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: getCoverPosition(formData, 'center 25%') }} />
                     ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '13px', gap: '6px' }}>
                             🖼️ Click para subir portada
@@ -107,8 +109,13 @@ export default function AppearanceTab({
                 <input type="file" id="banner-upload-appearance" style={{ display: 'none' }} accept="image/*" onChange={handleBannerUpload} disabled={uploadingBanner} />
 
                 {/* Hints */}
-                <div style={{ padding: '0 20px 20px', display: 'grid', gap: '4px' }}>
-                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>📐 Logo: cuadrado (512×512px) · Portada: panorámico (1200×400px o 16:9)</p>
+                <div style={{ padding: '0 20px 20px', display: 'grid', gap: '16px' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>📐 Logo: cuadrado (512×512px) · Portada: horizontal, ideal 1600×600px o más</p>
+                    <CoverFocusPicker
+                        image={formData.banner_image}
+                        value={formData.metadata?.banner_focus}
+                        onChange={(focus) => setFormData(prev => ({ ...prev, metadata: { ...(prev?.metadata || {}), banner_focus: focus } }))}
+                    />
                 </div>
             </div>
 
@@ -213,7 +220,8 @@ export default function AppearanceTab({
                     brand_color: formData.brand_color || formData.primary_color || '#10B981',
                     primary_color: formData.brand_color || formData.primary_color || '#10B981',
                     button_color: formData.brand_color || formData.primary_color || '#10B981',
-                    theme: formData.theme || 'light'
+                    theme: formData.theme || 'light',
+                    metadata: { banner_focus: formData.metadata?.banner_focus ?? null }
                 })}
                 style={saveButtonStyle}
                 disabled={saving}

@@ -1,5 +1,6 @@
 import React from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
+import CoverFocusPicker from '../../common/CoverFocusPicker';
 
 export default function VenueAppearanceTab({
     formData,
@@ -157,7 +158,15 @@ export default function VenueAppearanceTab({
                 <div>
                     <label style={labelStyle}>Foto de Portada / Banner</label>
                     {(formData.banner_image || formData.banner_url) && (
-                        <img src={formData.banner_image || formData.banner_url} alt="Banner preview" style={{ width: '100%', height: '80px', borderRadius: '12px', objectFit: 'cover', marginBottom: '12px', border: '1px solid var(--border)' }} />
+                        <div style={{ marginBottom: '12px' }}>
+                            <CoverFocusPicker
+                                image={formData.banner_image || formData.banner_url}
+                                value={formData.metadata?.banner_focus}
+                                onChange={(focus) => handleInputChange('metadata', { ...(formData.metadata || {}), banner_focus: focus })}
+                                desktopAspect="12 / 5"
+                                mobileAspect="1 / 1"
+                            />
+                        </div>
                     )}
                     <input
                         type="file"
@@ -169,6 +178,7 @@ export default function VenueAppearanceTab({
                                 const url = await serviceAdapter.uploadImage(file);
                                 handleInputChange('banner_image', url);
                                 handleInputChange('banner_url', url);
+                                handleInputChange('metadata', { ...(formData.metadata || {}), banner_focus: null });
                                 showToast('Banner actualizado', 'success');
                             }
                         }}
