@@ -9,6 +9,7 @@ import VenueGeneralTab from './settings/VenueGeneralTab';
 import VenueAppearanceTab from './settings/VenueAppearanceTab';
 import VenueGalleryTab from './settings/VenueGalleryTab';
 import VenuePricingTab from './settings/VenuePricingTab';
+import VenueStartTimesTab from './settings/VenueStartTimesTab';
 import VenueServicesTab from './settings/VenueServicesTab';
 import VenueAmenitiesTab from './settings/VenueAmenitiesTab';
 import VenueStoreTab from './settings/VenueStoreTab';
@@ -461,6 +462,7 @@ export default function VenueSettings({ business, onUpdate, isMobile, initialTab
                     { id: 'coupons', label: 'Cupones y Promos', icon: 'Tag' },
                     { id: 'gallery', label: 'Galería de Fotos', icon: 'Image' },
                     { id: 'pricing', label: 'Precios y Capacidad', icon: 'DollarSign' },
+                    { id: 'start_times', label: 'Horarios de Ingreso', icon: 'Clock' },
                     { id: 'services', label: 'Servicios Adicionales', icon: 'Sparkles' },
                     { id: 'whatsapp', label: 'Mensajes de WhatsApp', icon: 'MessageCircle' },
                     { id: 'amenities', label: 'Comodidades', icon: 'Armchair' }
@@ -557,6 +559,17 @@ export default function VenueSettings({ business, onUpdate, isMobile, initialTab
                         labelStyle={labelStyle}
                         inputStyle={inputStyle}
                         buttonStyle={buttonStyle}
+                    />
+                )}
+
+                {activeTab === 'start_times' && (
+                    <VenueStartTimesTab
+                        formData={formData}
+                        handleMetadataChange={handleMetadataChange}
+                        cardStyle={cardStyle}
+                        sectionTitleStyle={sectionTitleStyle}
+                        labelStyle={labelStyle}
+                        inputStyle={inputStyle}
                     />
                 )}
 

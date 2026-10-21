@@ -6,7 +6,7 @@ import {
     Gamepad2, Trophy, Dices, Activity, Bike, Dumbbell,
     Trees, TreePine, Flower2, Tent, House, Warehouse, Building2,
     Snowflake, Wind, Wifi, Lightbulb, Lamp, Armchair, Bed, Car, ShieldCheck, Lock, Key, Plug, Zap, Accessibility,
-    Baby, Smile, Dog, Heart, Users, Target, Search
+    Baby, Smile, Dog, Heart, Users, Target, Search, Clock
 } from 'lucide-react';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
@@ -17,7 +17,7 @@ const LucideIcons = {
     Gamepad2, Trophy, Dices, Activity, Bike, Dumbbell,
     Trees, TreePine, Flower2, Tent, House, Warehouse, Building2,
     Snowflake, Wind, Wifi, Lightbulb, Lamp, Armchair, Bed, Car, ShieldCheck, Lock, Key, Plug, Zap, Accessibility,
-    Baby, Smile, Dog, Heart, Users, Target, Search
+    Baby, Smile, Dog, Heart, Users, Target, Search, Clock
 };
 
 // Comprehensive Icon Categories for Venues / Quinchos / Events / Rentals

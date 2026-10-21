@@ -16,6 +16,9 @@ export default function VenueBookingWizardModal({
     setDuration,
     startTime,
     setStartTime,
+    usesRentalSchedule,
+    startOptions = [],
+    endTimeLabel,
     durationOptions,
     durationDiscountPct,
     durationDiscountAmount,
@@ -330,26 +333,81 @@ export default function VenueBookingWizardModal({
                                         {/* Start time */}
                                         <div>
                                             <label htmlFor="venueStartTime" style={{ display: 'block', fontSize: '14px', fontWeight: '700', color: textColor, marginBottom: '12px' }}>
-                                                Hora de inicio
+                                                Hora de ingreso
                                             </label>
-                                            <input
-                                                type="time"
-                                                id="venueStartTime"
-                                                value={startTime}
-                                                onChange={(e) => setStartTime(e.target.value)}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '14px 16px',
-                                                    borderRadius: '16px',
-                                                    border: `1px solid ${borderColor}`,
-                                                    background: subCardBg,
-                                                    color: textColor,
-                                                    fontSize: '16px',
-                                                    fontWeight: '700',
-                                                    fontFamily: 'inherit',
-                                                    boxSizing: 'border-box'
-                                                }}
-                                            />
+                                            {usesRentalSchedule ? (
+                                                <>
+                                                    {startOptions.length === 0 ? (
+                                                        <p style={{ margin: 0, fontSize: '14px', color: secondaryTextColor }}>Ese día no se alquila. Elegí otra fecha.</p>
+                                                    ) : (
+                                                        <div id="venueStartTime" role="group" aria-label="Hora de ingreso" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                            {startOptions.map(option => {
+                                                                const selected = option.available && startTime === option.time;
+                                                                return (
+                                                                    <button
+                                                                        key={option.time}
+                                                                        type="button"
+                                                                        disabled={!option.available}
+                                                                        aria-pressed={selected}
+                                                                        title={option.reason === 'taken' ? 'Ya está reservado' : option.reason === 'max_end' ? 'Con esas horas te pasás del horario de entrega' : option.reason === 'past' ? 'Ese horario ya pasó' : `Salida ${option.endTime}`}
+                                                                        onClick={() => setStartTime(option.time)}
+                                                                        style={{
+                                                                            minWidth: '76px',
+                                                                            minHeight: '44px',
+                                                                            padding: '10px 14px',
+                                                                            borderRadius: '14px',
+                                                                            border: `1px solid ${selected ? primaryColor : borderColor}`,
+                                                                            background: selected ? primaryColor : subCardBg,
+                                                                            color: selected ? '#000' : textColor,
+                                                                            fontSize: '15px',
+                                                                            fontWeight: '700',
+                                                                            fontFamily: 'inherit',
+                                                                            fontVariantNumeric: 'tabular-nums',
+                                                                            cursor: option.available ? 'pointer' : 'not-allowed',
+                                                                            opacity: option.available ? 1 : 0.4,
+                                                                            textDecoration: option.available ? 'none' : 'line-through'
+                                                                        }}
+                                                                    >
+                                                                        {option.time}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                    {startOptions.length > 0 && !startOptions.some(o => o.available) && (
+                                                        <p style={{ margin: '10px 0 0', fontSize: '13px', color: '#d97706' }}>
+                                                            {startOptions.some(o => o.reason === 'max_end')
+                                                                ? `Con ${duration} hs no entra ningún horario ese día. Probá con menos horas.`
+                                                                : 'Ese día ya no tiene horarios libres. Elegí otra fecha.'}
+                                                        </p>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <input
+                                                    type="time"
+                                                    id="venueStartTime"
+                                                    value={startTime}
+                                                    onChange={(e) => setStartTime(e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '14px 16px',
+                                                        borderRadius: '16px',
+                                                        border: `1px solid ${borderColor}`,
+                                                        background: subCardBg,
+                                                        color: textColor,
+                                                        fontSize: '16px',
+                                                        fontWeight: '700',
+                                                        fontFamily: 'inherit',
+                                                        boxSizing: 'border-box'
+                                                    }}
+                                                />
+                                            )}
+                                            {startTime && endTimeLabel && (
+                                                <div style={{ marginTop: '12px', padding: '12px 14px', borderRadius: '14px', background: subCardBg, border: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', fontSize: '14px', color: secondaryTextColor }}>
+                                                    <span>Ingreso <strong style={{ color: textColor }}>{startTime} hs</strong></span>
+                                                    <span>Salida <strong style={{ color: textColor }}>{endTimeLabel} hs</strong></span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </motion.div>
@@ -449,7 +507,7 @@ export default function VenueBookingWizardModal({
                                                     {selectedDate?.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                                                 </div>
                                                 {startTime && (
-                                                    <div style={{ fontSize: '13px', color: secondaryTextColor, marginTop: '2px' }}>desde las {startTime} hs</div>
+                                                    <div style={{ fontSize: '13px', color: secondaryTextColor, marginTop: '2px' }}>de {startTime} a {endTimeLabel} hs</div>
                                                 )}
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
@@ -593,7 +651,7 @@ export default function VenueBookingWizardModal({
                                 whileHover={{ scale: 1.01 }}
                                 onClick={() => {
                                     if (bookingStep === 1 && !startTime) {
-                                        showAlert('Falta la hora', 'Elegí a qué hora empieza el evento.', 'warning', 'Entendido');
+                                        showAlert('Falta la hora', 'Elegí la hora de ingreso.', 'warning', 'Entendido');
                                         return;
                                     }
                                     if (bookingStep === 4) {

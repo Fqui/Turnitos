@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import CustomDropdown from '../common/CustomDropdown';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { isRentalBusiness } from '../../utils/businessUtils';
+import { getRentalSchedule, hasRentalSchedule, getStartOptions, isRentalDateFull, minutesToTime, timeToMinutes } from '../../utils/rentalSchedule';
 import { getCourtSport } from '../../utils/sports';
 import { getDayHoursConfig, normalizeDayMinutes } from '../calendars/shared/utils';
 import { PADEL_DURATIONS, getDayShiftRanges, findShift } from '../../utils/courtHours';
@@ -46,6 +47,10 @@ const NewBookingModal = ({
     const isFutbol = isCourtBusiness && !isPadel;
     const isService = !isRental && !isCourtBusiness;
     const hasSpecialists = !isRental && !(currentBusiness?.courts?.length) && (currentBusiness?.specialists?.length || 0) > 0;
+
+    // Rental start times configured by the owner (Configuración > Horarios de Ingreso)
+    const rentalSchedule = getRentalSchedule(currentBusiness);
+    const usesRentalSchedule = isRental && hasRentalSchedule(rentalSchedule);
 
     // Capacity limit for rentals
     const maxCapacity = Number(currentBusiness?.capacity_limit || currentBusiness?.capacity || 100);
@@ -469,7 +474,13 @@ const NewBookingModal = ({
             return false;
         });
 
-        if (dayBookings.length > 0) {
+        // With start times there can be several rentals per day: the day is taken only when no start time fits
+        if (usesRentalSchedule && dayBookings.length > 0 && !dayBookings.some(b => b.status === 'blocked' || b.is_blocked || b.isBlocked)) {
+            const rentalDurations = (availableRentalDurations || []).map(o => o.hours);
+            if (isRentalDateFull(rentalSchedule, dateKey, rentalDurations, bookings)) {
+                return { status: 'occupied', label: 'Completo', selectable: true, booking: dayBookings[0] };
+            }
+        } else if (dayBookings.length > 0) {
             const isBlockedSlot = dayBookings.some(b => 
                 b.status === 'blocked' || 
                 b.is_blocked || 
@@ -952,30 +963,89 @@ const NewBookingModal = ({
                     </div>
 
                     {/* Start time of the rental */}
-                    {isRental && (
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                🕐 Hora de Inicio *
-                            </label>
-                            <input
-                                type="time"
-                                required
-                                value={newBookingData.time || ''}
-                                onChange={(e) => setNewBookingData(prev => ({ ...prev, time: e.target.value }))}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 12px',
-                                    borderRadius: '10px',
-                                    border: '1px solid var(--border)',
-                                    background: 'var(--bg-main)',
-                                    color: 'var(--text-primary)',
-                                    fontSize: '13px',
-                                    fontWeight: '700',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                        </div>
-                    )}
+                    {isRental && (() => {
+                        const rentalHours = Number(newBookingData.durationHours) || (Number(newBookingData.duration) || 240) / 60;
+                        const options = usesRentalSchedule ? getStartOptions(rentalSchedule, newBookingData.date, rentalHours, bookings) : [];
+                        const startMin = timeToMinutes(newBookingData.time);
+                        const endMin = startMin === null ? null : startMin + Math.round(rentalHours * 60);
+                        const chosen = options.find(o => o.time === newBookingData.time);
+                        let warning = '';
+                        if (usesRentalSchedule && startMin !== null) {
+                            if (!chosen) warning = 'Ese horario no está entre tus horarios de ingreso de ese día. Podés guardarla igual.';
+                            else if (chosen.reason === 'taken') warning = 'Se pisa con otra reserva de ese día. Podés guardarla igual.';
+                            else if (chosen.reason === 'max_end') warning = 'La salida pasa de tu horario de entrega. Podés guardarla igual.';
+                        }
+                        return (
+                            <div>
+                                <label htmlFor="rentalStartTime" style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                                    🕐 Hora de Ingreso *
+                                </label>
+                                {usesRentalSchedule && options.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                                        {options.map(option => {
+                                            const isSelected = newBookingData.time === option.time;
+                                            return (
+                                                <button
+                                                    key={option.time}
+                                                    type="button"
+                                                    aria-pressed={isSelected}
+                                                    title={option.reason === 'taken' ? 'Se pisa con otra reserva' : option.reason === 'max_end' ? 'Pasa del horario de entrega' : `Salida ${option.endTime}`}
+                                                    onClick={() => setNewBookingData(prev => ({ ...prev, time: option.time }))}
+                                                    style={{
+                                                        minHeight: '40px',
+                                                        padding: '8px 12px',
+                                                        borderRadius: '10px',
+                                                        border: isSelected ? '2px solid var(--primary-paddle)' : '1px solid var(--border)',
+                                                        background: isSelected ? 'var(--primary-paddle)' : 'var(--bg-main)',
+                                                        color: isSelected ? '#000' : 'var(--text-primary)',
+                                                        fontSize: '13px',
+                                                        fontWeight: '700',
+                                                        cursor: 'pointer',
+                                                        opacity: option.available || isSelected ? 1 : 0.45,
+                                                        textDecoration: option.available ? 'none' : 'line-through'
+                                                    }}
+                                                >
+                                                    {option.time}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {usesRentalSchedule && newBookingData.date && options.length === 0 && (
+                                    <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                        No tenés horarios de ingreso cargados para ese día. Podés poner la hora a mano.
+                                    </p>
+                                )}
+                                <input
+                                    id="rentalStartTime"
+                                    type="time"
+                                    required
+                                    aria-label={usesRentalSchedule ? 'Otro horario' : undefined}
+                                    value={newBookingData.time || ''}
+                                    onChange={(e) => setNewBookingData(prev => ({ ...prev, time: e.target.value }))}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 12px',
+                                        borderRadius: '10px',
+                                        border: '1px solid var(--border)',
+                                        background: 'var(--bg-main)',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '16px',
+                                        fontWeight: '700',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                                {endMin !== null && (
+                                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                        Salida: <strong style={{ color: 'var(--text-primary)' }}>{minutesToTime(endMin)} hs{endMin >= 1440 ? ' (día siguiente)' : ''}</strong>
+                                    </p>
+                                )}
+                                {warning && (
+                                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#d97706', fontWeight: '600' }}>⚠️ {warning}</p>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {/* Start time (courts and services) */}
                     {!isRental && (

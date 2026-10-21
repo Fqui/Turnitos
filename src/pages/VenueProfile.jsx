@@ -22,6 +22,7 @@ import VenueBookingWizardModal from '../components/venue/profile/VenueBookingWiz
 import VenueLightboxModal from '../components/venue/profile/VenueLightboxModal';
 import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerModal';
 import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
+import { getRentalSchedule, hasRentalSchedule, getStartOptions, isRentalDateFull, minutesToTime, timeToMinutes } from '../utils/rentalSchedule';
 
 // Fix Leaflet default icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -354,6 +355,19 @@ export default function VenueProfile({ business: initialBusiness }) {
         return '';
     };
 
+    const rentalSchedule = getRentalSchedule(business);
+    const usesRentalSchedule = hasRentalSchedule(rentalSchedule);
+    const scheduleBookings = venueBookings.length > 0 ? venueBookings : (business?.bookings || []);
+    const startOptions = usesRentalSchedule ? getStartOptions(rentalSchedule, selectedDate, duration, scheduleBookings) : [];
+    const startMinutes = timeToMinutes(startTime);
+    const endTimeLabel = startMinutes === null ? '' : `${minutesToTime(startMinutes + duration * 60)}${startMinutes + duration * 60 >= 1440 ? ' (día siguiente)' : ''}`;
+
+    // Si cambian la fecha o las horas y el ingreso elegido ya no entra, se borra
+    useEffect(() => {
+        if (!usesRentalSchedule || !startTime) return;
+        if (!startOptions.some(o => o.time === startTime && o.available)) setStartTime('');
+    }, [usesRentalSchedule, startTime, startOptions.map(o => `${o.time}:${o.available}`).join(',')]);
+
     const isDateBlocked = (date) => {
         if (!date) return false;
         const dateStr = formatDateStr(date);
@@ -369,6 +383,10 @@ export default function VenueProfile({ business: initialBusiness }) {
         if (isOwnerBlocked) return true;
 
         const bookingsList = venueBookings.length > 0 ? venueBookings : (business?.bookings || []);
+        // Con horarios de ingreso puede haber varias reservas por día: se completa cuando no entra ningún horario
+        if (usesRentalSchedule) {
+            return isRentalDateFull(rentalSchedule, date, business?.rental_duration_options || [4, 6, 8, 12, 24], bookingsList);
+        }
         const isBooked = bookingsList.some(b => {
             if (b.status === 'cancelled' || b.status === 'rejected') return false;
             const bStr = formatDateStr(b.date || b.start_time || b.created_at);
@@ -802,6 +820,9 @@ export default function VenueProfile({ business: initialBusiness }) {
                 setDuration={setDuration}
                 startTime={startTime}
                 setStartTime={setStartTime}
+                usesRentalSchedule={usesRentalSchedule}
+                startOptions={startOptions}
+                endTimeLabel={endTimeLabel}
                 durationOptions={durationOptions}
                 durationDiscountPct={durationDiscountPct}
                 durationDiscountAmount={durationDiscountAmount}
