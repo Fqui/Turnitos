@@ -5,6 +5,9 @@ export default function VenueGallerySection({
     galleryImages,
     permanentHighlights = [],
     onSelectHighlight,
+    activeStories = [],
+    storiesCover,
+    onOpenStories,
     onOpenLightbox,
     windowWidth,
     cardBg,
@@ -13,8 +16,76 @@ export default function VenueGallerySection({
     primaryColor
 }) {
     const hasPhotos = galleryImages && galleryImages.length > 0;
-    const hasHighlights = permanentHighlights.length > 0;
+    const hasStories = activeStories.length > 0;
+    const hasHighlights = permanentHighlights.length > 0 || hasStories;
     if (!hasPhotos && !hasHighlights) return null;
+
+    // Story cover; a video cover falls back to the logo or the first photo
+    const storyCoverRaw = hasStories ? (activeStories[0].cover_image || activeStories[0].images?.[0]) : null;
+    const storyCover = storyCoverRaw && !/\.(mp4|webm|mov|ogg|m4v)(\?|$)/i.test(storyCoverRaw)
+        ? storyCoverRaw
+        : (storiesCover || galleryImages?.[0]?.url);
+
+    const storiesBubble = hasStories ? (
+        <div
+            className="highlight-item"
+            data-story-origin
+            role="button"
+            tabIndex={0}
+            aria-label="Ver historias (24 h)"
+            onClick={onOpenStories}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onOpenStories();
+                }
+            }}
+            style={{
+                flexShrink: 0,
+                scrollSnapAlign: 'start',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px'
+            }}
+        >
+            <div data-story-bubble style={{
+                width: '84px',
+                height: '84px',
+                borderRadius: '50%',
+                padding: '3px',
+                background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
+            }}>
+                <div style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    padding: '2px',
+                    background: 'var(--bg-card)'
+                }}>
+                    {storyCover && (
+                        <img
+                            src={storyCover}
+                            alt="Historias"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+                        />
+                    )}
+                </div>
+            </div>
+            <span style={{
+                fontSize: '11.5px',
+                fontWeight: '600',
+                color: 'var(--text-primary)',
+                width: '84px',
+                textAlign: 'center',
+                lineHeight: '1.25',
+                minHeight: '2.5em'
+            }}>
+                Historias
+            </span>
+        </div>
+    ) : null;
 
     return (
         <div style={{
@@ -50,6 +121,7 @@ export default function VenueGallerySection({
                     <ProfileHighlightsBar
                         permanentHighlights={permanentHighlights}
                         onSelectHighlight={onSelectHighlight}
+                        leading={storiesBubble}
                         noBorder
                     />
                 </div>

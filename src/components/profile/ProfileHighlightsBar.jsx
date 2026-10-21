@@ -4,9 +4,10 @@ import HorizontalScroller from '../HorizontalScroller';
 export default function ProfileHighlightsBar({
     permanentHighlights,
     onSelectHighlight,
-    noBorder = false
+    noBorder = false,
+    leading = null
 }) {
-    if (!permanentHighlights || permanentHighlights.length === 0) {
+    if ((!permanentHighlights || permanentHighlights.length === 0) && !leading) {
         if (noBorder) return null;
         return (
             <div style={{
@@ -25,7 +26,8 @@ export default function ProfileHighlightsBar({
             style={noBorder ? { marginTop: 0, paddingTop: 0, borderTop: 'none' } : {}}
         >
             <HorizontalScroller arrows={false} innerClassName="highlights-container">
-                {permanentHighlights.map((highlight, index) => (
+                {leading}
+                {(permanentHighlights || []).map((highlight, index) => (
                     <div
                         key={highlight.id || index}
                         className="highlight-item"

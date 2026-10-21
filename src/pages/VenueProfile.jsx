@@ -533,14 +533,6 @@ export default function VenueProfile({ business: initialBusiness }) {
                 galleryImages={galleryImages}
                 windowWidth={windowWidth}
                 shareUrl={buildBusinessShareUrl(business.slug, '/turnos')}
-                activeStories={activeStories}
-                onStoryClick={() => {
-                    if (activeStories.length > 0) {
-                        setStoryViewerList(activeStories);
-                        setSelectedPhotoIndex(0);
-                        setSelectedHighlight(0);
-                    }
-                }}
             />
 
             {/* 2. Main Content Grid */}
@@ -564,6 +556,13 @@ export default function VenueProfile({ business: initialBusiness }) {
                     <VenueGallerySection
                         galleryImages={galleryImages}
                         permanentHighlights={permanentHighlights}
+                        activeStories={activeStories}
+                        storiesCover={business.logo || business.image}
+                        onOpenStories={() => {
+                            setStoryViewerList(activeStories);
+                            setSelectedPhotoIndex(0);
+                            setSelectedHighlight(0);
+                        }}
                         onSelectHighlight={(index) => {
                             setStoryViewerList(permanentHighlights);
                             setSelectedPhotoIndex(0);
