@@ -119,6 +119,37 @@ function readBusinesses(file) {
 
 // --- Validación ----------------------------------------------------------------
 
+const WEEKDAY_KEYS = { dom: '0', lun: '1', mar: '2', mie: '3', jue: '4', vie: '5', sab: '6' };
+
+function toMinutes(value) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(value || '').trim());
+    return m && Number(m[1]) < 24 && Number(m[2]) < 60 ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+// { "vie": ["10:00", "18:00"], "sab": [...], "salida": "02:00" } -> metadata.rental_schedule
+// (también acepta el formato de la app: { start_times, max_end })
+function parseStartTimes(value) {
+    if (typeof value !== 'object' || Array.isArray(value)) return '"horarios_ingreso" tiene que ser un objeto';
+    if (value.start_times) return { start_times: value.start_times, max_end: value.max_end ?? null };
+    const startTimes = {};
+    for (const [day, times] of Object.entries(value)) {
+        if (day === 'salida') continue;
+        const key = WEEKDAY_KEYS[slugify(day).slice(0, 3)];
+        if (!key) return `"horarios_ingreso": día "${day}" desconocido (lun, mar, mie, jue, vie, sab, dom)`;
+        const list = Array.isArray(times) ? times : [times];
+        if (list.some(t => toMinutes(t) === null)) return `"horarios_ingreso": horario inválido en "${day}" (usá "HH:MM")`;
+        startTimes[key] = list.map(t => String(t).trim().padStart(5, '0'));
+    }
+    let maxEnd = null;
+    if (value.salida) {
+        maxEnd = toMinutes(value.salida);
+        if (maxEnd === null) return '"horarios_ingreso.salida" tiene que ser "HH:MM"';
+        // Una salida de madrugada es del día siguiente (02:00 -> 26:00)
+        if (maxEnd < 12 * 60) maxEnd += 1440;
+    }
+    return { start_times: startTimes, max_end: maxEnd };
+}
+
 function normalize(raw, index) {
     const errors = [];
     const b = { ...raw };
@@ -152,6 +183,30 @@ function normalize(raw, index) {
 
     if (!b.horarios && rubro) b.horarios = DEFAULT_HOURS[rubro];
     if (!b.horarios) delete b.horarios;
+
+    // Seña: un número es porcentaje (0 la desactiva); { "monto": 5000 } es fija. Los de prueba van con 30 %
+    if ((b.sena == null || b.sena === '') && b.simulacion) b.sena = 30;
+    if (b.sena == null || b.sena === '') delete b.sena;
+    if (typeof b.sena === 'number' || /^\d+(\.\d+)?$/.test(String(b.sena))) b.sena = { porcentaje: Number(b.sena) };
+    else if (b.sena === false) b.sena = { porcentaje: 0 };
+    if (b.sena !== undefined && typeof b.sena !== 'object') errors.push('"sena" tiene que ser un porcentaje o { "monto": ... }');
+    // Los de prueba muestran datos de transferencia de ejemplo para que se vea el paso de la seña
+    if (!b.transferencia && b.simulacion && b.sena?.porcentaje !== 0) {
+        b.transferencia = { alias: 'ALIAS.DE.EJEMPLO', banco: 'Datos de ejemplo', titular: b.nombre };
+    }
+
+    if (b.horarios_ingreso) {
+        if (rubro !== 'alquileres') errors.push('"horarios_ingreso" es solo para alquileres');
+        const schedule = parseStartTimes(b.horarios_ingreso);
+        if (typeof schedule === 'string') errors.push(schedule);
+        else b.horarios_ingreso = schedule;
+    }
+
+    if (b.portada_foco != null) {
+        const x = Number(b.portada_foco.x), y = Number(b.portada_foco.y);
+        if (![x, y].every(v => Number.isFinite(v) && v >= 0 && v <= 100)) errors.push('"portada_foco" va como { "x": 0-100, "y": 0-100 }');
+        else b.portada_foco = { x: Math.round(x), y: Math.round(y) };
+    }
 
     return { business: b, errors: errors.map(e => `${label}: ${e}`) };
 }
