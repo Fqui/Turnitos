@@ -24,6 +24,7 @@ import UpcomingRemindersCard from '../components/business/UpcomingRemindersCard'
 import PortalAnalyticsView from '../components/business/portal/PortalAnalyticsView';
 import PortalListView from '../components/business/portal/PortalListView';
 import PortalListMobile from '../components/business/portal/mobile/PortalListMobile';
+import PhoneAlertsStrip from '../components/business/portal/mobile/PhoneAlertsStrip';
 import { PHONE_MAX_WIDTH } from '../components/business/portal/mobile/bookingMobileUtils';
 import { Plus } from 'lucide-react';
 import '../styles/portalMobile.css';
@@ -1008,6 +1009,8 @@ export default function BusinessPortal() {
 
     // Phone: floating "Nueva reserva" over the bottom bar in Calendario and Reservas
     const showFab = isPhone && !showSidebar && (viewMode === 'calendar' || viewMode === 'list');
+    // Phone: the notices on top of Calendario and Reservas go together in one collapsible strip
+    const phoneAlerts = isPhone && (viewMode === 'calendar' || viewMode === 'list');
 
     if (requirePasswordChange) {
         const targetBusinessId = currentBusinessId || selectedBusinessId;
@@ -1179,6 +1182,40 @@ export default function BusinessPortal() {
                     </div>
                 ) : (
                     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                        {phoneAlerts ? (
+                            <PhoneAlertsStrip>
+                                <PortalBillingBanner
+                                    business={currentBusiness}
+                                    onOpenSubscription={() => setViewMode('subscription')}
+                                />
+                                <PortalPushPrompt business={currentBusiness} />
+                                <PortalProfileChecklist
+                                    business={currentBusiness}
+                                    isMobile={isMobile}
+                                    onOpenSettings={(tab) => {
+                                        setSettingsTab(tab);
+                                        setViewMode('settings');
+                                    }}
+                                />
+                                {viewMode === 'calendar' && (
+                                    <PortalPastBookingsCard
+                                        bookings={bookings}
+                                        onResolved={() => fetchBookings(true)}
+                                        isMobile={isMobile}
+                                    />
+                                )}
+                                {viewMode === 'calendar' && (
+                                    <UpcomingRemindersCard
+                                        bookings={bookings}
+                                        currentBusiness={currentBusiness}
+                                        isMobile={isMobile}
+                                        onBookingUpdated={(updated) => {
+                                            setBookings(prev => prev.map(b => b.id === updated.id ? { ...b, ...updated } : b));
+                                        }}
+                                    />
+                                )}
+                            </PhoneAlertsStrip>
+                        ) : (<>
                         {viewMode !== 'subscription' && (
                             <PortalBillingBanner
                                 business={currentBusiness}
@@ -1196,6 +1233,7 @@ export default function BusinessPortal() {
                                 }}
                             />
                         )}
+                        </>)}
                         {viewMode === 'analytics' ? (
                             <PortalAnalyticsView
                                 metrics={metrics}
@@ -1227,19 +1265,23 @@ export default function BusinessPortal() {
                             />
                         ) : viewMode === 'calendar' ? (
                             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                                <PortalPastBookingsCard
-                                    bookings={bookings}
-                                    onResolved={() => fetchBookings(true)}
-                                    isMobile={isMobile}
-                                />
-                                <UpcomingRemindersCard
-                                    bookings={bookings}
-                                    currentBusiness={currentBusiness}
-                                    isMobile={isMobile}
-                                    onBookingUpdated={(updated) => {
-                                        setBookings(prev => prev.map(b => b.id === updated.id ? { ...b, ...updated } : b));
-                                    }}
-                                />
+                                {!phoneAlerts && (
+                                    <PortalPastBookingsCard
+                                        bookings={bookings}
+                                        onResolved={() => fetchBookings(true)}
+                                        isMobile={isMobile}
+                                    />
+                                )}
+                                {!phoneAlerts && (
+                                    <UpcomingRemindersCard
+                                        bookings={bookings}
+                                        currentBusiness={currentBusiness}
+                                        isMobile={isMobile}
+                                        onBookingUpdated={(updated) => {
+                                            setBookings(prev => prev.map(b => b.id === updated.id ? { ...b, ...updated } : b));
+                                        }}
+                                    />
+                                )}
 
                                 {reschedulingBooking && (
                                     <div style={{
