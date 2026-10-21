@@ -11,9 +11,10 @@
   display: grid;
   gap: 32px;
   align-items: center;
-  padding-top: 32px;
-  padding-bottom: 48px;
 }
+/* .sp-wrap (support.css) pone padding: 0 y en producción ese CSS puede cargarse después;
+   con doble clase el espacio vertical del hero no se pisa y la tarjeta flotante no tapa "¿Te suena?" */
+.sp-wrap.np-hero { padding-top: 32px; padding-bottom: 48px; }
 .np-hero .sp-title em { font-style: normal; color: var(--sp-accent-text); }
 .np-hero .sp-actions { margin-top: 24px; }
 .np-checks {
@@ -64,7 +65,8 @@
 .np-toast span { color: var(--text-secondary); }
 
 @media (min-width: 900px) {
-  .np-hero { grid-template-columns: 1.05fr 1fr; padding-top: 64px; padding-bottom: 72px; }
+  .np-hero { grid-template-columns: 1.05fr 1fr; }
+  .sp-wrap.np-hero { padding-top: 64px; padding-bottom: 72px; }
   .np-mosaic { grid-template-rows: repeat(3, 136px); margin-bottom: 0; }
   .np-toast { left: -24px; right: auto; width: 300px; bottom: -22px; }
 }
