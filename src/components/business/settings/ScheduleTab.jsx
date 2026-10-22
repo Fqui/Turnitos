@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button, TimePicker } from '../../common/controls';
 
 const daysTranslation = {
     monday: 'Lunes',
@@ -12,15 +13,34 @@ const daysTranslation = {
 
 const orderedDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
+const rowStyle = { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' };
+const rowLabelStyle = { fontSize: '13px', color: 'var(--text-secondary)', minWidth: '60px' };
+const timeStyle = { width: '112px' };
+
 export default function ScheduleTab({
     formData,
     handleInputChange,
     handleSave,
     saving,
-    inputStyle,
-    saveButtonStyle,
     isMobile
 }) {
+    const setDayField = (day, field, value) => {
+        const newHours = { ...formData.hours };
+        newHours[day] = { ...newHours[day], [field]: value };
+        handleInputChange('hours', newHours);
+    };
+
+    const timeField = (day, field, value, label) => (
+        <TimePicker
+            size="sm"
+            style={timeStyle}
+            aria-label={`${label} del ${daysTranslation[day].toLowerCase()}`}
+            title={`${daysTranslation[day]}: ${label.toLowerCase()}`}
+            value={value}
+            onChange={(v) => setDayField(day, field, v)}
+        />
+    );
+
     return (
         <div style={{ display: 'grid', gap: '20px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '10px' }}>Días y Horarios de Atención</h3>
@@ -79,8 +99,8 @@ export default function ScheduleTab({
                                                 newHours[day] = {
                                                     ...newHours[day],
                                                     isSplit: newIsSplit,
-                                                    open: newIsSplit ? (dayConfig.open || '09:00') : (dayConfig.open || '09:00'),
-                                                    close: newIsSplit ? (dayConfig.close || '20:00') : (dayConfig.close || '20:00'),
+                                                    open: dayConfig.open || '09:00',
+                                                    close: dayConfig.close || '20:00',
                                                     breakStart: newIsSplit ? '13:00' : null,
                                                     breakEnd: newIsSplit ? '16:00' : null
                                                 };
@@ -100,83 +120,26 @@ export default function ScheduleTab({
                                 <div style={{ paddingLeft: isMobile ? '0' : '30px', animation: 'fadeIn 0.2s' }}>
                                     {!isSplit ? (
                                         // Continuous Shift Mode
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', minWidth: '60px' }}>Corrido:</span>
-                                            <input
-                                                type="time"
-                                                value={dayConfig.open || '08:00'}
-                                                onChange={(e) => {
-                                                    const newHours = { ...formData.hours };
-                                                    newHours[day] = { ...newHours[day], open: e.target.value };
-                                                    handleInputChange('hours', newHours);
-                                                }}
-                                                style={{ ...inputStyle, width: 'auto', padding: '6px 10px', fontSize: '13px' }}
-                                            />
+                                        <div style={rowStyle}>
+                                            <span style={rowLabelStyle}>Corrido:</span>
+                                            {timeField(day, 'open', dayConfig.open || '08:00', 'Apertura')}
                                             <span style={{ color: 'var(--text-secondary)' }}>a</span>
-                                            <input
-                                                type="time"
-                                                value={dayConfig.close || '23:00'}
-                                                onChange={(e) => {
-                                                    const newHours = { ...formData.hours };
-                                                    newHours[day] = { ...newHours[day], close: e.target.value };
-                                                    handleInputChange('hours', newHours);
-                                                }}
-                                                style={{ ...inputStyle, width: 'auto', padding: '6px 10px', fontSize: '13px' }}
-                                            />
+                                            {timeField(day, 'close', dayConfig.close || '23:00', 'Cierre')}
                                         </div>
                                     ) : (
                                         // Split Shift Mode
                                         <div style={{ display: 'grid', gap: '12px' }}>
-                                            {/* Shift 1 */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', minWidth: '60px' }}>Turno 1:</span>
-                                                <input
-                                                    type="time"
-                                                    value={dayConfig.open || '09:00'}
-                                                    onChange={(e) => {
-                                                        const newHours = { ...formData.hours };
-                                                        newHours[day] = { ...newHours[day], open: e.target.value };
-                                                        handleInputChange('hours', newHours);
-                                                    }}
-                                                    style={{ ...inputStyle, width: 'auto', padding: '6px 10px', fontSize: '13px' }}
-                                                />
+                                            <div style={rowStyle}>
+                                                <span style={rowLabelStyle}>Turno 1:</span>
+                                                {timeField(day, 'open', dayConfig.open || '09:00', 'Apertura')}
                                                 <span style={{ color: 'var(--text-secondary)' }}>a</span>
-                                                <input
-                                                    type="time"
-                                                    value={dayConfig.breakStart || '13:00'}
-                                                    onChange={(e) => {
-                                                        const newHours = { ...formData.hours };
-                                                        newHours[day] = { ...newHours[day], breakStart: e.target.value };
-                                                        handleInputChange('hours', newHours);
-                                                    }}
-                                                    style={{ ...inputStyle, width: 'auto', padding: '6px 10px', fontSize: '13px' }}
-                                                />
+                                                {timeField(day, 'breakStart', dayConfig.breakStart || '13:00', 'Inicio del corte')}
                                             </div>
-
-                                            {/* Shift 2 */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', minWidth: '60px' }}>Turno 2:</span>
-                                                <input
-                                                    type="time"
-                                                    value={dayConfig.breakEnd || '16:00'}
-                                                    onChange={(e) => {
-                                                        const newHours = { ...formData.hours };
-                                                        newHours[day] = { ...newHours[day], breakEnd: e.target.value };
-                                                        handleInputChange('hours', newHours);
-                                                    }}
-                                                    style={{ ...inputStyle, width: 'auto', padding: '6px 10px', fontSize: '13px' }}
-                                                />
+                                            <div style={rowStyle}>
+                                                <span style={rowLabelStyle}>Turno 2:</span>
+                                                {timeField(day, 'breakEnd', dayConfig.breakEnd || '16:00', 'Fin del corte')}
                                                 <span style={{ color: 'var(--text-secondary)' }}>a</span>
-                                                <input
-                                                    type="time"
-                                                    value={dayConfig.close || '20:00'}
-                                                    onChange={(e) => {
-                                                        const newHours = { ...formData.hours };
-                                                        newHours[day] = { ...newHours[day], close: e.target.value };
-                                                        handleInputChange('hours', newHours);
-                                                    }}
-                                                    style={{ ...inputStyle, width: 'auto', padding: '6px 10px', fontSize: '13px' }}
-                                                />
+                                                {timeField(day, 'close', dayConfig.close || '20:00', 'Cierre')}
                                             </div>
                                         </div>
                                     )}
@@ -186,8 +149,10 @@ export default function ScheduleTab({
                     );
                 })}
             </div>
-            <button
-                type="button"
+            <Button
+                size="lg"
+                fullWidth
+                loading={saving}
                 onClick={() => {
                     const normalizedHours = {};
                     orderedDays.forEach(day => {
@@ -207,11 +172,9 @@ export default function ScheduleTab({
                     handleInputChange('hours', normalizedHours);
                     handleSave({ hours: normalizedHours });
                 }}
-                style={saveButtonStyle}
-                disabled={saving}
             >
                 {saving ? 'Guardando...' : 'Guardar Horarios'}
-            </button>
+            </Button>
         </div>
     );
 }

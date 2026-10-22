@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
 import CustomDropdown from '../common/CustomDropdown';
+import { DatePicker, Select, TimePicker } from '../common/controls';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { isRentalBusiness, isSportBusiness } from '../../utils/businessUtils';
 import { getCourtSport } from '../../utils/sports';
@@ -1124,20 +1125,12 @@ const BookingDetailsModalContent = ({
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '3px 0' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 <span style={{ fontSize: '10px', color: 'var(--text-secondary)', minWidth: '32px' }}>Inicio:</span>
-                                                <input
-                                                    type="time"
+                                                <TimePicker
+                                                    size="sm"
+                                                    aria-label="Inicio"
+                                                    title="Hora de inicio"
                                                     value={editableTime}
-                                                    onChange={(e) => setEditableTime(e.target.value)}
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '3px 6px',
-                                                        borderRadius: '6px',
-                                                        border: '1px solid var(--border)',
-                                                        background: 'var(--bg-card)',
-                                                        color: 'var(--text-primary)',
-                                                        fontSize: '12px',
-                                                        fontWeight: '700'
-                                                    }}
+                                                    onChange={setEditableTime}
                                                 />
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -2448,8 +2441,8 @@ const BookingDetailsModalContent = ({
                                     </label>
                                     {isEditing ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <input type="date" aria-label="Día del turno" value={editableDate} onChange={(e) => setEditableDate(e.target.value)} style={turnInputStyle} />
-                                            <input type="time" aria-label="Horario del turno" value={editableTime} onChange={(e) => setEditableTime(e.target.value)} style={turnInputStyle} />
+                                            <DatePicker aria-label="Día del turno" title="Día del turno" value={editableDate} onChange={setEditableDate} />
+                                            <TimePicker aria-label="Horario del turno" title="Horario del turno" value={editableTime} onChange={setEditableTime} />
                                         </div>
                                     ) : (
                                         <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
@@ -2463,26 +2456,33 @@ const BookingDetailsModalContent = ({
                                         {isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '💼 Servicio'}
                                     </label>
                                     {isEditing && resourceOptions.length > 0 ? (
-                                        <select aria-label={court ? 'Cancha' : 'Servicio'} value={editableResourceId} onChange={(e) => setEditableResourceId(e.target.value)} style={turnInputStyle}>
-                                            {!resourceOptions.some(r => String(r.id) === editableResourceId) && (
-                                                <option value={editableResourceId}>{resourceName}</option>
-                                            )}
-                                            {resourceOptions.map(r => (
-                                                <option key={r.id} value={String(r.id)}>{r.name}</option>
-                                            ))}
-                                        </select>
+                                        <Select
+                                            aria-label={court ? 'Cancha' : 'Servicio'}
+                                            title={court ? 'Cancha' : 'Servicio'}
+                                            value={editableResourceId}
+                                            onChange={setEditableResourceId}
+                                            options={[
+                                                ...(!resourceOptions.some(r => String(r.id) === editableResourceId) ? [{ value: editableResourceId, label: resourceName }] : []),
+                                                ...resourceOptions.map(r => ({ value: String(r.id), label: r.name }))
+                                            ]}
+                                        />
                                     ) : (
                                         <div style={{ fontWeight: '800', color: 'var(--primary-paddle)', fontSize: isMobile ? '13px' : '14px' }}>
                                             {resourceName}
                                         </div>
                                     )}
                                     {isEditing && specialistOptions.length > 0 ? (
-                                        <select aria-label="Profesional" value={editableSpecialistId} onChange={(e) => setEditableSpecialistId(e.target.value)} style={{ ...turnInputStyle, marginTop: '6px' }}>
-                                            <option value="">Sin profesional asignado</option>
-                                            {specialistOptions.map(sp => (
-                                                <option key={sp.id} value={String(sp.id)}>{sp.name}</option>
-                                            ))}
-                                        </select>
+                                        <Select
+                                            aria-label="Profesional"
+                                            title="Profesional"
+                                            value={editableSpecialistId}
+                                            onChange={setEditableSpecialistId}
+                                            style={{ marginTop: '6px' }}
+                                            options={[
+                                                { value: '', label: 'Sin profesional asignado' },
+                                                ...specialistOptions.map(sp => ({ value: String(sp.id), label: sp.name }))
+                                            ]}
+                                        />
                                     ) : specialist && (
                                         <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', marginTop: '2px' }}>
                                             👤 {specialist.name}
