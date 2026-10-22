@@ -5,54 +5,6 @@ import { EmojiPickerModal } from '../common/AmenityIcon';
 
 const PRESET_EMOJIS = ['📄', '📋', '🍔', '🍕', '🍻', '👥', '🎵', '⭐', '🌐', '💳', '📍', '📞', '🎁', '💬', '⚽', '🎾', '🏖️', '🔥'];
 
-const PRESET_TEMPLATES = [
-    {
-        label: '💬 WhatsApp',
-        title: 'Consultas por WhatsApp',
-        subtitle: 'Atención personalizada y dudas',
-        icon: '💬',
-        linkType: 'url',
-        url: 'https://wa.me/',
-        colorType: 'custom',
-        buttonColor: '#25D366'
-    },
-    {
-        label: '📄 Lista de Precios',
-        title: 'Lista de Precios',
-        subtitle: 'Precios actualizados de nuestros servicios',
-        icon: '📄',
-        linkType: 'file',
-        colorType: 'primary'
-    },
-    {
-        label: '📸 Instagram / Trabajos',
-        title: 'Nuestro Instagram',
-        subtitle: 'Mirá fotos y videos de nuestros trabajos',
-        icon: '📸',
-        linkType: 'url',
-        url: 'https://instagram.com/',
-        colorType: 'custom',
-        buttonColor: '#EC4899'
-    },
-    {
-        label: '📍 Cómo Llegar',
-        title: 'Cómo Llegar',
-        subtitle: 'Ver ubicación en Google Maps',
-        icon: '📍',
-        linkType: 'url',
-        url: 'https://maps.google.com/',
-        colorType: 'card'
-    },
-    {
-        label: '📜 Políticas y Señas',
-        title: 'Políticas y Cancelaciones',
-        subtitle: 'Información sobre señas y cancelaciones',
-        icon: '📜',
-        linkType: 'file',
-        colorType: 'card'
-    }
-];
-
 export default function LinkBioButtonsSettings({
     customLinks = [],
     onChange,
@@ -283,24 +235,6 @@ export default function LinkBioButtonsSettings({
         showToast('Posición actualizada', 'info');
     };
 
-    const applyPresetTemplate = (template) => {
-        resetForm();
-        setFormState({
-            id: 'link_' + Date.now(),
-            title: template.title,
-            subtitle: template.subtitle,
-            icon: template.icon,
-            linkType: template.linkType,
-            url: template.url || '',
-            fileName: '',
-            fileSize: '',
-            colorType: template.colorType,
-            buttonColor: template.colorType === 'primary' ? businessBrandColor : (template.buttonColor || businessBrandColor),
-            enabled: true
-        });
-        setIsAdding(true);
-    };
-
     const handleToggleLink = (index) => {
         const updated = [...customLinks];
         updated[index] = {
@@ -374,57 +308,6 @@ export default function LinkBioButtonsSettings({
                         <span>➕</span> Agregar Botón
                     </button>
                 )}
-            </div>
-
-            {/* Quick Templates Bar */}
-            <div style={{
-                background: 'var(--bg-main)',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                border: '1px solid var(--border)',
-                marginBottom: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                flexWrap: 'wrap'
-            }}>
-                <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span>💡</span> Sugerencias rápidas:
-                </span>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
-                    {PRESET_TEMPLATES.map((tmpl, tIdx) => (
-                        <button
-                            key={tIdx}
-                            type="button"
-                            onClick={() => applyPresetTemplate(tmpl)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                padding: '5px 11px',
-                                borderRadius: '8px',
-                                border: '1px solid var(--border)',
-                                background: 'var(--bg-card)',
-                                color: 'var(--text-primary)',
-                                fontSize: '12px',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.borderColor = 'var(--primary-paddle, #84CC16)';
-                                e.currentTarget.style.transform = 'translateY(-1px)';
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.borderColor = 'var(--border)';
-                                e.currentTarget.style.transform = 'translateY(0)';
-                            }}
-                        >
-                            <span>{tmpl.icon}</span>
-                            <span>{tmpl.label}</span>
-                        </button>
-                    ))}
-                </div>
             </div>
 
             {/* Add / Edit Form Modal / Box */}
