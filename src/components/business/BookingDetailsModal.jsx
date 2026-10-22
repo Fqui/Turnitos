@@ -208,6 +208,16 @@ const BookingDetailsModalContent = ({
     const initialTime = (booking.time && booking.time !== '00:00' && booking.time !== '00:00:00') ? booking.time : '';
     const [editableTime, setEditableTime] = useState(initialTime);
 
+    // Turnos de servicios y canchas: datos del cliente, día, servicio/cancha y profesional
+    const initialResourceId = String((court ? court.id : (booking.service_id || booking.serviceId)) || '');
+    const initialSpecialistId = String(booking.specialist_id || booking.specialistId || '');
+    const [editableCustomerName, setEditableCustomerName] = useState('');
+    const [editablePhone, setEditablePhone] = useState('');
+    const [editableEmail, setEditableEmail] = useState('');
+    const [editableDate, setEditableDate] = useState('');
+    const [editableResourceId, setEditableResourceId] = useState('');
+    const [editableSpecialistId, setEditableSpecialistId] = useState('');
+
     // State for editing mode and values
     const [isEditing, setIsEditing] = useState(false);
     const [editablePrice, setEditablePrice] = useState(0);
@@ -282,6 +292,30 @@ const BookingDetailsModalContent = ({
         }
     }
 
+    const turnInputStyle = {
+        width: '100%',
+        boxSizing: 'border-box',
+        padding: '8px 10px',
+        minHeight: '40px',
+        borderRadius: '8px',
+        border: '1px solid var(--border)',
+        background: 'var(--bg-card)',
+        color: 'var(--text-primary)',
+        fontSize: '14px',
+        fontWeight: '600'
+    };
+    const resourceOptions = court ? (biz?.courts || []) : (biz?.services || []);
+    const specialistOptions = biz?.specialists || [];
+
+    const resetTurnFields = () => {
+        setEditableCustomerName(booking.customer_name || booking.customerName || '');
+        setEditablePhone(phone);
+        setEditableEmail(email || '');
+        setEditableDate(String(booking.date || '').slice(0, 10));
+        setEditableResourceId(initialResourceId);
+        setEditableSpecialistId(initialSpecialistId);
+    };
+
     const currentGuests = booking.guest_count || booking.guestCount || booking.metadata?.guestCount || booking.guests || '';
 
     // Initialize or sync state when booking changes
@@ -294,6 +328,7 @@ const BookingDetailsModalContent = ({
         setEditableServices(parseBookingServices(booking));
         setEditableEventType(initialEventType);
         setEditableTime(initialTime);
+        resetTurnFields();
         setIsEditing(false);
         setIsSaving(false);
         setSaveSuccess(false);
@@ -597,6 +632,37 @@ const BookingDetailsModalContent = ({
                 }
             };
 
+            if (!isRental) {
+                const name = editableCustomerName.trim();
+                if (!name) {
+                    showToast('Poné el nombre del cliente', 'warning');
+                    setIsSaving(false);
+                    return;
+                }
+                if (!editableDate) {
+                    showToast('Elegí el día del turno', 'warning');
+                    setIsSaving(false);
+                    return;
+                }
+                updatePayload.customer_name = name;
+                updatePayload.customer_phone = editablePhone.trim();
+                updatePayload.customer_email = editableEmail.trim() || null;
+                updatePayload.date = editableDate;
+                if (editableResourceId && editableResourceId !== initialResourceId) {
+                    if (court) {
+                        updatePayload.court_id = editableResourceId;
+                    } else {
+                        updatePayload.service_id = editableResourceId;
+                        const newService = (biz?.services || []).find(sv => String(sv.id) === editableResourceId);
+                        const newDuration = Number(newService?.duration);
+                        if (newDuration > 0) updatePayload.duration = newDuration;
+                    }
+                }
+                if (editableSpecialistId !== initialSpecialistId) {
+                    updatePayload.specialist_id = editableSpecialistId || null;
+                }
+            }
+
             await onAction('update_booking', updatePayload);
 
             setIsSaving(false);
@@ -620,6 +686,7 @@ const BookingDetailsModalContent = ({
         setEditableServices(parseBookingServices(booking));
         setEditableEventType(initialEventType);
         setEditableTime(initialTime);
+        resetTurnFields();
         setShowAddCustomExtra(false);
         setCustomExtraName('');
         setCustomExtraPrice('');
@@ -2379,19 +2446,44 @@ const BookingDetailsModalContent = ({
                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>
                                         📅 Fecha y Horario
                                     </label>
-                                    <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
-                                        {formatDisplayDate(booking.date)} {booking.time && booking.time !== '00:00' && booking.time !== '00:00:00' ? `• ${booking.time} hs` : ''}
-                                    </div>
+                                    {isEditing ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <input type="date" aria-label="Día del turno" value={editableDate} onChange={(e) => setEditableDate(e.target.value)} style={turnInputStyle} />
+                                            <input type="time" aria-label="Horario del turno" value={editableTime} onChange={(e) => setEditableTime(e.target.value)} style={turnInputStyle} />
+                                        </div>
+                                    ) : (
+                                        <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: isMobile ? '13px' : '14px' }}>
+                                            {formatDisplayDate(booking.date)} {booking.time && booking.time !== '00:00' && booking.time !== '00:00:00' ? `• ${booking.time} hs` : ''}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>
                                         {isPadel ? '🎾 Cancha de Pádel' : isFutbol ? '⚽ Cancha de Fútbol' : '💼 Servicio'}
                                     </label>
-                                    <div style={{ fontWeight: '800', color: 'var(--primary-paddle)', fontSize: isMobile ? '13px' : '14px' }}>
-                                        {resourceName}
-                                    </div>
-                                    {specialist && (
+                                    {isEditing && resourceOptions.length > 0 ? (
+                                        <select aria-label={court ? 'Cancha' : 'Servicio'} value={editableResourceId} onChange={(e) => setEditableResourceId(e.target.value)} style={turnInputStyle}>
+                                            {!resourceOptions.some(r => String(r.id) === editableResourceId) && (
+                                                <option value={editableResourceId}>{resourceName}</option>
+                                            )}
+                                            {resourceOptions.map(r => (
+                                                <option key={r.id} value={String(r.id)}>{r.name}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div style={{ fontWeight: '800', color: 'var(--primary-paddle)', fontSize: isMobile ? '13px' : '14px' }}>
+                                            {resourceName}
+                                        </div>
+                                    )}
+                                    {isEditing && specialistOptions.length > 0 ? (
+                                        <select aria-label="Profesional" value={editableSpecialistId} onChange={(e) => setEditableSpecialistId(e.target.value)} style={{ ...turnInputStyle, marginTop: '6px' }}>
+                                            <option value="">Sin profesional asignado</option>
+                                            {specialistOptions.map(sp => (
+                                                <option key={sp.id} value={String(sp.id)}>{sp.name}</option>
+                                            ))}
+                                        </select>
+                                    ) : specialist && (
                                         <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', marginTop: '2px' }}>
                                             👤 {specialist.name}
                                         </div>
@@ -2411,6 +2503,13 @@ const BookingDetailsModalContent = ({
                             }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>👤 Cliente</label>
+                                    {isEditing ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                                            <input type="text" aria-label="Nombre del cliente" placeholder="Nombre" value={editableCustomerName} onChange={(e) => setEditableCustomerName(e.target.value)} style={turnInputStyle} />
+                                            <input type="tel" inputMode="tel" aria-label="Teléfono del cliente" placeholder="Teléfono" value={editablePhone} onChange={(e) => setEditablePhone(e.target.value)} style={turnInputStyle} />
+                                            <input type="email" aria-label="Email del cliente" placeholder="Email (opcional)" value={editableEmail} onChange={(e) => setEditableEmail(e.target.value)} style={turnInputStyle} />
+                                        </div>
+                                    ) : (<>
                                     <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '16px' }}>{booking.customer_name || booking.customerName || '-'}</div>
                                     
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
@@ -2425,6 +2524,7 @@ const BookingDetailsModalContent = ({
                                             </div>
                                         )}
                                     </div>
+                                    </>)}
                                 </div>
 
                                 {cleanPhone && (
@@ -2742,9 +2842,13 @@ const BookingDetailsModalContent = ({
 
                                     <div style={{ textAlign: 'right' }}>
                                         <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px', fontWeight: '600' }}>Precio Total</label>
-                                        <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '18px' }}>
-                                            ${activePrice.toLocaleString('es-AR')}
-                                        </div>
+                                        {isEditing ? (
+                                            <input type="number" inputMode="numeric" min="0" aria-label="Precio total" value={editablePrice} onChange={(e) => setEditablePrice(Math.max(0, Number(e.target.value) || 0))} style={{ ...turnInputStyle, width: '120px', textAlign: 'right' }} />
+                                        ) : (
+                                            <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '18px' }}>
+                                                ${activePrice.toLocaleString('es-AR')}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -2803,9 +2907,13 @@ const BookingDetailsModalContent = ({
                                 }}>
                                     <div>
                                         <span style={{ color: 'var(--text-secondary)', fontSize: '11px', display: 'block', marginBottom: '2px' }}>Seña:</span>
-                                        <span style={{ fontWeight: '700', color: booking.status === 'deposit_paid' || booking.status === 'confirmed' ? '#F59E0B' : 'var(--text-primary)' }}>
-                                            ${activeDeposit.toLocaleString('es-AR')}
-                                        </span>
+                                        {isEditing ? (
+                                            <input type="number" inputMode="numeric" min="0" aria-label="Seña" value={editableDeposit} onChange={(e) => setEditableDeposit(Math.max(0, Number(e.target.value) || 0))} style={{ ...turnInputStyle, width: '120px' }} />
+                                        ) : (
+                                            <span style={{ fontWeight: '700', color: booking.status === 'deposit_paid' || booking.status === 'confirmed' ? '#F59E0B' : 'var(--text-primary)' }}>
+                                                ${activeDeposit.toLocaleString('es-AR')}
+                                            </span>
+                                        )}
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
                                         <span style={{ color: 'var(--text-secondary)', fontSize: '11px', display: 'block', marginBottom: '2px' }}>Saldo a Cobrar:</span>
