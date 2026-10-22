@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import supabaseService from "../services/supabaseService";
 import "./SubscriptionManager.css";
+import { Button } from "./common/controls";
 import { calculateSubscriptionPrice } from "../utils/subscriptionUtils";
 
 const SubscriptionManager = ({ businessId, businessType, business, formData, onResourcesChange, onSave, saving, serviceAdapter, showToast }) => {
@@ -233,13 +234,15 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
             </div>
 
             {/* A row still open for editing is saved too, instead of being dropped */}
-            <button
-                className="btn-save-resources"
+            <Button
+                size="lg"
+                fullWidth
+                loading={saving}
+                style={{ marginTop: "16px" }}
                 onClick={() => (editingIndex !== null ? confirmEdit() : onSave && onSave({ [resourceKey]: resources }))}
-                disabled={saving}
             >
                 {saving ? "Guardando..." : `Guardar ${resourceLabelPlural}`}
-            </button>
+            </Button>
         </div>
     );
 };

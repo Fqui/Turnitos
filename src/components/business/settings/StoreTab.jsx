@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
-import { Select } from '../../common/controls';
+import { Button, Select } from '../../common/controls';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function StoreTab({
@@ -299,25 +299,9 @@ export default function StoreTab({
                             }
                         }}
                     />
-                    <button
-                        type="button"
-                        onClick={handleAddStoreCategory}
-                        disabled={!newCategoryInput.trim()}
-                        style={{
-                            padding: '10px 18px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: 'var(--primary-paddle, #10b981)',
-                            color: '#000',
-                            fontWeight: '700',
-                            fontSize: '13px',
-                            cursor: !newCategoryInput.trim() ? 'not-allowed' : 'pointer',
-                            opacity: !newCategoryInput.trim() ? 0.6 : 1,
-                            whiteSpace: 'nowrap'
-                        }}
-                    >
-                        ＋ Crear Categoría
-                    </button>
+                    <Button variant="secondary" onClick={handleAddStoreCategory} disabled={!newCategoryInput.trim()}>
+                        + Crear Categoría
+                    </Button>
                 </div>
 
                 {/* Categories Tag Chips */}
@@ -383,8 +367,7 @@ export default function StoreTab({
                             Productos que tus clientes pueden ver y encargar desde la tienda online.
                         </p>
                     </div>
-                    <button
-                        type="button"
+                    <Button
                         onClick={() => {
                             setEditingProduct({
                                 id: Date.now().toString(),
@@ -399,22 +382,9 @@ export default function StoreTab({
                             setIsCustomCategoryMode(false);
                             setIsProductModalOpen(true);
                         }}
-                        style={{
-                            padding: '10px 20px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: 'var(--primary-paddle, #10b981)',
-                            color: '#000',
-                            fontWeight: '700',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                        }}
                     >
-                        ＋ Agregar Producto
-                    </button>
+                        + Agregar Producto
+                    </Button>
                 </div>
 
                 {/* Products Grid / List */}
@@ -422,8 +392,8 @@ export default function StoreTab({
                     <div style={{ textAlign: 'center', padding: '36px', border: '1.5px dashed var(--border)', borderRadius: '16px', color: 'var(--text-secondary)', background: 'var(--bg-main)' }}>
                         <div style={{ fontSize: '36px', marginBottom: '8px' }}>🛒</div>
                         <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>Aún no tienes productos cargados en tu catálogo.</p>
-                        <button
-                            type="button"
+                        <Button
+                            variant="outline"
                             onClick={() => {
                                 setEditingProduct({
                                     id: Date.now().toString(),
@@ -438,19 +408,9 @@ export default function StoreTab({
                                 setIsCustomCategoryMode(false);
                                 setIsProductModalOpen(true);
                             }}
-                            style={{
-                                padding: '10px 20px',
-                                borderRadius: '12px',
-                                border: '1px solid var(--primary-paddle, #10b981)',
-                                background: 'transparent',
-                                color: 'var(--text-primary)',
-                                fontWeight: '700',
-                                fontSize: '13px',
-                                cursor: 'pointer'
-                            }}
                         >
-                            ＋ Agregar Primer Producto
-                        </button>
+                            + Agregar Primer Producto
+                        </Button>
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
@@ -507,30 +467,31 @@ export default function StoreTab({
                                         </span>
                                     </label>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button
-                                            type="button"
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
                                             onClick={() => {
                                                 setEditingProduct({ ...prod });
                                                 setIsCustomCategoryMode(!storeCategories.includes(prod.category) && !!prod.category);
                                                 setIsProductModalOpen(true);
                                             }}
-                                            style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer', color: 'var(--text-primary)' }}
                                         >
                                             ✏️ Editar
-                                        </button>
-                                        <button
-                                            type="button"
+                                        </Button>
+                                        <Button
+                                            variant="danger-soft"
+                                            size="sm"
+                                            aria-label={`Eliminar ${prod.name}`}
+                                            title="Eliminar producto"
                                             onClick={async () => {
                                                 const updated = (formData.metadata.store_products || []).filter((_, i) => i !== idx);
                                                 handleMetadataChange('store_products', updated);
                                                 if (!(await handleSave({ metadata: { ...formData.metadata, store_products: updated } }))) return;
                                                 if (showToast) showToast('Producto eliminado', 'info');
                                             }}
-                                            style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '14px', cursor: 'pointer' }}
-                                            title="Eliminar producto"
                                         >
                                             🗑️
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -556,8 +517,7 @@ export default function StoreTab({
                         </p>
                     </div>
 
-                    <button
-                        type="button"
+                    <Button
                         onClick={() => {
                             setEditingExtra({
                                 id: Date.now().toString(),
@@ -572,30 +532,17 @@ export default function StoreTab({
                             });
                             setIsExtraModalOpen(true);
                         }}
-                        style={{
-                            padding: '10px 20px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: 'var(--primary-paddle, #10b981)',
-                            color: '#000',
-                            fontWeight: '700',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                        }}
                     >
-                        ＋ Agregar Adicional de Turno
-                    </button>
+                        + Agregar Adicional de Turno
+                    </Button>
                 </div>
 
                 {(!formData.additional_services || formData.additional_services.length === 0) ? (
                     <div style={{ textAlign: 'center', padding: '36px', border: '1.5px dashed var(--border)', borderRadius: '16px', color: 'var(--text-secondary)', background: 'var(--bg-main)' }}>
                         <div style={{ fontSize: '36px', marginBottom: '8px' }}>⚡</div>
                         <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>No tienes adicionales de turno cargados.</p>
-                        <button
-                            type="button"
+                        <Button
+                            variant="outline"
                             onClick={() => {
                                 setEditingExtra({
                                     id: Date.now().toString(),
@@ -610,19 +557,9 @@ export default function StoreTab({
                                 });
                                 setIsExtraModalOpen(true);
                             }}
-                            style={{
-                                padding: '10px 20px',
-                                borderRadius: '12px',
-                                border: '1px solid var(--border)',
-                                background: 'var(--bg-card)',
-                                color: 'var(--text-primary)',
-                                fontWeight: '700',
-                                fontSize: '13px',
-                                cursor: 'pointer'
-                            }}
                         >
-                            ＋ Agregar Primer Adicional
-                        </button>
+                            + Agregar Primer Adicional
+                        </Button>
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
@@ -713,8 +650,9 @@ export default function StoreTab({
                                             </span>
                                         </label>
                                         <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button
-                                                type="button"
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
                                                 onClick={() => {
                                                     setEditingExtra({
                                                         ...extra,
@@ -724,23 +662,23 @@ export default function StoreTab({
                                                     });
                                                     setIsExtraModalOpen(true);
                                                 }}
-                                                style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer', color: 'var(--text-primary)' }}
                                             >
                                                 ✏️ Editar
-                                            </button>
-                                            <button
-                                                type="button"
+                                            </Button>
+                                            <Button
+                                                variant="danger-soft"
+                                                size="sm"
+                                                aria-label={`Eliminar ${extra.name}`}
+                                                title="Eliminar adicional"
                                                 onClick={async () => {
                                                     const updated = (formData.additional_services || []).filter((_, i) => i !== idx);
                                                     handleInputChange('additional_services', updated);
                                                     if (!(await handleSave({ additional_services: updated }))) return;
                                                     if (showToast) showToast('Adicional eliminado', 'info');
                                                 }}
-                                                style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '14px', cursor: 'pointer' }}
-                                                title="Eliminar adicional"
                                             >
                                                 🗑️
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
@@ -990,15 +928,12 @@ export default function StoreTab({
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                            <button
-                                type="button"
-                                onClick={() => setIsProductModalOpen(false)}
-                                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: '600' }}
-                            >
+                            <Button variant="secondary" size="lg" style={{ flex: 1 }} onClick={() => setIsProductModalOpen(false)}>
                                 Cancelar
-                            </button>
-                            <button
-                                type="button"
+                            </Button>
+                            <Button
+                                size="lg"
+                                style={{ flex: 2 }}
                                 onClick={async () => {
                                     if (!editingProduct.name || !editingProduct.name.trim()) {
                                         if (showToast) showToast('Ingresá el nombre del producto', 'error');
@@ -1046,10 +981,9 @@ export default function StoreTab({
                                     });
                                     if (showToast) showToast('Producto guardado', 'success');
                                 }}
-                                style={{ flex: 2, ...saveButtonStyle, marginTop: 0 }}
                             >
                                 Guardar Producto
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -1368,15 +1302,12 @@ export default function StoreTab({
                         </div>
 
                         <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                            <button
-                                type="button"
-                                onClick={() => setIsExtraModalOpen(false)}
-                                style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: '600' }}
-                            >
+                            <Button variant="secondary" size="lg" style={{ flex: 1 }} onClick={() => setIsExtraModalOpen(false)}>
                                 Cancelar
-                            </button>
-                            <button
-                                type="button"
+                            </Button>
+                            <Button
+                                size="lg"
+                                style={{ flex: 2 }}
                                 onClick={async () => {
                                     if (!editingExtra.name || !editingExtra.name.trim()) {
                                         if (showToast) showToast('Ingresá el nombre del adicional', 'error');
@@ -1407,10 +1338,9 @@ export default function StoreTab({
                                     if (!(await handleSave({ additional_services: updated }))) return;
                                     if (showToast) showToast('Adicional guardado correctamente', 'success');
                                 }}
-                                style={{ flex: 2, ...saveButtonStyle, marginTop: 0 }}
                             >
                                 Guardar Adicional
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import LocationModePicker from './LocationModePicker';
-import { Select } from '../../common/controls';
+import { Button, Select } from '../../common/controls';
 import ServicePhotosEditor from './ServicePhotosEditor';
 import { getLocationMode } from '../../../utils/homeService';
 import { getServiceImages } from '../../../utils/serviceImages';
@@ -20,8 +20,7 @@ export default function ServicesTab({
     isMobile,
     labelStyle,
     inputStyle,
-    buttonSecondaryStyle,
-    saveButtonStyle
+    buttonSecondaryStyle
 }) {
     const [newCategory, setNewCategory] = useState('');
     const [newService, setNewService] = useState({
@@ -169,8 +168,8 @@ export default function ServicesTab({
                             }
                         }}
                     />
-                    <button
-                        type="button"
+                    <Button
+                        variant="secondary"
                         onClick={async () => {
                             const trimmed = newCategory.trim();
                             if (!trimmed) {
@@ -200,10 +199,9 @@ export default function ServicesTab({
                                 showToast('Categoría agregada', 'success');
                             }
                         }}
-                        style={{ ...buttonSecondaryStyle, padding: '0 20px', whiteSpace: 'nowrap' }}
                     >
-                        ➕ Agregar Categoría
-                    </button>
+                        + Agregar Categoría
+                    </Button>
                 </div>
 
                 {/* Categories Chips */}
@@ -382,20 +380,12 @@ export default function ServicesTab({
                         </div>
                         {specialistsList.length > 0 && (
                             <div style={{ display: 'flex', gap: '6px' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setNewService(prev => ({ ...prev, specialist_ids: specialistsList.map(s => s.id) }))}
-                                    style={{ ...buttonSecondaryStyle, padding: '4px 10px', fontSize: '11px' }}
-                                >
-                                    ✅ Todos
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setNewService(prev => ({ ...prev, specialist_ids: [] }))}
-                                    style={{ ...buttonSecondaryStyle, padding: '4px 10px', fontSize: '11px' }}
-                                >
-                                    ❌ Ninguno
-                                </button>
+                                <Button variant="secondary" size="sm" onClick={() => setNewService(prev => ({ ...prev, specialist_ids: specialistsList.map(s => s.id) }))}>
+                                    Todos
+                                </Button>
+                                <Button variant="secondary" size="sm" onClick={() => setNewService(prev => ({ ...prev, specialist_ids: [] }))}>
+                                    Ninguno
+                                </Button>
                             </div>
                         )}
                     </div>
@@ -473,27 +463,9 @@ export default function ServicesTab({
                     )}
                 </div>
 
-                <button
-                    type="button"
-                    onClick={handleAddService}
-                    style={{
-                        width: '100%',
-                        padding: '14px',
-                        borderRadius: '12px',
-                        background: 'var(--primary-paddle)',
-                        color: '#000',
-                        fontWeight: '800',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        border: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px'
-                    }}
-                >
-                    ➕ Agregar Servicio a la Lista
-                </button>
+                <Button variant="outline" fullWidth onClick={handleAddService}>
+                    + Agregar Servicio a la Lista
+                </Button>
             </div>
 
             {/* 3. List of Created Services */}
@@ -633,19 +605,21 @@ export default function ServicesTab({
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '8px', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'flex-end' : 'flex-start' }}>
-                                        <button
-                                            type="button"
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
                                             onClick={() => setEditingService({
                                                 ...service,
                                                 images: photos,
                                                 specialist_ids: serviceSpecialists[service.id] || []
                                             })}
-                                            style={{ ...buttonSecondaryStyle, padding: '8px 14px', fontSize: '13px' }}
                                         >
                                             ✏️ Editar
-                                        </button>
-                                        <button
-                                            type="button"
+                                        </Button>
+                                        <Button
+                                            variant="danger-soft"
+                                            size="sm"
+                                            aria-label={`Eliminar ${service.name}`}
                                             onClick={async () => {
                                                 const confirmed = await showConfirm(
                                                     '¿Eliminar servicio?',
@@ -659,19 +633,9 @@ export default function ServicesTab({
                                                     showToast('Servicio eliminado de la lista', 'success');
                                                 }
                                             }}
-                                            style={{
-                                                padding: '8px 14px',
-                                                borderRadius: '10px',
-                                                border: '1px solid rgba(239, 68, 68, 0.3)',
-                                                background: 'rgba(239, 68, 68, 0.08)',
-                                                color: '#ef4444',
-                                                cursor: 'pointer',
-                                                fontWeight: '700',
-                                                fontSize: '13px'
-                                            }}
                                         >
                                             🗑️
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             );
@@ -799,20 +763,12 @@ export default function ServicesTab({
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                     <label style={{ ...labelStyle, margin: 0 }}>👥 Profesionales Asignados</label>
                                     <div style={{ display: 'flex', gap: '6px' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setEditingService(prev => ({ ...prev, specialist_ids: specialistsList.map(s => s.id) }))}
-                                            style={{ ...buttonSecondaryStyle, padding: '2px 8px', fontSize: '11px' }}
-                                        >
+                                        <Button variant="secondary" size="sm" onClick={() => setEditingService(prev => ({ ...prev, specialist_ids: specialistsList.map(s => s.id) }))}>
                                             Todos
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setEditingService(prev => ({ ...prev, specialist_ids: [] }))}
-                                            style={{ ...buttonSecondaryStyle, padding: '2px 8px', fontSize: '11px' }}
-                                        >
+                                        </Button>
+                                        <Button variant="secondary" size="sm" onClick={() => setEditingService(prev => ({ ...prev, specialist_ids: [] }))}>
                                             Ninguno
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
 
@@ -856,15 +812,10 @@ export default function ServicesTab({
                             </div>
 
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setEditingService(null)}
-                                    style={buttonSecondaryStyle}
-                                >
+                                <Button variant="secondary" onClick={() => setEditingService(null)}>
                                     Cancelar
-                                </button>
-                                <button
-                                    type="button"
+                                </Button>
+                                <Button
                                     onClick={async () => {
                                         const updatedServices = services.map(s => {
                                             if (s.id === editingService.id) {
@@ -906,10 +857,9 @@ export default function ServicesTab({
                                         }
                                         setEditingService(null);
                                     }}
-                                    style={saveButtonStyle}
                                 >
                                     Guardar Cambios
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -918,8 +868,10 @@ export default function ServicesTab({
 
             {/* Save Button for Services tab */}
             <div style={{ marginTop: '10px' }}>
-                <button
-                    type="button"
+                <Button
+                    size="lg"
+                    fullWidth
+                    loading={saving}
                     onClick={() => {
                         const servicesToSave = (formData.services || []).map(s => ({
                             ...s,
@@ -932,11 +884,9 @@ export default function ServicesTab({
                             service_categories: formData.service_categories
                         });
                     }}
-                    style={{ ...saveButtonStyle, width: '100%', padding: '16px', fontSize: '15px' }}
-                    disabled={saving}
                 >
-                    {saving ? 'Guardando en la nube...' : '💾 Guardar y Publicar Servicios'}
-                </button>
+                    {saving ? 'Guardando en la nube...' : 'Guardar y Publicar Servicios'}
+                </Button>
             </div>
         </div>
     );
