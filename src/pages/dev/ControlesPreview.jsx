@@ -71,6 +71,37 @@ export default function ControlesPreview() {
         document.documentElement.setAttribute('data-theme', theme);
     }, [theme]);
 
+    // ?tab=… muestra solo esa sección de Ajustes (y ?modal abre el detalle del turno), para comparar con main
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('tab')) {
+        return (
+            <div style={{ minHeight: '100vh', background: 'var(--bg-main)', color: 'var(--text-primary)', padding: '20px 16px 80px' }}>
+                <div style={{ maxWidth: '760px', margin: '0 auto' }}>
+                    <BusinessSettings
+                        business={{ ...DEMO_BIZ, hours: DEMO_HOURS, special_days: [{ id: 'sd1', date: '2026-12-25', type: 'holiday', description: 'Navidad' }] }}
+                        onUpdate={() => {}}
+                        isMobile={isMobile}
+                        isPhone={isMobile}
+                        initialTab={params.get('tab')}
+                    />
+                </div>
+                {params.has('modal') && (
+                    <BookingDetailsModal
+                        isOpen
+                        onClose={() => {}}
+                        isMobile={isMobile}
+                        booking={DEMO_BOOKING}
+                        businesses={[DEMO_BIZ]}
+                        selectedBusinessId={DEMO_BIZ.id}
+                        onAction={() => showToast('Vista previa: no se guarda nada', 'info')}
+                        formatDisplayDate={formatDisplayDate}
+                        getStatusLabel={(s) => STATUS_LABELS[s] || s}
+                    />
+                )}
+            </div>
+        );
+    }
+
     return (
         <div style={{ minHeight: '100vh', background: 'var(--bg-main)', color: 'var(--text-primary)', padding: '20px 16px 80px' }}>
             <div style={{ maxWidth: '760px', margin: '0 auto', display: 'grid', gap: '16px' }}>
