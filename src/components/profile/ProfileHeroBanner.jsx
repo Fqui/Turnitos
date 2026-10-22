@@ -1,7 +1,7 @@
 import React from 'react';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ShareButton from '../common/ShareButton';
 import { getCoverPosition } from '../../utils/imageUtils';
 
@@ -14,6 +14,13 @@ export default function ProfileHeroBanner({
     shareUrl = ''
 }) {
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Opened from the home list: go back to it, keeping its filters and scroll
+    const handleBack = () => {
+        if (location.state?.fromMarketplace && window.history.state?.idx > 0) navigate(-1);
+        else navigate('/');
+    };
 
     // Only real reviews: no stars at all until the business has some
     const ratingAvg = Number(business.rating_avg || business.metadata?.rating_avg || 0);
@@ -58,7 +65,7 @@ export default function ProfileHeroBanner({
                 }}></div>
 
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={handleBack}
                     style={{
                         position: 'absolute',
                         top: '16px',
