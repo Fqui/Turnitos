@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
@@ -19,13 +19,32 @@ const DEFAULT_CATEGORIES = [
     { id: 'quinchos', slug: 'quinchos', name: 'Quinchos', icon: '🏡' }
 ];
 
+// Last loaded data, so coming back from a business renders the list right away
+// and the saved scroll position can be restored before the refetch finishes.
+const homeCache = { businesses: null, promotions: null };
+// Results shown per history entry, so going back keeps the cards that were loaded
+const visibleCounts = new Map();
+
+const readFilterParams = (search) => {
+    const params = new URLSearchParams(search);
+    const q = params.get('q') || '';
+    return {
+        q,
+        category: q ? 'all' : (params.get('category') || 'all'),
+        sub: q ? 'all' : (params.get('sub') || 'all')
+    };
+};
+
 export default function Home() {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('all');
-    const [selectedSubCategory, setSelectedSubCategory] = useState('all');
-    const [businesses, setBusinesses] = useState([]);
-    const [promotions, setPromotions] = useState([]);
-    const [promotionsLoaded, setPromotionsLoaded] = useState(false);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const navigationType = useNavigationType();
+    const [searchTerm, setSearchTerm] = useState(() => readFilterParams(location.search).q);
+    const [selectedCategory, setSelectedCategory] = useState(() => readFilterParams(location.search).category);
+    const [selectedSubCategory, setSelectedSubCategory] = useState(() => readFilterParams(location.search).sub);
+    const [businesses, setBusinesses] = useState(() => homeCache.businesses || []);
+    const [promotions, setPromotions] = useState(() => homeCache.promotions || []);
+    const [promotionsLoaded, setPromotionsLoaded] = useState(() => !!homeCache.promotions);
     const [categoriesData, setCategoriesData] = useState(() => {
         try {
             const cached = localStorage.getItem('turnitos_categories_cache');
@@ -34,14 +53,39 @@ export default function Home() {
             return [];
         }
     }); // Dynamic categories with instant cache support
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => !homeCache.businesses);
     const [isNearMeActive, setIsNearMeActive] = useState(false); // ✅ New state for Near Me
-    const [visibleCount, setVisibleCount] = useState(20);
+    const [visibleCount, setVisibleCount] = useState(() =>
+        (navigationType === 'POP' && visibleCounts.get(location.key)) || 20
+    );
     const resultsRef = useRef(null);
     const searchTimeoutRef = useRef(null);
     const syncedSearchRef = useRef(null);
-    const navigate = useNavigate();
-    const location = useLocation();
+
+    // Category and subcategory live in the URL, so going back from a business
+    // lands on the same filtered list. Replace: picking chips adds no history entries.
+    const writeFilterParams = (category, subCategory) => {
+        const params = new URLSearchParams(location.search);
+        params.delete('q');
+        if (category && category !== 'all') params.set('category', category);
+        else params.delete('category');
+        if (subCategory && subCategory !== 'all') params.set('sub', subCategory);
+        else params.delete('sub');
+        const search = params.toString() ? `?${params.toString()}` : '';
+        if (search === location.search) return;
+        syncedSearchRef.current = search;
+        navigate({ search }, { replace: true });
+    };
+
+    const selectSubCategory = (subCategory) => {
+        setSelectedSubCategory(subCategory);
+        writeFilterParams(selectedCategory, subCategory);
+    };
+
+    // Remember how many results were showing before opening a business
+    const rememberListState = () => {
+        visibleCounts.set(location.key, visibleCount);
+    };
 
     // Reset Near Me when changing Category
     const resetNearMe = async () => {
@@ -79,7 +123,7 @@ export default function Home() {
                     const nearby = await serviceAdapter.getNearbyBusinesses(latitude, longitude, 50000);
                     setBusinesses(nearby);
                     setIsNearMeActive(true);
-                    setSelectedSubCategory('all'); // Reset subcategory, but keep Main Category
+                    selectSubCategory('all'); // Reset subcategory, but keep Main Category
 
                     // Scroll to results
                     if (resultsRef.current) {
@@ -110,23 +154,23 @@ export default function Home() {
             return;
         }
 
-        const params = new URLSearchParams(location.search);
-        const categoryParam = params.get('category');
-        const queryParam = params.get('q') || '';
+        const { q: queryParam, category: categoryParam, sub: subParam } = readFilterParams(location.search);
 
         // Search comes from the URL (?q=), otherwise reset it to avoid filtering conflicts
         setSearchTerm(queryParam);
-        setSelectedSubCategory('all');
+        setSelectedCategory(categoryParam);
+        setSelectedSubCategory(subParam);
+
+        // Back/forward: the app restores the saved scroll position
+        if (navigationType === 'POP') return;
 
         if (queryParam) {
-            setSelectedCategory('all');
             if (resultsRef.current) {
                 setTimeout(() => {
                     resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 100);
             }
-        } else if (categoryParam) {
-            setSelectedCategory(categoryParam);
+        } else if (categoryParam !== 'all') {
             // Scroll to results to show the filtered category
             if (resultsRef.current) {
                 setTimeout(() => {
@@ -134,11 +178,10 @@ export default function Home() {
                 }, 100);
             }
         } else {
-            // "Inicio" (No param) - Reset to All and Scroll Top
-            setSelectedCategory('all');
+            // "Inicio" (No param) - Scroll Top
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-    }, [location.search]);
+    }, [location.search, navigationType]);
 
     // Keep ?q= in the URL in sync with the search box so searches can be shared
     useEffect(() => {
@@ -151,6 +194,7 @@ export default function Home() {
             if (term) {
                 params.set('q', term);
                 params.delete('category');
+                params.delete('sub');
             } else {
                 params.delete('q');
             }
@@ -169,10 +213,14 @@ export default function Home() {
                     serviceAdapter.getPromotions(),
                     serviceAdapter.getCategories() // ✅ Fetch categories
                 ]);
-                if (businessesData && businessesData.length > 0) setBusinesses(businessesData);
+                if (businessesData && businessesData.length > 0) {
+                    setBusinesses(businessesData);
+                    homeCache.businesses = businessesData;
+                }
                 // Solo publicidades vigentes: activas y dentro de su rango de fechas (hora AR)
                 const livePromotions = (promotionsData || []).filter(p => isPromotionLive(p));
                 setPromotions(livePromotions);
+                homeCache.promotions = livePromotions;
                 setPromotionsLoaded(true);
                 if (categoriesResult && categoriesResult.length > 0) {
                     setCategoriesData(categoriesResult);
@@ -321,10 +369,14 @@ export default function Home() {
         });
     }, [searchTerm, selectedCategory, selectedSubCategory, businesses, categoriesData, isNearMeActive]);
 
-    // Reset pagination when search or filters change
+    // Reset pagination when search or filters change (not on mount, to keep a restored count)
+    const filterKey = `${searchTerm}|${selectedCategory}|${selectedSubCategory}`;
+    const lastFilterKey = useRef(filterKey);
     useEffect(() => {
+        if (lastFilterKey.current === filterKey) return;
+        lastFilterKey.current = filterKey;
         setVisibleCount(20);
-    }, [searchTerm, selectedCategory, selectedSubCategory]);
+    }, [filterKey]);
 
     const PAGE_SIZE = 20;
     const handleShowMore = () => {
@@ -354,6 +406,7 @@ export default function Home() {
         setSelectedSubCategory('all'); // Reset sub-category when main category changes
         setSearchTerm('');
         setVisibleCount(20);
+        writeFilterParams(category, 'all');
 
         // Auto scroll to results on mobile
         if (window.innerWidth < 768 && resultsRef.current) {
@@ -426,6 +479,7 @@ export default function Home() {
         try {
             sessionStorage.setItem('turnitos_booking_source', JSON.stringify({ businessId: business.id, at: Date.now() }));
         } catch (e) {}
+        rememberListState();
         navigate(`/${generateSlug(business.name)}`, { state: { business, fromMarketplace: true } });
         setShowSuggestions(false);
     };
@@ -799,7 +853,7 @@ export default function Home() {
                             <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                                 <motion.button
                                     whileTap={{ scale: 0.95 }}
-                                    onClick={() => setSelectedSubCategory('all')}
+                                    onClick={() => selectSubCategory('all')}
                                     style={{
                                         padding: '8px 20px',
                                         borderRadius: '50px',
@@ -822,7 +876,7 @@ export default function Home() {
                                     <motion.button
                                         key={sub.id}
                                         whileTap={{ scale: 0.95 }}
-                                        onClick={() => setSelectedSubCategory(sub.slug)}
+                                        onClick={() => selectSubCategory(sub.slug)}
                                         style={{
                                             padding: '8px 20px',
                                             borderRadius: '50px',
@@ -855,7 +909,7 @@ export default function Home() {
                                         <motion.button
                                             key={sub}
                                             whileTap={{ scale: 0.95 }}
-                                            onClick={() => setSelectedSubCategory(sub === 'Todos' ? 'all' : sub.toLowerCase())}
+                                            onClick={() => selectSubCategory(sub === 'Todos' ? 'all' : sub.toLowerCase())}
                                             style={{
                                                 padding: '8px 20px',
                                                 borderRadius: '50px',
@@ -885,7 +939,7 @@ export default function Home() {
                             <div className="container" style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                                 <motion.button
                                     whileTap={{ scale: 0.95 }}
-                                    onClick={() => setSelectedSubCategory('all')}
+                                    onClick={() => selectSubCategory('all')}
                                     style={{
                                         padding: '8px 20px',
                                         borderRadius: '50px',
@@ -954,6 +1008,7 @@ export default function Home() {
                                                 try {
                                                     sessionStorage.setItem('turnitos_booking_source', JSON.stringify({ businessId: business.id, at: Date.now() }));
                                                 } catch (e) {}
+                                                rememberListState();
                                             }}
                                             style={{ display: 'block', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                                         >
