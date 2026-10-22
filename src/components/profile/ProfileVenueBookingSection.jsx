@@ -1,5 +1,6 @@
 import React from 'react';
 import AmenityIcon from '../common/AmenityIcon';
+import { Select } from '../common/controls';
 
 export default function ProfileVenueBookingSection({
     business,
@@ -98,17 +99,16 @@ export default function ProfileVenueBookingSection({
                         <>
                             <div style={{ marginBottom: '20px' }}>
                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: 'var(--text-secondary)' }}>Hora de Inicio</label>
-                                <select
+                                <Select
+                                    aria-label="Hora de inicio"
+                                    title="Hora de inicio"
+                                    placeholder="Seleccionar hora..."
                                     value={selectedTime?.time || ''}
-                                    onChange={(e) => {
-                                        const time = e.target.value;
+                                    onChange={(time) => {
                                         const price = (business.price_per_hour || 0) * (selectedDuration || 0);
                                         setSelectedTime({ time, price });
                                     }}
-                                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)' }}
-                                >
-                                    <option value="">Seleccionar hora...</option>
-                                    {(() => {
+                                    options={(() => {
                                         const { open, close, ranges } = getBusinessHours(selectedDate);
                                         const slots = [];
 
@@ -148,17 +148,11 @@ export default function ProfileVenueBookingSection({
                                             addSlots(open, close);
                                         }
 
-                                        if (slots.length === 0) {
-                                            return <option value="" disabled>No hay horarios disponibles</option>;
-                                        }
-
                                         const uniqueSlots = [...new Set(slots)].sort((a, b) => a - b);
 
-                                        return uniqueSlots.map(hour => (
-                                            <option key={hour} value={`${hour}:00`}>{`${hour}:00`}</option>
-                                        ));
+                                        return uniqueSlots.map(hour => ({ value: `${hour}:00`, label: `${hour}:00` }));
                                     })()}
-                                </select>
+                                />
                             </div>
 
                             {business.rental_duration_options && (

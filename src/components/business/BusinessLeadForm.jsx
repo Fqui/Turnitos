@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { createBusinessLead, LEAD_CATEGORIES } from '../../services/supabase/leadService';
 import '../../styles/support.css';
+import { Select } from '../common/controls';
 
 const EMPTY_LEAD = { businessName: '', category: '', contactName: '', phone: '', city: 'La Rioja', message: '' };
 
@@ -42,10 +43,26 @@ export default function BusinessLeadForm() {
             </div>
             <div>
                 <label htmlFor="lead-category" className="sp-label">Rubro *</label>
-                <select id="lead-category" className="sp-input" required value={lead.category} onChange={update('category')}>
-                    <option value="" disabled>Elegí una opción</option>
-                    {LEAD_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
+                <div style={{ position: 'relative' }}>
+                    <Select
+                        id="lead-category"
+                        size="lg"
+                        title="Rubro"
+                        placeholder="Elegí una opción"
+                        value={lead.category}
+                        onChange={(v) => setLead(prev => ({ ...prev, category: v }))}
+                        options={LEAD_CATEGORIES}
+                    />
+                    {/* Mantiene el aviso de campo obligatorio del formulario */}
+                    <input
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        required
+                        value={lead.category}
+                        onChange={() => {}}
+                        style={{ position: 'absolute', left: '50%', bottom: 0, width: '1px', height: '1px', opacity: 0, border: 0, padding: 0, pointerEvents: 'none' }}
+                    />
+                </div>
             </div>
             <div className="sp-form-row">
                 <div>

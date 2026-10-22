@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CouponInput from '../../common/CouponInput';
 import AmenityIcon from '../../common/AmenityIcon';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import { TimePicker } from '../../common/controls';
+import { readableTextOn } from '../../common/controls/color';
 
 export default function VenueBookingWizardModal({
     showBookingModal,
@@ -358,7 +360,7 @@ export default function VenueBookingWizardModal({
                                                                             borderRadius: '14px',
                                                                             border: `1px solid ${selected ? primaryColor : borderColor}`,
                                                                             background: selected ? primaryColor : subCardBg,
-                                                                            color: selected ? '#000' : textColor,
+                                                                            color: selected ? (readableTextOn(primaryColor) || '#000') : textColor,
                                                                             fontSize: '15px',
                                                                             fontWeight: '700',
                                                                             fontFamily: 'inherit',
@@ -383,23 +385,15 @@ export default function VenueBookingWizardModal({
                                                     )}
                                                 </>
                                             ) : (
-                                                <input
-                                                    type="time"
+                                                <TimePicker
                                                     id="venueStartTime"
+                                                    size="lg"
+                                                    step={30}
+                                                    title="Hora de ingreso"
+                                                    placeholder="Elegí la hora"
                                                     value={startTime}
-                                                    onChange={(e) => setStartTime(e.target.value)}
-                                                    style={{
-                                                        width: '100%',
-                                                        padding: '14px 16px',
-                                                        borderRadius: '16px',
-                                                        border: `1px solid ${borderColor}`,
-                                                        background: subCardBg,
-                                                        color: textColor,
-                                                        fontSize: '16px',
-                                                        fontWeight: '700',
-                                                        fontFamily: 'inherit',
-                                                        boxSizing: 'border-box'
-                                                    }}
+                                                    onChange={setStartTime}
+                                                    style={{ background: subCardBg, borderColor, color: textColor, borderRadius: '16px' }}
                                                 />
                                             )}
                                             {startTime && endTimeLabel && (
