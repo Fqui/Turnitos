@@ -1,4 +1,5 @@
 import React from 'react';
+import { Select } from '../../common/controls';
 
 export default function PoliciesAndPaymentsTab({
     formData,
@@ -99,18 +100,20 @@ export default function PoliciesAndPaymentsTab({
                             <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
                                 Política de reembolso
                             </label>
-                            <select
+                            <Select
+                                aria-label="Política de reembolso"
+                                title="Política de reembolso"
                                 value={cancellation.refund_policy}
-                                onChange={(e) => handleInputChange('booking_rules', {
+                                onChange={(v) => handleInputChange('booking_rules', {
                                     ...rules,
-                                    cancellation: { ...cancellation, refund_policy: e.target.value }
+                                    cancellation: { ...cancellation, refund_policy: v }
                                 })}
-                                style={inputStyle}
-                            >
-                                <option value="full">Reembolso completo</option>
-                                <option value="partial">Reembolso parcial</option>
-                                <option value="none">Sin reembolso</option>
-                            </select>
+                                options={[
+                                    { value: 'full', label: 'Reembolso completo' },
+                                    { value: 'partial', label: 'Reembolso parcial' },
+                                    { value: 'none', label: 'Sin reembolso' }
+                                ]}
+                            />
                         </div>
                     </div>
                 </div>
@@ -235,17 +238,19 @@ export default function PoliciesAndPaymentsTab({
                                         <label style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
                                             Tipo de seña
                                         </label>
-                                        <select
+                                        <Select
+                                            aria-label="Tipo de seña"
+                                            title="Tipo de seña"
                                             value={deposit.type}
-                                            onChange={(e) => handleInputChange('payment_settings', {
+                                            onChange={(v) => handleInputChange('payment_settings', {
                                                 ...paymentSettings,
-                                                deposit: { ...deposit, type: e.target.value }
+                                                deposit: { ...deposit, type: v }
                                             })}
-                                            style={inputStyle}
-                                        >
-                                            <option value="percentage">Porcentaje del total</option>
-                                            <option value="fixed">Monto fijo</option>
-                                        </select>
+                                            options={[
+                                                { value: 'percentage', label: 'Porcentaje del total' },
+                                                { value: 'fixed', label: 'Monto fijo' }
+                                            ]}
+                                        />
                                     </div>
 
                                     {deposit.type === 'percentage' ? (

@@ -1,4 +1,5 @@
 import React from 'react';
+import { DatePicker } from '../../common/controls';
 
 export default function RentalTab({
     formData,
@@ -289,15 +290,16 @@ export default function RentalTab({
                     <div style={{ display: 'grid', gap: '12px' }}>
                         {(formData.blocked_dates || []).map((blocked, index) => (
                             <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: '12px', alignItems: 'center', padding: '12px', background: 'var(--bg-main)', borderRadius: '12px' }}>
-                                <input
-                                    type="date"
+                                <DatePicker
+                                    aria-label="Fecha bloqueada"
+                                    title="Fecha bloqueada"
+                                    withYear
                                     value={blocked.date || ''}
-                                    onChange={(e) => {
+                                    onChange={(v) => {
                                         const dates = [...formData.blocked_dates];
-                                        dates[index] = { ...blocked, date: e.target.value };
+                                        dates[index] = { ...blocked, date: v };
                                         handleInputChange('blocked_dates', dates);
                                     }}
-                                    style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
                                 />
                                 <input
                                     type="text"

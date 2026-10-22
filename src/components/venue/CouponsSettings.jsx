@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
+import { DatePicker } from '../common/controls';
 
 const DAYS_MAP = [
     { label: 'Dom', full: 'Domingo', value: 0 },
@@ -554,19 +555,14 @@ export default function CouponsSettings({
                             <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '6px' }}>
                                 Vencimiento (Opcional)
                             </label>
-                            <input
-                                type="date"
+                            <DatePicker
+                                aria-label="Vencimiento"
+                                title="Vencimiento del cupón"
+                                placeholder="Sin vencimiento"
+                                withYear
+                                allowClear
                                 value={formState.end_date}
-                                onChange={(e) => setFormState(prev => ({ ...prev, end_date: e.target.value }))}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 12px',
-                                    borderRadius: '8px',
-                                    border: '1px solid var(--border)',
-                                    background: 'var(--bg-card)',
-                                    color: 'var(--text-primary)',
-                                    fontSize: '13.5px'
-                                }}
+                                onChange={(v) => setFormState(prev => ({ ...prev, end_date: v }))}
                             />
                         </div>
                     </div>

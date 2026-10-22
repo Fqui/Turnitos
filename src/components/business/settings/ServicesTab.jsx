@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import LocationModePicker from './LocationModePicker';
+import { Select } from '../../common/controls';
 import ServicePhotosEditor from './ServicePhotosEditor';
 import { getLocationMode } from '../../../utils/homeService';
 import { getServiceImages } from '../../../utils/serviceImages';
@@ -47,6 +48,8 @@ export default function ServicesTab({
             ? [...durationOptions, value].sort((a, b) => a - b)
             : durationOptions;
     };
+    const toDurationOptions = (list) => list.map(dur => ({ value: dur, label: `${dur} min (${dur >= 60 ? `${dur / 60}h` : `${dur}m`})` }));
+    const categoryOptions = (emptyLabel) => [{ value: '', label: emptyLabel }, ...serviceCategories.map(cat => ({ value: cat, label: cat }))];
 
     const handleAddService = () => {
         if (!newService.name || !newService.name.trim()) {
@@ -309,31 +312,26 @@ export default function ServicesTab({
 
                     <div>
                         <label style={labelStyle}>Duración</label>
-                        <select
-                            style={inputStyle}
+                        <Select
+                            aria-label="Duración"
+                            title="Duración"
                             value={newService.duration}
-                            onChange={e => setNewService(prev => ({ ...prev, duration: Number(e.target.value) }))}
-                        >
-                            {durationOptions.map(dur => (
-                                <option key={dur} value={dur}>{dur} min ({dur >= 60 ? `${dur / 60}h` : `${dur}m`})</option>
-                            ))}
-                        </select>
+                            onChange={v => setNewService(prev => ({ ...prev, duration: Number(v) }))}
+                            options={toDurationOptions(durationOptions)}
+                        />
                     </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                     <div style={{ gridColumn: '1 / -1' }}>
                         <label style={labelStyle}>Categoría</label>
-                        <select
-                            style={inputStyle}
+                        <Select
+                            aria-label="Categoría"
+                            title="Categoría"
                             value={newService.category || ''}
-                            onChange={e => setNewService(prev => ({ ...prev, category: e.target.value }))}
-                        >
-                            <option value="">Sin categoría asignada</option>
-                            {serviceCategories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
+                            onChange={v => setNewService(prev => ({ ...prev, category: v }))}
+                            options={categoryOptions('Sin categoría asignada')}
+                        />
                     </div>
 
                 </div>
@@ -748,30 +746,25 @@ export default function ServicesTab({
                                 </div>
                                 <div>
                                     <label style={labelStyle}>Duración</label>
-                                    <select
-                                        style={inputStyle}
+                                    <Select
+                                        aria-label="Duración"
+                                        title="Duración"
                                         value={editingService.duration || 60}
-                                        onChange={e => setEditingService(prev => ({ ...prev, duration: Number(e.target.value) }))}
-                                    >
-                                        {durationOptionsWith(editingService.duration).map(dur => (
-                                            <option key={dur} value={dur}>{dur} min ({dur >= 60 ? `${dur / 60}h` : `${dur}m`})</option>
-                                        ))}
-                                    </select>
+                                        onChange={v => setEditingService(prev => ({ ...prev, duration: Number(v) }))}
+                                        options={toDurationOptions(durationOptionsWith(editingService.duration))}
+                                    />
                                 </div>
                             </div>
 
                             <div>
                                 <label style={labelStyle}>Categoría</label>
-                                <select
-                                    style={inputStyle}
+                                <Select
+                                    aria-label="Categoría"
+                                    title="Categoría"
                                     value={editingService.category || ''}
-                                    onChange={e => setEditingService(prev => ({ ...prev, category: e.target.value }))}
-                                >
-                                    <option value="">Sin categoría</option>
-                                    {serviceCategories.map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                </select>
+                                    onChange={v => setEditingService(prev => ({ ...prev, category: v }))}
+                                    options={categoryOptions('Sin categoría')}
+                                />
                             </div>
 
                             <div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DatePicker } from '../common/controls';
 
 const METHODS = ['Efectivo', 'Transferencia', 'Otro'];
 
@@ -185,12 +186,7 @@ export default function RentalPaymentsCard({ payments, total, onSave }) {
                             onChange={(e) => setAmount(e.target.value)}
                             style={inputStyle}
                         />
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            style={inputStyle}
-                        />
+                        <DatePicker aria-label="Fecha del pago" title="Fecha del pago" value={date} onChange={setDate} />
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
                         {METHODS.map(m => (

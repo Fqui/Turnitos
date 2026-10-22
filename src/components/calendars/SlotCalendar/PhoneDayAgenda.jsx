@@ -1,6 +1,8 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-react';
 import SlotActionMenu from '../shared/SlotActionMenu';
+import PickerShell from '../../common/controls/PickerShell';
+import { MonthGrid } from '../../common/controls/DatePicker';
 import {
     generateTimeSlots,
     formatDateKey,
@@ -66,7 +68,9 @@ export default function PhoneDayAgenda({
 }) {
     const [resourceId, setResourceId] = useState(null);
     const [slotMenu, setSlotMenu] = useState(null);
-    const dateInputRef = useRef(null);
+    const dateButtonRef = useRef(null);
+    const [showCalendar, setShowCalendar] = useState(false);
+    const closeCalendar = useCallback(() => setShowCalendar(false), []);
     useBodyScrollLock(!!slotMenu);
 
     const dayKey = formatDateKey(currentDate);
@@ -165,29 +169,47 @@ export default function PhoneDayAgenda({
                     <ChevronLeft size={20} strokeWidth={2.4} />
                 </button>
                 <button
+                    ref={dateButtonRef}
                     type="button"
                     className="pm-daynav-lbl"
-                    onClick={() => {
-                        try { dateInputRef.current?.showPicker(); } catch { dateInputRef.current?.focus(); }
-                    }}
+                    onClick={() => setShowCalendar(true)}
+                    aria-haspopup="dialog"
+                    aria-expanded={showCalendar}
                     aria-label={`Elegir otra fecha, ahora ${fullDate}`}
                 >
                     <span>{isNearDay ? dateLabel : shortDate(dayKey).split(' ')[0].replace(/^./, c => c.toUpperCase())}</span>
                     <small>{isNearDay ? shortDate(dayKey) : fullDate} <CalendarDays size={13} aria-hidden="true" /></small>
                 </button>
-                <input
-                    ref={dateInputRef}
-                    type="date"
-                    className="pm-date-input"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    value={dayKey}
-                    onChange={(e) => {
-                        if (!e.target.value) return;
-                        const [y, m, d] = e.target.value.split('-').map(Number);
-                        setCurrentDate(new Date(y, m - 1, d));
-                    }}
-                />
+                {showCalendar && (
+                    <PickerShell
+                        anchorRef={dateButtonRef}
+                        isPhone
+                        title="Elegir día"
+                        onClose={closeCalendar}
+                        footer={(
+                            <>
+                                <span />
+                                <button
+                                    type="button"
+                                    className="tl-link-btn"
+                                    onClick={() => { setCurrentDate(new Date()); closeCalendar(); }}
+                                >
+                                    Hoy
+                                </button>
+                            </>
+                        )}
+                    >
+                        <MonthGrid
+                            value={dayKey}
+                            autoFocus
+                            onSelect={(key) => {
+                                const [y, m, d] = key.split('-').map(Number);
+                                setCurrentDate(new Date(y, m - 1, d));
+                                closeCalendar();
+                            }}
+                        />
+                    </PickerShell>
+                )}
                 <button type="button" className="pm-nav-btn" onClick={() => goToDay(1)} aria-label="Día siguiente">
                     <ChevronRight size={20} strokeWidth={2.4} />
                 </button>

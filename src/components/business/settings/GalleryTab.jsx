@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 import { isPhoneWidth } from '../portal/mobile/bookingMobileUtils';
+import { Select } from '../../common/controls';
+
+const GALLERY_CATEGORIES = ['General', 'Piscina', 'Quincho', 'Salón', 'Exterior', 'Juegos', 'Noche'];
 
 export default function GalleryTab({
     formData,
@@ -882,24 +885,19 @@ export default function GalleryTab({
                                             }}
                                             style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '12px' }}
                                         />
-                                        <select
+                                        <Select
+                                            size="sm"
+                                            aria-label="Categoría de la foto"
+                                            title="Categoría de la foto"
                                             value={item.category || 'General'}
-                                            onChange={(e) => {
+                                            onChange={(v) => {
                                                 const updated = [...currentVenueGallery];
-                                                updated[idx] = { ...updated[idx], category: e.target.value };
+                                                updated[idx] = { ...updated[idx], category: v };
                                                 const newMetadata = { ...(formData.metadata || {}), venue_gallery: updated };
                                                 setFormData(prev => ({ ...prev, metadata: newMetadata }));
                                             }}
-                                            style={{ width: '100%', padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)', fontSize: '12px' }}
-                                        >
-                                            <option value="General">General</option>
-                                            <option value="Piscina">Piscina</option>
-                                            <option value="Quincho">Quincho</option>
-                                            <option value="Salón">Salón</option>
-                                            <option value="Exterior">Exterior</option>
-                                            <option value="Juegos">Juegos</option>
-                                            <option value="Noche">Noche</option>
-                                        </select>
+                                            options={GALLERY_CATEGORIES}
+                                        />
                                     </div>
                                 </div>
                             ))}

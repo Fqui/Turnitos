@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
+import { Select } from '../../common/controls';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export default function StoreTab({
@@ -818,24 +819,25 @@ export default function StoreTab({
                                 <label style={labelStyle}>Categoría</label>
                                 {!isCustomCategoryMode && storeCategories.length > 0 ? (
                                     <div style={{ display: 'flex', gap: '6px' }}>
-                                        <select
-                                            style={{ ...inputStyle, flex: 1 }}
+                                        <Select
+                                            aria-label="Categoría"
+                                            title="Categoría"
+                                            placeholder="Seleccionar categoría..."
+                                            style={{ flex: 1 }}
                                             value={editingProduct.category || ''}
-                                            onChange={e => {
-                                                if (e.target.value === '__NEW__') {
+                                            onChange={v => {
+                                                if (v === '__NEW__') {
                                                     setIsCustomCategoryMode(true);
                                                     setEditingProduct(prev => ({ ...prev, category: '' }));
                                                 } else {
-                                                    setEditingProduct(prev => ({ ...prev, category: e.target.value }));
+                                                    setEditingProduct(prev => ({ ...prev, category: v }));
                                                 }
                                             }}
-                                        >
-                                            <option value="">Seleccionar categoría...</option>
-                                            {storeCategories.map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
-                                            ))}
-                                            <option value="__NEW__">➕ Crear nueva categoría...</option>
-                                        </select>
+                                            options={[
+                                                ...storeCategories.map(cat => ({ value: cat, label: cat })),
+                                                { value: '__NEW__', label: 'Crear nueva categoría...', icon: '➕' }
+                                            ]}
+                                        />
                                     </div>
                                 ) : (
                                     <div style={{ display: 'flex', gap: '6px' }}>

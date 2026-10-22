@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import CustomDropdown from '../common/CustomDropdown';
+import { TimePicker } from '../common/controls';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { isRentalBusiness } from '../../utils/businessUtils';
 import { getRentalSchedule, hasRentalSchedule, getStartOptions, isRentalDateFull, minutesToTime, timeToMinutes } from '../../utils/rentalSchedule';
@@ -1016,25 +1017,24 @@ const NewBookingModal = ({
                                         No tenés horarios de ingreso cargados para ese día. Podés poner la hora a mano.
                                     </p>
                                 )}
-                                <input
-                                    id="rentalStartTime"
-                                    type="time"
-                                    required
-                                    aria-label={usesRentalSchedule ? 'Otro horario' : undefined}
-                                    value={newBookingData.time || ''}
-                                    onChange={(e) => setNewBookingData(prev => ({ ...prev, time: e.target.value }))}
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px 12px',
-                                        borderRadius: '10px',
-                                        border: '1px solid var(--border)',
-                                        background: 'var(--bg-main)',
-                                        color: 'var(--text-primary)',
-                                        fontSize: '16px',
-                                        fontWeight: '700',
-                                        boxSizing: 'border-box'
-                                    }}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <TimePicker
+                                        id="rentalStartTime"
+                                        aria-label={usesRentalSchedule ? 'Otro horario' : 'Horario de ingreso'}
+                                        title={usesRentalSchedule ? 'Otro horario' : 'Horario de ingreso'}
+                                        value={newBookingData.time || ''}
+                                        onChange={(v) => setNewBookingData(prev => ({ ...prev, time: v }))}
+                                    />
+                                    {/* Mantiene el aviso de campo obligatorio del formulario */}
+                                    <input
+                                        tabIndex={-1}
+                                        aria-hidden="true"
+                                        required
+                                        value={newBookingData.time || ''}
+                                        onChange={() => {}}
+                                        style={{ position: 'absolute', left: '50%', bottom: 0, width: '1px', height: '1px', opacity: 0, border: 0, padding: 0, pointerEvents: 'none' }}
+                                    />
+                                </div>
                                 {endMin !== null && (
                                     <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
                                         Salida: <strong style={{ color: 'var(--text-primary)' }}>{minutesToTime(endMin)} hs{endMin >= 1440 ? ' (día siguiente)' : ''}</strong>

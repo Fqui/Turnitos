@@ -55,6 +55,19 @@
   font-size: 15px;
 }
 
+/* Disparador "+ Agregar": borde punteado, sin fondo, del ancho del texto */
+.tl-field--add {
+  width: auto;
+  border-style: dashed;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.tl-field--add .tl-field-chevron {
+  display: none;
+}
+
 .tl-field--time {
   min-width: 104px;
 }

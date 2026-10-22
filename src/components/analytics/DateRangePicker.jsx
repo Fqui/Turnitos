@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Button, DatePicker } from '../common/controls';
 
 /**
  * DateRangePicker Component
@@ -107,6 +108,7 @@ export default function DateRangePicker({ onRangeChange }) {
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
+                    flexWrap: 'wrap',
                     gap: '8px',
                     padding: '8px 12px',
                     background: 'var(--bg-card)',
@@ -114,49 +116,30 @@ export default function DateRangePicker({ onRangeChange }) {
                     border: '1px solid var(--border)',
                     fontSize: '12px'
                 }}>
-                    <input
-                        type="date"
+                    <DatePicker
+                        size="sm"
+                        aria-label="Desde"
+                        title="Desde"
+                        placeholder="Desde"
+                        style={{ width: '150px' }}
+                        max={customEnd || undefined}
                         value={customStart}
-                        onChange={(e) => setCustomStart(e.target.value)}
-                        style={{
-                            padding: '4px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid var(--border)',
-                            background: 'var(--bg-main)',
-                            color: 'var(--text-primary)',
-                            fontSize: '12px'
-                        }}
+                        onChange={setCustomStart}
                     />
                     <span style={{ color: 'var(--text-secondary)' }}>hasta</span>
-                    <input
-                        type="date"
+                    <DatePicker
+                        size="sm"
+                        aria-label="Hasta"
+                        title="Hasta"
+                        placeholder="Hasta"
+                        style={{ width: '150px' }}
+                        min={customStart || undefined}
                         value={customEnd}
-                        onChange={(e) => setCustomEnd(e.target.value)}
-                        style={{
-                            padding: '4px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid var(--border)',
-                            background: 'var(--bg-main)',
-                            color: 'var(--text-primary)',
-                            fontSize: '12px'
-                        }}
+                        onChange={setCustomEnd}
                     />
-                    <button
-                        type="button"
-                        onClick={handleApplyCustom}
-                        style={{
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            background: 'var(--primary-paddle)',
-                            color: '#000',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            fontSize: '11px'
-                        }}
-                    >
+                    <Button size="sm" disabled={!customStart} onClick={handleApplyCustom}>
                         Aplicar
-                    </button>
+                    </Button>
                 </div>
             )}
         </div>

@@ -1,12 +1,13 @@
 import React from 'react';
 import { WEEK_DAYS, getRentalSchedule, minutesToTime, timeToMinutes } from '../../../utils/rentalSchedule';
+import { Button, Select } from '../../common/controls';
 
 // Horas que se pueden agregar como ingreso (06:00 a 23:30, cada 30 min)
 const START_CHOICES = Array.from({ length: 36 }, (_, i) => minutesToTime(360 + i * 30));
 // Tope de entrega: 12:00 del día hasta 08:00 del día siguiente
 const MAX_END_CHOICES = Array.from({ length: 41 }, (_, i) => 720 + i * 30);
 
-export default function VenueStartTimesTab({ formData, handleMetadataChange, cardStyle, sectionTitleStyle, labelStyle, inputStyle }) {
+export default function VenueStartTimesTab({ formData, handleMetadataChange, cardStyle, sectionTitleStyle, labelStyle }) {
     const schedule = getRentalSchedule(formData);
 
     const save = (startTimes, maxEnd) => {
@@ -85,26 +86,16 @@ export default function VenueStartTimesTab({ formData, handleMetadataChange, car
                                         </button>
                                     </span>
                                 ))}
-                                <select
+                                <Select
+                                    size="sm"
+                                    className="tl-field--add"
                                     aria-label={`Agregar horario el ${label.toLowerCase()}`}
+                                    title={`Agregar horario · ${label}`}
                                     value=""
-                                    onChange={e => addTime(key, e.target.value)}
-                                    style={{
-                                        padding: '7px 10px',
-                                        borderRadius: '10px',
-                                        border: '1px dashed var(--border)',
-                                        background: 'transparent',
-                                        color: 'var(--primary-paddle)',
-                                        fontWeight: '700',
-                                        fontSize: '16px',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <option value="">+ Agregar</option>
-                                    {START_CHOICES.filter(t => !list.includes(t)).map(t => (
-                                        <option key={t} value={t}>{t}</option>
-                                    ))}
-                                </select>
+                                    onChange={v => addTime(key, v)}
+                                    renderValue={() => <span>+ Agregar</span>}
+                                    options={START_CHOICES.filter(t => !list.includes(t))}
+                                />
                             </div>
                         </div>
                     );
@@ -112,38 +103,24 @@ export default function VenueStartTimesTab({ formData, handleMetadataChange, car
             </div>
 
             {firstFilledDay && (
-                <button
-                    type="button"
-                    onClick={() => copyToAll(firstFilledDay.key)}
-                    style={{
-                        padding: '10px 14px',
-                        borderRadius: '10px',
-                        border: '1px solid var(--border)',
-                        background: 'var(--bg-card)',
-                        color: 'var(--text-primary)',
-                        fontWeight: '700',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        marginBottom: '24px'
-                    }}
-                >
+                <Button variant="secondary" size="sm" style={{ marginBottom: '24px', whiteSpace: 'normal' }} onClick={() => copyToAll(firstFilledDay.key)}>
                     Copiar los horarios del {firstFilledDay.label.toLowerCase()} a todos los días
-                </button>
+                </Button>
             )}
 
             <div>
                 <label htmlFor="rentalMaxEnd" style={labelStyle}>El espacio se entrega hasta</label>
-                <select
+                <Select
                     id="rentalMaxEnd"
+                    title="El espacio se entrega hasta"
                     value={schedule.maxEnd === null ? '' : String(schedule.maxEnd)}
-                    onChange={e => save(schedule.startTimes, e.target.value === '' ? null : Number(e.target.value))}
-                    style={{ ...inputStyle, fontSize: '16px', maxWidth: '320px' }}
-                >
-                    <option value="">Sin tope</option>
-                    {MAX_END_CHOICES.map(m => (
-                        <option key={m} value={m}>{minutesToTime(m)}{m >= 1440 ? ' (día siguiente)' : ''}</option>
-                    ))}
-                </select>
+                    onChange={v => save(schedule.startTimes, v === '' ? null : Number(v))}
+                    style={{ maxWidth: '320px' }}
+                    options={[
+                        { value: '', label: 'Sin tope' },
+                        ...MAX_END_CHOICES.map(m => ({ value: String(m), label: `${minutesToTime(m)}${m >= 1440 ? ' (día siguiente)' : ''}` }))
+                    ]}
+                />
                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
                     La salida nunca pasa de esta hora. Si alquilás de noche, elegí una hora de la madrugada.
                 </p>

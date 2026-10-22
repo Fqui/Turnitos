@@ -1,5 +1,16 @@
 import React from 'react';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import { Select } from '../../common/controls';
+
+const VENUE_GALLERY_SECTORS = [
+    { value: 'General', label: 'General', icon: '📸' },
+    { value: 'Piscina', label: 'Piscina / Solárium', icon: '🏊' },
+    { value: 'Salón', label: 'Salón / Quincho Cubierto', icon: '🏠' },
+    { value: 'Exterior', label: 'Parque / Jardín', icon: '🌳' },
+    { value: 'Parrilla', label: 'Asador / Parrilla', icon: '🔥' },
+    { value: 'Baños', label: 'Baños & Vestuarios', icon: '🚿' },
+    { value: 'Juegos', label: 'Juegos & Entretenimiento', icon: '🎮' }
+];
 
 export default function VenueGalleryTab({
     formData,
@@ -335,23 +346,18 @@ export default function VenueGalleryTab({
                                             <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>
                                                 Sector / Categoría
                                             </label>
-                                            <select
+                                            <Select
+                                                size="sm"
+                                                aria-label="Sector o categoría"
+                                                title="Sector / Categoría"
                                                 value={item.category || 'General'}
-                                                onChange={(e) => {
+                                                onChange={(v) => {
                                                     const newGallery = [...(formData.metadata?.venue_gallery || [])];
-                                                    newGallery[index].category = e.target.value;
+                                                    newGallery[index].category = v;
                                                     handleMetadataChange('venue_gallery', newGallery);
                                                 }}
-                                                style={{ ...inputStyle, padding: '8px 10px', fontSize: '12px', margin: 0 }}
-                                            >
-                                                <option value="General">📸 General</option>
-                                                <option value="Piscina">🏊 Piscina / Solárium</option>
-                                                <option value="Salón">🏠 Salón / Quincho Cubierto</option>
-                                                <option value="Exterior">🌳 Parque / Jardín</option>
-                                                <option value="Parrilla">🔥 Asador / Parrilla</option>
-                                                <option value="Baños">🚿 Baños & Vestuarios</option>
-                                                <option value="Juegos">🎮 Juegos & Entretenimiento</option>
-                                            </select>
+                                                options={VENUE_GALLERY_SECTORS}
+                                            />
                                         </div>
 
                                         <button

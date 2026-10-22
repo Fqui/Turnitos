@@ -1,5 +1,16 @@
 import React from 'react';
 import { getHomeVisit, HOME_VISIT_BADGE_STYLE } from '../../../utils/homeService';
+import { Button, DatePicker, Select } from '../../common/controls';
+
+const STATUS_FILTERS = [
+    { value: 'all', label: 'Todos los estados' },
+    { value: 'pending', label: 'Pendientes' },
+    { value: 'confirmed', label: 'Confirmados' },
+    { value: 'deposit_paid', label: 'Señados' },
+    { value: 'completed', label: 'Finalizados' },
+    { value: 'cancelled', label: 'Cancelados' },
+    { value: 'blocked', label: 'Bloqueados' }
+];
 
 export default function PortalListView({
     bookings,
@@ -193,78 +204,39 @@ export default function PortalListView({
                         />
                     </div>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <select
+                        <Select
+                            aria-label="Estado"
+                            title="Estado"
+                            style={{ width: 'auto', minWidth: '190px' }}
                             value={listFilters.status}
-                            onChange={(e) => {
-                                setListFilters(prev => ({ ...prev, status: e.target.value }));
+                            onChange={(v) => {
+                                setListFilters(prev => ({ ...prev, status: v }));
                                 setCurrentPage(1);
                             }}
-                            style={{
-                                padding: '10px 12px',
-                                borderRadius: '8px',
-                                border: '1px solid var(--border)',
-                                background: 'var(--bg-main)',
-                                fontSize: '14px',
-                                color: 'var(--text-primary)',
-                                cursor: 'pointer'
+                            options={STATUS_FILTERS}
+                        />
+                        <DatePicker
+                            aria-label="Fecha"
+                            title="Filtrar por fecha"
+                            placeholder="Cualquier fecha"
+                            allowClear
+                            style={{ width: 'auto', minWidth: '170px' }}
+                            value={listFilters.date}
+                            onChange={(v) => {
+                                setListFilters(prev => ({ ...prev, date: v }));
+                                setCurrentPage(1);
                             }}
-                        >
-                            <option value="all">Todos los estados</option>
-                            <option value="pending">Pendientes</option>
-                            <option value="confirmed">Confirmados</option>
-                            <option value="deposit_paid">Señados</option>
-                            <option value="completed">Finalizados</option>
-                            <option value="cancelled">Cancelados</option>
-                            <option value="blocked">Bloqueados</option>
-                        </select>
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '0 12px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)',
-                            background: 'var(--bg-main)'
-                        }}>
-                            <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '500' }}>Fecha:</span>
-                            <input
-                                type="date"
-                                value={listFilters.date}
-                                onChange={(e) => {
-                                    setListFilters(prev => ({ ...prev, date: e.target.value }));
-                                    setCurrentPage(1);
-                                }}
-                                style={{
-                                    padding: '10px 0',
-                                    borderRadius: '0',
-                                    border: 'none',
-                                    background: 'transparent',
-                                    fontSize: '14px',
-                                    color: 'var(--text-primary)',
-                                    cursor: 'pointer',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
+                        />
                         {(listFilters.search || listFilters.status !== 'all' || listFilters.date) && (
-                            <button
+                            <Button
+                                variant="danger-soft"
                                 onClick={() => {
                                     setListFilters({ search: '', status: 'all', date: '' });
                                     setCurrentPage(1);
                                 }}
-                                style={{
-                                    padding: '10px 12px',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    background: 'rgba(255, 68, 68, 0.1)',
-                                    color: '#ff4444',
-                                    fontSize: '13px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer'
-                                }}
                             >
                                 Limpiar
-                            </button>
+                            </Button>
                         )}
                     </div>
                 </div>

@@ -1,4 +1,18 @@
 import React, { useState } from 'react';
+import { Button, DatePicker, Select, TimePicker } from '../../common/controls';
+
+const TYPE_OPTIONS = [
+    { value: 'special_price', label: 'Oferta / Descuento Promocional', icon: '🏷️' },
+    { value: 'special_hours', label: 'Horario Especial', icon: '🕐' },
+    { value: 'closed', label: 'Cerrado', icon: '🚫' },
+    { value: 'holiday', label: 'Feriado', icon: '🎉' }
+];
+
+const PRICE_MODE_OPTIONS = [
+    { value: 'discount_percent', label: '% Descuento (Ej: 20% OFF)' },
+    { value: 'fixed', label: 'Precio Fijo ($)' },
+    { value: 'surcharge', label: 'Recargo (%)' }
+];
 
 export default function SpecialDaysTab({
     formData,
@@ -9,8 +23,7 @@ export default function SpecialDaysTab({
     showConfirm,
     isMobile,
     labelStyle,
-    inputStyle,
-    saveButtonStyle
+    inputStyle
 }) {
     const specialDays = formData.special_days || [];
 
@@ -84,25 +97,11 @@ export default function SpecialDaysTab({
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                         <div>
                             <label style={{ ...labelStyle, marginBottom: '4px' }}>Fecha</label>
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                style={inputStyle}
-                            />
+                            <DatePicker aria-label="Fecha" title="Fecha del día especial" withYear value={date} onChange={setDate} />
                         </div>
                         <div>
                             <label style={{ ...labelStyle, marginBottom: '4px' }}>Tipo de Día Especial</label>
-                            <select
-                                value={type}
-                                onChange={(e) => setType(e.target.value)}
-                                style={inputStyle}
-                            >
-                                <option value="special_price">🏷️ Oferta / Descuento Promocional</option>
-                                <option value="special_hours">🕐 Horario Especial</option>
-                                <option value="closed">🚫 Cerrado</option>
-                                <option value="holiday">🎉 Feriado</option>
-                            </select>
+                            <Select aria-label="Tipo de día especial" title="Tipo de día especial" value={type} onChange={setType} options={TYPE_OPTIONS} />
                         </div>
                     </div>
 
@@ -121,15 +120,7 @@ export default function SpecialDaysTab({
                                 <label style={{ ...labelStyle, marginBottom: '4px', color: '#059669', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                     Tipo de Oferta
                                 </label>
-                                <select
-                                    value={priceMode}
-                                    onChange={(e) => setPriceMode(e.target.value)}
-                                    style={inputStyle}
-                                >
-                                    <option value="discount_percent">% Descuento (Ej: 20% OFF)</option>
-                                    <option value="fixed">Precio Fijo ($)</option>
-                                    <option value="surcharge">Recargo (%)</option>
-                                </select>
+                                <Select aria-label="Tipo de oferta" title="Tipo de oferta" value={priceMode} onChange={setPriceMode} options={PRICE_MODE_OPTIONS} />
                             </div>
                             <div>
                                 <label style={{ ...labelStyle, marginBottom: '4px', color: '#059669', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -160,21 +151,11 @@ export default function SpecialDaysTab({
                         }}>
                             <div>
                                 <label style={{ ...labelStyle, marginBottom: '4px' }}>Apertura Especial</label>
-                                <input
-                                    type="time"
-                                    value={openTime}
-                                    onChange={(e) => setOpenTime(e.target.value)}
-                                    style={inputStyle}
-                                />
+                                <TimePicker aria-label="Apertura especial" title="Apertura especial" value={openTime} onChange={setOpenTime} />
                             </div>
                             <div>
                                 <label style={{ ...labelStyle, marginBottom: '4px' }}>Cierre Especial</label>
-                                <input
-                                    type="time"
-                                    value={closeTime}
-                                    onChange={(e) => setCloseTime(e.target.value)}
-                                    style={inputStyle}
-                                />
+                                <TimePicker aria-label="Cierre especial" title="Cierre especial" value={closeTime} onChange={setCloseTime} />
                             </div>
                         </div>
                     )}
@@ -190,26 +171,9 @@ export default function SpecialDaysTab({
                         />
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={handleAddSpecialDay}
-                        style={{
-                            padding: '12px 18px',
-                            borderRadius: '10px',
-                            border: 'none',
-                            background: 'var(--primary-paddle, #00E676)',
-                            color: '#000',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px'
-                        }}
-                    >
+                    <Button variant="outline" fullWidth onClick={handleAddSpecialDay}>
                         + Agregar Día Especial
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -315,8 +279,10 @@ export default function SpecialDaysTab({
                                             )}
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
+                                    <Button
+                                        variant="danger-soft"
+                                        size="sm"
+                                        aria-label="Eliminar día especial"
                                         onClick={async () => {
                                             const confirmed = showConfirm 
                                                 ? await showConfirm('¿Eliminar día especial?', '¿Deseas quitar este día especial?', 'Eliminar', 'Cancelar')
@@ -326,23 +292,10 @@ export default function SpecialDaysTab({
                                                 handleInputChange('special_days', updatedDays);
                                             }
                                         }}
-                                        style={{
-                                            padding: '8px',
-                                            borderRadius: '10px',
-                                            border: 'none',
-                                            background: 'rgba(239, 68, 68, 0.08)',
-                                            color: '#ef4444',
-                                            cursor: 'pointer',
-                                            fontWeight: '600',
-                                            fontSize: '14px',
-                                            transition: 'background 0.2s'
-                                        }}
                                         title="Eliminar"
-                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'}
                                     >
                                         ✕
-                                    </button>
+                                    </Button>
                                 </div>
                             );
                         })}
@@ -359,14 +312,9 @@ export default function SpecialDaysTab({
                 </div>
             )}
 
-            <button
-                type="button"
-                onClick={() => handleSave({ special_days: formData.special_days })}
-                style={saveButtonStyle}
-                disabled={saving}
-            >
+            <Button size="lg" fullWidth loading={saving} onClick={() => handleSave({ special_days: formData.special_days })}>
                 {saving ? 'Guardando...' : 'Guardar Días Especiales'}
-            </button>
+            </Button>
         </div>
     );
 }
