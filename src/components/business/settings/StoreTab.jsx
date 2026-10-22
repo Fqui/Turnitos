@@ -12,8 +12,7 @@ export default function StoreTab({
     isMobile,
     showToast,
     labelStyle,
-    inputStyle,
-    saveButtonStyle
+    inputStyle
 }) {
     // Store management modal state
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);

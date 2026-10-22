@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNotification } from '../../contexts/NotificationContext';
-import { DatePicker } from '../common/controls';
+import { Button, DatePicker } from '../common/controls';
 
 const DAYS_MAP = [
     { label: 'Dom', full: 'Domingo', value: 0 },
@@ -242,27 +242,9 @@ export default function CouponsSettings({
                 </div>
 
                 {!isAdding && (
-                    <button
-                        type="button"
-                        onClick={handleStartAdd}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '10px 20px',
-                            borderRadius: '10px',
-                            background: brandColor,
-                            color: '#fff',
-                            border: 'none',
-                            fontWeight: '800',
-                            fontSize: '13.5px',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-                            transition: 'opacity 0.2s'
-                        }}
-                    >
-                        <span>➕</span> Crear Cupón
-                    </button>
+                    <Button onClick={handleStartAdd}>
+                        + Crear Cupón
+                    </Button>
                 )}
             </div>
 
@@ -760,38 +742,12 @@ export default function CouponsSettings({
 
                     {/* Action Buttons */}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                        <button
-                            type="button"
-                            onClick={resetForm}
-                            style={{
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                border: '1px solid var(--border)',
-                                background: 'transparent',
-                                color: 'var(--text-secondary)',
-                                fontWeight: '700',
-                                fontSize: '13px',
-                                cursor: 'pointer'
-                            }}
-                        >
+                        <Button variant="secondary" onClick={resetForm}>
                             Cancelar
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSaveCoupon}
-                            style={{
-                                padding: '8px 20px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: brandColor,
-                                color: '#fff',
-                                fontWeight: '800',
-                                fontSize: '13.5px',
-                                cursor: 'pointer'
-                            }}
-                        >
+                        </Button>
+                        <Button onClick={handleSaveCoupon}>
                             {editingIndex !== null ? 'Guardar Cambios' : 'Crear Cupón'}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             )}
@@ -813,22 +769,9 @@ export default function CouponsSettings({
                         Crea códigos de descuento exclusivos o beneficios de regalo para fidelizar clientes y llenar tus días de menor demanda.
                     </p>
                     {!isAdding && (
-                        <button
-                            type="button"
-                            onClick={handleStartAdd}
-                            style={{
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                background: `${brandColor}20`,
-                                border: `1px solid ${brandColor}`,
-                                color: brandColor,
-                                fontWeight: '700',
-                                fontSize: '13px',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            ➕ Crear Primer Cupón
-                        </button>
+                        <Button variant="outline" onClick={handleStartAdd}>
+                            + Crear Primer Cupón
+                        </Button>
                     )}
                 </div>
             ) : (

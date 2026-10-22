@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import serviceAdapter from '../../services/serviceAdapter';
 import { useNotification } from '../../contexts/NotificationContext';
 import { EmojiPickerModal } from '../common/AmenityIcon';
+import { Button } from '../common/controls';
 
 const PRESET_EMOJIS = ['📄', '📋', '🍔', '🍕', '🍻', '👥', '🎵', '⭐', '🌐', '💳', '📍', '📞', '🎁', '💬', '⚽', '🎾', '🏖️', '🔥'];
 
@@ -286,27 +287,9 @@ export default function LinkBioButtonsSettings({
                 </div>
 
                 {!isAdding && (
-                    <button
-                        type="button"
-                        onClick={handleStartAdd}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '10px 20px',
-                            borderRadius: '10px',
-                            background: 'var(--primary-paddle, #84CC16)',
-                            color: '#000',
-                            border: 'none',
-                            fontWeight: '800',
-                            fontSize: '13.5px',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-                            transition: 'opacity 0.2s'
-                        }}
-                    >
-                        <span>➕</span> Agregar Botón
-                    </button>
+                    <Button onClick={handleStartAdd}>
+                        + Agregar Botón
+                    </Button>
                 )}
             </div>
 
@@ -730,38 +713,12 @@ export default function LinkBioButtonsSettings({
 
                     {/* Action Buttons */}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                        <button
-                            type="button"
-                            onClick={resetForm}
-                            style={{
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                border: '1px solid var(--border)',
-                                background: 'transparent',
-                                color: 'var(--text-secondary)',
-                                fontWeight: '700',
-                                fontSize: '13px',
-                                cursor: 'pointer'
-                            }}
-                        >
+                        <Button variant="secondary" onClick={resetForm}>
                             Cancelar
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSaveLink}
-                            style={{
-                                padding: '8px 20px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: 'var(--primary-paddle, #84CC16)',
-                                color: '#000',
-                                fontWeight: '800',
-                                fontSize: '13.5px',
-                                cursor: 'pointer'
-                            }}
-                        >
+                        </Button>
+                        <Button onClick={handleSaveLink}>
                             {editingIndex !== null ? 'Guardar Cambios' : 'Agregar al LinkBio'}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             )}
@@ -783,22 +740,9 @@ export default function LinkBioButtonsSettings({
                         Agrega enlaces a tu carta en PDF, reglamento o grupo de WhatsApp con tus propios íconos y colores para tu LinkBio.
                     </p>
                     {!isAdding && (
-                        <button
-                            type="button"
-                            onClick={handleStartAdd}
-                            style={{
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                background: 'rgba(132, 204, 22, 0.15)',
-                                border: '1px solid var(--primary-paddle, #84CC16)',
-                                color: 'var(--primary-paddle, #84CC16)',
-                                fontWeight: '700',
-                                fontSize: '13px',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            ➕ Crear Primer Botón
-                        </button>
+                        <Button variant="outline" onClick={handleStartAdd}>
+                            + Crear Primer Botón
+                        </Button>
                     )}
                 </div>
             ) : (

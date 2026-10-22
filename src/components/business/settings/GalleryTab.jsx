@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 import { isPhoneWidth } from '../portal/mobile/bookingMobileUtils';
-import { Select } from '../../common/controls';
+import { Button, Select } from '../../common/controls';
 
 const GALLERY_CATEGORIES = ['General', 'Piscina', 'Quincho', 'Salón', 'Exterior', 'Juegos', 'Noche'];
 
@@ -17,9 +17,7 @@ export default function GalleryTab({
     showConfirm,
     showAlert,
     labelStyle,
-    inputStyle,
-    buttonSecondaryStyle,
-    saveButtonStyle
+    inputStyle
 }) {
     // Separate states for permanent highlights and 24h stories
     const [editingHighlight, setEditingHighlight] = useState(null);
@@ -348,29 +346,9 @@ export default function GalleryTab({
                         </p>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={createStory}
-                        style={{
-                            padding: '10px 18px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                            color: '#fff',
-                            fontWeight: '700',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            boxShadow: '0 4px 14px rgba(220, 39, 67, 0.35)',
-                            transition: 'transform 0.15s ease'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                    >
-                        ⚡ Publicar Nueva Historia
-                    </button>
+                    <Button onClick={createStory}>
+                        + Publicar Nueva Historia
+                    </Button>
                 </div>
 
                 {/* Sub-bloque A: Historias Activas En Vivo */}
@@ -470,28 +448,15 @@ export default function GalleryTab({
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setEditingStory(story)}
-                                                style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px' }}
-                                            >
+                                            <Button variant="secondary" size="sm" onClick={() => setEditingStory(story)}>
                                                 ✏️ Editar
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => endStoryEarly(story)}
-                                                style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px' }}
-                                                title="Pasa la historia al historial de inmediato"
-                                            >
+                                            </Button>
+                                            <Button variant="secondary" size="sm" onClick={() => endStoryEarly(story)} title="Pasa la historia al historial de inmediato">
                                                 ⏹️ Finalizar
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => deleteStory(story.id)}
-                                                style={{ ...buttonSecondaryStyle, padding: '6px 12px', fontSize: '12px', background: 'rgba(255, 68, 68, 0.1)', color: '#ff4444', border: 'none' }}
-                                            >
+                                            </Button>
+                                            <Button variant="danger-soft" size="sm" aria-label="Eliminar historia" onClick={() => deleteStory(story.id)}>
                                                 🗑️
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
                                 );
@@ -600,53 +565,21 @@ export default function GalleryTab({
 
                                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                             {/* RENEW BUTTON */}
-                                            <button
-                                                type="button"
-                                                onClick={() => renewStory(story)}
-                                                style={{
-                                                    padding: '6px 14px',
-                                                    borderRadius: '10px',
-                                                    border: 'none',
-                                                    background: 'var(--primary-paddle, #10b981)',
-                                                    color: '#fff',
-                                                    fontWeight: '700',
-                                                    fontSize: '12px',
-                                                    cursor: 'pointer',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '6px'
-                                                }}
-                                                title="Reactivar esta historia por 24 horas ahora"
-                                            >
+                                            <Button size="sm" onClick={() => renewStory(story)} title="Reactivar esta historia por 24 horas ahora">
                                                 🔄 Renovar (24hs)
-                                            </button>
+                                            </Button>
 
-                                            <button
-                                                type="button"
-                                                onClick={() => convertStoryToHighlight(story)}
-                                                style={{ ...buttonSecondaryStyle, padding: '6px 10px', fontSize: '12px' }}
-                                                title="Convertir esta historia en una destacada permanente"
-                                            >
+                                            <Button variant="secondary" size="sm" onClick={() => convertStoryToHighlight(story)} title="Convertir esta historia en una destacada permanente">
                                                 ⭐ A Destacada
-                                            </button>
+                                            </Button>
 
-                                            <button
-                                                type="button"
-                                                onClick={() => setEditingStory(story)}
-                                                style={{ ...buttonSecondaryStyle, padding: '6px 10px', fontSize: '12px' }}
-                                                title="Editar fotos o título antes de publicar"
-                                            >
+                                            <Button variant="secondary" size="sm" aria-label="Editar historia" onClick={() => setEditingStory(story)} title="Editar fotos o título antes de publicar">
                                                 ✏️
-                                            </button>
+                                            </Button>
 
-                                            <button
-                                                type="button"
-                                                onClick={() => deleteStory(story.id)}
-                                                style={{ ...buttonSecondaryStyle, padding: '6px 10px', fontSize: '12px', background: 'rgba(255, 68, 68, 0.1)', color: '#ff4444', border: 'none' }}
-                                                title="Eliminar del historial"
-                                            >
+                                            <Button variant="danger-soft" size="sm" aria-label="Eliminar historia" onClick={() => deleteStory(story.id)} title="Eliminar del historial">
                                                 🗑️
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
                                 );
@@ -685,27 +618,9 @@ export default function GalleryTab({
                         </p>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={createHighlight}
-                        disabled={permanentHighlightsList.length >= 20}
-                        style={{
-                            padding: '10px 18px',
-                            borderRadius: '12px',
-                            border: '1px solid var(--border)',
-                            background: 'var(--bg-card)',
-                            color: 'var(--text-primary)',
-                            fontWeight: '700',
-                            fontSize: '13px',
-                            opacity: permanentHighlightsList.length >= 20 ? 0.5 : 1,
-                            cursor: permanentHighlightsList.length >= 20 ? 'not-allowed' : 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}
-                    >
-                        ⭐ Nueva Destacada
-                    </button>
+                    <Button variant="outline" onClick={createHighlight} disabled={permanentHighlightsList.length >= 20}>
+                        + Nueva Destacada
+                    </Button>
                 </div>
 
                 {permanentHighlightsList.length === 0 ? (
@@ -769,20 +684,12 @@ export default function GalleryTab({
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setEditingHighlight(highlight)}
-                                            style={{ ...buttonSecondaryStyle, padding: '6px 14px', fontSize: '12px' }}
-                                        >
+                                        <Button variant="secondary" size="sm" onClick={() => setEditingHighlight(highlight)}>
                                             ✏️ Editar
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => deleteHighlight(highlight.id)}
-                                            style={{ ...buttonSecondaryStyle, padding: '6px 14px', fontSize: '12px', background: 'rgba(255, 68, 68, 0.1)', color: '#ff4444', border: 'none' }}
-                                        >
+                                        </Button>
+                                        <Button variant="danger-soft" size="sm" onClick={() => deleteHighlight(highlight.id)}>
                                             🗑️ Borrar
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             );
@@ -977,15 +884,7 @@ export default function GalleryTab({
                         <div style={{ marginBottom: '20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                 <label style={labelStyle}>Fotos y Videos ({editingHighlight.images?.length || 0}/20)</label>
-                                <label style={{
-                                    ...saveButtonStyle,
-                                    width: 'auto',
-                                    margin: 0,
-                                    padding: '6px 14px',
-                                    fontSize: '12px',
-                                    cursor: uploadingMedia ? 'not-allowed' : 'pointer',
-                                    opacity: uploadingMedia ? 0.7 : 1
-                                }}>
+                                <label className="tl-btn tl-btn--outline tl-btn--sm" style={{ cursor: uploadingMedia ? 'not-allowed' : 'pointer', opacity: uploadingMedia ? 0.6 : 1 }}>
                                     <input
                                         type="file"
                                         multiple
@@ -1103,25 +1002,12 @@ export default function GalleryTab({
 
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                            <button
-                                type="button"
-                                onClick={() => setEditingHighlight(null)}
-                                style={buttonSecondaryStyle}
-                            >
+                            <Button variant="secondary" onClick={() => setEditingHighlight(null)}>
                                 Cancelar
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => saveHighlight(editingHighlight)}
-                                disabled={!editingHighlight.title?.trim() || !editingHighlight.images?.length}
-                                style={{
-                                    ...saveButtonStyle,
-                                    opacity: (!editingHighlight.title?.trim() || !editingHighlight.images?.length) ? 0.5 : 1,
-                                    cursor: (!editingHighlight.title?.trim() || !editingHighlight.images?.length) ? 'not-allowed' : 'pointer'
-                                }}
-                            >
+                            </Button>
+                            <Button onClick={() => saveHighlight(editingHighlight)} disabled={!editingHighlight.title?.trim() || !editingHighlight.images?.length}>
                                 Guardar Destacada
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -1201,17 +1087,9 @@ export default function GalleryTab({
                         <div style={{ marginBottom: '20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                 <label style={labelStyle}>Fotos y Videos ({editingStory.images?.length || 0}/20)</label>
-                                <label style={{
-                                    ...saveButtonStyle,
-                                    width: 'auto',
-                                    margin: 0,
-                                    padding: '6px 14px',
-                                    fontSize: '12px',
+                                <label className="tl-btn tl-btn--outline tl-btn--sm" style={{
                                     cursor: uploadingMedia ? 'not-allowed' : 'pointer',
-                                    opacity: uploadingMedia ? 0.7 : 1,
-                                    background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                                    border: 'none',
-                                    color: '#fff'
+                                    opacity: uploadingMedia ? 0.6 : 1
                                 }}>
                                     <input
                                         type="file"
@@ -1330,29 +1208,12 @@ export default function GalleryTab({
 
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                            <button
-                                type="button"
-                                onClick={() => setEditingStory(null)}
-                                style={buttonSecondaryStyle}
-                            >
+                            <Button variant="secondary" onClick={() => setEditingStory(null)}>
                                 Cancelar
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => saveStory(editingStory)}
-                                disabled={!editingStory.images?.length}
-                                style={{
-                                    ...saveButtonStyle,
-                                    background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                                    border: 'none',
-                                    color: '#fff',
-                                    boxShadow: '0 4px 14px rgba(220, 39, 67, 0.3)',
-                                    opacity: (!editingStory.images?.length) ? 0.5 : 1,
-                                    cursor: (!editingStory.images?.length) ? 'not-allowed' : 'pointer'
-                                }}
-                            >
-                                ⚡ Publicar Historia (24hs)
-                            </button>
+                            </Button>
+                            <Button onClick={() => saveStory(editingStory)} disabled={!editingStory.images?.length}>
+                                Publicar Historia (24hs)
+                            </Button>
                         </div>
                     </div>
                 </div>
