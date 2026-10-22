@@ -1,5 +1,6 @@
 import React from 'react';
 import CoverFocusPicker from '../../common/CoverFocusPicker';
+import { Button } from '../../common/controls';
 import { getCoverPosition } from '../../../utils/imageUtils';
 
 export default function AppearanceTab({
@@ -13,8 +14,7 @@ export default function AppearanceTab({
     handleSave,
     saving,
     hintStyle,
-    buttonSecondaryStyle,
-    saveButtonStyle
+    buttonSecondaryStyle
 }) {
     const currentBrandColor = formData.brand_color || formData.primary_color || '#10B981';
     const suggestedColors = ['#10B981', '#00E676', '#3B82F6', '#6366F1', '#EC4899', '#8B5CF6', '#F59E0B', '#EF4444'];
@@ -211,7 +211,10 @@ export default function AppearanceTab({
                 </div>
             </div>
 
-            <button
+            <Button
+                size="lg"
+                fullWidth
+                loading={saving}
                 onClick={() => handleSave({
                     logo: formData.logo,
                     logo_url: formData.logo || formData.logo_url,
@@ -223,11 +226,9 @@ export default function AppearanceTab({
                     theme: formData.theme || 'light',
                     metadata: { banner_focus: formData.metadata?.banner_focus ?? null }
                 })}
-                style={saveButtonStyle}
-                disabled={saving}
             >
                 {saving ? 'Guardando...' : 'Guardar Apariencia y Colores'}
-            </button>
+            </Button>
         </div>
     );
 }

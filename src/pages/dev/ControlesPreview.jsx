@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Button, DatePicker, Select, TimePicker } from '../../components/common/controls';
 import BookingDetailsModal from '../../components/business/BookingDetailsModal';
 import ScheduleTab from '../../components/business/settings/ScheduleTab';
+import BusinessSettings from '../../components/BusinessSettings';
 import { formatDisplayDate } from '../../utils/dateUtils';
 import { useNotification } from '../../contexts/NotificationContext';
 
@@ -130,6 +131,17 @@ export default function ControlesPreview() {
                         <Button color={brand} variant="outline">Ver horarios</Button>
                         <Button color={brand} size="lg" fullWidth>Confirmar turno</Button>
                     </div>
+                </div>
+
+                <div style={section} data-preview="ajustes">
+                    <h2 style={h2}>Ajustes completos (datos de ejemplo, no guarda)</h2>
+                    <BusinessSettings
+                        business={{ ...DEMO_BIZ, hours: DEMO_HOURS, special_days: [{ id: 'sd1', date: '2026-12-25', type: 'holiday', description: 'Navidad' }] }}
+                        onUpdate={() => {}}
+                        isMobile={isMobile}
+                        isPhone={isMobile}
+                        initialTab={new URLSearchParams(window.location.search).get('tab') || 'services'}
+                    />
                 </div>
 
                 <div style={section} data-preview="horarios">

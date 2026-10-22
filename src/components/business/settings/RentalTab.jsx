@@ -1,5 +1,5 @@
 import React from 'react';
-import { DatePicker } from '../../common/controls';
+import { Button, DatePicker } from '../../common/controls';
 
 export default function RentalTab({
     formData,
@@ -164,8 +164,9 @@ export default function RentalTab({
                 <div style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'var(--text-primary)' }}>Escalones de Precio por Invitados</h3>
-                        <button
-                            type="button"
+                        <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => {
                                 const tiers = [...(formData.pricing_tiers || [])];
                                 const lastTier = tiers[tiers.length - 1];
@@ -173,18 +174,9 @@ export default function RentalTab({
                                 tiers.push({ min: newMin, max: newMin + 29, price: formData.price_per_hour || 0, label: `${newMin}-${newMin + 29} personas` });
                                 handleInputChange('pricing_tiers', tiers);
                             }}
-                            style={{
-                                background: 'rgba(var(--primary-rgb), 0.1)',
-                                color: 'var(--primary-paddle)',
-                                border: 'none',
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                fontWeight: '700',
-                                cursor: 'pointer'
-                            }}
                         >
                             + Agregar Escalón
-                        </button>
+                        </Button>
                     </div>
 
                     {(formData.pricing_tiers || []).length === 0 ? (
@@ -234,17 +226,19 @@ export default function RentalTab({
                                             style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
                                         />
                                     </div>
-                                    <button
-                                        type="button"
+                                    <Button
+                                        variant="danger-soft"
+                                        size="sm"
+                                        aria-label="Eliminar escalón"
+                                        title="Eliminar"
+                                        style={{ marginTop: '16px' }}
                                         onClick={() => {
                                             const tiers = formData.pricing_tiers.filter((_, i) => i !== index);
                                             handleInputChange('pricing_tiers', tiers);
                                         }}
-                                        style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', marginTop: '16px' }}
-                                        title="Eliminar"
                                     >
                                         🗑️
-                                    </button>
+                                    </Button>
                                 </div>
                             ))}
                         </div>
@@ -259,8 +253,9 @@ export default function RentalTab({
             <div style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'var(--text-primary)' }}>Fechas Bloqueadas</h3>
-                    <button
-                        type="button"
+                    <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => {
                             const dates = [...(formData.blocked_dates || [])];
                             const tomorrow = new Date();
@@ -268,18 +263,9 @@ export default function RentalTab({
                             dates.push({ date: tomorrow.toISOString().split('T')[0], reason: '' });
                             handleInputChange('blocked_dates', dates);
                         }}
-                        style={{
-                            background: 'rgba(var(--primary-rgb), 0.1)',
-                            color: 'var(--primary-paddle)',
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '8px',
-                            fontWeight: '700',
-                            cursor: 'pointer'
-                        }}
                     >
                         + Bloquear Fecha
-                    </button>
+                    </Button>
                 </div>
 
                 {(formData.blocked_dates || []).length === 0 ? (
@@ -312,17 +298,18 @@ export default function RentalTab({
                                     }}
                                     style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
                                 />
-                                <button
-                                    type="button"
+                                <Button
+                                    variant="danger-soft"
+                                    size="sm"
+                                    aria-label="Quitar fecha bloqueada"
+                                    title="Eliminar"
                                     onClick={() => {
                                         const dates = formData.blocked_dates.filter((_, i) => i !== index);
                                         handleInputChange('blocked_dates', dates);
                                     }}
-                                    style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px' }}
-                                    title="Eliminar"
                                 >
                                     🗑️
-                                </button>
+                                </Button>
                             </div>
                         ))}
                     </div>
@@ -333,21 +320,9 @@ export default function RentalTab({
             <div style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <h3 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: 'var(--text-primary)' }}>Servicios Adicionales</h3>
-                    <button
-                        type="button"
-                        onClick={addAdditionalService}
-                        style={{
-                            background: 'rgba(var(--primary-rgb), 0.1)',
-                            color: 'var(--primary-paddle)',
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '8px',
-                            fontWeight: '700',
-                            cursor: 'pointer'
-                        }}
-                    >
+                    <Button variant="outline" size="sm" onClick={addAdditionalService}>
                         + Agregar
-                    </button>
+                    </Button>
                 </div>
 
                 {(formData.additional_services || []).length === 0 ? (
@@ -370,14 +345,9 @@ export default function RentalTab({
                                     onChange={(e) => handleAdditionalServiceChange(index, 'price', parseFloat(e.target.value))}
                                     style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-main)', color: 'var(--text-primary)' }}
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => removeAdditionalService(index)}
-                                    style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px' }}
-                                    title="Eliminar"
-                                >
+                                <Button variant="danger-soft" size="sm" aria-label="Quitar servicio adicional" title="Eliminar" onClick={() => removeAdditionalService(index)}>
                                     🗑️
-                                </button>
+                                </Button>
                             </div>
                         ))}
                     </div>
@@ -413,24 +383,9 @@ export default function RentalTab({
 
             {/* Save Button */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '24px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)' }}>
-                <button
-                    type="button"
-                    onClick={() => handleSave()}
-                    disabled={saving}
-                    style={{
-                        padding: '14px 32px',
-                        borderRadius: '12px',
-                        background: saving ? 'var(--border)' : 'var(--primary-paddle)',
-                        color: saving ? 'var(--text-secondary)' : '#000',
-                        border: 'none',
-                        fontWeight: '700',
-                        fontSize: '15px',
-                        cursor: saving ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s'
-                    }}
-                >
+                <Button size="lg" loading={saving} onClick={() => handleSave()}>
                     {saving ? 'Guardando...' : 'Guardar Cambios'}
-                </button>
+                </Button>
             </div>
         </div>
     );

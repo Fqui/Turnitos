@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import AmenityIcon, { IconPickerModal, parseAmenity } from '../../common/AmenityIcon';
+import { Button } from '../../common/controls';
+import { readableTextOn } from '../../common/controls/color';
 
 const PRESET_AMENITIES = [
     { name: 'WiFi Gratis', icon: 'Wifi' },
@@ -38,8 +40,7 @@ export default function AmenitiesTab({
     showToast,
     primaryColor,
     inputStyle,
-    buttonSecondaryStyle,
-    saveButtonStyle
+    buttonSecondaryStyle
 }) {
     const [newAmenityName, setNewAmenityName] = useState('');
     const [newAmenityIcon, setNewAmenityIcon] = useState('Sparkles');
@@ -247,7 +248,7 @@ export default function AmenitiesTab({
                                     borderRadius: '50%',
                                     border: isSelected ? `1.5px solid ${brandColor}` : '1.5px solid var(--border)',
                                     background: isSelected ? brandColor : 'transparent',
-                                    color: '#000',
+                                    color: readableTextOn(brandColor) || '#000',
                                     fontSize: '11px',
                                     fontWeight: '900',
                                     flexShrink: 0,
@@ -284,27 +285,15 @@ export default function AmenitiesTab({
 
                     {/* Icon Selection Toolbar */}
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '14px' }}>
-                        <button
-                            type="button"
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            color={brandColor}
+                            icon={<AmenityIcon icon={newAmenityIcon} size={18} />}
                             onClick={() => setIsIconPickerOpen(true)}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '8px 14px',
-                                borderRadius: '10px',
-                                border: `1.5px solid ${brandColor}`,
-                                background: `${brandColor}20`,
-                                color: 'var(--text-primary)',
-                                fontSize: '13px',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                            }}
                         >
-                            <AmenityIcon icon={newAmenityIcon} size={18} />
-                            <span>🎨 Cambiar Ícono (+60 disponibles)</span>
-                        </button>
+                            Cambiar ícono (+60 disponibles)
+                        </Button>
 
                         <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
                             {QUICK_ICONS.map(iconKey => (
@@ -364,24 +353,9 @@ export default function AmenitiesTab({
                                 }}
                             />
                         </div>
-                        <button
-                            type="button"
-                            onClick={handleAddCustom}
-                            style={{
-                                padding: '12px 20px',
-                                borderRadius: '12px',
-                                border: 'none',
-                                background: brandColor,
-                                color: '#000000',
-                                fontWeight: '800',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                whiteSpace: 'nowrap',
-                                transition: 'opacity 0.15s ease'
-                            }}
-                        >
+                        <Button color={brandColor} onClick={handleAddCustom}>
                             + Agregar
-                        </button>
+                        </Button>
                     </div>
 
                     {/* Active Custom Amenities Chips */}
@@ -436,21 +410,9 @@ export default function AmenitiesTab({
             </div>
 
             {/* Save Button */}
-            <button
-                type="button"
-                onClick={() => handleSave({ amenities: formData.amenities })}
-                style={{
-                    ...saveButtonStyle,
-                    background: brandColor,
-                    color: '#000000',
-                    fontWeight: '800',
-                    padding: '14px 24px',
-                    borderRadius: '12px'
-                }}
-                disabled={saving}
-            >
+            <Button size="lg" fullWidth loading={saving} onClick={() => handleSave({ amenities: formData.amenities })}>
                 {saving ? 'Guardando en la nube...' : 'Guardar Comodidades'}
-            </button>
+            </Button>
 
             {/* Icon Picker Modal */}
             <IconPickerModal

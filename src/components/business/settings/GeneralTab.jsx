@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapContainer, Marker, useMapEvents } from 'react-leaflet';
 import { TurnitosTileLayer, defaultTurnitosIcon } from '../../common/TurnitosMap';
+import { Button } from '../../common/controls';
 
 function LocationPicker({ position, onLocationSelect }) {
     useMapEvents({
@@ -19,8 +20,7 @@ export default function GeneralTab({
     saving,
     labelStyle,
     inputStyle,
-    hintStyle,
-    saveButtonStyle
+    hintStyle
 }) {
     const mapCenter = [formData.latitude || -34.6037, formData.longitude || -58.3816];
 
@@ -83,7 +83,10 @@ export default function GeneralTab({
 
             {/* Consolidated Save Button */}
             <div style={{ marginTop: '10px' }}>
-                <button
+                <Button
+                    size="lg"
+                    fullWidth
+                    loading={saving}
                     onClick={() => handleSave({
                         name: formData.name,
                         description: formData.description,
@@ -95,11 +98,9 @@ export default function GeneralTab({
                         tiktok: formData.tiktok,
                         facebook: formData.facebook
                     })}
-                    style={saveButtonStyle}
-                    disabled={saving}
                 >
                     {saving ? 'Guardando...' : 'Guardar Información General'}
-                </button>
+                </Button>
             </div>
         </div>
     );

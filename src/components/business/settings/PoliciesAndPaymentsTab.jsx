@@ -1,5 +1,5 @@
 import React from 'react';
-import { Select } from '../../common/controls';
+import { Button, Select } from '../../common/controls';
 
 export default function PoliciesAndPaymentsTab({
     formData,
@@ -8,8 +8,7 @@ export default function PoliciesAndPaymentsTab({
     saving,
     isMobile,
     labelStyle,
-    inputStyle,
-    saveButtonStyle
+    inputStyle
 }) {
     const rules = formData.booking_rules || {};
     const advanceBooking = rules.advance_booking || { min_hours: 2, max_days: 30 };
@@ -185,17 +184,18 @@ export default function PoliciesAndPaymentsTab({
                 </div>
 
                 {/* Save Button */}
-                <button
-                    type="button"
+                <Button
+                    size="lg"
+                    fullWidth
+                    loading={saving}
+                    style={{ marginTop: '20px' }}
                     onClick={() => handleSave({
                         booking_rules: formData.booking_rules,
                         payment_settings: formData.payment_settings
                     })}
-                    style={saveButtonStyle}
-                    disabled={saving}
                 >
                     {saving ? 'Guardando...' : 'Guardar Reglas'}
-                </button>
+                </Button>
             </div>
 
             {/* ================= PAYMENTS SECTION ================= */}
@@ -458,17 +458,18 @@ export default function PoliciesAndPaymentsTab({
                         </div>
 
                         {/* Save Button */}
-                        <button
-                            type="button"
+                        <Button
+                            size="lg"
+                            fullWidth
+                            loading={saving}
+                            style={{ marginTop: '20px' }}
                             onClick={() => handleSave({
                                 booking_rules: formData.booking_rules,
                                 payment_settings: formData.payment_settings
                             })}
-                            style={saveButtonStyle}
-                            disabled={saving}
                         >
                             {saving ? 'Guardando...' : 'Guardar Configuración de Pagos'}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import HomeRingsMap from '../../common/HomeRingsMap';
+import { Button } from '../../common/controls';
 import { DEFAULT_RINGS, MAX_RINGS, RING_COLORS, getHomeRings, formatFee } from '../../../utils/homeService';
 
 const stepButton = {
@@ -17,7 +18,7 @@ const stepButton = {
     fontFamily: 'inherit'
 };
 
-export default function HomeServiceTab({ formData, handleSave, saving, onGoToGeneral, labelStyle, inputStyle, saveButtonStyle }) {
+export default function HomeServiceTab({ formData, handleSave, saving, onGoToGeneral, labelStyle, inputStyle }) {
     const lat = Number(formData?.latitude);
     const lng = Number(formData?.longitude);
     const hasLocation = isFinite(lat) && isFinite(lng) && !(lat === 0 && lng === 0) && formData?.latitude != null;
@@ -71,7 +72,7 @@ export default function HomeServiceTab({ formData, handleSave, saving, onGoToGen
                 <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>Primero cargá la ubicación de tu negocio</strong>
                 <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Los anillos de distancia se dibujan alrededor de tu local. Marcalo en el mapa de "General y Ubicación" y volvé acá.</span>
                 {onGoToGeneral && (
-                    <button type="button" onClick={onGoToGeneral} style={{ ...saveButtonStyle, alignSelf: 'flex-start' }}>Ir a General y Ubicación</button>
+                    <Button variant="outline" style={{ alignSelf: 'flex-start' }} onClick={onGoToGeneral}>Ir a General y Ubicación</Button>
                 )}
             </div>
         );
@@ -140,9 +141,9 @@ export default function HomeServiceTab({ formData, handleSave, saving, onGoToGen
                 {' '}La distancia se mide en línea recta desde tu local.
             </p>
 
-            <button type="button" onClick={save} disabled={saving} style={saveButtonStyle}>
+            <Button size="lg" fullWidth loading={saving} onClick={save}>
                 {saving ? 'Guardando...' : 'Guardar zonas'}
-            </button>
+            </Button>
         </div>
     );
 }
