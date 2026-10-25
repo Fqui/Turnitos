@@ -184,6 +184,16 @@ function highlightItems(b: Json): Json[] {
         .map((h: Json) => ({ titulo: h.title, fotos: Array.isArray(h.images) ? h.images : [], portada: h.cover_image ?? undefined }));
 }
 
+async function findService(db: SupabaseClient, b: Json, ref: unknown): Promise<Json> {
+    const { data: services, error } = await db.from('services').select('id, name, images').eq('business_id', b.id);
+    if (error) throw new ToolError(error.message);
+    const service = (services ?? []).find(s => slugify(s.name) === slugify(ref));
+    if (!service) {
+        throw new ToolError(`No hay un servicio "${ref}". Servicios: ${(services ?? []).map(s => s.name).join(', ') || 'ninguno'}`);
+    }
+    return service;
+}
+
 async function assignMedia(db: SupabaseClient, b: Json, file: Json, url: string): Promise<string> {
     switch (file.destino) {
         case 'portada':
@@ -219,12 +229,7 @@ async function assignMedia(db: SupabaseClient, b: Json, file: Json, url: string)
             return `destacada "${item.titulo}" (${item.fotos.length} fotos)`;
         }
         case 'servicio': {
-            const { data: services, error } = await db.from('services').select('id, name, images').eq('business_id', b.id);
-            if (error) throw new ToolError(error.message);
-            const service = (services ?? []).find(s => slugify(s.name) === slugify(file.ref));
-            if (!service) {
-                throw new ToolError(`No hay un servicio "${file.ref}". Servicios: ${(services ?? []).map(s => s.name).join(', ') || 'ninguno'}`);
-            }
+            const service = await findService(db, b, file.ref);
             // image_url es la principal (= images[1]); hasta 5 fotos
             const images = [url, ...(service.images ?? []).filter((u: string) => u !== url)].slice(0, 5);
             const { error: updateError } = await db.from('services').update({ image_url: url, images }).eq('id', service.id);
@@ -349,6 +354,8 @@ async function subirMedia(db: SupabaseClient, args: Json) {
     const results = [];
     for (const [i, file] of files.entries()) {
         try {
+            // Que el servicio exista antes de subir, así no queda un archivo suelto
+            if (file.destino === 'servicio') await findService(db, b, file.ref);
             const { bytes, type } = await loadFile(file);
             const path = `simulacion/${b.slug}/${await fileName(file, bytes, type)}`;
             const { error } = await storage.upload(path, bytes, { contentType: type, upsert: true, cacheControl: '3600' });
