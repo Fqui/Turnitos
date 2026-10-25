@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "TurnitosLR · Instagram a demo",
+  "version": "1.0.0",
+  "description": "Junta los datos y las fotos de un perfil de Instagram abierto y los descarga en un .zip para armar la demo en TurnitosLR.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Instagram a TurnitosLR"
+  },
+  "permissions": ["activeTab", "scripting", "downloads"],
+  "host_permissions": [
+    "https://www.instagram.com/*",
+    "https://*.cdninstagram.com/*",
+    "https://*.fbcdn.net/*"
+  ]
+}
