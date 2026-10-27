@@ -4,10 +4,35 @@ import process from 'node:process'
 
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Precarga el woff2 latin de Plus Jakarta Sans: sin esto el navegador lo descubre
+// recién al parsear el CSS y pinta primero con la fuente del sistema
+function preloadFont() {
+  let base = '/'
+  return {
+    name: 'preload-plus-jakarta-sans',
+    apply: 'build',
+    configResolved(config) {
+      base = config.base
+    },
+    transformIndexHtml(html, ctx) {
+      const font = Object.keys(ctx.bundle || {}).find((file) =>
+        /plus-jakarta-sans-latin-wght-normal.*\.woff2$/.test(file)
+      )
+      if (!font) return
+      return [{
+        tag: 'link',
+        attrs: { rel: 'preload', as: 'font', type: 'font/woff2', href: base + font, crossorigin: '' },
+        injectTo: 'head-prepend'
+      }]
+    }
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    preloadFont(),
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'public',

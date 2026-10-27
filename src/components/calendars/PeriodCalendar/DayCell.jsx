@@ -136,7 +136,7 @@ export default function DayCell({
                     : 'none',
                 position: 'relative',
                 overflow: 'hidden',
-                fontFamily: 'var(--font-sans, "Plus Jakarta Sans", system-ui, sans-serif)'
+                fontFamily: 'var(--font-sans, "Plus Jakarta Sans Variable", "Plus Jakarta Sans Fallback", system-ui, sans-serif)'
             }}
             onMouseEnter={(e) => {
                 if (isCurrentMonth) {

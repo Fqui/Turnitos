@@ -759,7 +759,7 @@ const BookingDetailsModalContent = ({
                     boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
                     border: '1px solid var(--border)',
                     textAlign: 'center',
-                    fontFamily: 'var(--font-sans, "Plus Jakarta Sans", system-ui, sans-serif)'
+                    fontFamily: 'var(--font-sans, "Plus Jakarta Sans Variable", "Plus Jakarta Sans Fallback", system-ui, sans-serif)'
                 }} onClick={e => e.stopPropagation()}>
                     <div style={{
                         width: '56px',

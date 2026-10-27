@@ -35,7 +35,7 @@
     display: flex;
     background: var(--sa-bg);
     color: var(--sa-text);
-    font-family: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans Fallback', Inter, system-ui, -apple-system, sans-serif;
 }
 
 .sa-root[data-theme="dark"] {

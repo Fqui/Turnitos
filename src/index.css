@@ -1,7 +1,28 @@
+/* Respaldo con las medidas de Plus Jakarta Sans: mientras baja el woff2 el texto
+   ocupa lo mismo y no salta al cambiar de fuente */
+@font-face {
+  font-family: 'Plus Jakarta Sans Fallback';
+  src: local('Arial');
+  font-weight: 200 500;
+  size-adjust: 103.5%;
+  ascent-override: 100.5%;
+  descent-override: 21.3%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans Fallback';
+  src: local('Arial Bold'), local('Arial-BoldMT');
+  font-weight: 600 800;
+  size-adjust: 100.5%;
+  ascent-override: 103.5%;
+  descent-override: 21.9%;
+  line-gap-override: 0%;
+}
+
 :root {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-title: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-title: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
