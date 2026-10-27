@@ -1999,6 +1999,22 @@ textarea {
   border-color: rgba(255, 255, 255, 0.05) !important;
 }
 
+/* Photo count and video badges on the store card */
+.store-card-media-badge {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .store-product-card:hover .store-card-img {
   transform: scale(1.05);
 }

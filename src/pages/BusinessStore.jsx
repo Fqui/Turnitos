@@ -18,7 +18,8 @@ import {
     MessageCircle,
     Truck,
     Trash2,
-    Tag
+    Tag,
+    Play
 } from 'lucide-react';
 import serviceAdapter from '../services/serviceAdapter';
 import { findBusinessBySlug, getSubdomain } from '../utils/utils';
@@ -30,7 +31,9 @@ import { buildWhatsAppUrl } from '../utils/whatsapp';
 import PromotionModal from '../components/promotions/PromotionModal';
 import ShareButton from '../components/common/ShareButton';
 import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
-import { ProductCardImage, ProductDetailImage } from '../components/store/ProductImage';
+import { ProductCardImage } from '../components/store/ProductImage';
+import ProductMediaCarousel from '../components/store/ProductMediaCarousel';
+import { getProductPhotos, getProductVideo, PRODUCT_PLACEHOLDER_IMAGE } from '../utils/productMedia';
 import { parsePromotionTarget, calculatePromoDiscount, isPromotionLive } from '../utils/promotionUtils';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
@@ -138,7 +141,6 @@ export default function BusinessStore({ overrideSlug }) {
     // Product Detail View state (matching Screen 2 from reference)
     const [selectedProductModal, setSelectedProductModal] = useState(null);
     useBodyScrollLock(isCartOpen || !!selectedProductModal || showLeaveConfirmation || !!itemToDelete);
-    const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [modalQty, setModalQty] = useState(1);
     const [selectedSize, setSelectedSize] = useState(null);
 
@@ -205,7 +207,6 @@ export default function BusinessStore({ overrideSlug }) {
                             if (foundP) {
                                 setSelectedProductModal(foundP);
                                 setModalQty(1);
-                                setActiveImageIndex(0);
                                 setSelectedSize(null);
                             }
                         }
@@ -227,7 +228,6 @@ export default function BusinessStore({ overrideSlug }) {
         if (!sharedProduct) return;
         setSharedProductHandled(productId);
         setSelectedProductModal(sharedProduct);
-        setActiveImageIndex(0);
         setModalQty(1);
         setSelectedSize(sharedProduct.sizes?.[0] || null);
     }, [searchParams, products, sharedProductHandled]);
@@ -432,18 +432,12 @@ export default function BusinessStore({ overrideSlug }) {
 
     const getProductImages = (prod) => {
         if (!prod) return [];
-        if (Array.isArray(prod.images) && prod.images.length > 0) {
-            return prod.images;
-        }
-        if (prod.image) {
-            return [prod.image];
-        }
-        return ['https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80'];
+        const photos = getProductPhotos(prod);
+        return photos.length > 0 ? photos : [PRODUCT_PLACEHOLDER_IMAGE];
     };
 
     const handleOpenProductModal = (prod) => {
         setSelectedProductModal(prod);
-        setActiveImageIndex(0);
         setModalQty(1);
         setSelectedSize(prod.sizes?.[0] || null);
     };
@@ -994,7 +988,9 @@ export default function BusinessStore({ overrideSlug }) {
                     ) : (
                         <div className="store-products-grid">
                             {filteredProducts.map(prod => {
-                                const img = prod.image || prod.images?.[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=300&q=80';
+                                const photos = getProductPhotos(prod);
+                                const img = photos[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=300&q=80';
+                                const hasVideo = !!getProductVideo(prod);
 
                                 return (
                                     <motion.div
@@ -1042,6 +1038,16 @@ export default function BusinessStore({ overrideSlug }) {
                                                 <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
                                                 En stock
                                             </div>
+                                            {hasVideo && (
+                                                <span className="store-card-media-badge" style={{ top: '8px', right: '8px', width: '24px', height: '24px', justifyContent: 'center', borderRadius: '50%' }} aria-label="Tiene video">
+                                                    <Play size={11} fill="#fff" />
+                                                </span>
+                                            )}
+                                            {photos.length > 1 && (
+                                                <span className="store-card-media-badge" style={{ bottom: '8px', right: '8px', padding: '3px 7px' }} aria-label={`${photos.length} fotos`}>
+                                                    1/{photos.length}
+                                                </span>
+                                            )}
                                         </ProductCardImage>
 
                                         {/* Product Details */}
@@ -1263,90 +1269,36 @@ export default function BusinessStore({ overrideSlug }) {
                                 <div className="store-detail-modal-columns">
                                     {/* Left Column: Studio Gallery */}
                                     <div>
-                                        {(() => {
-                                            const images = getProductImages(selectedProductModal);
-                                            const currentImg = images[activeImageIndex] || images[0];
-
-                                            return (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                    {/* Main Hero Photo Viewport */}
-                                                    <div style={{
-                                                        position: 'relative',
-                                                        width: '100%',
-                                                        height: '270px',
-                                                        borderRadius: '20px',
-                                                        background: 'radial-gradient(circle at 50% 50%, var(--bg-card) 0%, var(--bg-main) 100%)',
-                                                        border: '1px solid var(--border)',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        overflow: 'hidden',
-                                                        padding: 0,
-                                                        boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.02)'
-                                                    }}>
-                                                        {/* Stock pill */}
-                                                        <div style={{
-                                                            position: 'absolute',
-                                                            top: '12px',
-                                                            left: '12px',
-                                                            background: 'rgba(255,255,255,0.95)',
-                                                            backdropFilter: 'blur(8px)',
-                                                            borderRadius: '12px',
-                                                            padding: '4px 10px',
-                                                            fontSize: '11px',
-                                                            fontWeight: '700',
-                                                            color: '#0f172a',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '6px',
-                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                                                            border: '1px solid rgba(0,0,0,0.04)',
-                                                            zIndex: 2
-                                                        }}>
-                                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-                                                            En stock
-                                                        </div>
-
-                                                        <ProductDetailImage
-                                                            src={currentImg}
-                                                            alt={selectedProductModal.name}
-                                                            animationKey={activeImageIndex}
-                                                        />
-                                                    </div>
-
-                                                    {/* Interactive Thumbnails (if multiple images) */}
-                                                    {images.length > 1 && (
-                                                        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '2px 0' }}>
-                                                            {images.map((thumbUrl, idx) => (
-                                                                <button
-                                                                    key={idx}
-                                                                    type="button"
-                                                                    onClick={() => setActiveImageIndex(idx)}
-                                                                    style={{
-                                                                        width: '56px',
-                                                                        height: '56px',
-                                                                        borderRadius: '12px',
-                                                                        border: activeImageIndex === idx ? `2px solid ${primaryColor}` : '1px solid var(--border)',
-                                                                        background: '#ffffff',
-                                                                        padding: '4px',
-                                                                        cursor: 'pointer',
-                                                                        boxShadow: activeImageIndex === idx ? `0 2px 8px ${primaryColor}40` : 'none',
-                                                                        transition: 'all 0.15s ease',
-                                                                        flexShrink: 0
-                                                                    }}
-                                                                >
-                                                                    <img
-                                                                        src={thumbUrl}
-                                                                        alt={`Vista ${idx + 1}`}
-                                                                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                                                    />
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })()}
+                                        <ProductMediaCarousel
+                                            key={selectedProductModal.id}
+                                            photos={getProductImages(selectedProductModal)}
+                                            video={getProductVideo(selectedProductModal)}
+                                            alt={selectedProductModal.name}
+                                            color={primaryColor}
+                                        >
+                                            {/* Stock pill */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '12px',
+                                                left: '12px',
+                                                background: 'rgba(255,255,255,0.95)',
+                                                backdropFilter: 'blur(8px)',
+                                                borderRadius: '12px',
+                                                padding: '4px 10px',
+                                                fontSize: '11px',
+                                                fontWeight: '700',
+                                                color: '#0f172a',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                                                border: '1px solid rgba(0,0,0,0.04)',
+                                                zIndex: 2
+                                            }}>
+                                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                                                En stock
+                                            </div>
+                                        </ProductMediaCarousel>
                                     </div>
 
                                     {/* Right Column: Information & Selection */}
@@ -2483,7 +2435,6 @@ export default function BusinessStore({ overrideSlug }) {
                         if (p) {
                             setSelectedProductModal(p);
                             setModalQty(1);
-                            setActiveImageIndex(0);
                         }
                     }
                 }}
