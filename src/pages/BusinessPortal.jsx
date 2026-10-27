@@ -1104,26 +1104,6 @@ export default function BusinessPortal() {
                             {currentBusiness?.name || 'Portal Socios'}
                         </h1>
                     </div>
-                    <button
-                        onClick={() => setShowSidebar(!showSidebar)}
-                        aria-label={showSidebar ? 'Cerrar menú' : 'Abrir menú'}
-                        aria-expanded={showSidebar}
-                        style={{
-                            background: 'var(--bg-main)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '10px',
-                            width: '44px',
-                            height: '44px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '18px',
-                            cursor: 'pointer',
-                            color: 'var(--text-primary)'
-                        }}
-                    >
-                        {showSidebar ? '✕' : '☰'}
-                    </button>
                 </div>
             )}
 
