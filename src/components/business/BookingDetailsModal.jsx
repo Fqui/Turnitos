@@ -302,7 +302,7 @@ const BookingDetailsModalContent = ({
         border: '1px solid var(--border)',
         background: 'var(--bg-card)',
         color: 'var(--text-primary)',
-        fontSize: '14px',
+        fontSize: '16px',
         fontWeight: '600'
     };
     const resourceOptions = court ? (biz?.courts || []) : (biz?.services || []);
@@ -736,7 +736,7 @@ const BookingDetailsModalContent = ({
 
     if (isBlockedBooking) {
         return (
-            <div style={{
+            <div className="booking-details-modal" style={{
                 position: 'fixed',
                 top: 0,
                 left: 0,
@@ -859,7 +859,7 @@ const BookingDetailsModalContent = ({
     }
 
     return (
-        <div style={{
+        <div className="booking-details-modal" style={{
             position: 'fixed',
             top: 0,
             left: 0,

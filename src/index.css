@@ -2111,6 +2111,15 @@ textarea {
   }
 }
 
+/* Detalle del turno en el panel: al editarlo en celular ningún campo baja de 16px */
+@media (max-width: 768px) {
+  .booking-details-modal input,
+  .booking-details-modal select,
+  .booking-details-modal textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Barra de acción fija de los modales de reserva en celular: botones cómodos para el dedo */
 .booking-action-bar--mobile button {
   min-height: 48px;
