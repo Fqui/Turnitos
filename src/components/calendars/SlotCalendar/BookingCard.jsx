@@ -1,6 +1,7 @@
 import React from 'react';
 import { getBookingColor } from '../shared/config';
 import { calculateSlotSpan } from '../shared/utils';
+import { formatDuration } from '../../../utils/dateUtils';
 
 export default function BookingCard({
     booking,
@@ -147,7 +148,7 @@ export default function BookingCard({
                 <>
                     {showDuration && booking.status !== 'blocked' && (
                         <span style={{ opacity: 0.9, fontSize: textSize(11, 12), fontWeight: '700' }}>
-                            {booking.duration} min
+                            {formatDuration(booking.duration)}
                         </span>
                     )}
                     {showTimeRange && booking.status !== 'blocked' && (

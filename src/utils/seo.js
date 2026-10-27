@@ -1,4 +1,5 @@
 import { isProfileReady } from './profileChecklist.js';
+import { formatDuration } from './dateUtils.js';
 
 // SEO metadata shared by the browser (SEOHead) and the server (api/page.js),
 // so search engines get the same title, canonical and JSON-LD before and after
@@ -251,7 +252,7 @@ export function buildBusinessSeo(business, view = 'turnos') {
 
 // Link previews of a single service or product (?servicio= / ?producto=)
 export function buildServicePreview(business, service) {
-    const details = [service.duration ? `${service.duration} min` : '', formatPrice(service.price)].filter(Boolean).join(' · ');
+    const details = [service.duration ? formatDuration(service.duration) : '', formatPrice(service.price)].filter(Boolean).join(' · ');
     return {
         title: `${service.name} · ${business.name}`,
         description: truncate(`${sentence(details)}${sentence(service.description)}Reservá tu turno online en ${business.name}.`),

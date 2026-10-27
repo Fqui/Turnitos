@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Search, Lock } from 'lucide-react';
 import { getHomeVisit } from '../../../../utils/homeService';
+import { formatDuration } from '../../../../utils/dateUtils';
 import {
     STATUS_META,
     blockReason,
@@ -12,7 +13,6 @@ import {
     bookingServiceName,
     bookingTime,
     addMinutesToTime,
-    formatDuration,
     isBookingBlocked,
     mobileStatusKey,
     money,

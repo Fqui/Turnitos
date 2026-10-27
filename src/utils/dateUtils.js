@@ -110,3 +110,16 @@ export function formatFriendlyDate(date) {
     return `${day} de ${month.toLowerCase()}`;
 }
 
+
+/**
+ * Formats a duration in minutes for display: "45 min", "1 h", "1 h 40 min"
+ * @param {number|string} minutes - The duration in minutes
+ * @returns {string} - Formatted duration
+ */
+export function formatDuration(minutes) {
+    const m = Math.round(Number(minutes) || 0);
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60);
+    const rest = m % 60;
+    return rest ? `${h} h ${rest} min` : `${h} h`;
+}

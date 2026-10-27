@@ -6,6 +6,7 @@ import { getLocationMode } from '../../../utils/homeService';
 import { getServiceImages } from '../../../utils/serviceImages';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import { formatDuration } from '../../../utils/dateUtils';
 
 export default function ServicesTab({
     formData,
@@ -567,7 +568,7 @@ export default function ServicesTab({
                                             <span style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '15px' }}>
                                                 ${Number(service.price || 0).toLocaleString('es-AR')}
                                             </span>
-                                            <span>⏱️ {service.duration || 60} min</span>
+                                            <span>⏱️ {formatDuration(service.duration || 60)}</span>
                                             {getLocationMode(service) !== 'local' && (
                                                 <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'rgba(37, 99, 235, 0.12)', color: 'var(--status-completed, #2563eb)' }}>
                                                     {getLocationMode(service) === 'home' ? 'SOLO DOMICILIO' : 'LOCAL Y DOMICILIO'}

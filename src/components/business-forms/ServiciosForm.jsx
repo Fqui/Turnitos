@@ -6,6 +6,7 @@ import supabaseService from '../../services/supabaseService';
 import { generateBusinessCredentials, validateSubscriptionLimit, slugify } from '../../utils/businessUtils';
 import { resizeImage, validateImageFile } from '../../utils/imageUtils';
 import CostBreakdown from '../CostBreakdown';
+import { formatDuration } from '../../utils/dateUtils';
 
 const SUGGESTED_COLORS = ['#2196F3', '#9C27B0', '#E91E63', '#FF9800', '#00BCD4', '#4CAF50'];
 
@@ -373,7 +374,7 @@ export default function ServiciosForm({ business, onSave, onCancel }) {
                             <div style={{ flex: 1 }}>
                                 <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>{service.name} {service.category && <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>({service.category})</span>}</p>
                                 {service.description && <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>{service.description}</p>}
-                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>${service.price} - {service.duration} min</p>
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>${service.price} - {formatDuration(service.duration)}</p>
                             </div>
                             <button type="button" onClick={() => setFormData(prev => ({ ...prev, services: prev.services.filter((_, i) => i !== index) }))} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #FF4444', backgroundColor: '#FF444410', color: '#FF4444', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>🗑️</button>
                         </div>

@@ -78,13 +78,6 @@ export const addMinutesToTime = (time, minutes) => {
     return `${pad2(Math.floor(total / 60) % 24)}:${pad2(total % 60)}`;
 };
 
-export const formatDuration = (minutes) => {
-    const m = Number(minutes) || 0;
-    if (m < 60) return `${m} min`;
-    if (m % 60 === 0) return `${m / 60} h`;
-    return `${Math.floor(m / 60)} h ${m % 60}`;
-};
-
 export const bookingPrice = (booking) => Number(booking?.price || booking?.total_price || booking?.totalPrice || 0);
 
 export const bookingDeposit = (booking) => Number(booking?.deposit_amount || booking?.depositAmount ||

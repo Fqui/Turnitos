@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { formatDuration } from '../utils/dateUtils';
 
 const DurationSelector = ({
     court,
@@ -31,7 +32,7 @@ const DurationSelector = ({
         if (duration === 60) return '1 hora';
         if (duration === 90) return '1 hora 30 min';
         if (duration === 120) return '2 horas';
-        return `${duration} min`;
+        return formatDuration(duration);
     };
 
     return (

@@ -7,6 +7,7 @@ import ShareButton from './common/ShareButton';
 import ServicePhotoCarousel from './ServicePhotoCarousel';
 import { getServiceImages } from '../utils/serviceImages';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { formatDuration } from '../utils/dateUtils';
 
 // Display-only: category names come from each business ("combos" → "Combos")
 const capitalize = (text) => (typeof text === 'string' && text ? text.charAt(0).toUpperCase() + text.slice(1) : text);
@@ -355,7 +356,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                     border: '1px solid var(--border)'
                                 }}>
                                     <Clock size={12} color={color} />
-                                    <span>{service.duration} min</span>
+                                    <span>{formatDuration(service.duration)}</span>
                                 </div>
                             </div>
                         </div>
@@ -527,7 +528,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                             <Clock size={16} color={color} />
                                             <div>
                                                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', fontWeight: '600' }}>Duración</span>
-                                                <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{detailService.duration} minutos</strong>
+                                                <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{formatDuration(detailService.duration)}</strong>
                                             </div>
                                         </div>
 
