@@ -1957,8 +1957,8 @@ export default function BusinessStore({ overrideSlug }) {
                                         onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
                                         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                                     >
-                                        <span>{orderSentToWhatsApp ? 'Abrir WhatsApp de nuevo' : 'Confirmar Pedido vía WhatsApp'}</span>
-                                        <span>💬</span>
+                                        <span>{orderSentToWhatsApp ? 'Abrir WhatsApp de nuevo' : 'Continuar'}</span>
+                                        {orderSentToWhatsApp ? <span>💬</span> : <ShoppingBag size={18} aria-hidden="true" />}
                                     </button>
 
                                     {orderSentToWhatsApp && (
