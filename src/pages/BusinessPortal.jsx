@@ -1120,8 +1120,9 @@ export default function BusinessPortal() {
                 pendingCount={bookings.filter(b => b.status === 'pending').length}
                 onCreateBooking={(e) => handleCreateBooking(e)}
                 onLogout={async () => {
-                    // Stop this device's alerts while the session can still delete its subscription
-                    await pushService.disable();
+                    // Unlink this device while the session can still delete its row; the browser
+                    // keeps its subscription so the next login re-links it without asking again
+                    await pushService.detach();
                     await supabaseService.logout();
                     setIsLoggedIn(false);
                 }}

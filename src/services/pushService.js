@@ -138,7 +138,23 @@ export const pushService = {
         }
     },
 
-    /** Stops alerts on this device (used on logout too, while the session is still valid). */
+    /**
+     * Unlinks this device from the business on logout (while the session is still valid)
+     * but keeps the browser subscription, so the next login re-links it without asking again.
+     */
+    async detach() {
+        if (!isSupported()) return;
+        try {
+            const reg = await navigator.serviceWorker.getRegistration('/');
+            const subscription = await reg?.pushManager.getSubscription();
+            if (!subscription) return;
+            await supabase.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint);
+        } catch (error) {
+            console.warn('[pushService] detach warning:', error);
+        }
+    },
+
+    /** Stops alerts on this device. */
     async disable() {
         if (!isSupported()) return;
         try {
