@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { Button, Select } from '../../common/controls';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import ProductMediaEditor from './ProductMediaEditor';
+import { getAllProductPhotos, getProductPhotos, getProductVideo } from '../../../utils/productMedia';
 
 export default function StoreTab({
     formData,
@@ -18,7 +20,6 @@ export default function StoreTab({
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [isCustomCategoryMode, setIsCustomCategoryMode] = useState(false);
-    const [uploadingProductImage, setUploadingProductImage] = useState(false);
 
     // Turn Extras management modal state
     const [isExtraModalOpen, setIsExtraModalOpen] = useState(false);
@@ -429,7 +430,7 @@ export default function StoreTab({
                             >
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                     <img
-                                        src={prod.image || prod.images?.[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&q=80'}
+                                        src={getProductPhotos(prod)[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&q=80'}
                                         alt={prod.name}
                                         style={{ width: '54px', height: '54px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }}
                                     />
@@ -814,117 +815,17 @@ export default function StoreTab({
                             />
                         </div>
 
-                        <div>
-                            <label style={labelStyle}>Imágenes del Producto</label>
-                            {((Array.isArray(editingProduct.images) && editingProduct.images.length > 0) || editingProduct.image) && (
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                                    {(Array.isArray(editingProduct.images) && editingProduct.images.length > 0
-                                        ? editingProduct.images
-                                        : [editingProduct.image]
-                                    ).filter(Boolean).map((imgUrl, iIdx) => (
-                                        <div key={iIdx} style={{ position: 'relative', width: '60px', height: '60px' }}>
-                                            <img
-                                                src={imgUrl}
-                                                alt={`Foto ${iIdx + 1}`}
-                                                style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    borderRadius: '12px',
-                                                    objectFit: 'cover',
-                                                    border: (editingProduct.image === imgUrl || (!editingProduct.image && iIdx === 0)) ? '2px solid var(--primary-paddle, #10b981)' : '1px solid var(--border)'
-                                                }}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const currentList = Array.isArray(editingProduct.images) && editingProduct.images.length > 0
-                                                        ? editingProduct.images
-                                                        : [editingProduct.image];
-                                                    const newImgs = currentList.filter((_, idx) => idx !== iIdx);
-                                                    setEditingProduct(prev => ({
-                                                        ...prev,
-                                                        images: newImgs,
-                                                        image: newImgs[0] || null
-                                                    }));
-                                                }}
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: '-6px',
-                                                    right: '-6px',
-                                                    width: '20px',
-                                                    height: '20px',
-                                                    borderRadius: '50%',
-                                                    background: '#ef4444',
-                                                    color: '#fff',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    fontSize: '11px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}
-                                                title="Eliminar foto"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            <label style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                width: '100%',
-                                padding: '12px 16px',
-                                borderRadius: '12px',
-                                border: '1px dashed var(--border)',
-                                background: 'var(--bg-main)',
-                                color: 'var(--text-primary)',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: uploadingProductImage ? 'wait' : 'pointer'
-                            }}>
-                                {uploadingProductImage ? '⏳ Subiendo imágenes...' : '📷 Subir Imágenes (Seleccionar 1 o varias)'}
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    disabled={uploadingProductImage}
-                                    style={{ display: 'none' }}
-                                    onChange={async (e) => {
-                                        const files = Array.from(e.target.files || []);
-                                        if (files.length === 0) return;
-                                        try {
-                                            setUploadingProductImage(true);
-                                            const uploadPromises = files.map(file => serviceAdapter.uploadImage(file));
-                                            const uploadedUrls = await Promise.all(uploadPromises);
-
-                                            setEditingProduct(prev => {
-                                                const existingImages = Array.isArray(prev.images) && prev.images.length > 0
-                                                    ? prev.images
-                                                    : (prev.image ? [prev.image] : []);
-                                                const combined = [...existingImages, ...uploadedUrls.filter(Boolean)];
-                                                return {
-                                                    ...prev,
-                                                    images: combined,
-                                                    image: combined[0] || null
-                                                };
-                                            });
-                                            if (showToast) showToast(`${uploadedUrls.length} imagen(es) subida(s)`, 'success');
-                                        } catch (err) {
-                                            console.error('Error uploading product images:', err);
-                                            if (showToast) showToast('Error al subir imágenes', 'error');
-                                        } finally {
-                                            setUploadingProductImage(false);
-                                            e.target.value = '';
-                                        }
-                                    }}
-                                />
-                            </label>
-                        </div>
+                        <ProductMediaEditor
+                            images={getAllProductPhotos(editingProduct)}
+                            video={getProductVideo(editingProduct)}
+                            onChange={({ images, video }) => setEditingProduct(prev => ({
+                                ...prev,
+                                images,
+                                image: images[0] || null,
+                                video: video || null
+                            }))}
+                            showToast={showToast}
+                        />
 
                         <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                             <Button variant="secondary" size="lg" style={{ flex: 1 }} onClick={() => setIsProductModalOpen(false)}>
@@ -938,9 +839,7 @@ export default function StoreTab({
                                         if (showToast) showToast('Ingresá el nombre del producto', 'error');
                                         return;
                                     }
-                                    const finalImages = Array.isArray(editingProduct.images) && editingProduct.images.length > 0
-                                        ? editingProduct.images
-                                        : (editingProduct.image ? [editingProduct.image] : []);
+                                    const finalImages = getProductPhotos(editingProduct);
                                     const prodCategory = (editingProduct.category || '').trim() || 'General';
 
                                     const prodToSave = {
@@ -949,7 +848,8 @@ export default function StoreTab({
                                         price: Number(editingProduct.price) || 0,
                                         category: prodCategory,
                                         images: finalImages,
-                                        image: finalImages[0] || null
+                                        image: finalImages[0] || null,
+                                        video: getProductVideo(editingProduct)
                                     };
 
                                     // Add to store_categories if newly created
