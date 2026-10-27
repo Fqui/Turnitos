@@ -42,6 +42,21 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Scroll to the "Elegí una fecha" title once the page settled: the service detail already
+// closed (body unlocked) and the section's slideUp ended, because scrollIntoView measures
+// the translated box and would leave the title cut off above the screen.
+function scrollToCalendarTitle(sectionRef, titleRef, delay) {
+    setTimeout(() => {
+        requestAnimationFrame(async () => {
+            const animations = sectionRef.current?.getAnimations?.() || [];
+            await Promise.all(animations.map(a => a.finished.catch(() => {})));
+            requestAnimationFrame(() => {
+                titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    }, delay);
+}
+
 export default function BusinessProfile({ business: initialBusiness }) {
     const { businessSlug } = useParams();
     const navigate = useNavigate();
@@ -100,6 +115,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
     // Refs for auto-scrolling
     const calendarRef = useRef(null);
+    const calendarTitleRef = useRef(null);
     const timeRef = useRef(null);
     const specialistRef = useRef(null);
     const confirmRef = useRef(null);
@@ -442,9 +458,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
         if (!sharedService) return;
         sharedServiceHandled.current = serviceId;
         setSelectedItem(sharedService);
-        setTimeout(() => {
-            calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 600);
+        scrollToCalendarTitle(calendarRef, calendarTitleRef, 600);
     }, [searchParams, business]);
 
     const getServiceShareUrl = (service) => buildBusinessShareUrl(business.slug, '/turnos', { servicio: service.id });
@@ -455,11 +469,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
         setSelectedTime(null);
         setSelectedSpecialist(null);
         setAvailableSpecialists([]);
-        setTimeout(() => {
-            if (calendarRef.current) {
-                calendarRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }, 150);
+        scrollToCalendarTitle(calendarRef, calendarTitleRef, 150);
     };
 
     const handlePromoFilterCategory = (categoryName) => {
@@ -912,14 +922,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     setSelectedSpecialist(null);
                                     setAvailableSpecialists([]);
 
-                                    setTimeout(() => {
-                                        if (calendarRef.current) {
-                                            calendarRef.current.scrollIntoView({
-                                                behavior: 'smooth',
-                                                block: 'start'
-                                            });
-                                        }
-                                    }, 100);
+                                    // Wait for the service detail to finish closing
+                                    scrollToCalendarTitle(calendarRef, calendarTitleRef, 350);
                                 }}
                                 color={primaryColor}
                                 businessName={business.name}
@@ -951,7 +955,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
                             ref={calendarRef}
                             style={{ marginBottom: '30px', animation: 'slideUp 0.4s ease' }}
                         >
-                            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                            <h3 ref={calendarTitleRef} style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-primary)', scrollMarginTop: '16px' }}>
                                 {business.type === 'service' ? 'Elegí una fecha' : '1. Elegí una fecha'}
                             </h3>
                             <div style={{
