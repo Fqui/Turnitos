@@ -93,7 +93,7 @@ export default function BookingSuccessModal({ onClose, whatsappUrl, isDemo = fal
                             Esta es una muestra de cómo quedaría la página de tu negocio en TurnitosLR. La reserva que acabás de hacer es de prueba: no es un turno real.
                         </p>
                         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>
-                            Cuando el negocio esté activo, tus clientes ven la confirmación de siempre y este cartel no aparece.
+                            Cuando el negocio esté activo, tus clientes van a ver la confirmación de su turno con el día, la hora y los datos del negocio, y este cartel no aparece más.
                         </p>
                     </div>
                 ) : (
