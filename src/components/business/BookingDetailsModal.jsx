@@ -813,7 +813,7 @@ const BookingDetailsModalContent = ({
 
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
+                        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                         gap: '10px'
                     }}>
                         <button
@@ -882,13 +882,15 @@ const BookingDetailsModalContent = ({
                 boxShadow: '0 24px 70px rgba(0,0,0,0.35)',
                 border: '1px solid var(--border)',
                 maxHeight: isMobile ? '92dvh' : '90vh',
-                overflowY: 'auto'
+                overflowY: 'auto',
+                // En celular nada puede ensanchar la hoja: los campos se achican al ancho de la pantalla
+                overflowX: 'hidden'
             }} onClick={e => e.stopPropagation()}>
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '24px' }}>{isRental ? '🏡' : '📋'}</span>
-                        <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        {!(isMobile && isEditing) && <span style={{ fontSize: '24px' }}>{isRental ? '🏡' : '📋'}</span>}
+                        <div style={{ minWidth: 0 }}>
                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>
                                 {isRental ? 'Detalle de Reserva' : 'Detalle del Turno'}
                             </h3>
@@ -911,7 +913,7 @@ const BookingDetailsModalContent = ({
                             </span>
                         )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', flexShrink: 0 }}>
                         {!isEditing ? (
                             <button
                                 onClick={() => setIsEditing(true)}
@@ -967,7 +969,7 @@ const BookingDetailsModalContent = ({
                                         boxShadow: '0 2px 8px rgba(0, 230, 118, 0.3)'
                                     }}
                                 >
-                                    {isSaving ? 'Guardando...' : '💾 Guardar'}
+                                    {isSaving ? 'Guardando...' : (isMobile ? 'Guardar' : '💾 Guardar')}
                                 </button>
                             </div>
                         )}
@@ -975,7 +977,7 @@ const BookingDetailsModalContent = ({
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '10px' }}>
                     {/* Booking Source Banner */}
                     {(() => {
                         const isMarketplace = booking.metadata?.booking_source === 'marketplace' || 
@@ -2308,7 +2310,7 @@ const BookingDetailsModalContent = ({
 
                             {/* BOTTOM ACTION BUTTONS FOR RENTALS */}
                             {hasPrimaryAction && (
-                            <div className={isMobile ? 'booking-action-bar--mobile' : undefined} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', ...actionBarStyle }}>
+                            <div className={isMobile ? 'booking-action-bar--mobile' : undefined} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '8px', ...actionBarStyle }}>
                                 {(booking.status === 'pending' || booking.status === 'deposit_paid') && (
                                     <button
                                         onClick={() => booking.status === 'pending' && onAction('confirm_deposit', { depositAmount: activeDeposit })}
@@ -2380,7 +2382,7 @@ const BookingDetailsModalContent = ({
 
                             </div>
                             )}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingBottom: isMobile ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : 0 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '8px', paddingBottom: isMobile ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : 0 }}>
                                 {booking.status !== 'cancelled' && booking.status !== 'completed' && (
                                     <button
                                         onClick={(e) => {
@@ -2428,7 +2430,7 @@ const BookingDetailsModalContent = ({
                             {/* Top Grid: Date + Court + Duration */}
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: '1fr 1fr',
+                                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                                 gap: '8px',
                                 padding: '10px 14px',
                                 background: 'var(--bg-main)',
@@ -2530,7 +2532,7 @@ const BookingDetailsModalContent = ({
                                 {cleanPhone && (
                                     <div style={{
                                         display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr',
+                                        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                                         gap: '8px',
                                         paddingTop: '8px',
                                         borderTop: '1px dashed var(--border)'
@@ -2901,7 +2903,7 @@ const BookingDetailsModalContent = ({
                                 <div style={{
                                     paddingTop: '6px',
                                     display: 'grid',
-                                    gridTemplateColumns: '1fr 1fr',
+                                    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                                     gap: '8px',
                                     fontSize: '12px'
                                 }}>
@@ -3000,7 +3002,7 @@ const BookingDetailsModalContent = ({
 
                             {/* Action Buttons Grid for Sports */}
                             {hasPrimaryAction && (
-                            <div className={isMobile ? 'booking-action-bar--mobile' : undefined} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', ...actionBarStyle }}>
+                            <div className={isMobile ? 'booking-action-bar--mobile' : undefined} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '8px', ...actionBarStyle }}>
                                 {(booking.status === 'pending' || booking.status === 'deposit_paid') && (
                                     <button
                                         onClick={() => {
@@ -3080,7 +3082,7 @@ const BookingDetailsModalContent = ({
                                 )}
                             </div>
                             )}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingBottom: isMobile ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : 0 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '8px', paddingBottom: isMobile ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : 0 }}>
                                 {booking.status !== 'cancelled' && booking.status !== 'completed' && (
                                     <button
                                         onClick={(e) => {
