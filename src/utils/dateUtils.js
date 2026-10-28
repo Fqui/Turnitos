@@ -112,11 +112,14 @@ export function formatFriendlyDate(date) {
 
 
 /**
- * Formats a duration in minutes for display, always in minutes: "45 min", "60 min", "90 min"
+ * Formats a duration in minutes for display: "45 minutos", "60 minutos", "1 hr 30 min", "2 hr"
  * @param {number|string} minutes - The duration in minutes
  * @returns {string} - Formatted duration
  */
 export function formatDuration(minutes) {
     const m = Math.round(Number(minutes) || 0);
-    return `${m} min`;
+    if (m <= 60) return `${m} minutos`;
+    const h = Math.floor(m / 60);
+    const rest = m % 60;
+    return rest ? `${h} hr ${rest} min` : `${h} hr`;
 }
