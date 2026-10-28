@@ -1,5 +1,6 @@
 import React from 'react';
 import HorizontalScroller from '../HorizontalScroller';
+import { frameStyleFor } from '../../utils/imageFrame';
 
 export default function ProfileHighlightsBar({
     permanentHighlights,
@@ -84,7 +85,7 @@ export default function ProfileHighlightsBar({
                                         style={{
                                             width: '100%',
                                             height: '100%',
-                                            objectFit: 'cover',
+                                            objectFit: 'cover', ...frameStyleFor(highlight.cover_image || highlight.images[0]),
                                             borderRadius: '50%'
                                         }}
                                     />

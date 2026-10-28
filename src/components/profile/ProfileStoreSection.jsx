@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSubdomain } from '../../utils/utils';
+import { frameStyleFor } from '../../utils/imageFrame';
 
 export default function ProfileStoreSection({
     business,
@@ -83,7 +84,7 @@ export default function ProfileStoreSection({
                         onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                     >
                         <div style={{ height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
-                            <img src={prod.image || prod.images?.[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&q=80'} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={prod.image || prod.images?.[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&q=80'} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(prod.image || prod.images?.[0]) }} />
                         </div>
                         <h4 style={{ fontSize: '11px', fontWeight: '700', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{prod.name}</h4>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>

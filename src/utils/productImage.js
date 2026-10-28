@@ -24,7 +24,7 @@ export function getSizedImageUrl(url, size) {
 const cache = new Map(); // url -> 'transparent' | 'opaque'
 
 function guessFromUrl(url) {
-    const path = url.split('?')[0].toLowerCase();
+    const path = url.split(/[?#]/)[0].toLowerCase();
     if (/\.(jpe?g)$/.test(path)) return 'opaque';
     if (url.includes('images.unsplash.com') && !/[?&]fm=(png|webp|avif)/.test(url)) return 'opaque';
     return null;

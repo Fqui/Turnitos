@@ -1,7 +1,9 @@
 import React from 'react';
-import CoverFocusPicker from '../../common/CoverFocusPicker';
+import { Crop } from 'lucide-react';
+import ImageFrameEditor, { FRAME_ASPECTS, useFrameAfterUpload } from '../../common/ImageFrameEditor';
 import { Button } from '../../common/controls';
-import { getCoverPosition } from '../../../utils/imageUtils';
+import { getCoverImage, getCoverPosition } from '../../../utils/imageUtils';
+import { frameStyleFor } from '../../../utils/imageFrame';
 
 export default function AppearanceTab({
     formData,
@@ -17,6 +19,9 @@ export default function AppearanceTab({
     buttonSecondaryStyle
 }) {
     const currentBrandColor = formData.brand_color || formData.primary_color || '#10B981';
+    const [framingCover, setFramingCover] = useFrameAfterUpload(formData.banner_image, uploadingBanner);
+    const [framingLogo, setFramingLogo] = useFrameAfterUpload(formData.logo, uploadingLogo);
+    const frameButton = { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
     const suggestedColors = ['#10B981', '#00E676', '#3B82F6', '#6366F1', '#EC4899', '#8B5CF6', '#F59E0B', '#EF4444'];
 
     return (
@@ -34,7 +39,7 @@ export default function AppearanceTab({
                     onClick={() => document.getElementById('banner-upload-appearance')?.click()}
                 >
                     {formData.banner_image ? (
-                        <img src={formData.banner_image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: getCoverPosition(formData, 'center 25%') }} />
+                        <img src={formData.banner_image} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: getCoverPosition(formData, 'center 25%'), ...frameStyleFor(getCoverImage(formData)) }} />
                     ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '13px', gap: '6px' }}>
                             🖼️ Click para subir portada
@@ -74,7 +79,7 @@ export default function AppearanceTab({
                         }}
                     >
                         {formData.logo ? (
-                            <img src={formData.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={formData.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(formData.logo) }} />
                         ) : (
                             <span style={{ fontSize: '28px' }}>🏢</span>
                         )}
@@ -111,10 +116,31 @@ export default function AppearanceTab({
                 {/* Hints */}
                 <div style={{ padding: '0 20px 20px', display: 'grid', gap: '16px' }}>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>📐 Logo: cuadrado (512×512px) · Portada: horizontal, ideal 1600×600px o más</p>
-                    <CoverFocusPicker
-                        image={formData.banner_image}
-                        value={formData.metadata?.banner_focus}
-                        onChange={(focus) => setFormData(prev => ({ ...prev, metadata: { ...(prev?.metadata || {}), banner_focus: focus } }))}
+                    {(formData.banner_image || formData.logo) && (
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {formData.banner_image && (
+                                <button type="button" onClick={() => setFramingCover(true)} style={frameButton}><Crop size={15} /> Acomodar portada</button>
+                            )}
+                            {formData.logo && (
+                                <button type="button" onClick={() => setFramingLogo(true)} style={frameButton}><Crop size={15} /> Acomodar logo</button>
+                            )}
+                        </div>
+                    )}
+                    <ImageFrameEditor
+                        open={framingCover}
+                        image={getCoverImage(formData)}
+                        aspects={FRAME_ASPECTS.cover}
+                        title="Acomodá la portada"
+                        onSave={(url) => setFormData(prev => ({ ...prev, banner_image: url, metadata: { ...(prev?.metadata || {}), banner_focus: null } }))}
+                        onClose={() => setFramingCover(false)}
+                    />
+                    <ImageFrameEditor
+                        open={framingLogo}
+                        image={formData.logo}
+                        aspects={FRAME_ASPECTS.logo}
+                        title="Acomodá el logo"
+                        onSave={(url) => setFormData(prev => ({ ...prev, logo: url }))}
+                        onClose={() => setFramingLogo(false)}
                     />
                 </div>
             </div>

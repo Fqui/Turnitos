@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import FramedImage from './common/FramedImage';
 
 const canHover = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 
@@ -60,22 +61,14 @@ export default function ServicePhotoCarousel({ images, alt, color = '#00E676' })
                 }}
             >
                 {images.map((url, i) => (
-                    <img
-                        key={url}
-                        src={url}
-                        alt={`${alt} · foto ${i + 1}`}
-                        loading={i === 0 ? 'eager' : 'lazy'}
-                        draggable={false}
-                        style={{
-                            flex: '0 0 100%',
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            objectPosition: 'center',
-                            scrollSnapAlign: 'center',
-                            scrollSnapStop: 'always'
-                        }}
-                    />
+                    <div key={url} style={{ flex: '0 0 100%', width: '100%', height: '100%', scrollSnapAlign: 'center', scrollSnapStop: 'always' }}>
+                        <FramedImage
+                            src={url}
+                            alt={`${alt} · foto ${i + 1}`}
+                            loading={i === 0 ? 'eager' : 'lazy'}
+                            draggable={false}
+                        />
+                    </div>
                 ))}
             </div>
             <style>{'.service-photo-track::-webkit-scrollbar{display:none}'}</style>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import FramedImage from '../common/FramedImage';
 
 const getInitials = (name = '') => name
     .trim()
@@ -23,11 +24,11 @@ export default function SpecialistAvatar({ specialist, size = 40, ring = false }
 
     if (photo && !failed) {
         return (
-            <img
+            <FramedImage
                 src={photo}
                 alt={specialist?.name || ''}
                 onError={() => setFailed(true)}
-                style={{ ...base, objectFit: 'cover' }}
+                style={base}
             />
         );
     }

@@ -36,6 +36,7 @@ import ProductMediaCarousel from '../components/store/ProductMediaCarousel';
 import { getProductPhotos, getProductVideo, PRODUCT_PLACEHOLDER_IMAGE } from '../utils/productMedia';
 import { parsePromotionTarget, calculatePromoDiscount, isPromotionLive } from '../utils/promotionUtils';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import FramedImage from '../components/common/FramedImage';
 
 export default function BusinessStore({ overrideSlug }) {
     const { businessSlug: routeSlug } = useParams();
@@ -576,16 +577,10 @@ export default function BusinessStore({ overrideSlug }) {
                         </button>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             {business.logo || business.image ? (
-                                <img
+                                <FramedImage
                                     src={business.logo || business.image}
                                     alt={business.name}
-                                    style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        borderRadius: '12px',
-                                        objectFit: 'cover',
-                                        border: '1px solid var(--border)'
-                                    }}
+                                    style={{ width: '40px', height: '40px', borderRadius: '12px', border: '1px solid var(--border)', flexShrink: 0 }}
                                 />
                             ) : (
                                 <div style={{

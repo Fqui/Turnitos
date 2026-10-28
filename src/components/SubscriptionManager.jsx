@@ -3,12 +3,15 @@ import supabaseService from "../services/supabaseService";
 import "./SubscriptionManager.css";
 import { Button } from "./common/controls";
 import { calculateSubscriptionPrice } from "../utils/subscriptionUtils";
+import ImageFrameEditor, { FRAME_ASPECTS } from "./common/ImageFrameEditor";
+import FramedImage from "./common/FramedImage";
 
 const SubscriptionManager = ({ businessId, businessType, business, formData, onResourcesChange, onSave, saving, serviceAdapter, showToast }) => {
     const [subscription, setSubscription] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [editingIndex, setEditingIndex] = useState(null);
+    const [framingIndex, setFramingIndex] = useState(null);
     const [editValue, setEditValue] = useState("");
     const [editRoleValue, setEditRoleValue] = useState("");
     const [editPriceValue, setEditPriceValue] = useState("");
@@ -149,16 +152,21 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
         if (showToast) showToast(`${resourceLabel} ${resources[index].name} ${newActive ? "habilitado" : "deshabilitado"}`, newActive ? "success" : "info");
     };
 
+    const saveAvatar = async (index, url) => {
+        applyOverride(index, { avatar_url: url });
+        const newResources = resources.map((r, i) => i === index ? { ...r, avatar_url: url } : r);
+        if (onResourcesChange) onResourcesChange(resourceKey, newResources);
+        return !onSave || await onSave({ [resourceKey]: newResources });
+    };
+
     const handlePhotoUpload = async (index, file) => {
         if (!file || !serviceAdapter) return;
         try {
             if (showToast) showToast("Subiendo foto...", "info");
             const url = await serviceAdapter.uploadImage(file);
-            applyOverride(index, { avatar_url: url });
-            const newResources = resources.map((r, i) => i === index ? { ...r, avatar_url: url } : r);
-            if (onResourcesChange) onResourcesChange(resourceKey, newResources);
-            if (onSave && !(await onSave({ [resourceKey]: newResources }))) return;
+            if (!(await saveAvatar(index, url))) return;
             if (showToast) showToast("Foto guardada correctamente", "success");
+            setFramingIndex(index);
         } catch (err) {
             console.error(err);
             if (showToast) showToast("Error al subir imagen", "error");
@@ -170,6 +178,16 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
 
     return (
         <div className="subscription-manager">
+            <ImageFrameEditor
+                open={framingIndex !== null && !!resources[framingIndex]?.avatar_url}
+                image={resources[framingIndex]?.avatar_url}
+                aspects={FRAME_ASPECTS.avatar}
+                title="Acomodá la foto"
+                onSave={async (url) => {
+                    if (await saveAvatar(framingIndex, url) && showToast) showToast("Foto guardada", "success");
+                }}
+                onClose={() => setFramingIndex(null)}
+            />
             <div className="resources-section">
                 <div className="resources-header">
                     <div>
@@ -177,7 +195,7 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                         <p className="resources-subtitle">Toca el <span className="pencil-hint">✏️</span> para cambiar el nombre{isSport ? " y precio" : " y el rol"}.</p>
                         {!isSport && (
                             <p className="resources-subtitle">
-                                La foto, el nombre y el rol se muestran en la card "Nosotros" de tu página. Subí una foto de cada uno para que se vea mejor; los servicios que atiende se toman de la pestaña Servicios.
+                                La foto, el nombre y el rol se muestran en la card "Nosotros" de tu página. Subí una foto de cada uno para que se vea mejor (tocándola la podés acomodar); los servicios que atiende se toman de la pestaña Servicios.
                             </p>
                         )}
                     </div>
@@ -191,8 +209,13 @@ const SubscriptionManager = ({ businessId, businessType, business, formData, onR
                                 <div className="resource-number">{index + 1}</div>
                                 {!isSport && (
                                     <div className="specialist-photo-wrap">
-                                        <div className="specialist-photo">
-                                            {resource.avatar_url ? <img src={resource.avatar_url} alt={resource.name} /> : <span>{resourceIcon}</span>}
+                                        <div
+                                            className="specialist-photo"
+                                            onClick={resource.avatar_url ? () => setFramingIndex(index) : undefined}
+                                            title={resource.avatar_url ? "Tocá para acomodar la foto" : undefined}
+                                            style={resource.avatar_url ? { cursor: "pointer" } : undefined}
+                                        >
+                                            {resource.avatar_url ? <FramedImage src={resource.avatar_url} alt={resource.name} /> : <span>{resourceIcon}</span>}
                                         </div>
                                         <input type="file" id={`photo-upload-${index}`} className="photo-input-hidden" accept="image/*" onChange={(e) => handlePhotoUpload(index, e.target.files[0])} />
                                         <label htmlFor={`photo-upload-${index}`} className="photo-upload-btn" title="Cambiar foto">📷</label>

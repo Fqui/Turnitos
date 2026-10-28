@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, ChevronLeft, ChevronRight, ArrowRight, Sparkles, Tag } from 'lucide-react';
 import { getSubdomain } from '../../utils/utils';
 import { PRODUCT_IMAGE_FALLBACK, getSizedImageUrl, useImageKind } from '../../utils/productImage';
+import { frameStyleFor } from '../../utils/imageFrame';
 
 export const getSafeStoreProducts = (biz) => {
     if (!biz) return [];
@@ -270,7 +271,8 @@ export default function ProfileStorePromoCard({
                                         style={{
                                             width: isCutout ? '88%' : '100%',
                                             height: isCutout ? '88%' : '100%',
-                                            objectFit: isCutout ? 'contain' : 'cover'
+                                            objectFit: isCutout ? 'contain' : 'cover',
+                                            ...(isCutout ? {} : frameStyleFor(productImage))
                                         }}
                                     />
                                 </div>

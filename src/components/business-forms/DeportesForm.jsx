@@ -6,6 +6,7 @@ import supabaseService from '../../services/supabaseService';
 import { generateBusinessCredentials, validateSubscriptionLimit, slugify } from '../../utils/businessUtils';
 import { resizeImage, validateImageFile } from '../../utils/imageUtils';
 import CostBreakdown from '../CostBreakdown';
+import ImageFrameEditor, { FRAME_ASPECTS, useFrameBeforeAdd } from '../common/ImageFrameEditor';
 
 const SUGGESTED_COLORS = ['#00E676', '#2196F3', '#9C27B0', '#FF9800', '#E91E63', '#00BCD4'];
 
@@ -85,6 +86,9 @@ export default function DeportesForm({ business, onSave, onCancel }) {
     const [newCourt, setNewCourt] = useState({ name: '', price: '', sport: 'padel' });
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingBanner, setUploadingBanner] = useState(false);
+    // Each upload goes through the framing editor before it lands in the form
+    const [framingType, setFramingType] = useState(null);
+    const imageFrame = useFrameBeforeAdd(url => setFormData(prev => ({ ...prev, [framingType === 'logo' ? 'logo' : 'banner_image']: url })));
     const [costBreakdown, setCostBreakdown] = useState(null);
 
     useEffect(() => {
@@ -178,10 +182,8 @@ export default function DeportesForm({ business, onSave, onCancel }) {
 
             // Upload resized image
             const imageUrl = await supabaseService.uploadImage(resizedFile, 'businesses');
-            setFormData(prev => ({
-                ...prev,
-                [type === 'logo' ? 'logo' : 'banner_image']: imageUrl
-            }));
+            setFramingType(type);
+            imageFrame.start(imageUrl);
         } catch (error) {
             console.error('Error uploading image:', error);
             alert('Error al subir imagen: ' + error.message);
@@ -458,6 +460,7 @@ export default function DeportesForm({ business, onSave, onCancel }) {
                             disabled={uploadingLogo}
                             style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)' }}
                         />
+                        <ImageFrameEditor {...imageFrame.editorProps} aspects={framingType === 'logo' ? FRAME_ASPECTS.logo : FRAME_ASPECTS.cover} />
                         {uploadingLogo && <p style={{ fontSize: '12px', color: 'var(--primary-paddle)', marginTop: '8px' }}>Subiendo...</p>}
                     </div>
 

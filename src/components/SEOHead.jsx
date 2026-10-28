@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { SITE_URL, DEFAULT_TITLE, DEFAULT_DESCRIPTION, DEFAULT_IMAGE } from '../utils/seo';
+import { imageSrc } from '../utils/imageFrame';
 
 /**
  * SEOHead: keeps title, meta description, robots, OpenGraph, Twitter Cards,
@@ -23,7 +24,7 @@ export default function SEOHead({
             ? (!brandTitle || title.includes('Turnitos') ? title : `${title} | TurnitosLR`)
             : DEFAULT_TITLE;
         const finalDescription = description || DEFAULT_DESCRIPTION;
-        const finalImage = image || DEFAULT_IMAGE;
+        const finalImage = imageSrc(image) || DEFAULT_IMAGE;
         const finalUrl = url ? (url.startsWith('http') ? url : `${SITE_URL}${url.startsWith('/') ? '' : '/'}${url}`) : window.location.href;
         const finalCanonical = canonical || finalUrl.split('?')[0];
         const finalRobots = robots || (noIndex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large');

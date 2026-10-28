@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import { Crop } from 'lucide-react';
+import FramedImage from '../../common/FramedImage';
+import ImageFrameEditor, { FRAME_ASPECTS, useFrameBeforeAdd } from '../../common/ImageFrameEditor';
+import { frameStyleFor } from '../../../utils/imageFrame';
 
 export default function VenueStoreTab({
     formData,
@@ -19,6 +23,23 @@ export default function VenueStoreTab({
     useBodyScrollLock(isProductModalOpen && !!editingProduct);
     const [uploadingProductImage, setUploadingProductImage] = useState(false);
     const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
+    // handleAddBanner lives inside the banners block below; it registers itself here
+    const addBannerRef = useRef(null);
+    const bannerFrame = useFrameBeforeAdd((url) => {
+        addBannerRef.current?.(url);
+        if (showToast) showToast('Banner agregado correctamente', 'success');
+    });
+    // Product photo URLs waiting for the framing editor; the first one is open.
+    const [productFraming, setProductFraming] = useState([]);
+    const saveProductFrame = (newUrl) => {
+        const oldUrl = productFraming[0];
+        setProductFraming(q => q.map(u => (u === oldUrl ? newUrl : u)));
+        setEditingProduct(prev => {
+            if (!prev) return prev;
+            const list = Array.isArray(prev.images) && prev.images.length > 0 ? prev.images : (prev.image ? [prev.image] : []);
+            return { ...prev, images: list.map(u => (u === oldUrl ? newUrl : u)), image: prev.image === oldUrl ? newUrl : prev.image };
+        });
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -70,6 +91,7 @@ export default function VenueStoreTab({
                                 handleMetadataChange('store_banners', updated);
                                 handleMetadataChange('store_banner_image', updated[0] || newUrl);
                             };
+                            addBannerRef.current = handleAddBanner;
 
                             return (
                                 <div>
@@ -92,7 +114,7 @@ export default function VenueStoreTab({
                                                     <img
                                                         src={url}
                                                         alt={`Banner ${idx + 1}`}
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(url) }}
                                                     />
                                                     <div style={{
                                                         position: 'absolute',
@@ -149,6 +171,7 @@ export default function VenueStoreTab({
                                             transition: 'border-color 0.2s ease'
                                         }}>
                                             {uploadingBannerImage ? '⏳ Subiendo banner...' : '📷 + Agregar Banner Publicitario (1200x400)'}
+                                            <ImageFrameEditor {...bannerFrame.editorProps} aspects={FRAME_ASPECTS.banner} title="Acomodá el banner" />
                                             <input
                                                 type="file"
                                                 accept="image/*"
@@ -160,8 +183,7 @@ export default function VenueStoreTab({
                                                     try {
                                                         setUploadingBannerImage(true);
                                                         const url = await serviceAdapter.uploadImage(file);
-                                                        handleAddBanner(url);
-                                                        if (showToast) showToast('Banner agregado correctamente', 'success');
+                                                        bannerFrame.start(url);
                                                     } catch (err) {
                                                         console.error('Error uploading banner image:', err);
                                                         if (showToast) showToast('Error al subir banner', 'error');
@@ -245,10 +267,10 @@ export default function VenueStoreTab({
                                 }}
                             >
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                    <img
+                                    <FramedImage
                                         src={prod.image || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&q=80'}
                                         alt={prod.name}
-                                        style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                                        style={{ width: '56px', height: '56px', borderRadius: '12px', border: '1px solid var(--border)', flexShrink: 0 }}
                                     />
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary-paddle)', textTransform: 'uppercase' }}>
@@ -396,14 +418,13 @@ export default function VenueStoreTab({
                                         : [editingProduct.image]
                                     ).filter(Boolean).map((imgUrl, iIdx) => (
                                         <div key={iIdx} style={{ position: 'relative', width: '64px', height: '64px' }}>
-                                            <img
+                                            <FramedImage
                                                 src={imgUrl}
                                                 alt={`Foto ${iIdx + 1}`}
                                                 style={{
                                                     width: '100%',
                                                     height: '100%',
                                                     borderRadius: '12px',
-                                                    objectFit: 'cover',
                                                     border: (editingProduct.image === imgUrl || (!editingProduct.image && iIdx === 0)) ? '2px solid var(--primary-paddle)' : '1px solid var(--border)'
                                                 }}
                                             />
@@ -423,6 +444,15 @@ export default function VenueStoreTab({
                                                     Principal
                                                 </span>
                                             )}
+                                            <button
+                                                type="button"
+                                                onClick={() => setProductFraming([imgUrl])}
+                                                title="Acomodar zoom y encuadre"
+                                                aria-label="Acomodar foto"
+                                                style={{ position: 'absolute', top: '-6px', left: '-6px', width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(0,0,0,0.75)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
+                                            >
+                                                <Crop size={11} />
+                                            </button>
                                             {/* Delete button */}
                                             <button
                                                 type="button"
@@ -479,6 +509,13 @@ export default function VenueStoreTab({
                                 cursor: uploadingProductImage ? 'wait' : 'pointer'
                             }}>
                                 {uploadingProductImage ? '⏳ Subiendo fotos a la nube...' : '📷 Subir Fotos (Seleccionar 1 o varias desde tu dispositivo)'}
+                                <ImageFrameEditor
+                                    open={productFraming.length > 0}
+                                    image={productFraming[0]}
+                                    aspects={FRAME_ASPECTS.product}
+                                    onSave={saveProductFrame}
+                                    onClose={() => setProductFraming(q => q.slice(1))}
+                                />
                                 <input
                                     type="file"
                                     accept="image/*"
@@ -505,6 +542,7 @@ export default function VenueStoreTab({
                                                 };
                                             });
                                             showToast(`${uploadedUrls.length} imagen(es) subida(s)`, 'success');
+                                            setProductFraming(uploadedUrls.filter(Boolean));
                                         } catch (err) {
                                             console.error('Error uploading product images:', err);
                                             showToast('Error al subir imágenes', 'error');

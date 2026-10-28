@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import FramedImage from '../common/FramedImage';
+import { frameStyleFor } from '../../utils/imageFrame';
 
 const STORY_DURATION = 5000; // 5 seconds per image slide
 const PROGRESS_INTERVAL = 30; // Update progress every 30ms
@@ -559,17 +561,10 @@ export default function ProfileStoryViewerModal({
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                             {(business?.logo || business?.image) && (
-                                <img
+                                <FramedImage
                                     src={business.logo || business.image}
                                     alt={business.name}
-                                    style={{
-                                        width: '36px',
-                                        height: '36px',
-                                        borderRadius: '50%',
-                                        objectFit: 'cover',
-                                        border: '2px solid rgba(255,255,255,0.85)',
-                                        flexShrink: 0
-                                    }}
+                                    style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.85)', flexShrink: 0 }}
                                 />
                             )}
                             <div style={{ minWidth: 0 }}>
@@ -737,7 +732,8 @@ export default function ProfileStoryViewerModal({
                                         width: '100%',
                                         height: '100%',
                                         objectFit: 'contain',
-                                        pointerEvents: 'none'
+                                        pointerEvents: 'none',
+                                        ...frameStyleFor(layer.url)
                                     }}
                                     draggable={false}
                                 />

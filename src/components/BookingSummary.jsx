@@ -8,6 +8,7 @@ import { Info, ShoppingCart, Check } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import HomeVisitSection from './booking/HomeVisitSection';
 import { getLocationMode, getHomeRings, findRing, formatKm } from '../utils/homeService';
+import { frameStyleFor } from '../utils/imageFrame';
 
 // 🔥 CACHÉ GLOBAL (Nivel Módulo): Sobrevive a desmontajes/remontajes del componente
 const globalCachedPaymentData = {
@@ -563,7 +564,7 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                                     }}
                                                 >
                                                     <div style={{ width: '48px', height: '48px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)' }}>
-                                                        <img src={extraImage} alt={extra.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        <img src={extraImage} alt={extra.name} style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(extraImage) }} />
                                                     </div>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

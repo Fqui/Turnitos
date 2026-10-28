@@ -37,6 +37,7 @@ const Home = lazyWithRetry(() => import('./pages/Home'));
 const PromosPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/PromosPreview')) : null;
 const ControlesPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/ControlesPreview')) : null;
 const ProductosPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/ProductosPreview')) : null;
+const EncuadrePreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/EncuadrePreview')) : null;
 const BusinessProfile = lazyWithRetry(() => import('./pages/BusinessProfile'));
 const VenueProfile = lazyWithRetry(() => import('./pages/VenueProfile'));
 const BusinessProfileRouter = lazyWithRetry(() => import('./pages/BusinessProfileRouter'));
@@ -345,6 +346,7 @@ function AppContent() {
                 {import.meta.env.DEV && <Route path="/dev/promos" element={<Suspense fallback={<LoadingFallback />}><PromosPreview /></Suspense>} />}
                 {import.meta.env.DEV && <Route path="/dev/controles" element={<Suspense fallback={<LoadingFallback />}><ControlesPreview /></Suspense>} />}
                 {import.meta.env.DEV && <Route path="/dev/productos" element={<Suspense fallback={<LoadingFallback />}><ProductosPreview /></Suspense>} />}
+                {import.meta.env.DEV && <Route path="/dev/encuadre" element={<Suspense fallback={<LoadingFallback />}><EncuadrePreview /></Suspense>} />}
                 {/* /:businessSlug now goes directly to the reservation / booking page */}
                 {/* One route for both URLs so moving between them keeps the page mounted */}
                 <Route path="/:businessSlug/turnos?" element={<BusinessProfileRouter />} />

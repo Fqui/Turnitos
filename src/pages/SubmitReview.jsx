@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import serviceAdapter from '../services/serviceAdapter';
 import { generateSlug } from '../utils/utils';
+import FramedImage from '../components/common/FramedImage';
 
 export default function SubmitReview() {
     const { token } = useParams();
@@ -261,16 +262,10 @@ export default function SubmitReview() {
                 {/* Business Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
                     {business?.logo ? (
-                        <img
+                        <FramedImage
                             src={business.logo}
                             alt={business.name}
-                            style={{
-                                width: '64px',
-                                height: '64px',
-                                borderRadius: '16px',
-                                objectFit: 'cover',
-                                border: '2px solid var(--border)'
-                            }}
+                            style={{ width: '64px', height: '64px', borderRadius: '16px', border: '2px solid var(--border)', flexShrink: 0 }}
                         />
                     ) : (
                         <div style={{

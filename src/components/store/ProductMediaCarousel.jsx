@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Play, Volume2, VolumeX } from 'lucide-react';
+import FramedImage from '../common/FramedImage';
 
 const canHover = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
 
@@ -108,14 +109,14 @@ export default function ProductMediaCarousel({ photos, video, alt, color = '#10B
                 {slides.map((slide, i) => (slide.type === 'video'
                     ? <VideoSlide key={slide.key} src={video} poster={photos[0]} active={index === i} />
                     : (
-                        <img
-                            key={slide.key}
-                            src={slide.src}
-                            alt={`${alt} · foto ${i + 1 - (video ? 1 : 0)}`}
-                            draggable={false}
-                            loading={i < 2 ? 'eager' : 'lazy'}
-                            style={{ flex: '0 0 100%', width: '100%', height: '100%', objectFit: 'cover', scrollSnapAlign: 'center', scrollSnapStop: 'always' }}
-                        />
+                        <div key={slide.key} style={{ flex: '0 0 100%', width: '100%', height: '100%', scrollSnapAlign: 'center', scrollSnapStop: 'always' }}>
+                            <FramedImage
+                                src={slide.src}
+                                alt={`${alt} · foto ${i + 1 - (video ? 1 : 0)}`}
+                                draggable={false}
+                                loading={i < 2 ? 'eager' : 'lazy'}
+                            />
+                        </div>
                     )))}
             </div>
             <style>{'.product-media-track::-webkit-scrollbar{display:none}'}</style>

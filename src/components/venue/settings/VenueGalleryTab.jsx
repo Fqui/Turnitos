@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Crop } from 'lucide-react';
+import ImageFrameEditor from '../../common/ImageFrameEditor';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 import { Select } from '../../common/controls';
+import { frameStyleFor } from '../../../utils/imageFrame';
 
 const VENUE_GALLERY_SECTORS = [
     { value: 'General', label: 'General', icon: '📸' },
@@ -33,8 +36,35 @@ export default function VenueGalleryTab({
     buttonStyle
 }) {
     useBodyScrollLock(!!previewGalleryImage);
+    const gallery = formData.metadata?.venue_gallery || [];
+    // Photo URLs waiting for the framing editor; the first one is open. New uploads are queued here.
+    const [framing, setFraming] = useState([]);
+    const countBeforeUpload = useRef(null);
+    useEffect(() => {
+        if (isUploadingGallery) {
+            countBeforeUpload.current = gallery.length;
+        } else if (countBeforeUpload.current !== null) {
+            setFraming(gallery.slice(countBeforeUpload.current).map(item => item.url));
+            countBeforeUpload.current = null;
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isUploadingGallery]);
+
+    const saveFrame = (newUrl) => {
+        const oldUrl = framing[0];
+        setFraming(q => q.map(u => (u === oldUrl ? newUrl : u)));
+        handleMetadataChange('venue_gallery', gallery.map(item => (item.url === oldUrl ? { ...item, url: newUrl } : item)));
+    };
+
     return (
         <div style={cardStyle}>
+            <ImageFrameEditor
+                open={framing.length > 0}
+                image={framing[0]}
+                aspects={[{ label: 'Galería', ratio: '16 / 10' }, { label: 'Portada', ratio: '12 / 5' }]}
+                onSave={saveFrame}
+                onClose={() => setFraming(q => q.slice(1))}
+            />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
                 <div>
                     <h2 style={{ ...sectionTitleStyle, marginBottom: '4px' }}>📸 Galería de Fotos del Predio</h2>
@@ -198,7 +228,7 @@ export default function VenueGalleryTab({
                                         <img
                                             src={item.url}
                                             alt={item.caption || 'Foto del predio'}
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(item.url) }}
                                         />
 
                                         {/* Top Badges */}
@@ -233,6 +263,15 @@ export default function VenueGalleryTab({
 
                                         {/* Quick Actions (Delete & Preview) */}
                                         <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 2, display: 'flex', gap: '6px' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFraming([item.url])}
+                                                title="Acomodar zoom y encuadre"
+                                                aria-label="Acomodar foto"
+                                                style={{ width: '30px', height: '30px', borderRadius: '8px', border: 'none', background: 'rgba(0,0,0,0.7)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                                            >
+                                                <Crop size={15} />
+                                            </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setPreviewGalleryImage(item.url)}

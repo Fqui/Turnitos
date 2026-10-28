@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import { frameStyleFor } from '../../utils/imageFrame';
 
 export const getPublicSpecialists = (business) =>
     (business?.specialists || []).filter(s => s && s.id !== 'auto-assigned' && s.name);
@@ -143,7 +144,7 @@ export default function ProfileAboutCard({ business, primaryColor = '#10b981' })
                         transition={{ duration: 0.45, ease: 'easeOut' }}
                     >
                         {current.avatar_url ? (
-                            <img src={current.avatar_url} alt={current.name} draggable={false} />
+                            <img src={current.avatar_url} alt={current.name} draggable={false} style={frameStyleFor(current.avatar_url)} />
                         ) : (
                             <div className="profile-about-initials">{getInitials(current.name)}</div>
                         )}

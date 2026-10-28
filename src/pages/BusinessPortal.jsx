@@ -36,6 +36,7 @@ import PortalPastBookingsCard from '../components/business/portal/PortalPastBook
 import SportCanteenCashPanel from '../components/business/canteen/SportCanteenCashPanel';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuthStore, useBookingsStore, usePortalUIStore } from '../stores';
+import FramedImage from '../components/common/FramedImage';
 
 export default function BusinessPortal() {
     const { showToast } = useNotification();
@@ -1094,10 +1095,10 @@ export default function BusinessPortal() {
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         {(currentBusiness?.logo || currentBusiness?.image) && (
-                            <img
+                            <FramedImage
                                 src={currentBusiness.logo || currentBusiness.image}
                                 alt="Logo"
-                                style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                                style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
                             />
                         )}
                         <h1 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>

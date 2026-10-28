@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Crop } from 'lucide-react';
 import serviceAdapter from '../../../services/serviceAdapter';
-import CoverFocusPicker from '../../common/CoverFocusPicker';
+import FramedImage from '../../common/FramedImage';
+import ImageFrameEditor, { FRAME_ASPECTS } from '../../common/ImageFrameEditor';
+import { getCoverImage } from '../../../utils/imageUtils';
+
+const VENUE_COVER_ASPECTS = [{ label: 'Compu', ratio: '12 / 5' }, { label: 'Celular', ratio: '1 / 1' }];
 
 export default function VenueAppearanceTab({
     formData,
@@ -15,6 +20,11 @@ export default function VenueAppearanceTab({
     inputStyle,
     buttonStyle
 }) {
+    // 'cover' | 'logo' while the framing editor is open
+    const [framing, setFraming] = useState(null);
+    const coverUrl = getCoverImage(formData, formData.banner_url);
+    const frameButton = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
+
     return (
         <div style={cardStyle}>
             <h2 style={sectionTitleStyle}>🎨 Apariencia y Marca</h2>
@@ -137,7 +147,10 @@ export default function VenueAppearanceTab({
                 <div>
                     <label style={labelStyle}>Logo del Predio</label>
                     {(formData.logo || formData.logo_url) && (
-                        <img src={formData.logo || formData.logo_url} alt="Logo preview" style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', marginBottom: '12px', border: '1px solid var(--border)' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                            <FramedImage src={formData.logo || formData.logo_url} alt="Logo preview" style={{ width: '80px', height: '80px', borderRadius: '12px', border: '1px solid var(--border)', flexShrink: 0 }} />
+                            <button type="button" onClick={() => setFraming('logo')} style={frameButton}><Crop size={15} /> Acomodar logo</button>
+                        </div>
                     )}
                     <input
                         type="file"
@@ -150,6 +163,7 @@ export default function VenueAppearanceTab({
                                 handleInputChange('logo', url);
                                 handleInputChange('logo_url', url);
                                 showToast('Logo actualizado', 'success');
+                                setFraming('logo');
                             }
                         }}
                         style={inputStyle}
@@ -158,14 +172,11 @@ export default function VenueAppearanceTab({
                 <div>
                     <label style={labelStyle}>Foto de Portada / Banner</label>
                     {(formData.banner_image || formData.banner_url) && (
-                        <div style={{ marginBottom: '12px' }}>
-                            <CoverFocusPicker
-                                image={formData.banner_image || formData.banner_url}
-                                value={formData.metadata?.banner_focus}
-                                onChange={(focus) => handleInputChange('metadata', { ...(formData.metadata || {}), banner_focus: focus })}
-                                desktopAspect="12 / 5"
-                                mobileAspect="1 / 1"
-                            />
+                        <div style={{ marginBottom: '12px', display: 'grid', gap: '10px' }}>
+                            <div style={{ aspectRatio: '12 / 5', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', background: '#111' }}>
+                                <FramedImage src={coverUrl} alt="Portada" />
+                            </div>
+                            <button type="button" onClick={() => setFraming('cover')} style={frameButton}><Crop size={15} /> Acomodar portada</button>
                         </div>
                     )}
                     <input
@@ -180,12 +191,37 @@ export default function VenueAppearanceTab({
                                 handleInputChange('banner_url', url);
                                 handleInputChange('metadata', { ...(formData.metadata || {}), banner_focus: null });
                                 showToast('Banner actualizado', 'success');
+                                setFraming('cover');
                             }
                         }}
                         style={inputStyle}
                     />
                 </div>
             </div>
+
+            <ImageFrameEditor
+                open={framing === 'cover' && !!coverUrl}
+                image={coverUrl}
+                aspects={VENUE_COVER_ASPECTS}
+                title="Acomodá la portada"
+                onSave={(url) => {
+                    handleInputChange('banner_image', url);
+                    handleInputChange('banner_url', url);
+                    handleInputChange('metadata', { ...(formData.metadata || {}), banner_focus: null });
+                }}
+                onClose={() => setFraming(null)}
+            />
+            <ImageFrameEditor
+                open={framing === 'logo' && !!(formData.logo || formData.logo_url)}
+                image={formData.logo || formData.logo_url}
+                aspects={FRAME_ASPECTS.logo}
+                title="Acomodá el logo"
+                onSave={(url) => {
+                    handleInputChange('logo', url);
+                    handleInputChange('logo_url', url);
+                }}
+                onClose={() => setFraming(null)}
+            />
 
             <button
                 type="button"

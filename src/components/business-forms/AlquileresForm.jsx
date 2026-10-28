@@ -6,6 +6,7 @@ import supabaseService from '../../services/supabaseService';
 import { useNotification } from '../../contexts/NotificationContext';
 import { generateBusinessCredentials, slugify } from '../../utils/businessUtils';
 import { resizeImage, validateImageFile } from '../../utils/imageUtils';
+import ImageFrameEditor, { FRAME_ASPECTS, useFrameBeforeAdd } from '../common/ImageFrameEditor';
 
 const SUGGESTED_COLORS = ['#FF5722', '#FF9800', '#FFC107', '#4CAF50', '#00BCD4', '#9C27B0'];
 
@@ -63,6 +64,17 @@ export default function AlquileresForm({ business, onSave, onCancel }) {
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const [uploadingBanner, setUploadingBanner] = useState(false);
     const [uploadingGallery, setUploadingGallery] = useState(false);
+    // Each upload goes through the framing editor before it lands in the form
+    const [framingType, setFramingType] = useState(null);
+    const applyUploadedImage = (type, imageUrl) => {
+        if (type === 'gallery') {
+            setFormData(prev => ({ ...prev, gallery_images: [...prev.gallery_images, imageUrl] }));
+        } else {
+            setFormData(prev => ({ ...prev, [type === 'logo' ? 'logo' : 'banner_image']: imageUrl }));
+        }
+    };
+    const imageFrame = useFrameBeforeAdd(url => applyUploadedImage(framingType, url));
+    const frameAspects = { logo: FRAME_ASPECTS.logo, banner: [{ label: 'Compu', ratio: '12 / 5' }, { label: 'Celular', ratio: '1 / 1' }], gallery: [{ label: 'Galería', ratio: '16 / 10' }] }[framingType];
 
     useEffect(() => { fetchData(); }, []);
     useEffect(() => { if (formData.category_id) fetchSubcategories(formData.category_id); }, [formData.category_id]);
@@ -110,11 +122,8 @@ export default function AlquileresForm({ business, onSave, onCancel }) {
             }
 
             const imageUrl = await supabaseService.uploadImage(fileToUpload, 'businesses');
-            if (type === 'gallery') {
-                setFormData(prev => ({ ...prev, gallery_images: [...prev.gallery_images, imageUrl] }));
-            } else {
-                setFormData(prev => ({ ...prev, [type === 'logo' ? 'logo' : 'banner_image']: imageUrl }));
-            }
+            setFramingType(type);
+            imageFrame.start(imageUrl);
         } catch (error) {
             console.error('Error uploading image:', error);
             showToast('Error al subir imagen: ' + error.message, 'error');
@@ -220,6 +229,7 @@ export default function AlquileresForm({ business, onSave, onCancel }) {
                     <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>Logo *</label>
                         {formData.logo && <img src={formData.logo} alt="Logo" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '12px', marginBottom: '12px', backgroundColor: 'var(--bg-main)' }} />}
                         <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e.target.files[0], 'logo')} disabled={uploadingLogo} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)' }} />
+                        <ImageFrameEditor {...imageFrame.editorProps} aspects={frameAspects} />
                         {uploadingLogo && <p style={{ fontSize: '12px', color: 'var(--primary-paddle)', marginTop: '8px' }}>Subiendo...</p>}</div>
                     <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>Banner Principal *</label>
                         {formData.banner_image && <img src={formData.banner_image} alt="Banner" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '12px', marginBottom: '12px' }} />}

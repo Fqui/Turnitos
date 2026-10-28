@@ -7,6 +7,7 @@ import { generateBusinessCredentials, validateSubscriptionLimit, slugify } from 
 import { resizeImage, validateImageFile } from '../../utils/imageUtils';
 import CostBreakdown from '../CostBreakdown';
 import { formatDuration } from '../../utils/dateUtils';
+import ImageFrameEditor, { FRAME_ASPECTS, useFrameBeforeAdd } from '../common/ImageFrameEditor';
 
 const SUGGESTED_COLORS = ['#2196F3', '#9C27B0', '#E91E63', '#FF9800', '#00BCD4', '#4CAF50'];
 
@@ -65,6 +66,15 @@ export default function ServiciosForm({ business, onSave, onCancel }) {
     const [uploadingBanner, setUploadingBanner] = useState(false);
     const [uploadingServiceImage, setUploadingServiceImage] = useState(false);
     const [uploadingSpecialistImage, setUploadingSpecialistImage] = useState(false);
+    // Each upload goes through the framing editor before it lands in the form
+    const [framingType, setFramingType] = useState(null);
+    const applyUploadedImage = (type, imageUrl) => {
+        if (type === 'service') setNewService(prev => ({ ...prev, image_url: imageUrl }));
+        else if (type === 'specialist') setNewSpecialist(prev => ({ ...prev, image_url: imageUrl }));
+        else setFormData(prev => ({ ...prev, [type === 'logo' ? 'logo' : 'banner_image']: imageUrl }));
+    };
+    const imageFrame = useFrameBeforeAdd(url => applyUploadedImage(framingType, url));
+    const frameAspects = { logo: FRAME_ASPECTS.logo, banner: FRAME_ASPECTS.cover, service: FRAME_ASPECTS.service, specialist: FRAME_ASPECTS.avatar }[framingType];
     const [costBreakdown, setCostBreakdown] = useState(null);
 
     useEffect(() => { fetchData(); }, []);
@@ -146,9 +156,8 @@ export default function ServiciosForm({ business, onSave, onCancel }) {
             }
 
             const imageUrl = await supabaseService.uploadImage(fileToUpload, 'businesses');
-            if (type === 'service') setNewService(prev => ({ ...prev, image_url: imageUrl }));
-            else if (type === 'specialist') setNewSpecialist(prev => ({ ...prev, image_url: imageUrl }));
-            else setFormData(prev => ({ ...prev, [type === 'logo' ? 'logo' : 'banner_image']: imageUrl }));
+            setFramingType(type);
+            imageFrame.start(imageUrl);
         } catch (error) {
             console.error('Error uploading image:', error);
             alert('Error al subir imagen: ' + error.message);
@@ -273,6 +282,7 @@ export default function ServiciosForm({ business, onSave, onCancel }) {
                     <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>Logo *</label>
                         {formData.logo && <img src={formData.logo} alt="Logo" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '12px', marginBottom: '12px', backgroundColor: 'var(--bg-main)' }} />}
                         <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e.target.files[0], 'logo')} disabled={uploadingLogo} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)' }} />
+                        <ImageFrameEditor {...imageFrame.editorProps} aspects={frameAspects} />
                         {uploadingLogo && <p style={{ fontSize: '12px', color: 'var(--primary-paddle)', marginTop: '8px' }}>Subiendo...</p>}</div>
                     <div><label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-secondary)' }}>Banner/Fachada *</label>
                         {formData.banner_image && <img src={formData.banner_image} alt="Banner" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '12px', marginBottom: '12px' }} />}

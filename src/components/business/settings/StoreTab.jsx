@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { Button, Select } from '../../common/controls';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 import ProductMediaEditor from './ProductMediaEditor';
 import { getAllProductPhotos, getProductPhotos, getProductVideo } from '../../../utils/productMedia';
+import FramedImage from '../../common/FramedImage';
+import ImageFrameEditor, { FRAME_ASPECTS, useFrameBeforeAdd } from '../../common/ImageFrameEditor';
+import { frameStyleFor } from '../../../utils/imageFrame';
 
 export default function StoreTab({
     formData,
@@ -27,6 +30,10 @@ export default function StoreTab({
     useBodyScrollLock((isProductModalOpen && !!editingProduct) || (isExtraModalOpen && !!editingExtra));
     const [uploadingExtraImage, setUploadingExtraImage] = useState(false);
     const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
+    // handleAddBanner lives inside the banners block below; it registers itself here
+    const addBannerRef = useRef(null);
+    const bannerFrame = useFrameBeforeAdd(url => addBannerRef.current?.(url));
+    const extraFrame = useFrameBeforeAdd(url => setEditingExtra(prev => (prev ? { ...prev, image: url } : prev)));
 
     // Category input state for the dedicated categories manager
     const [newCategoryInput, setNewCategoryInput] = useState('');
@@ -153,6 +160,7 @@ export default function StoreTab({
                                 });
                                 if (showToast) showToast('Banner agregado y guardado', 'success');
                             };
+                            addBannerRef.current = handleAddBanner;
 
                             return (
                                 <div>
@@ -175,7 +183,7 @@ export default function StoreTab({
                                                     <img
                                                         src={url}
                                                         alt={`Banner ${idx + 1}`}
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(url) }}
                                                     />
                                                     <div style={{
                                                         position: 'absolute',
@@ -232,6 +240,7 @@ export default function StoreTab({
                                             transition: 'border-color 0.2s ease'
                                         }}>
                                             {uploadingBannerImage ? '⏳ Subiendo banner...' : '📷 + Agregar Banner Publicitario (1200x400)'}
+                                            <ImageFrameEditor {...bannerFrame.editorProps} aspects={FRAME_ASPECTS.banner} title="Acomodá el banner" />
                                             <input
                                                 type="file"
                                                 accept="image/*"
@@ -243,7 +252,7 @@ export default function StoreTab({
                                                     try {
                                                         setUploadingBannerImage(true);
                                                         const url = await serviceAdapter.uploadImage(file);
-                                                        if (url) await handleAddBanner(url);
+                                                        if (url) bannerFrame.start(url);
                                                     } catch (err) {
                                                         console.error('Error uploading banner image:', err);
                                                         if (showToast) showToast('Error al subir banner', 'error');
@@ -429,10 +438,10 @@ export default function StoreTab({
                                 }}
                             >
                                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                    <img
+                                    <FramedImage
                                         src={getProductPhotos(prod)[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&q=80'}
                                         alt={prod.name}
-                                        style={{ width: '54px', height: '54px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }}
+                                        style={{ width: '54px', height: '54px', borderRadius: '12px', border: '1px solid var(--border)', flexShrink: 0 }}
                                     />
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary-paddle, #10b981)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
@@ -584,10 +593,10 @@ export default function StoreTab({
                                 >
                                     <div>
                                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '10px' }}>
-                                            <img
+                                            <FramedImage
                                                 src={extra.image || extra.image_url || 'https://images.unsplash.com/photo-1616788494707-ec28f08d05a1?w=200&q=80'}
                                                 alt={extra.name}
-                                                style={{ width: '54px', height: '54px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }}
+                                                style={{ width: '54px', height: '54px', borderRadius: '12px', border: '1px solid var(--border)', flexShrink: 0 }}
                                             />
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1152,12 +1161,12 @@ export default function StoreTab({
                             <label style={labelStyle}>Imagen del Adicional</label>
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                 {editingExtra.image && (
-                                    <img
-                                        src={editingExtra.image}
-                                        alt="Preview"
-                                        style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }}
-                                    />
+                                    <button type="button" onClick={() => extraFrame.start(editingExtra.image)} title="Acomodar zoom y encuadre" style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', flexShrink: 0, position: 'relative' }}>
+                                        <FramedImage src={editingExtra.image} alt="Preview" style={{ width: '56px', height: '56px', borderRadius: '12px', border: '1px solid var(--border)' }} />
+                                        <span style={{ position: 'absolute', bottom: '3px', right: '3px', width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(0,0,0,0.65)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>✂</span>
+                                    </button>
                                 )}
+                                <ImageFrameEditor {...extraFrame.editorProps} aspects={FRAME_ASPECTS.square} />
                                 <label style={{
                                     flex: 1,
                                     display: 'inline-flex',
@@ -1186,6 +1195,7 @@ export default function StoreTab({
                                                 setUploadingExtraImage(true);
                                                 const publicUrl = await serviceAdapter.uploadImage(file);
                                                 setEditingExtra(prev => ({ ...prev, image: publicUrl }));
+                                                extraFrame.start(publicUrl);
                                                 if (showToast) showToast('Imagen subida correctamente', 'success');
                                             } catch (err) {
                                                 console.error('Error uploading extra image:', err);

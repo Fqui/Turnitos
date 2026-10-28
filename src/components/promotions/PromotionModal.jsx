@@ -10,6 +10,7 @@ import {
     promoGivesDiscount
 } from '../../utils/promotionUtils';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import FramedImage from '../common/FramedImage';
 
 const PROMO_GREEN = '#10B981';
 
@@ -185,7 +186,7 @@ export default function PromotionModal({
                         {business?.name && (
                             <div style={{ position: 'absolute', right: '12px', bottom: '12px', zIndex: 1, display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontSize: '12px', fontWeight: '700', maxWidth: '45%' }}>
                                 {business.logo ? (
-                                    <img src={business.logo} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.4)', flexShrink: 0 }} />
+                                    <FramedImage src={business.logo} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.4)', flexShrink: 0 }} />
                                 ) : (
                                     <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: accent, display: 'grid', placeItems: 'center', fontSize: '11px', flexShrink: 0 }}>{initials}</span>
                                 )}

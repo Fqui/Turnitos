@@ -3,7 +3,9 @@ import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ShareButton from '../common/ShareButton';
-import { getCoverPosition } from '../../utils/imageUtils';
+import { getCoverImage, getCoverPosition } from '../../utils/imageUtils';
+import { frameStyleFor } from '../../utils/imageFrame';
+import FramedImage from '../common/FramedImage';
 
 export default function ProfileHeroBanner({
     business,
@@ -54,7 +56,7 @@ export default function ProfileHeroBanner({
                     layoutId={`business-image-${business.id}`}
                     src={business.banner_image || business.image || selectedItem?.image_url}
                     alt={business.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: getCoverPosition(business, 'center 25%') }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: getCoverPosition(business, 'center 25%'), ...frameStyleFor(getCoverImage(business)) }}
                     transition={{ duration: 0.5, ease: "circOut" }}
                 />
                 <div style={{
@@ -147,16 +149,7 @@ export default function ProfileHeroBanner({
                             alignItems: 'center',
                             justifyContent: 'center'
                         }}>
-                            <img
-                                src={business.logo || business.image}
-                                alt={business.name}
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    borderRadius: '50%',
-                                    objectFit: 'cover'
-                                }}
-                            />
+                            <FramedImage src={business.logo || business.image} alt={business.name} style={{ borderRadius: '50%' }} />
                         </div>
                     </div>
 

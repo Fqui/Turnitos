@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { MAX_SERVICE_IMAGES } from '../../../utils/serviceImages';
+import { Crop } from 'lucide-react';
+import FramedImage from '../../common/FramedImage';
+import ImageFrameEditor, { FRAME_ASPECTS } from '../../common/ImageFrameEditor';
 
 // Thumbnail row to manage a service's photos. The first one is the main photo (image_url).
 export default function ServicePhotosEditor({ inputId, images, onChange, showToast, labelStyle, buttonSecondaryStyle }) {
     const [uploading, setUploading] = useState(false);
+    // Photos waiting to be framed, by index; the first one is open in the editor.
+    const [framing, setFraming] = useState([]);
     const list = images || [];
     const remaining = MAX_SERVICE_IMAGES - list.length;
 
@@ -31,7 +36,9 @@ export default function ServicePhotosEditor({ inputId, images, onChange, showToa
                 const url = await serviceAdapter.uploadImage(file);
                 if (url) uploaded.push(url);
             }
-            onChange([...list, ...uploaded].slice(0, MAX_SERVICE_IMAGES));
+            const next = [...list, ...uploaded].slice(0, MAX_SERVICE_IMAGES);
+            onChange(next);
+            setFraming(next.map((_, i) => i).slice(list.length));
             showToast(uploaded.length > 1 ? 'Fotos cargadas' : 'Foto cargada', 'success');
         } catch (err) {
             console.error(err);
@@ -41,8 +48,10 @@ export default function ServicePhotosEditor({ inputId, images, onChange, showToa
         }
     };
 
-    const removeAt = (idx) => onChange(list.filter((_, i) => i !== idx));
-    const makeMain = (idx) => onChange([list[idx], ...list.filter((_, i) => i !== idx)]);
+    const removeAt = (idx) => { setFraming([]); onChange(list.filter((_, i) => i !== idx)); };
+    const editingIdx = framing[0];
+    const saveFrame = (url) => onChange(list.map((u, i) => (i === editingIdx ? url : u)));
+    const makeMain = (idx) => { setFraming([]); onChange([list[idx], ...list.filter((_, i) => i !== idx)]); };
 
     const tile = {
         position: 'relative',
@@ -79,7 +88,10 @@ export default function ServicePhotosEditor({ inputId, images, onChange, showToa
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-start' }}>
                 {list.map((url, idx) => (
                     <div key={url} style={tile}>
-                        <img src={url} alt={`Foto ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        <FramedImage src={url} alt={`Foto ${idx + 1}`} />
+                        <button type="button" aria-label="Acomodar foto" title="Acomodar zoom y encuadre" onClick={() => setFraming([idx])} style={{ ...iconButton, right: 'auto', left: '4px' }}>
+                            <Crop size={13} />
+                        </button>
                         <button type="button" aria-label="Quitar foto" title="Quitar foto" onClick={() => removeAt(idx)} style={iconButton}>
                             ✕
                         </button>
@@ -149,8 +161,15 @@ export default function ServicePhotosEditor({ inputId, images, onChange, showToa
             <span style={{ display: 'block', marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
                 {list.length === 0
                     ? 'PNG, JPG o WebP. La primera es la principal y se ve en tu catálogo.'
-                    : `${list.length}/${MAX_SERVICE_IMAGES} fotos · la principal es la que se ve en la tarjeta del servicio.`}
+                    : `${list.length}/${MAX_SERVICE_IMAGES} fotos · la principal es la que se ve en la tarjeta del servicio. Con el ícono de recorte acomodás zoom y encuadre.`}
             </span>
+            <ImageFrameEditor
+                open={editingIdx !== undefined && !!list[editingIdx]}
+                image={list[editingIdx]}
+                aspects={FRAME_ASPECTS.service}
+                onSave={saveFrame}
+                onClose={() => setFraming(q => q.slice(1))}
+            />
         </div>
     );
 }

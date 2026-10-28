@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { getSizedImageUrl, useImageKind } from '../../utils/productImage';
+import { frameStyleFor, parseFrame } from '../../utils/imageFrame';
+import FramedImage from '../common/FramedImage';
 
 /**
  * Store grid thumbnail: photos fill the square box, cut-out PNGs float on the studio background.
@@ -21,7 +23,8 @@ export function ProductCardImage({ src, alt, children }) {
                     height: '100%',
                     objectFit: isCutout ? 'contain' : 'cover',
                     filter: isCutout ? 'drop-shadow(0 8px 14px rgba(0,0,0,0.12))' : 'none',
-                    transition: 'transform 0.3s ease'
+                    transition: 'transform 0.3s ease',
+                    ...(isCutout ? {} : frameStyleFor(url))
                 }}
             />
             {children}
@@ -35,6 +38,11 @@ export function ProductCardImage({ src, alt, children }) {
  */
 export function ProductDetailImage({ src, alt, animationKey }) {
     const isCutout = useImageKind(src) === 'transparent';
+
+    // A photo the owner framed shows that framing instead of the whole image
+    if (!isCutout && parseFrame(src).frame) {
+        return <FramedImage key={animationKey} src={src} alt={alt} />;
+    }
 
     return (
         <>

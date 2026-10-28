@@ -3,6 +3,21 @@ import serviceAdapter from '../../../services/serviceAdapter';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 import { isPhoneWidth } from '../portal/mobile/bookingMobileUtils';
 import { Button, Select } from '../../common/controls';
+import { Crop } from 'lucide-react';
+import FramedImage from '../../common/FramedImage';
+import ImageFrameEditor from '../../common/ImageFrameEditor';
+import { frameStyleFor } from '../../../utils/imageFrame';
+
+const HIGHLIGHT_ASPECTS = [{ label: 'Círculo', ratio: '1 / 1', round: true }, { label: 'Pantalla', ratio: '9 / 16' }];
+const VENUE_GALLERY_ASPECTS = [{ label: 'Galería', ratio: '4 / 3' }, { label: 'Cuadrada', ratio: '1 / 1' }];
+const cropButtonStyle = { position: 'absolute', top: '4px', left: '4px', width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, zIndex: 1 };
+
+// Swap one photo URL (e.g. after framing it) inside a highlight or story, keeping its cover in sync.
+const replaceMedia = (item, oldUrl, newUrl) => ({
+    ...item,
+    images: (item.images || []).map(u => (u === oldUrl ? newUrl : u)),
+    cover_image: item.cover_image === oldUrl ? newUrl : item.cover_image
+});
 
 const GALLERY_CATEGORIES = ['General', 'Piscina', 'Quincho', 'Salón', 'Exterior', 'Juegos', 'Noche'];
 
@@ -24,6 +39,9 @@ export default function GalleryTab({
     const [editingStory, setEditingStory] = useState(null);
     useBodyScrollLock(!!editingHighlight || !!editingStory);
     const [uploadingMedia, setUploadingMedia] = useState(false);
+    // Photos waiting for the framing editor: { kind: 'highlight' | 'story' | 'venue', url }; the first one is open.
+    const [framing, setFraming] = useState([]);
+    const currentFrame = framing[0];
 
     const highlights = formData.gallery_highlights || [];
 
@@ -71,6 +89,7 @@ export default function GalleryTab({
                 gallery_images: newGalleryImages
             }));
             showToast('Fotos subidas a la galería', 'success');
+            setFraming(uploadedItems.map(item => ({ kind: 'venue', url: item.url })));
         } catch (err) {
             console.error("Upload error:", err);
             showToast('Error al subir fotos', 'error');
@@ -294,6 +313,8 @@ export default function GalleryTab({
 
             setItemCallback(updatedItem);
             showToast(`${newUrls.length} archivo(s) subido(s)`, 'success');
+            const kind = setItemCallback === setEditingStory ? 'story' : 'highlight';
+            setFraming(newUrls.filter(u => !isVideo(u)).map(url => ({ kind, url })));
         } catch (error) {
             console.error('Error uploading media:', error);
             showToast('Error al subir archivos', 'error');
@@ -304,6 +325,22 @@ export default function GalleryTab({
     };
 
     const isVideo = (url) => typeof url === 'string' && /\.(mp4|webm|mov|ogg|m4v)(\?|$)/i.test(url);
+
+    const saveFrame = (newUrl) => {
+        const { kind, url } = currentFrame;
+        // Later photos in the queue keep pointing at the right item
+        setFraming(q => q.map(f => (f.url === url ? { ...f, url: newUrl } : f)));
+        if (kind === 'highlight') setEditingHighlight(prev => prev && replaceMedia(prev, url, newUrl));
+        else if (kind === 'story') setEditingStory(prev => prev && replaceMedia(prev, url, newUrl));
+        else {
+            const updatedList = currentVenueGallery.map(item => (item.url === url ? { ...item, url: newUrl } : item));
+            setFormData(prev => ({
+                ...prev,
+                metadata: { ...(prev.metadata || {}), venue_gallery: updatedList },
+                gallery_images: updatedList.map(i => i.url)
+            }));
+        }
+    };
 
     return (
         <div style={{ display: 'grid', gap: '28px' }}>
@@ -420,7 +457,7 @@ export default function GalleryTab({
                                                     <img
                                                         src={mediaUrl || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
                                                         alt={story.title}
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(mediaUrl) }}
                                                     />
                                                 )}
                                             </div>
@@ -536,7 +573,7 @@ export default function GalleryTab({
                                                     <img
                                                         src={mediaUrl || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
                                                         alt={story.title}
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(mediaUrl) }}
                                                     />
                                                 )}
                                             </div>
@@ -668,7 +705,7 @@ export default function GalleryTab({
                                                 <img
                                                     src={mediaUrl || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&q=80'}
                                                     alt={highlight.title}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(mediaUrl) }}
                                                 />
                                             )}
                                         </div>
@@ -755,7 +792,10 @@ export default function GalleryTab({
                             {currentVenueGallery.map((item, idx) => (
                                 <div key={idx} style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', background: 'var(--bg-card)' }}>
                                     <div style={{ aspectRatio: '4/3', overflow: 'hidden', position: 'relative' }}>
-                                        <img src={item.url} alt={`Foto ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <FramedImage src={item.url} alt={`Foto ${idx + 1}`} />
+                                        <button type="button" aria-label="Acomodar foto" title="Acomodar zoom y encuadre" onClick={() => setFraming([{ kind: 'venue', url: item.url }])} style={{ ...cropButtonStyle, top: '8px', left: '8px', width: '30px', height: '30px' }}>
+                                            <Crop size={15} />
+                                        </button>
                                         <button
                                             type="button"
                                             className="pm-photo-del"
@@ -938,12 +978,14 @@ export default function GalleryTab({
                                                     onMouseLeave={(e) => { e.target.pause(); e.target.currentTime = 0; }}
                                                 />
                                             ) : (
-                                                <img
-                                                    src={url}
-                                                    alt={`Foto ${idx + 1}`}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                                                    onClick={() => setEditingHighlight({ ...editingHighlight, cover_image: url })}
-                                                />
+                                                <>
+                                                    <div onClick={() => setEditingHighlight({ ...editingHighlight, cover_image: url })} style={{ width: '100%', height: '100%', cursor: 'pointer' }}>
+                                                        <FramedImage src={url} alt={`Foto ${idx + 1}`} />
+                                                    </div>
+                                                    <button type="button" aria-label="Acomodar foto" title="Acomodar zoom y encuadre" onClick={() => setFraming([{ kind: 'highlight', url }])} style={cropButtonStyle}>
+                                                        <Crop size={13} />
+                                                    </button>
+                                                </>
                                             )}
                                             <button
                                                 type="button"
@@ -1144,12 +1186,14 @@ export default function GalleryTab({
                                                     onMouseLeave={(e) => { e.target.pause(); e.target.currentTime = 0; }}
                                                 />
                                             ) : (
-                                                <img
-                                                    src={url}
-                                                    alt={`Foto ${idx + 1}`}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                                                    onClick={() => setEditingStory({ ...editingStory, cover_image: url })}
-                                                />
+                                                <>
+                                                    <div onClick={() => setEditingStory({ ...editingStory, cover_image: url })} style={{ width: '100%', height: '100%', cursor: 'pointer' }}>
+                                                        <FramedImage src={url} alt={`Foto ${idx + 1}`} />
+                                                    </div>
+                                                    <button type="button" aria-label="Acomodar foto" title="Acomodar zoom y encuadre" onClick={() => setFraming([{ kind: 'story', url }])} style={cropButtonStyle}>
+                                                        <Crop size={13} />
+                                                    </button>
+                                                </>
                                             )}
                                             <button
                                                 type="button"
@@ -1218,6 +1262,14 @@ export default function GalleryTab({
                     </div>
                 </div>
             )}
+
+            <ImageFrameEditor
+                open={!!currentFrame}
+                image={currentFrame?.url}
+                aspects={currentFrame?.kind === 'venue' ? VENUE_GALLERY_ASPECTS : HIGHLIGHT_ASPECTS}
+                onSave={saveFrame}
+                onClose={() => setFraming(q => q.slice(1))}
+            />
         </div>
     );
 }

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { generateSlug, getSubdomain } from '../utils/utils';
 import { SITE_URL } from '../utils/seo';
 import { trackPromotionEvent } from '../services/supabase/promotionService';
+import { frameStyleFor } from '../utils/imageFrame';
 
 const VIEWED_KEY = 'turnitos_promo_views';
 
@@ -213,7 +214,8 @@ export default function PromotionsHero({ promotions, businesses }) {
                                 width: '100%',
                                 height: '100%',
                                 objectFit: 'cover',
-                                objectPosition: 'center 40%'
+                                objectPosition: 'center 40%',
+                                ...frameStyleFor(promo.image)
                             }}
                         />
                     ) : placeholder}

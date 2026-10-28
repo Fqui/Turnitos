@@ -1,3 +1,5 @@
+import { parseFrame, withFrame } from './imageFrame';
+
 /**
  * Image Resizing and Optimization Utility
  * Handles automatic resizing of images according to DESIGN_GUIDELINES.md
@@ -231,4 +233,17 @@ export function getCoverPosition(business, fallback = 'center') {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return fallback;
     const clamp = (v) => Math.min(100, Math.max(0, Math.round(v)));
     return `${clamp(x)}% ${clamp(y)}%`;
+}
+
+/**
+ * Cover URL with its framing, ready for <FramedImage>. Covers framed in the editor carry it in
+ * the URL; older ones only have metadata.banner_focus, which becomes a framing with no zoom.
+ */
+export function getCoverImage(business, fallbackUrl) {
+    const url = business?.banner_image || fallbackUrl;
+    if (!url || parseFrame(url).frame || url !== business?.banner_image) return url;
+    const focus = business?.metadata?.banner_focus;
+    const x = Number(focus?.x), y = Number(focus?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return url;
+    return withFrame(url, { x, y, z: 1, whole: false });
 }

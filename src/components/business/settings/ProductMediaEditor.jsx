@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Film, ImagePlus, Star, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crop, Film, ImagePlus, Star, X } from 'lucide-react';
+import FramedImage from '../../common/FramedImage';
+import ImageFrameEditor, { FRAME_ASPECTS } from '../../common/ImageFrameEditor';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { MAX_PRODUCT_PHOTOS, MAX_PRODUCT_VIDEO_MB, PRODUCT_VIDEO_TYPES } from '../../../utils/productMedia';
 
@@ -47,6 +49,8 @@ export default function ProductMediaEditor({ images, video, onChange, showToast 
     const [uploadingVideo, setUploadingVideo] = useState(false);
     const [videoError, setVideoError] = useState('');
     const [dragIndex, setDragIndex] = useState(null);
+    // Photo URLs waiting for the framing editor; the first one is open.
+    const [framing, setFraming] = useState([]);
 
     const photos = images.slice(0, MAX_PRODUCT_PHOTOS);
     const droppedCount = images.length - photos.length;
@@ -77,6 +81,7 @@ export default function ProductMediaEditor({ images, video, onChange, showToast 
             setUploadingPhotos(true);
             const urls = await Promise.all(accepted.map(file => serviceAdapter.uploadImage(file)));
             setPhotos([...photos, ...urls.filter(Boolean)]);
+            setFraming(urls.filter(Boolean));
             showToast?.(`${urls.length} foto(s) subida(s)`, 'success');
         } catch (err) {
             console.error('Error uploading product images:', err);
@@ -115,8 +120,21 @@ export default function ProductMediaEditor({ images, video, onChange, showToast 
         }
     };
 
+    const saveFrame = (newUrl) => {
+        const oldUrl = framing[0];
+        setFraming(q => q.map(u => (u === oldUrl ? newUrl : u)));
+        setPhotos(photos.map(u => (u === oldUrl ? newUrl : u)));
+    };
+
     return (
         <div style={{ display: 'grid', gap: '12px' }}>
+            <ImageFrameEditor
+                open={framing.length > 0 && photos.includes(framing[0])}
+                image={framing[0]}
+                aspects={FRAME_ASPECTS.product}
+                onSave={saveFrame}
+                onClose={() => setFraming(q => q.slice(1))}
+            />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
                 <span style={sectionTitle}>Fotos del producto</span>
                 <span style={counter}>{photos.length}/{MAX_PRODUCT_PHOTOS}</span>
@@ -136,7 +154,10 @@ export default function ProductMediaEditor({ images, video, onChange, showToast 
                             border: i === 0 ? `2px solid ${ACCENT}` : '1px solid var(--border)', opacity: dragIndex === i ? 0.5 : 1
                         }}
                     >
-                        <img src={url} alt={`Foto ${i + 1}`} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        <FramedImage src={url} alt={`Foto ${i + 1}`} draggable={false} />
+                        <button type="button" onClick={() => setFraming([url])} aria-label="Acomodar foto" title="Acomodar zoom y encuadre" style={{ ...badge, top: '6px', right: '34px', padding: '4px', cursor: 'pointer' }}>
+                            <Crop size={12} />
+                        </button>
                         {i === 0 ? (
                             <span style={{ ...badge, top: '6px', left: '6px', padding: '3px 7px', background: ACCENT }}>
                                 <Star size={10} fill="#fff" /> Portada

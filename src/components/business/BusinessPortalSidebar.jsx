@@ -4,6 +4,7 @@ import usePushAlerts, { PUSH_HELP } from '../../hooks/usePushAlerts';
 import { isSportBusiness } from '../../utils/businessUtils';
 import { BOTTOM_NAV_HEIGHT } from './BusinessPortalBottomNav';
 import PhoneMoreMenu from './portal/mobile/PhoneMoreMenu';
+import FramedImage from '../common/FramedImage';
 
 const BusinessPortalSidebar = ({
     isVisible,
@@ -187,14 +188,13 @@ const BusinessPortalSidebar = ({
                         width: isVisible ? 'auto' : '100%'
                     }}>
                         {currentBusiness?.logo || currentBusiness?.image ? (
-                            <img
+                            <FramedImage
                                 src={currentBusiness.logo || currentBusiness.image}
                                 alt="Logo"
                                 style={{
                                     width: isVisible ? '38px' : '34px',
                                     height: isVisible ? '38px' : '34px',
                                     borderRadius: '10px',
-                                    objectFit: 'cover',
                                     border: '2px solid var(--border)',
                                     boxShadow: 'var(--shadow-sm)',
                                     flexShrink: 0

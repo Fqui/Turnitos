@@ -5,6 +5,8 @@ import { supabase } from '../../../services/supabaseClient';
 import { parsePromotionTarget, getPromotionStatus, todayAR, PROMO_KINDS, getPromoKindMeta, getPromoConditionChips, DAY_SHORT, WEEK_ORDER } from '../../../utils/promotionUtils';
 import { getPromotionStats } from '../../../services/supabase/promotionService';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import ImageFrameEditor, { FRAME_ASPECTS } from '../../common/ImageFrameEditor';
+import { frameStyleFor } from '../../../utils/imageFrame';
 
 const STATUS_META = {
     live: { label: 'Vigente', color: '#10b981' },
@@ -199,6 +201,7 @@ export default function PromotionsTab({ businesses = [] }) {
     const [editingPromo, setEditingPromo] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [framingPromo, setFramingPromo] = useState(false);
     const fileInputRef = useRef(null);
 
     const [form, setForm] = useState({
@@ -449,6 +452,8 @@ export default function PromotionsTab({ businesses = [] }) {
 
             if (data?.publicUrl) {
                 setForm(prev => ({ ...prev, image: data.publicUrl }));
+                // Business promos are cropped into the card; general campaigns are shown whole
+                if (form.business_id) setFramingPromo(true);
                 showToast('✅ Imagen cargada a Supabase Store con éxito', 'success');
             }
         } catch (err) {
@@ -1162,7 +1167,7 @@ export default function PromotionsTab({ businesses = [] }) {
                                                 <img
                                                     src={form.image}
                                                     alt={`Vista previa en ${preview.label.toLowerCase()}`}
-                                                    style={{ position: 'relative', width: '100%', height: '100%', objectFit: form.business_id ? 'cover' : 'contain', display: 'block' }}
+                                                    style={{ position: 'relative', width: '100%', height: '100%', objectFit: form.business_id ? 'cover' : 'contain', display: 'block', ...(form.business_id ? frameStyleFor(form.image) : {}) }}
                                                     onError={(e) => { e.target.style.display = 'none'; }}
                                                 />
                                             </div>
@@ -1170,6 +1175,19 @@ export default function PromotionsTab({ businesses = [] }) {
                                     ))}
                                 </div>
                             )}
+                            {form.image && form.business_id && (
+                                <button type="button" onClick={() => setFramingPromo(true)} style={{ marginTop: '8px', background: 'transparent', color: 'var(--sa-text)', border: '1px solid var(--sa-border-strong)', borderRadius: '8px', padding: '7px 12px', fontSize: '12.5px', fontWeight: '700', cursor: 'pointer' }}>
+                                    ✂ Acomodar zoom y encuadre
+                                </button>
+                            )}
+                            <ImageFrameEditor
+                                open={framingPromo && !!form.image}
+                                image={form.image}
+                                aspects={FRAME_ASPECTS.promo}
+                                title="Acomodá la imagen de la promo"
+                                onSave={(url) => setForm(prev => ({ ...prev, image: url }))}
+                                onClose={() => setFramingPromo(false)}
+                            />
                         </div>
 
                         <div>

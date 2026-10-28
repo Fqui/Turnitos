@@ -1,5 +1,6 @@
 import { isProfileReady } from './profileChecklist.js';
 import { formatDuration } from './dateUtils.js';
+import { imageSrc } from './imageFrame.js';
 
 // SEO metadata shared by the browser (SEOHead) and the server (api/page.js),
 // so search engines get the same title, canonical and JSON-LD before and after
@@ -102,8 +103,9 @@ const TITLE_ACTIONS = {
     service: 'Reservá tu turno online'
 };
 
+// Photos can carry the owner's framing in the URL fragment; share previews get the plain file.
 export const businessImage = (business) =>
-    business?.banner_image || business?.banner_url || business?.logo || business?.logo_url || DEFAULT_IMAGE;
+    imageSrc(business?.banner_image || business?.banner_url || business?.logo || business?.logo_url) || DEFAULT_IMAGE;
 
 const DAY_NAMES = {
     monday: 'Monday', tuesday: 'Tuesday', wednesday: 'Wednesday', thursday: 'Thursday',
@@ -217,7 +219,7 @@ export function buildBusinessSeo(business, view = 'turnos') {
         return {
             title: `Tienda de ${name} | Comprá online en ${REGION}`,
             description: truncate(`Productos de ${name} en ${where}. Mirá precios y hacé tu pedido online.`),
-            image: parseMetadata(business.metadata).store_banners?.[0] || businessImage(business),
+            image: imageSrc(parseMetadata(business.metadata).store_banners?.[0]) || businessImage(business),
             canonical: businessUrl(business.slug, 'tienda'),
             robots: indexable && hasOnlineStore(business) ? 'index, follow, max-image-preview:large' : 'noindex, follow',
             schema: null
@@ -256,7 +258,7 @@ export function buildServicePreview(business, service) {
     return {
         title: `${service.name} · ${business.name}`,
         description: truncate(`${sentence(details)}${sentence(service.description)}Reservá tu turno online en ${business.name}.`),
-        image: service.image_url || businessImage(business)
+        image: imageSrc(service.image_url) || businessImage(business)
     };
 }
 
@@ -265,6 +267,6 @@ export function buildProductPreview(business, product) {
     return {
         title: `${product.name} · ${business.name}`,
         description: truncate(`${sentence(formatPrice(product.price))}${sentence(product.desc)}Pedilo en la tienda online de ${business.name}.`),
-        image: productImage || businessImage(business)
+        image: imageSrc(productImage) || businessImage(business)
     };
 }

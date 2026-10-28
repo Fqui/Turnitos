@@ -8,6 +8,8 @@ import SEOHead from '../components/SEOHead';
 import { SITE_URL, DEFAULT_TITLE, DEFAULT_DESCRIPTION } from '../utils/seo';
 import { generateSlug } from '../utils/utils';
 import { isProfileReady } from '../utils/profileChecklist';
+import { frameStyleFor } from '../utils/imageFrame';
+import { getCoverImage } from '../utils/imageUtils';
 
 // Orden por reputación (rating + reseñas) en la home: apagado hasta definir el criterio
 const SORT_BY_REPUTATION = false;
@@ -658,7 +660,7 @@ export default function Home() {
                                                 <img
                                                     src={item.logo}
                                                     alt={item.title}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(item.logo) }}
                                                     onError={() => setFailedLogos(prev => new Set(prev).add(item.logo))}
                                                 />
                                             ) : (
@@ -1032,7 +1034,7 @@ export default function Home() {
                                                         src={business.banner_image || business.image}
                                                         alt={business.name}
                                                         loading="lazy"
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(getCoverImage(business)) }}
                                                     />
                                                 </div>
                                                 <div style={{ padding: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -1050,7 +1052,7 @@ export default function Home() {
                                                             <img
                                                                 src={business.logo}
                                                                 alt={`${business.name} logo`}
-                                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(business.logo) }}
                                                             />
                                                         </div>
                                                     )}

@@ -13,6 +13,8 @@ import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerMod
 import { isStoreAvailable } from '../utils/storeUtils';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
 import PageLoader from '../components/common/PageLoader';
+import { frameStyleFor } from '../utils/imageFrame';
+import FramedImage from '../components/common/FramedImage';
 
 // Fix for default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -309,7 +311,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                 <img
                     src={bannerUrl}
                     alt={business.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(bannerUrl) }}
                 />
                 <div className="linkbio-banner-overlay" />
             </div>
@@ -371,11 +373,7 @@ const LinkBio = ({ overrideSlug = null }) => {
                         alignItems: 'center',
                         justifyContent: 'center'
                     }}>
-                        <img
-                            src={business.logo || business.image}
-                            alt={business.name}
-                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-                        />
+                        <FramedImage src={business.logo || business.image} alt={business.name} style={{ borderRadius: '50%' }} />
                     </div>
                 </div>
                 <h1 className="linkbio-name" style={{ fontSize: nameFontSize, fontWeight: '800', marginBottom: '2px', color: 'var(--text-primary)' }}>

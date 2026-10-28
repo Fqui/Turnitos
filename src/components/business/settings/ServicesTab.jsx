@@ -7,6 +7,7 @@ import { getServiceImages } from '../../../utils/serviceImages';
 import serviceAdapter from '../../../services/serviceAdapter';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 import { formatDuration } from '../../../utils/dateUtils';
+import { frameStyleFor } from '../../../utils/imageFrame';
 
 export default function ServicesTab({
     formData,
@@ -442,7 +443,7 @@ export default function ServicesTab({
                                             flexShrink: 0
                                         }}>
                                             {spec.avatar_url ? (
-                                                <img src={spec.avatar_url} alt={spec.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <img src={spec.avatar_url} alt={spec.name} style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(spec.avatar_url) }} />
                                             ) : (
                                                 <span style={{ fontSize: '14px' }}>👤</span>
                                             )}
@@ -530,7 +531,7 @@ export default function ServicesTab({
                                         position: 'relative'
                                     }}>
                                         {photos.length > 0 ? (
-                                            <img src={photos[0]} alt={service.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            <img src={photos[0]} alt={service.name} style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(photos[0]) }} />
                                         ) : (
                                             <span style={{ fontSize: '28px' }}>💆‍♀️</span>
                                         )}

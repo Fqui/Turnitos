@@ -1,5 +1,6 @@
 import React from 'react';
 import ProfileHighlightsBar from '../../profile/ProfileHighlightsBar';
+import { frameStyleFor } from '../../../utils/imageFrame';
 
 export default function VenueGallerySection({
     galleryImages,
@@ -68,7 +69,7 @@ export default function VenueGallerySection({
                         <img
                             src={storyCover}
                             alt="Historias"
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(storyCover), borderRadius: '50%', display: 'block' }}
                         />
                     )}
                 </div>
@@ -147,7 +148,7 @@ export default function VenueGallerySection({
                     <img
                         src={galleryImages[0].url}
                         alt={galleryImages[0].caption || 'Imagen principal'}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(galleryImages[0].url) }}
                     />
                 </div>
 
@@ -185,7 +186,7 @@ export default function VenueGallerySection({
                                         <img
                                             src={img.url}
                                             alt={img.caption || `Imagen ${actualIndex + 1}`}
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(img.url) }}
                                         />
                                         {showRemaining && (
                                             <div style={{

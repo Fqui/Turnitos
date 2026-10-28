@@ -5,6 +5,7 @@ import { doesPromoApplyToService, calculatePromoDiscount, parsePromotionTarget }
 import HorizontalScroller from './HorizontalScroller';
 import ShareButton from './common/ShareButton';
 import ServicePhotoCarousel from './ServicePhotoCarousel';
+import FramedImage from './common/FramedImage';
 import { getServiceImages } from '../utils/serviceImages';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { formatDuration } from '../utils/dateUtils';
@@ -175,16 +176,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                     border: '1px solid var(--border)'
                                 }}>
                                     {photos.length > 0 ? (
-                                        <img
-                                            src={photos[0]}
-                                            alt={service.name}
-                                            style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover',
-                                                objectPosition: 'center'
-                                            }}
-                                        />
+                                        <FramedImage src={photos[0]} alt={service.name} />
                                     ) : (
                                         <div style={{
                                             width: '100%',
@@ -446,16 +438,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 {detailPhotos.length > 1 ? (
                                     <ServicePhotoCarousel images={detailPhotos} alt={detailService.name} color={color} />
                                 ) : detailPhotos.length === 1 ? (
-                                    <img
-                                        src={detailPhotos[0]}
-                                        alt={detailService.name}
-                                        style={{
-                                            width: '100%',
-                                            height: '100%',
-                                            objectFit: 'cover',
-                                            objectPosition: 'center'
-                                        }}
-                                    />
+                                    <FramedImage src={detailPhotos[0]} alt={detailService.name} />
                                 ) : (
                                     <div style={{
                                         width: '100%',
