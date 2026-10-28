@@ -6,6 +6,17 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    // iPhone/iPad: Safari agranda la página al tocar un campo y no vuelve. Con maximum-scale=1
+    // deja de hacer ese zoom automático, pero se puede seguir haciendo zoom con los dedos.
+    (function () {
+      var ua = navigator.userAgent;
+      var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (!isIOS) return;
+      var vp = document.querySelector('meta[name="viewport"]');
+      if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1');
+    })();
+  </script>
   <meta name="theme-color" content="#00E676" />
 
   <!-- Business pages and static pages get this block replaced on the server (api/page.js) -->
