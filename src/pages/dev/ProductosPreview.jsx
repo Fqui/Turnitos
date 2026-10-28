@@ -9,24 +9,26 @@ import ProductMediaEditor from '../../components/business/settings/ProductMediaE
 const BRAND = '#E11D74';
 
 const photo = (id) => `https://images.unsplash.com/${id}?w=900&q=80`;
+// Fotos y video del negocio de simulación Espléndidas
+const SIM = 'https://pjtakqbegttsazhkcsmv.supabase.co/storage/v1/object/public/business-images/simulacion';
 const SAMPLE_VIDEO = {
-    src: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+    src: `${SIM}/nazajt-nails/ellas12.mp4`,
     name: 'video-producto.mp4',
-    sizeMb: 1.1
+    sizeMb: 0.5
 };
 
 const PRODUCTS = [
     {
         id: 'p1',
-        name: 'Kit esmaltado semipermanente',
-        category: 'Uñas',
-        price: 18500,
-        desc: 'Incluye base, top coat y 3 colores de temporada. Dura hasta 3 semanas.',
+        name: 'Kit de cuidado de uñas',
+        category: 'Cuidado',
+        price: 12000,
+        desc: 'Aceite, lima, buffer y crema de manos.',
         images: [
-            photo('photo-1604654894610-df63bc536371'),
-            photo('photo-1610992015732-2449b76344bc'),
-            photo('photo-1632345031435-8727f6897d53'),
-            photo('photo-1607779097040-26e80aa78e66')
+            `${SIM}/soft-nails/kit-v2.jpg`,
+            `${SIM}/soft-nails/aceite-v2.jpg`,
+            `${SIM}/soft-nails/lima-v2.jpg`,
+            photo('photo-1604654894610-df63bc536371')
         ],
         video: SAMPLE_VIDEO
     },
@@ -294,7 +296,7 @@ export default function ProductosPreview() {
                     {pair(<PanelBefore product={PRODUCTS[0]} />, <PanelAfter product={PRODUCTS[0]} />)}
                 </div>
 
-                <p style={note}>Vista previa: no guarda nada (subir archivos sí usaría el almacenamiento real). Fotos de Unsplash y video de muestra CC0 (MDN).</p>
+                <p style={note}>Vista previa: no guarda nada (subir archivos sí usaría el almacenamiento real). Fotos y video del negocio de simulación Espléndidas y de Unsplash.</p>
             </div>
         </div>
     );
