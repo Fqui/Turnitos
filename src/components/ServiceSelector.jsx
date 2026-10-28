@@ -294,8 +294,8 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
                                 </p>
                             </div>
 
-                            {/* Price and Duration Row */}
-                            <div style={{
+                            {/* Price and Duration Row (translate="no": el traductor de Chrome pasa "$20.000" a "20.000 $") */}
+                            <div translate="no" style={{
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
@@ -517,7 +517,7 @@ export default function ServiceSelector({ services, selected, onSelect, color = 
 
                                         <div style={{ width: '1px', height: '28px', backgroundColor: 'var(--border)' }} />
 
-                                        <div style={{ flex: 1, textAlign: 'right' }}>
+                                        <div translate="no" style={{ flex: 1, textAlign: 'right' }}>
                                             <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', fontWeight: '600' }}>Valor</span>
                                             {(() => {
                                                 const dPromoApplies = doesPromoApplyToService(activePromotion, detailService);
