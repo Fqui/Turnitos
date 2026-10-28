@@ -26,7 +26,8 @@ export default function ProfileHighlightsBar({
             id="galeria"
             style={noBorder ? { marginTop: 0, paddingTop: 0, borderTop: 'none' } : {}}
         >
-            <HorizontalScroller arrows={false} innerClassName="highlights-container">
+            {/* arrowTop: vertical center of the 84px circles (4px top padding + 42px) */}
+            <HorizontalScroller arrows={false} mouseControls arrowTop="46px" innerClassName="highlights-container">
                 {leading}
                 {(permanentHighlights || []).map((highlight, index) => (
                     <div

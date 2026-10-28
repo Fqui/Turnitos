@@ -759,6 +759,8 @@ textarea {
 @media (min-width: 769px) {
   .highlights-container {
     justify-content: center !important;
+    /* safe: si desborda, arranca desde la izquierda en vez de cortar la primera */
+    justify-content: safe center !important;
   }
 }
 
@@ -1009,6 +1011,7 @@ textarea {
 
 .profile-highlights-and-store .highlights-container {
   justify-content: center !important;
+  justify-content: safe center !important;
   padding: 4px 2px 8px !important;
   gap: 20px !important;
   scroll-behavior: smooth;
@@ -1475,6 +1478,7 @@ textarea {
   .highlights-container {
     gap: 28px !important;
     justify-content: center !important;
+    justify-content: safe center !important;
     padding: 0 !important;
   }
 }
