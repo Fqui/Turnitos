@@ -20,7 +20,7 @@ BEGIN
         (v_category_belleza_id, 'Estética', 'estetica', 1),
         (v_category_belleza_id, 'Peluquería', 'peluqueria', 2),
         (v_category_belleza_id, 'Spa', 'spa', 3),
-        (v_category_belleza_id, 'Manicura', 'manicura', 4)
+        (v_category_belleza_id, 'Salón de Uñas', 'salon-de-unas', 4)
     ON CONFLICT (category_id, slug) DO NOTHING;
     
     RAISE NOTICE '✅ Subcategorías de Belleza creadas/verificadas';

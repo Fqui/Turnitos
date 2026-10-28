@@ -20,7 +20,7 @@ BEGIN
     SELECT id INTO v_subcat_estetica_id FROM subcategories WHERE slug = 'estetica' AND category_id = v_category_belleza_id;
     SELECT id INTO v_subcat_peluqueria_id FROM subcategories WHERE slug = 'peluqueria' AND category_id = v_category_belleza_id;
     SELECT id INTO v_subcat_spa_id FROM subcategories WHERE slug = 'spa' AND category_id = v_category_belleza_id;
-    SELECT id INTO v_subcat_manicura_id FROM subcategories WHERE slug = 'manicura' AND category_id = v_category_belleza_id;
+    SELECT id INTO v_subcat_manicura_id FROM subcategories WHERE slug = 'salon-de-unas' AND category_id = v_category_belleza_id;
     SELECT id INTO v_plan_duo_id FROM subscription_plans WHERE name = 'Dúo' AND business_type = 'service';
     SELECT id INTO v_plan_trio_id FROM subscription_plans WHERE name = 'Trío' AND business_type = 'service';
     SELECT id INTO v_plan_equipo_id FROM subscription_plans WHERE name = 'Equipo' AND business_type = 'service';

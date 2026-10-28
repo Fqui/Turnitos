@@ -6,7 +6,7 @@ Esta carpeta contiene todos los scripts SQL para sembrar datos de prueba en la b
 
 ### Categoría: BELLEZA
 
-1. **01_belleza_subcategories.sql** - Crear subcategorías (Estética, Peluquería, Spa, Manicura)
+1. **01_belleza_subcategories.sql** - Crear subcategorías (Estética, Peluquería, Spa, Salón de Uñas)
 2. **02_belleza_businesses.sql** - Crear 8 negocios con servicios y especialistas
 
 ## Contenido del Sembrado
@@ -15,7 +15,7 @@ Esta carpeta contiene todos los scripts SQL para sembrar datos de prueba en la b
 - **Estética** (2): Estética Integral, Belleza Natural
 - **Peluquería** (2): Peluquería Estilo, Salón Glamour
 - **Spa** (2): Spa Relax, Spa Zen
-- **Manicura** (2): Nails Art Studio, Beauty Nails
+- **Salón de Uñas** (2): Nails Art Studio, Beauty Nails
 
 **Total:**
 - 8 negocios
