@@ -7,6 +7,7 @@ import { buildWhatsAppUrl } from '../utils/whatsapp';
 import { Info, ShoppingCart, Check } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import HomeVisitSection from './booking/HomeVisitSection';
+import TransferDetails from './booking/TransferDetails';
 import { getLocationMode, getHomeRings, findRing, formatKm } from '../utils/homeService';
 import { frameStyleFor } from '../utils/imageFrame';
 
@@ -1209,125 +1210,12 @@ function BookingSummaryContent({ bookingDetails, sportColor, onClose, onConfirm,
                                 {!payAtVenue && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
                                     {hasBankDetails ? (
-                                        <div style={{
-                                            backgroundColor: 'var(--bg-card)',
-                                            borderRadius: '16px',
-                                            padding: '16px',
-                                            border: '1px solid var(--border)',
-                                            marginBottom: '16px'
-                                        }}>
-                                            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--text-primary)' }}>
-                                                Datos para la transferencia
-                                            </h4>
-
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                                                <div>
-                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '4px', color: 'var(--text-secondary)' }}>
-                                                        Banco
-                                                    </label>
-                                                    <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>
-                                                        {bankDetails.banco || '-'}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '4px', color: 'var(--text-secondary)' }}>
-                                                        Titular
-                                                    </label>
-                                                    <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>
-                                                        {bankDetails.titular || '-'}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Alias */}
-                                            {bankDetails.alias && (
-                                                <div style={{ marginBottom: '12px' }}>
-                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
-                                                        Alias
-                                                    </label>
-                                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                                        <div style={{
-                                                            flex: 1,
-                                                            padding: '12px 16px',
-                                                            borderRadius: '12px',
-                                                            backgroundColor: 'var(--bg-main)',
-                                                            border: '1px solid var(--border)',
-                                                            fontSize: '16px',
-                                                            fontWeight: '600',
-                                                            color: 'var(--text-primary)',
-                                                            fontFamily: 'monospace',
-                                                            letterSpacing: '0.5px',
-                                                            minWidth: 0,
-                                                            overflowWrap: 'anywhere'
-                                                        }}>
-                                                            {bankDetails.alias}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => copyToClipboard(bankDetails.alias, 'alias')}
-                                                            style={{
-                                                                padding: '10px 12px',
-                                                                borderRadius: '10px',
-                                                                border: '1px solid var(--border)',
-                                                                backgroundColor: copiedField === 'alias' ? `${sportColor}15` : 'var(--bg-card)',
-                                                                color: copiedField === 'alias' ? sportColor : 'var(--text-primary)',
-                                                                fontSize: '13px',
-                                                                fontWeight: '600',
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s',
-                                                                minWidth: '80px',
-                                                                flexShrink: 0
-                                                            }}
-                                                        >
-                                                            {copiedField === 'alias' ? '✓ Copiado' : 'Copiar'}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* CBU */}
-                                            {bankDetails.cbu && (
-                                                <div>
-                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: 'var(--text-secondary)' }}>
-                                                        CBU
-                                                    </label>
-                                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                                        <div style={{
-                                                            flex: 1,
-                                                            padding: '12px 16px',
-                                                            borderRadius: '12px',
-                                                            backgroundColor: 'var(--bg-main)',
-                                                            border: '1px solid var(--border)',
-                                                            fontSize: '16px',
-                                                            fontWeight: '600',
-                                                            color: 'var(--text-primary)',
-                                                            fontFamily: 'monospace',
-                                                            minWidth: 0,
-                                                            overflowWrap: 'anywhere'
-                                                        }}>
-                                                            {bankDetails.cbu}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => copyToClipboard(bankDetails.cbu, 'cbu')}
-                                                            style={{
-                                                                padding: '10px 12px',
-                                                                borderRadius: '10px',
-                                                                border: '1px solid var(--border)',
-                                                                backgroundColor: copiedField === 'cbu' ? `${sportColor}15` : 'var(--bg-card)',
-                                                                color: copiedField === 'cbu' ? sportColor : 'var(--text-primary)',
-                                                                fontSize: '13px',
-                                                                fontWeight: '600',
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s',
-                                                                minWidth: '80px',
-                                                                flexShrink: 0
-                                                            }}
-                                                        >
-                                                            {copiedField === 'cbu' ? '✓ Copiado' : 'Copiar'}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                        <TransferDetails
+                                            bankDetails={bankDetails}
+                                            copiedField={copiedField}
+                                            onCopy={copyToClipboard}
+                                            accentColor={sportColor}
+                                        />
                                     ) : (
                                         <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '14px', border: '1px dashed var(--border)', borderRadius: '12px', marginBottom: '16px' }}>
                                             No se han configurado datos bancarios para este negocio.
