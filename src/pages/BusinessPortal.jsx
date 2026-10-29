@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import supabaseService from '../services/supabaseService';
 import serviceAdapter from '../services/serviceAdapter';
 import analyticsService from '../services/analyticsService';
@@ -26,7 +26,7 @@ import PortalListView from '../components/business/portal/PortalListView';
 import PortalListMobile from '../components/business/portal/mobile/PortalListMobile';
 import PhoneAlertsStrip from '../components/business/portal/mobile/PhoneAlertsStrip';
 import { PHONE_MAX_WIDTH, needsAction, bookingDateKey, todayKey } from '../components/business/portal/mobile/bookingMobileUtils';
-import { Plus } from 'lucide-react';
+import { Plus, CalendarCheck } from 'lucide-react';
 import '../styles/portalMobile.css';
 import PortalNewBookingAlert from '../components/business/portal/PortalNewBookingAlert';
 import PortalBillingBanner from '../components/business/portal/PortalBillingBanner';
@@ -37,6 +37,8 @@ import SportCanteenCashPanel from '../components/business/canteen/SportCanteenCa
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuthStore, useBookingsStore, usePortalUIStore } from '../stores';
 import FramedImage from '../components/common/FramedImage';
+
+const ShareAgendaSheet = lazy(() => import('../components/business/portal/ShareAgendaSheet'));
 
 export default function BusinessPortal() {
     const { showToast } = useNotification();
@@ -82,6 +84,9 @@ export default function BusinessPortal() {
         closeBlockModal,
         pendingBlockData
     } = usePortalUIStore();
+
+    // "Compartir agenda": story with the free times of the next days
+    const [showShareAgenda, setShowShareAgenda] = useState(false);
 
     // Settings tab to open from the "Completá tu perfil" card; cleared when leaving settings
     const [settingsTab, setSettingsTab] = useState(null);
@@ -1093,7 +1098,7 @@ export default function BusinessPortal() {
                     zIndex: 100,
                     boxShadow: 'var(--shadow-sm)'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                         {(currentBusiness?.logo || currentBusiness?.image) && (
                             <FramedImage
                                 src={currentBusiness.logo || currentBusiness.image}
@@ -1101,10 +1106,35 @@ export default function BusinessPortal() {
                                 style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--border)', flexShrink: 0 }}
                             />
                         )}
-                        <h1 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                        <h1 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {currentBusiness?.name || 'Portal Socios'}
                         </h1>
                     </div>
+                    {currentBusiness && (
+                        <button
+                            type="button"
+                            onClick={() => setShowShareAgenda(true)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                flexShrink: 0,
+                                marginLeft: '10px',
+                                padding: '8px 12px',
+                                borderRadius: '12px',
+                                border: '1px solid var(--border)',
+                                background: 'var(--bg-input)',
+                                color: 'var(--text-primary)',
+                                fontFamily: 'inherit',
+                                fontSize: '13px',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <CalendarCheck size={16} strokeWidth={2.4} aria-hidden="true" />
+                            Compartir agenda
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -1120,6 +1150,7 @@ export default function BusinessPortal() {
                 currentBusiness={currentBusiness}
                 pendingCount={bookings.filter(b => b.status === 'pending').length}
                 onCreateBooking={(e) => handleCreateBooking(e)}
+                onShareAgenda={!isMobile && currentBusiness ? () => setShowShareAgenda(true) : null}
                 onLogout={async () => {
                     // Unlink this device while the session can still delete its row; the browser
                     // keeps its subscription so the next login re-links it without asking again
@@ -1404,6 +1435,12 @@ export default function BusinessPortal() {
                     </div>
                 )}
             </div>
+
+            {showShareAgenda && currentBusiness && (
+                <Suspense fallback={null}>
+                    <ShareAgendaSheet business={currentBusiness} onClose={() => setShowShareAgenda(false)} />
+                </Suspense>
+            )}
 
             {showFab && (
                 <button type="button" className="pm-fab" onClick={(e) => handleCreateBooking(e)}>

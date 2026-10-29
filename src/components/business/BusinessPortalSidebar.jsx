@@ -5,6 +5,7 @@ import { isSportBusiness } from '../../utils/businessUtils';
 import { BOTTOM_NAV_HEIGHT } from './BusinessPortalBottomNav';
 import PhoneMoreMenu from './portal/mobile/PhoneMoreMenu';
 import FramedImage from '../common/FramedImage';
+import { CalendarCheck } from 'lucide-react';
 
 const BusinessPortalSidebar = ({
     isVisible,
@@ -18,6 +19,7 @@ const BusinessPortalSidebar = ({
     toggleTheme,
     onLogout,
     onCreateBooking,
+    onShareAgenda,
     pendingCount = 0
 }) => {
     const { showToast, showAlert, showConfirm } = useNotification();
@@ -318,6 +320,39 @@ const BusinessPortalSidebar = ({
                     >
                         <span style={{ fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>＋</span>
                         {isVisible && <span>Nueva Reserva</span>}
+                    </button>
+                </div>
+            )}
+
+            {/* Share Agenda Button: story with the free times */}
+            {onShareAgenda && (
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: isVisible ? '-6px' : '0', marginBottom: isVisible ? '16px' : '8px' }}>
+                    <button
+                        type="button"
+                        onClick={onShareAgenda}
+                        title={!isVisible ? 'Compartir agenda' : ''}
+                        aria-label="Compartir agenda"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            padding: isVisible ? '10px 16px' : '0',
+                            width: isVisible ? '100%' : '38px',
+                            height: isVisible ? '42px' : '38px',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-input)',
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '13px',
+                            fontFamily: 'inherit',
+                            flexShrink: 0
+                        }}
+                    >
+                        <CalendarCheck size={17} strokeWidth={2.3} aria-hidden="true" />
+                        {isVisible && <span>Compartir agenda</span>}
                     </button>
                 </div>
             )}

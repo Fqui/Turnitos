@@ -33,6 +33,7 @@ import ProfileSpecialistSelector from '../components/profile/ProfileSpecialistSe
 import ProfileInfoSection from '../components/profile/ProfileInfoSection';
 import ProfileSportSelector from '../components/profile/ProfileSportSelector';
 import { groupCourtsBySport, normalizeSport } from '../utils/sports';
+import { getDayHours, getSlotInterval } from '../utils/availableSlots';
 
 // Fix for default marker icon in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -123,105 +124,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
     // The button itself is sticky, so scrolling to it never moves the page.
     const confirmAnchorRef = useRef(null);
 
-    // Helper to parse business hours
-    const getBusinessHours = (date) => {
-        let hours = business?.hours;
-        const defaultHours = { open: '08:00', close: '20:00' };
-
-        if (!hours) return defaultHours;
-
-        if (typeof hours === 'string') {
-            try {
-                if (hours.trim().startsWith('{') || hours.trim().startsWith('[')) {
-                    hours = JSON.parse(hours);
-                }
-            } catch (e) {}
-        }
-
-        if (typeof hours === 'string') {
-            const matches = hours.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
-            if (matches) {
-                return { open: matches[1], close: matches[2] };
-            }
-            return defaultHours;
-        }
-
-        // Check special_days override
-        const specialDays = business?.special_days || [];
-        if (specialDays.length > 0 && date) {
-            const dateObj = date instanceof Date
-                ? date
-                : new Date(typeof date === 'string' && !date.includes('T') ? `${date}T00:00:00` : date);
-            const year = dateObj.getFullYear();
-            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            const dateStr = `${year}-${month}-${day}`;
-
-            const matchedSpecialDay = specialDays.find(sd => sd.date === dateStr);
-            if (matchedSpecialDay) {
-                if (matchedSpecialDay.type === 'closed' || matchedSpecialDay.type === 'holiday') {
-                    return { open: '00:00', close: '00:00', isClosed: true };
-                }
-                if (matchedSpecialDay.type === 'special_hours' && matchedSpecialDay.open && matchedSpecialDay.close) {
-                    return { open: matchedSpecialDay.open, close: matchedSpecialDay.close };
-                }
-            }
-        }
-
-        if (!date) return defaultHours;
-
-        const daysEn = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const daysEs = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
-        const daysEsAccents = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-
-        const dateObj = date instanceof Date
-            ? date
-            : new Date(typeof date === 'string' && !date.includes('T') ? `${date}T00:00:00` : date);
-
-        const dayIndex = dateObj.getDay();
-        const dayNameEn = daysEn[dayIndex];
-        const dayNameEs = daysEs[dayIndex];
-        const dayNameEsAcc = daysEsAccents[dayIndex];
-
-        let schedule = null;
-        if (typeof hours === 'object' && hours !== null) {
-            schedule = hours[dayNameEn] ||
-                       hours[dayNameEs] ||
-                       hours[dayNameEsAcc] ||
-                       hours[dayNameEn.toUpperCase()] ||
-                       hours[dayNameEs.toUpperCase()] ||
-                       hours[dayIndex];
-        }
-
-        if (!schedule) {
-            return defaultHours;
-        }
-
-        if (schedule.isOpen === false) {
-            return { open: '00:00', close: '00:00', isClosed: true };
-        }
-
-        if (schedule.isSplit) {
-            const o1 = schedule.open || '08:00';
-            const c1 = schedule.breakStart || '13:00';
-            const o2 = schedule.breakEnd || '16:00';
-            const c2 = schedule.close || '20:00';
-            return {
-                open: o1,
-                close: c2,
-                ranges: [
-                    { open: o1, close: c1 },
-                    { open: o2, close: c2 }
-                ]
-            };
-        }
-
-        return {
-            open: schedule.open || '08:00',
-            close: schedule.close || '20:00',
-            ranges: (Array.isArray(schedule.ranges) && schedule.ranges.length > 0) ? schedule.ranges : undefined
-        };
-    };
+    // Hours of a date (special days and weekly schedule), shared with the "Agenda abierta" story
+    const getBusinessHours = (date) => getDayHours(business, date);
 
     // Is the business open right now? null when it has no schedule loaded
     const getOpenNowStatus = () => {
@@ -1078,33 +982,12 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                     const businessHours = getBusinessHours(selectedDate);
                                     const { open, close, ranges } = businessHours;
 
-                                    let hoursObj = business.hours;
-                                    if (typeof hoursObj === 'string') {
-                                        try {
-                                            hoursObj = JSON.parse(hoursObj);
-                                        } catch (e) {
-                                            hoursObj = {};
-                                        }
-                                    }
-
-                                    let defaultInterval = 60;
-                                    if (business.type === 'service') {
-                                        defaultInterval = 30;
-                                    } else if (business.type === 'sport') {
-                                        const sportName = isMixedSports
+                                    const interval = getSlotInterval(
+                                        business,
+                                        isMixedSports
                                             ? activeSport
-                                            : (typeof selectedItem === 'string'
-                                                ? selectedItem.toLowerCase()
-                                                : (business.category || '').toLowerCase());
-
-                                        if (sportName.includes('padel') || sportName.includes('paddle')) {
-                                            defaultInterval = 30;
-                                        }
-                                    }
-
-                                    const interval = (hoursObj?.interval && hoursObj.interval > 0)
-                                        ? hoursObj.interval
-                                        : defaultInterval;
+                                            : (typeof selectedItem === 'string' ? selectedItem : (business.category || ''))
+                                    );
 
                                     const isClosed = open === '00:00' && close === '00:00';
 
