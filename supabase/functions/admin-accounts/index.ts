@@ -1,10 +1,14 @@
-// admin-accounts: crea cuentas de negocio y restablece contraseñas desde el servidor,
+// admin-accounts: crea cuentas de negocio y demos, y restablece contraseñas desde el servidor,
 // sin cambiar la sesión de quien lo pide. Solo superadmins o el vendedor del negocio.
 //
 // POST { action: 'create_account', email, password }           -> { user_id }
 // POST { action: 'create_business', business: {...} }          -> { business, credentials }
 // POST { action: 'reset_password', business_id }              -> { email, tempPassword }
-import { createClient } from 'npm:@supabase/supabase-js@2';
+// POST multipart { payload: '{"action":"create_demo","negocio":{...}}', 'archivo:<clave>': File }
+//                                                               -> { business, credentials }
+// POST { action: 'delete_demo', business_id }                  -> { deleted }
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import { normalize } from '../mcp/normalize.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -63,6 +67,33 @@ const RESERVED_SLUGS = new Set([
     'terminos', 'privacidad', 'calificar', 'review', 'api', 'assets'
 ]);
 
+const BUCKET = 'business-images';
+const MAX_DEMO_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_DEMO_FILES = 40;
+const FILE_REF = /^archivo:([a-z0-9_-]{1,40})$/;
+
+// Only the image formats the browser can produce after resizing
+function imageType(bytes: Uint8Array): { type: string; ext: string } | null {
+    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return { type: 'image/jpeg', ext: 'jpg' };
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return { type: 'image/png', ext: 'png' };
+    const ascii = String.fromCharCode(...bytes.slice(0, 12));
+    if (ascii.startsWith('RIFF') && ascii.slice(8, 12) === 'WEBP') return { type: 'image/webp', ext: 'webp' };
+    return null;
+}
+
+async function removeDemoFiles(admin: SupabaseClient, slug: string) {
+    const storage = admin.storage.from(BUCKET);
+    const prefix = `simulacion/${slug}`;
+    for (let round = 0; round < 20; round++) {
+        const { data: files, error } = await storage.list(prefix, { limit: 100 });
+        if (error || !files?.length) break;
+        const paths = files.filter(f => f.id).map(f => `${prefix}/${f.name}`);
+        if (!paths.length) break;
+        const { error: removeError } = await storage.remove(paths);
+        if (removeError) break;
+    }
+}
+
 function randomSuffix(): string {
     return crypto.getRandomValues(new Uint32Array(1))[0].toString(36).substring(0, 4);
 }
@@ -98,9 +129,16 @@ Deno.serve(async (req) => {
 
     if (!superAdmin && !seller) return json({ error: 'No autorizado' }, 403);
 
+    // create_demo comes as multipart (the photos travel with it); the rest as JSON
     let body: Record<string, unknown>;
+    let form: FormData | null = null;
     try {
-        body = await req.json();
+        if ((req.headers.get('Content-Type') ?? '').includes('multipart/form-data')) {
+            form = await req.formData();
+            body = JSON.parse(String(form.get('payload') ?? '{}'));
+        } else {
+            body = await req.json();
+        }
     } catch {
         return json({ error: 'Cuerpo inválido' }, 400);
     }
@@ -226,6 +264,105 @@ Deno.serve(async (req) => {
         if (updateError) return json({ error: updateError.message }, 400);
 
         return json({ email: business.email, tempPassword, businessName: business.name });
+    }
+
+    if (body.action === 'create_demo') {
+        const raw = body.negocio as Record<string, unknown> | undefined;
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return json({ error: 'Faltan los datos del negocio' }, 400);
+
+        // Photos go up after the business exists (their folder is the slug), so set them aside.
+        // The demo is always a simulation in trial with a 30 % deposit; a seller can only make their own
+        const { logo, portada, galeria, destacados, email: _email, estado: _estado, vendedor_id: requestedSeller, ...rest } = raw;
+        const sellerId = seller ? seller.id : (requestedSeller ? String(requestedSeller) : null);
+        const { business: data, errors } = normalize({ ...rest, simulacion: true, estado: 'trial', sena: 30, vendedor_id: sellerId });
+        if (errors.length) return json({ error: `Revisá estos datos: ${errors.join('; ')}` }, 400);
+
+        const files = new Map<string, File>();
+        for (const [key, value] of form?.entries() ?? []) {
+            const m = FILE_REF.exec(key);
+            if (m && value instanceof File) files.set(m[1], value);
+        }
+        if (files.size > MAX_DEMO_FILES) return json({ error: `Elegí hasta ${MAX_DEMO_FILES} fotos` }, 400);
+        for (const file of files.values()) {
+            if (file.size > MAX_DEMO_FILE_BYTES) return json({ error: 'Alguna foto pasa los 8 MB' }, 400);
+        }
+
+        const { data: created, error: seedError } = await admin.rpc('admin_seed_business', { p_data: data });
+        if (seedError) return json({ error: seedError.message }, 400);
+        const slug = String(created.slug);
+
+        try {
+            const storage = admin.storage.from(BUCKET);
+            const urls = new Map<string, string>();
+            for (const [key, file] of files) {
+                const bytes = new Uint8Array(await file.arrayBuffer());
+                const kind = imageType(bytes);
+                if (!kind) throw new Error('Alguna foto no es jpg, png ni webp');
+                const path = `simulacion/${slug}/${key}.${kind.ext}`;
+                const { error } = await storage.upload(path, bytes, { contentType: kind.type, upsert: true, cacheControl: '3600' });
+                if (error) throw new Error(`No se pudo subir una foto: ${error.message}`);
+                urls.set(key, storage.getPublicUrl(path).data.publicUrl);
+            }
+            // "archivo:<clave>" -> its public URL, keeping the framing fragment (#tf=...) if it has one;
+            // anything else has to be an https URL already
+            const resolve = (value: unknown): string | null => {
+                const text = String(value ?? '');
+                const hashAt = text.indexOf('#');
+                const [ref, fragment] = hashAt === -1 ? [text, ''] : [text.slice(0, hashAt), text.slice(hashAt)];
+                const m = FILE_REF.exec(ref);
+                if (m) return urls.has(m[1]) ? urls.get(m[1]) + fragment : null;
+                return /^https:\/\//i.test(text) ? text : null;
+            };
+
+            const media: Record<string, unknown> = {};
+            if (resolve(logo)) media.logo = resolve(logo);
+            if (resolve(portada)) media.portada = resolve(portada);
+            if (Array.isArray(galeria)) {
+                media.galeria = galeria
+                    .map((g: Record<string, unknown>) => ({ ...g, url: resolve(g?.url) }))
+                    .filter(g => g.url);
+            }
+            if (Array.isArray(destacados)) {
+                media.destacados = destacados
+                    .map((h: Record<string, unknown>) => ({
+                        titulo: String(h?.titulo ?? '').trim() || 'Fotos',
+                        fotos: (Array.isArray(h?.fotos) ? h.fotos : []).map(resolve).filter(Boolean)
+                    }))
+                    .filter(h => h.fotos.length);
+            }
+            if (Object.keys(media).length) {
+                const { error } = await admin.rpc('admin_apply_business_profile', { p_business_id: created.id, p_data: media });
+                if (error) throw new Error(error.message);
+            }
+        } catch (err) {
+            // Leave nothing half-made: the demo goes away with its files
+            await admin.rpc('admin_delete_simulated_business', { p_slug: slug });
+            await removeDemoFiles(admin, slug);
+            return json({ error: err instanceof Error ? err.message : 'No se pudo cargar la demo' }, 400);
+        }
+
+        return json({
+            business: { id: created.id, name: created.nombre, slug, link: created.link, type: created.tipo },
+            credentials: { email: created.email, password: created.password }
+        });
+    }
+
+    if (body.action === 'delete_demo') {
+        const { data: business } = await admin
+            .from('businesses')
+            .select('id, slug, seller_id, metadata')
+            .eq('id', String(body.business_id ?? ''))
+            .maybeSingle();
+        if (!business) return json({ error: 'Negocio no encontrado' }, 404);
+
+        const allowed = Boolean(superAdmin) || (seller && business.seller_id === seller.id);
+        if (!allowed) return json({ error: 'No autorizado para este negocio' }, 403);
+        if (business.metadata?.simulacion !== true) return json({ error: 'Solo se pueden borrar las demos' }, 400);
+
+        const { error } = await admin.rpc('admin_delete_simulated_business', { p_slug: business.slug });
+        if (error) return json({ error: error.message }, 400);
+        await removeDemoFiles(admin, business.slug);
+        return json({ deleted: business.slug });
     }
 
     return json({ error: 'Acción desconocida' }, 400);

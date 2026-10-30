@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
+import DemoBadge from './DemoBadge';
 
 const SellerDashboard = () => {
     const [seller, setSeller] = useState(null);
@@ -82,9 +83,9 @@ const SellerDashboard = () => {
                         Bienvenido a tu panel de vendedor
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     <button
-                        onClick={() => navigate('/admin/businesses/new')}
+                        onClick={() => navigate('/admin/demo-instagram')}
                         style={{
                             padding: '12px 24px',
                             background: 'var(--primary-paddle)',
@@ -95,6 +96,21 @@ const SellerDashboard = () => {
                             cursor: 'pointer',
                             fontSize: '14px',
                             boxShadow: '0 4px 12px rgba(0, 230, 118, 0.3)'
+                        }}
+                    >
+                        📸 Demo desde Instagram
+                    </button>
+                    <button
+                        onClick={() => navigate('/admin/businesses/new')}
+                        style={{
+                            padding: '12px 24px',
+                            background: 'rgba(255,255,255,0.05)',
+                            color: 'white',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            fontSize: '14px'
                         }}
                     >
                         + Crear Negocio
@@ -158,6 +174,11 @@ const SellerDashboard = () => {
                 gap: '16px',
                 marginBottom: '32px'
             }}>
+                <QuickActionCard
+                    icon="📸"
+                    title="Demo desde Instagram"
+                    onClick={() => navigate('/admin/demo-instagram')}
+                />
                 <QuickActionCard
                     icon="📋"
                     title="Mis Negocios"
@@ -334,6 +355,7 @@ const BusinessRow = ({ business }) => {
                 </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                {business.metadata?.simulacion === true && <DemoBadge />}
                 {getStatusBadge(business.subscription_status)}
                 <div style={{ fontSize: '20px', opacity: 0.5 }}>→</div>
             </div>

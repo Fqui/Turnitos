@@ -135,6 +135,39 @@ export async function createBusinessWithAccount(businessData) {
 }
 
 /**
+ * Create a demo business (simulation, trial, 30 % deposit) for the calling seller.
+ * `negocio` uses the scripts/negocios format; photos are referenced as "archivo:<key>"
+ * in logo, portada, galeria[].url and destacados[].fotos, and `files` maps each key to a Blob.
+ * Returns { business: { id, name, slug, link, type }, credentials: { email, password } }.
+ */
+export async function createDemoBusiness(negocio, files = {}) {
+    const form = new FormData();
+    form.append('payload', JSON.stringify({ action: 'create_demo', negocio }));
+    Object.entries(files).forEach(([key, blob]) => form.append(`archivo:${key}`, blob, `${key}.jpg`));
+
+    const { data, error } = await supabase.functions.invoke('admin-accounts', { body: form });
+    if (error) {
+        const detail = await error.context?.json?.().catch(() => null);
+        throw new Error(detail?.error || 'No se pudo crear la demo');
+    }
+    return data;
+}
+
+/**
+ * Delete a demo business (only simulations; a seller only their own)
+ */
+export async function deleteDemoBusiness(businessId) {
+    const { data, error } = await supabase.functions.invoke('admin-accounts', {
+        body: { action: 'delete_demo', business_id: businessId }
+    });
+    if (error) {
+        const detail = await error.context?.json?.().catch(() => null);
+        throw new Error(detail?.error || 'No se pudo borrar la demo');
+    }
+    return data;
+}
+
+/**
  * Create business by seller (the server assigns it to the calling seller)
  */
 export async function createBusinessBySeller(businessData) {

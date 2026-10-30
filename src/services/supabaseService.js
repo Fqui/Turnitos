@@ -303,6 +303,14 @@ class SupabaseService {
         return sellerService.createBusinessBySeller(businessData);
     }
 
+    async createDemoBusiness(negocio, files) {
+        return sellerService.createDemoBusiness(negocio, files);
+    }
+
+    async deleteDemoBusiness(businessId) {
+        return sellerService.deleteDemoBusiness(businessId);
+    }
+
     async updateBusinessBySeller(sellerId, businessId, businessData) {
         // Same update as the SuperAdmin form (subcategories, plan and courts/professionals), after the ownership check
         return sellerService.updateBusinessBySeller(sellerId, businessId, businessData, (id, b) => this.updateBusinessAsSuperAdmin(id, b));

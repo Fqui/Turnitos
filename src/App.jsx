@@ -39,6 +39,7 @@ const ControlesPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/Co
 const ProductosPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/ProductosPreview')) : null;
 const EncuadrePreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/EncuadrePreview')) : null;
 const AgendaPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/AgendaPreview')) : null;
+const DemoInstagramPreview = import.meta.env.DEV ? lazy(() => import('./components/seller/SellerDemoInstagram')) : null;
 const BusinessProfile = lazyWithRetry(() => import('./pages/BusinessProfile'));
 const VenueProfile = lazyWithRetry(() => import('./pages/VenueProfile'));
 const BusinessProfileRouter = lazyWithRetry(() => import('./pages/BusinessProfileRouter'));
@@ -57,6 +58,7 @@ const SellerLogin = lazyWithRetry(() => import('./components/seller/SellerLogin'
 const SellerDashboard = lazyWithRetry(() => import('./components/seller/SellerDashboard'));
 const SellerBusinessList = lazyWithRetry(() => import('./components/seller/SellerBusinessList'));
 const SellerBusinessForm = lazyWithRetry(() => import('./components/seller/SellerBusinessForm'));
+const SellerDemoInstagram = lazyWithRetry(() => import('./components/seller/SellerDemoInstagram'));
 const SellerCommissionsReport = lazyWithRetry(() => import('./components/seller/SellerCommissionsReport'));
 const SuperAdminDashboard = lazyWithRetry(() => import('./components/seller/SuperAdminDashboard'));
 const ProtectedSellerRoute = lazyWithRetry(() => import('./components/seller/ProtectedSellerRoute'));
@@ -349,6 +351,7 @@ function AppContent() {
                 {import.meta.env.DEV && <Route path="/dev/productos" element={<Suspense fallback={<LoadingFallback />}><ProductosPreview /></Suspense>} />}
                 {import.meta.env.DEV && <Route path="/dev/encuadre" element={<Suspense fallback={<LoadingFallback />}><EncuadrePreview /></Suspense>} />}
                 {import.meta.env.DEV && <Route path="/dev/agenda" element={<Suspense fallback={<LoadingFallback />}><AgendaPreview /></Suspense>} />}
+                {import.meta.env.DEV && <Route path="/admin/dev/demo-instagram" element={<Suspense fallback={<LoadingFallback />}><DemoInstagramPreview /></Suspense>} />}
                 {/* /:businessSlug now goes directly to the reservation / booking page */}
                 {/* One route for both URLs so moving between them keeps the page mounted */}
                 <Route path="/:businessSlug/turnos?" element={<BusinessProfileRouter />} />
@@ -363,6 +366,7 @@ function AppContent() {
                 <Route path="/admin/businesses" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerBusinessList /></ProtectedSellerRoute></Suspense>} />
                 <Route path="/admin/businesses/new" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerBusinessForm /></ProtectedSellerRoute></Suspense>} />
                 <Route path="/admin/businesses/:id/edit" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerBusinessForm /></ProtectedSellerRoute></Suspense>} />
+                <Route path="/admin/demo-instagram" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerDemoInstagram /></ProtectedSellerRoute></Suspense>} />
                 <Route path="/admin/commissions" element={<Suspense fallback={<LoadingFallback />}><ProtectedSellerRoute><SellerCommissionsReport /></ProtectedSellerRoute></Suspense>} />
               </Routes>
             </Suspense>

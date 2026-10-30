@@ -3,16 +3,33 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 import RegisterPaymentModal from './RegisterPaymentModal';
+import DemoBadge from './DemoBadge';
 import { getBillingInfo, formatDueText, formatMoney } from '../../utils/billingUtils';
+
+const isDemo = (business) => business.metadata?.simulacion === true;
 
 const SellerBusinessList = () => {
     const [businesses, setBusinesses] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('all'); // all, trial, active, inactive
+    const [filter, setFilter] = useState('all'); // all, demo, trial, active, inactive
     const [searchTerm, setSearchTerm] = useState('');
     const [subscriptions, setSubscriptions] = useState([]);
     const [paymentTarget, setPaymentTarget] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
     const navigate = useNavigate();
+
+    const deleteDemo = async (business) => {
+        if (!window.confirm(`¿Borrar la demo "${business.name}"? Se borran su link, sus fotos y su acceso. No se puede deshacer.`)) return;
+        setDeletingId(business.id);
+        try {
+            await supabaseService.deleteDemoBusiness(business.id);
+            setBusinesses(list => list.filter(b => b.id !== business.id));
+        } catch (error) {
+            window.alert(error.message || 'No se pudo borrar la demo');
+        } finally {
+            setDeletingId(null);
+        }
+    };
 
     useEffect(() => {
         loadBusinesses();
@@ -35,7 +52,8 @@ const SellerBusinessList = () => {
     };
 
     const filteredBusinesses = businesses.filter(business => {
-        const matchesFilter = filter === 'all' || business.subscription_status === filter;
+        const matchesFilter = filter === 'all'
+            || (filter === 'demo' ? isDemo(business) : business.subscription_status === filter);
         const matchesSearch = business.name.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesFilter && matchesSearch;
     });
@@ -157,13 +175,13 @@ const SellerBusinessList = () => {
                         outline: 'none'
                     }}
                 />
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    {['all', 'trial', 'active', 'inactive'].map(status => (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {['all', 'demo', 'trial', 'active', 'inactive'].map(status => (
                         <button
                             key={status}
                             onClick={() => setFilter(status)}
                             style={{
-                                padding: '12px 20px',
+                                padding: '10px 16px',
                                 background: filter === status ? 'var(--primary-paddle)' : 'rgba(255,255,255,0.05)',
                                 color: filter === status ? '#000' : 'white',
                                 border: '1px solid rgba(255,255,255,0.1)',
@@ -173,7 +191,7 @@ const SellerBusinessList = () => {
                                 fontSize: '14px'
                             }}
                         >
-                            {status === 'all' ? 'Todos' : status === 'trial' ? 'Prueba' : status === 'active' ? 'Activos' : 'Inactivos'}
+                            {{ all: 'Todos', demo: 'Demos', trial: 'Prueba', active: 'Activos', inactive: 'Inactivos' }[status]}
                         </button>
                     ))}
                 </div>
@@ -226,17 +244,20 @@ const SellerBusinessList = () => {
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '16px',
                                 padding: '20px',
                                 background: 'rgba(255,255,255,0.03)',
                                 border: '1px solid rgba(255,255,255,0.05)',
                                 borderRadius: '16px',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s'
+                                transition: 'all 0.2s',
+                                opacity: deletingId === business.id ? 0.5 : 1
                             }}
                         >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: '1 1 260px', minWidth: 0 }}>
                                 <div style={{ fontSize: '48px' }}>{business.categories?.icon || '🏢'}</div>
-                                <div style={{ flex: 1 }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontWeight: '700', fontSize: '18px', marginBottom: '6px' }}>
                                         {business.name}
                                     </div>
@@ -252,7 +273,31 @@ const SellerBusinessList = () => {
                                     </div>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                {isDemo(business) && (
+                                    <>
+                                        <a
+                                            href={`https://${business.slug}.turnitoslr.com`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', color: 'white', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}
+                                        >
+                                            Ver demo ↗
+                                        </a>
+                                        <button
+                                            type="button"
+                                            disabled={deletingId === business.id}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteDemo(business);
+                                            }}
+                                            style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(248,113,113,0.4)', background: 'none', color: '#f87171', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+                                        >
+                                            {deletingId === business.id ? 'Borrando…' : 'Borrar demo'}
+                                        </button>
+                                    </>
+                                )}
                                 <button
                                     type="button"
                                     onClick={(e) => {
@@ -263,6 +308,7 @@ const SellerBusinessList = () => {
                                 >
                                     + Registrar pago
                                 </button>
+                                {isDemo(business) && <DemoBadge />}
                                 {getStatusBadge(business.subscription_status)}
                                 <div style={{ fontSize: '24px', opacity: 0.5 }}>→</div>
                             </div>

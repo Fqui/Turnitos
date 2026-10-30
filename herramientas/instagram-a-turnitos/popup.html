@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Instagram a TurnitosLR</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #111827;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --accent: #6d28d9;
+            --accent-text: #ffffff;
+            --ok: #15803d;
+            --error: #b91c1c;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #111827;
+                --text: #f9fafb;
+                --muted: #9ca3af;
+                --border: #374151;
+                --accent: #8b5cf6;
+                --ok: #4ade80;
+                --error: #f87171;
+            }
+        }
+        body {
+            margin: 0;
+            width: 320px;
+            padding: 16px;
+            background: var(--bg);
+            color: var(--text);
+            font: 14px/1.4 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        }
+        h1 { font-size: 16px; margin: 0 0 4px; }
+        p { margin: 0 0 12px; color: var(--muted); }
+        label { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; color: var(--muted); }
+        button {
+            width: 100%;
+            padding: 10px 12px;
+            border: 0;
+            border-radius: 10px;
+            background: var(--accent);
+            color: var(--accent-text);
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:disabled { opacity: .6; cursor: default; }
+        #status { margin-top: 12px; white-space: pre-line; font-size: 13px; }
+        #status.ok { color: var(--ok); }
+        #status.error { color: var(--error); }
+    </style>
+</head>
+<body>
+    <h1>Instagram → TurnitosLR</h1>
+    <p>Abrí un perfil de Instagram (con tu sesión iniciada) y bajá un poco para que carguen los posts.</p>
+    <label><input type="checkbox" id="highlights" checked> Incluir fotos de destacadas</label>
+    <button id="run">Juntar y descargar .zip</button>
+    <div id="status"></div>
+    <script type="module" src="popup.js"></script>
+</body>
+</html>

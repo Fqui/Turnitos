@@ -45,4 +45,8 @@ export default defineConfig([
     files: ['public/**/*.js'],
     languageOptions: { globals: { ...globals.serviceworker, firebase: 'readonly' } },
   },
+  {
+    files: ['herramientas/**/*.js'],
+    languageOptions: { globals: { ...globals.browser, ...globals.webextensions } },
+  },
 ])
