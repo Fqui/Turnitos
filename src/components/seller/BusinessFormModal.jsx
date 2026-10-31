@@ -673,7 +673,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     <motion.svg
                                         animate={{ rotate: categoryOpen ? 180 : 0 }}
                                         transition={{ duration: 0.2 }}
-                                        width="14" height="14" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
+                                        width="14" height="14" viewBox="0 0 16 16" fill="var(--sa-text-muted)"
                                     >
                                         <path d="M8 11L3 6h10z" />
                                     </motion.svg>
@@ -729,7 +729,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isSel ? 'var(--sa-primary-soft)' : 'transparent'}
                                                     >
                                                         <span style={{ fontSize: '18px' }}>{cat.icon || '🏷️'}</span>
-                                                        <span style={{ flex: 1, color: isSel ? 'var(--sa-primary)' : 'white', fontSize: '13px', fontWeight: isSel ? '700' : '500' }}>
+                                                        <span style={{ flex: 1, color: isSel ? 'var(--sa-primary)' : 'var(--sa-text)', fontSize: '13px', fontWeight: isSel ? '700' : '500' }}>
                                                             {cat.name}
                                                         </span>
                                                         {isSel && (
@@ -778,7 +778,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     }}
                                 >
                                     <span style={{
-                                        color: (formData.subcategory_ids?.length > 0) ? 'white' : 'rgba(255,255,255,0.45)',
+                                        color: (formData.subcategory_ids?.length > 0) ? 'var(--sa-text)' : 'var(--sa-text-muted)',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap'
@@ -796,7 +796,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     <motion.svg
                                         animate={{ rotate: subcategoryOpen ? 180 : 0 }}
                                         transition={{ duration: 0.2 }}
-                                        width="14" height="14" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
+                                        width="14" height="14" viewBox="0 0 16 16" fill="var(--sa-text-muted)"
                                     >
                                         <path d="M8 11L3 6h10z" />
                                     </motion.svg>
@@ -895,7 +895,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                             width: '16px',
                                                             height: '16px',
                                                             borderRadius: '4px',
-                                                            border: isSelected ? '2px solid var(--sa-primary)' : '2px solid rgba(255,255,255,0.3)',
+                                                            border: isSelected ? '2px solid var(--sa-primary)' : '2px solid var(--sa-border-strong)',
                                                             backgroundColor: isSelected ? 'var(--sa-primary)' : 'transparent',
                                                             display: 'flex',
                                                             alignItems: 'center',
@@ -908,7 +908,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                                 </svg>
                                                             )}
                                                         </div>
-                                                        <span style={{ color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)', fontSize: '13px' }}>
+                                                        <span style={{ color: 'var(--sa-text)', fontSize: '13px' }}>
                                                             {sub.name}
                                                         </span>
                                                     </div>
@@ -1247,7 +1247,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     gap: '8px'
                                 }}
                             >
-                                <span style={{ color: formData.seller_id ? 'white' : 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ color: formData.seller_id ? 'var(--sa-text)' : 'var(--sa-text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span>👤</span>
                                     {(() => {
                                         if (!formData.seller_id) return 'Sin vendedor asignado';
@@ -1260,7 +1260,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                 <motion.svg
                                     animate={{ rotate: sellerOpen ? 180 : 0 }}
                                     transition={{ duration: 0.2 }}
-                                    width="14" height="14" viewBox="0 0 16 16" fill="rgba(255,255,255,0.6)"
+                                    width="14" height="14" viewBox="0 0 16 16" fill="var(--sa-text-muted)"
                                 >
                                     <path d="M8 11L3 6h10z" />
                                 </motion.svg>
@@ -1329,7 +1329,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                                         borderBottom: '1px solid var(--sa-hover)'
                                                     }}
                                                 >
-                                                    <span style={{ color: isSel ? 'var(--sa-primary)' : 'white', fontSize: '13px', fontWeight: isSel ? '700' : '400' }}>
+                                                    <span style={{ color: isSel ? 'var(--sa-primary)' : 'var(--sa-text)', fontSize: '13px', fontWeight: isSel ? '700' : '400' }}>
                                                         {`${seller.first_name || ''} ${seller.last_name || ''}`.trim() || seller.email}
                                                     </span>
                                                     {isSel && (
@@ -1631,7 +1631,7 @@ const CredentialsRow = ({ label, value }) => {
                     background: copied ? 'rgba(0, 230, 118, 0.25)' : 'var(--sa-border)',
                     border: copied ? '1px solid var(--sa-primary)' : '1px solid var(--sa-border-strong)',
                     borderRadius: '8px',
-                    color: copied ? 'var(--sa-primary)' : 'white',
+                    color: copied ? 'var(--sa-primary)' : 'var(--sa-text)',
                     cursor: 'pointer',
                     fontSize: '12px',
                     fontWeight: '700',
