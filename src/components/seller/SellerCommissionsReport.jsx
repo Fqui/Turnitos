@@ -10,6 +10,15 @@ const SellerCommissionsReport = () => {
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const navigate = useNavigate();
+    // Each seller's agreed rates (sellers.first_month_rate / recurring_rate)
+    const [rates] = useState(() => {
+        try {
+            const seller = JSON.parse(localStorage.getItem('seller')) || {};
+            return { first: Number(seller.first_month_rate ?? 50), recurring: Number(seller.recurring_rate ?? 30) };
+        } catch {
+            return { first: 50, recurring: 30 };
+        }
+    });
 
     useEffect(() => {
         loadCommissions();
@@ -263,28 +272,13 @@ const SellerCommissionsReport = () => {
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                     <div>
-                        <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--primary-paddle)' }}>40%</div>
-                        <div style={{ fontSize: '13px', opacity: 0.8 }}>Mes 1</div>
+                        <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--primary-paddle)' }}>{rates.first}%</div>
+                        <div style={{ fontSize: '13px', opacity: 0.8 }}>Primer mes que paga</div>
                     </div>
                     <div>
-                        <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--primary-paddle)' }}>30%</div>
-                        <div style={{ fontSize: '13px', opacity: 0.8 }}>Mes 2</div>
+                        <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--primary-paddle)' }}>{rates.recurring}%</div>
+                        <div style={{ fontSize: '13px', opacity: 0.8 }}>Cada mes siguiente, mientras siga pagando</div>
                     </div>
-                    <div>
-                        <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--primary-paddle)' }}>20%</div>
-                        <div style={{ fontSize: '13px', opacity: 0.8 }}>Mes 3</div>
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--primary-paddle)' }}>10%</div>
-                        <div style={{ fontSize: '13px', opacity: 0.8 }}>Meses 4-6</div>
-                    </div>
-                    <div>
-                        <div style={{ fontSize: '24px', fontWeight: '700', color: '#ef4444' }}>0%</div>
-                        <div style={{ fontSize: '13px', opacity: 0.8 }}>Mes 7+</div>
-                    </div>
-                </div>
-                <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(0, 230, 118, 0.1)', borderRadius: '8px' }}>
-                    <strong>🎉 Bonus:</strong> +5% adicional si tienes 50+ clientes activos en el mes
                 </div>
             </div>
         </div>
