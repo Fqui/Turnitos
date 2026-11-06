@@ -103,6 +103,12 @@ export const bookingResourceName = (booking, business) => {
     return court?.name || booking?.courts?.name || '';
 };
 
+// Web bookings don't save the deposit amount, so the business rule decides too (same rule as the public booking)
+export const businessRequiresDeposit = (business) => {
+    const deposit = (business?.payment_settings || business?.paymentSettings)?.deposit;
+    return Boolean(business) && deposit?.enabled !== false;
+};
+
 // Phone status: a pending booking with a deposit is waiting for it; without one it only needs confirming
 export const STATUS_META = {
     unconfirmed: { label: 'Sin confirmar', tone: 'pend' },
@@ -115,9 +121,9 @@ export const STATUS_META = {
     blocked: { label: 'Bloqueado', tone: 'pend' }
 };
 
-export const mobileStatusKey = (booking) => {
+export const mobileStatusKey = (booking, business) => {
     if (isBookingBlocked(booking)) return 'blocked';
-    if (booking?.status === 'pending') return bookingDeposit(booking) > 0 ? 'deposit_due' : 'unconfirmed';
+    if (booking?.status === 'pending') return bookingDeposit(booking) > 0 || businessRequiresDeposit(business) ? 'deposit_due' : 'unconfirmed';
     return STATUS_META[booking?.status] ? booking.status : 'unconfirmed';
 };
 

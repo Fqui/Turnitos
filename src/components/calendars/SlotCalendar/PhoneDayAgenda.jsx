@@ -288,7 +288,7 @@ export default function PhoneDayAgenda({
                             </div>
                         );
                     }
-                    const statusKey = mobileStatusKey(b);
+                    const statusKey = mobileStatusKey(b, business);
                     const time = bookingTime(b);
                     const price = bookingPrice(b);
                     return (

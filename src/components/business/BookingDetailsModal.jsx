@@ -10,6 +10,9 @@ import HomeVisitCard from './HomeVisitCard';
 import BookingCashCharge from './canteen/BookingCashCharge';
 import { useBookingCash } from './canteen/useBookingCash';
 import BookingSheetPhone from './portal/mobile/BookingSheetPhone';
+import { bookingDeposit, businessRequiresDeposit } from './portal/mobile/bookingMobileUtils';
+import { buildWhatsAppUrl } from '../../utils/whatsapp';
+import { WHATSAPP_MESSAGE_TYPES, fillWhatsappTemplate, formatBankDetails, getWhatsappTemplate } from '../../utils/whatsappTemplates';
 
 // Booking history in Argentina time, 24 h, whatever the device settings
 const formatHistoryTime = (iso) => new Date(iso).toLocaleString('es-AR', {
@@ -453,6 +456,24 @@ const BookingDetailsModalContent = ({
     // WhatsApp Message Builder
     const generateWhatsappMessage = (templateType) => {
         if (templateType === 'direct') return '';
+        if (!isRental) {
+            const bank = paymentSettings.bank_details || {};
+            return fillWhatsappTemplate(getWhatsappTemplate(biz, templateType), {
+                cliente: booking.customer_name || booking.customerName || '',
+                negocio: biz?.name || 'nuestro negocio',
+                servicio: service?.name || resourceName,
+                profesional: specialist?.name || '',
+                fecha: formatDisplayDate(booking.date),
+                hora: String(editableTime || booking.time || '').slice(0, 5),
+                monto_seña: `$${activeDeposit.toLocaleString('es-AR')}`,
+                total: `$${activePrice.toLocaleString('es-AR')}`,
+                saldo: `$${pendingBalance.toLocaleString('es-AR')}`,
+                cbu: bank.cbu || '',
+                alias: bank.alias || '',
+                datos_bancarios: formatBankDetails(bank),
+                direccion: biz?.address || biz?.location || ''
+            });
+        }
         const customTemplates = biz?.whatsapp_templates || biz?.metadata?.whatsapp_templates || {};
         const defaultTemplates = {
             pedir_sena: "¡Hola {cliente}! 👋 Te escribimos de *{negocio}* para coordinar tu reserva del *{fecha}* ({invitados}). Para asegurar y reservar la fecha, solicitamos una seña de *${seña}* (Total: ${total}). Quedamos a disposición para pasarte los datos de pago.",
@@ -498,12 +519,12 @@ const BookingDetailsModalContent = ({
             return;
         }
         if (templateType === 'direct') {
-            window.open(`https://wa.me/${cleanPhone}`, '_blank');
+            window.open(buildWhatsAppUrl(phone), '_blank');
             setShowWhatsappMenu(false);
             return;
         }
         const text = generateWhatsappMessage(templateType);
-        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
+        window.open(buildWhatsAppUrl(phone, text), '_blank');
         setShowWhatsappMenu(false);
     };
 
@@ -697,8 +718,19 @@ const BookingDetailsModalContent = ({
     const isBlockedBooking = booking.status === 'blocked' || booking.is_blocked;
     if (isPhone && !isRental && !isBlockedBooking && !isEditing && !showFullDetails) {
         const chargeDepositInCash = isSport && bookingCash.canCharge && !bookingCash.error;
+        // activeDeposit is only a suggestion: without a deposit rule the booking goes straight to confirming
+        const hasDeposit = bookingDeposit(booking) > 0 || businessRequiresDeposit(biz);
+        const openWhatsappMenu = () => {
+            if (!cleanPhone) {
+                handleSendWhatsapp('direct');
+                return;
+            }
+            setShowFullDetails(true);
+            setShowWhatsappMenu(true);
+            setTimeout(() => document.getElementById('booking-whatsapp-menu')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+        };
         const handlePrimary = () => {
-            if (booking.status === 'pending' && activeDeposit > 0) {
+            if (booking.status === 'pending' && hasDeposit && activeDeposit > 0) {
                 // Courts with a cash register: the deposit is charged in the register (full view)
                 if (chargeDepositInCash) {
                     setShowFullDetails(true);
@@ -716,15 +748,16 @@ const BookingDetailsModalContent = ({
         return (
             <BookingSheetPhone
                 booking={booking}
+                business={biz}
                 serviceName={service?.name || resourceName}
                 resourceLabel={specialist ? 'Profesional' : (court ? 'Cancha' : 'Profesional')}
                 resourceName={specialist?.name || (court ? court.name : '')}
                 price={activePrice}
-                deposit={activeDeposit}
+                deposit={hasDeposit ? activeDeposit : 0}
                 depositPaid={depositPaid}
                 notes={notes}
                 onClose={onClose}
-                onWhatsapp={() => handleSendWhatsapp('direct')}
+                onWhatsapp={openWhatsappMenu}
                 onPrimary={handlePrimary}
                 onReschedule={onReschedule ? () => onReschedule(booking) : null}
                 onEdit={() => setIsEditing(true)}
@@ -2274,7 +2307,7 @@ const BookingDetailsModalContent = ({
                                                     {log.label === 'Turno Confirmado' ? 'Reserva Confirmada' : (log.label === 'Turno Cancelado' ? 'Reserva Cancelada' : log.label)}
                                                 </span>
                                                 <span style={{ color: 'var(--text-secondary)', fontSize: '9px' }}>
-                                                    {formatHistoryTime(log.timestamp)}
+                                                    {log.by ? `${log.by} · ` : ''}{formatHistoryTime(log.timestamp)}
                                                 </span>
                                             </div>
                                             {log.reason && (
@@ -2590,7 +2623,7 @@ const BookingDetailsModalContent = ({
 
                                 {/* WhatsApp Presets Expandable Panel */}
                                 {cleanPhone && showWhatsappMenu && (
-                                    <div style={{
+                                    <div id="booking-whatsapp-menu" style={{
                                         marginTop: '4px',
                                         padding: '10px 12px',
                                         background: 'var(--bg-card)',
@@ -2602,85 +2635,52 @@ const BookingDetailsModalContent = ({
                                     }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <span style={{ fontSize: '11px', fontWeight: '700', color: '#25D366', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                                                🚀 Enviar mensaje predeterminado:
+                                                🚀 Mensajes para el cliente:
                                             </span>
                                             <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                                                Haz clic para enviar directo o previsualizar
+                                                Tocá para enviar o ✏️ para editar antes
                                             </span>
                                         </div>
 
                                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '6px' }}>
-                                            <div style={{ display: 'flex', gap: '4px' }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSendWhatsapp('pedir_sena')}
-                                                    style={{
-                                                        flex: 1,
-                                                        padding: '6px 10px',
-                                                        borderRadius: '6px',
-                                                        border: '1px solid var(--border)',
-                                                        background: 'var(--bg-main)',
-                                                        color: 'var(--text-primary)',
-                                                        fontSize: '11px',
-                                                        fontWeight: '600',
-                                                        cursor: 'pointer',
-                                                        textAlign: 'left'
-                                                    }}
-                                                >
-                                                    💳 <strong>Pedir Seña</strong>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleOpenPreview('pedir_sena', 'Pedir Seña')}
-                                                    style={{
-                                                        padding: '6px 8px',
-                                                        borderRadius: '6px',
-                                                        border: '1px solid var(--border)',
-                                                        background: 'var(--bg-main)',
-                                                        fontSize: '11px',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                    title="Editar o ver antes de enviar"
-                                                >
-                                                    ✏️
-                                                </button>
-                                            </div>
-
-                                            <div style={{ display: 'flex', gap: '4px' }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSendWhatsapp('confirmar_reserva')}
-                                                    style={{
-                                                        flex: 1,
-                                                        padding: '6px 10px',
-                                                        borderRadius: '6px',
-                                                        border: '1px solid var(--border)',
-                                                        background: 'var(--bg-main)',
-                                                        color: 'var(--text-primary)',
-                                                        fontSize: '11px',
-                                                        fontWeight: '600',
-                                                        cursor: 'pointer',
-                                                        textAlign: 'left'
-                                                    }}
-                                                >
-                                                    🎉 <strong>Confirmar Reserva</strong>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleOpenPreview('confirmar_reserva', 'Confirmar Reserva')}
-                                                    style={{
-                                                        padding: '6px 8px',
-                                                        borderRadius: '6px',
-                                                        border: '1px solid var(--border)',
-                                                        background: 'var(--bg-main)',
-                                                        fontSize: '11px',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                    title="Editar o ver antes de enviar"
-                                                >
-                                                    ✏️
-                                                </button>
-                                            </div>
+                                            {WHATSAPP_MESSAGE_TYPES.map(type => (
+                                                <div key={type.id} style={{ display: 'flex', gap: '4px' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSendWhatsapp(type.id)}
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: isMobile ? '10px 12px' : '7px 10px',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid var(--border)',
+                                                            background: 'var(--bg-main)',
+                                                            color: 'var(--text-primary)',
+                                                            fontSize: isMobile ? '13px' : '11px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            textAlign: 'left'
+                                                        }}
+                                                    >
+                                                        {type.icon} <strong>{type.label}</strong>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenPreview(type.id, type.label)}
+                                                        style={{
+                                                            padding: isMobile ? '10px 12px' : '7px 8px',
+                                                            borderRadius: '6px',
+                                                            border: '1px solid var(--border)',
+                                                            background: 'var(--bg-main)',
+                                                            fontSize: isMobile ? '13px' : '11px',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        title="Editar antes de enviar"
+                                                        aria-label={`Editar ${type.label} antes de enviar`}
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 )}
@@ -2987,7 +2987,7 @@ const BookingDetailsModalContent = ({
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
                                                 <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{log.label}</span>
                                                 <span style={{ color: 'var(--text-secondary)', fontSize: '9px' }}>
-                                                    {formatHistoryTime(log.timestamp)}
+                                                    {log.by ? `${log.by} · ` : ''}{formatHistoryTime(log.timestamp)}
                                                 </span>
                                             </div>
                                             {log.reason && (
@@ -3200,7 +3200,7 @@ const BookingDetailsModalContent = ({
                             <button
                                 type="button"
                                 onClick={() => {
-                                    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(previewMessage.text)}`, '_blank');
+                                    window.open(buildWhatsAppUrl(phone, previewMessage.text), '_blank');
                                     setPreviewMessage(null);
                                 }}
                                 style={{

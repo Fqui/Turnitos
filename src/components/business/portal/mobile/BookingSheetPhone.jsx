@@ -18,6 +18,7 @@ import {
 // Detalle del turno en celular: hoja inferior con la acción principal fija abajo junto a WhatsApp
 export default function BookingSheetPhone({
     booking,
+    business,
     serviceName,
     resourceLabel,
     resourceName,
@@ -33,7 +34,7 @@ export default function BookingSheetPhone({
     onCancel,
     onShowFull
 }) {
-    const statusKey = mobileStatusKey(booking);
+    const statusKey = mobileStatusKey(booking, business);
     const dateKey = bookingDateKey(booking);
     const time = bookingTime(booking);
     const end = time ? addMinutesToTime(time, bookingDuration(booking)) : '';

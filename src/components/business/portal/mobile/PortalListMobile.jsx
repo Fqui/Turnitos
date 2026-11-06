@@ -60,7 +60,7 @@ export function BlockRow({ booking, onClick, showResource = true, hideTime = fal
 }
 
 export function BookingCard({ booking, business, isRental, onClick }) {
-    const statusKey = mobileStatusKey(booking);
+    const statusKey = mobileStatusKey(booking, business);
     const time = bookingTime(booking);
     const duration = bookingDuration(booking);
     const price = bookingPrice(booking);
