@@ -1,0 +1,576 @@
+/* Seller panel (inicio, negocios, comisiones). Uses the superadmin.css tokens (light/dark). */
+.sp-root {
+    display: block;
+    --sp-info: #2563EB;
+    --sp-info-soft: rgba(37, 99, 235, 0.10);
+}
+
+.sp-root[data-theme="dark"] {
+    --sp-info: #7DA8FF;
+    --sp-info-soft: rgba(125, 168, 255, 0.13);
+}
+
+/* ---------- Frame ---------- */
+
+.sp-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--sa-surface);
+    border-bottom: 1px solid var(--sa-border);
+}
+
+.sp-topbar-in {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.sp-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.sp-brand-name {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+
+.sp-brand-tag {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sa-text-muted);
+}
+
+.sp-nav {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+
+.sp-nav-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 9px;
+    color: var(--sa-text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.sp-nav-item:hover { background: var(--sa-hover); color: var(--sa-text); }
+.sp-nav-item.is-active { background: var(--sa-primary-soft); color: var(--sa-primary-text); }
+
+.sp-tools {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.sp-icon-btn {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 9px;
+    color: var(--sa-text-muted);
+    cursor: pointer;
+}
+
+.sp-icon-btn:hover { background: var(--sa-hover); color: var(--sa-text); }
+
+.sp-main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 28px 24px 48px;
+    box-sizing: border-box;
+}
+
+/* ---------- Page header ---------- */
+
+.sp-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+
+.sp-title {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.sp-sub {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--sa-text-muted);
+}
+
+.sp-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ---------- Buttons ---------- */
+
+.sp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 9px;
+    border: 1px solid var(--sa-border-strong);
+    background: var(--sa-surface);
+    color: var(--sa-text);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.sp-btn:hover { background: var(--sa-surface-2); }
+.sp-btn:disabled { opacity: 0.6; cursor: default; }
+
+.sp-btn-primary {
+    background: var(--sa-primary);
+    border-color: var(--sa-primary);
+    color: var(--sa-on-primary);
+}
+
+.sp-btn-primary:hover { background: var(--sa-primary-hover); border-color: var(--sa-primary-hover); }
+
+.sp-btn-danger {
+    border-color: var(--sa-danger);
+    background: none;
+    color: var(--sa-danger);
+}
+
+.sp-btn-danger:hover { background: var(--sa-danger-soft); }
+
+.sp-btn-sm {
+    min-height: 34px;
+    padding: 0 11px;
+    font-size: 12.5px;
+}
+
+/* ---------- Stats ---------- */
+
+.sp-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.sp-stats-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.sp-stat {
+    padding: 16px;
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 12px;
+    box-shadow: var(--sa-shadow);
+    min-width: 0;
+}
+
+.sp-stat-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--sa-text-muted);
+}
+
+.sp-stat-value {
+    margin-top: 10px;
+    font-size: 25px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.sp-stat-note {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--sa-text-muted);
+}
+
+.sp-stat.is-highlight {
+    background: var(--sa-primary-soft);
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.sp-stat.is-highlight .sp-stat-value { color: var(--sa-primary-text); }
+
+/* ---------- Cards and lists ---------- */
+
+.sp-card {
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 12px;
+    box-shadow: var(--sa-shadow);
+}
+
+.sp-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--sa-border);
+}
+
+.sp-card-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.sp-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--sa-primary-text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sp-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--sa-border);
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.sp-row:last-child { border-bottom: none; border-radius: 0 0 12px 12px; }
+.sp-row:hover { background: var(--sa-hover); }
+
+.sp-avatar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--sa-surface-2);
+    font-size: 20px;
+}
+
+.sp-row-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.sp-row-name {
+    font-size: 14.5px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-row-meta {
+    margin-top: 2px;
+    font-size: 12.5px;
+    color: var(--sa-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.sp-badge {
+    padding: 3px 9px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.sp-badge-info { background: var(--sp-info-soft); color: var(--sp-info); }
+.sp-badge-success { background: var(--sa-primary-soft); color: var(--sa-primary-text); }
+.sp-badge-muted { background: var(--sa-surface-2); color: var(--sa-text-muted); }
+
+.sp-empty {
+    padding: 48px 20px;
+    text-align: center;
+    color: var(--sa-text-muted);
+    font-size: 14px;
+}
+
+.sp-empty h3 {
+    margin: 0 0 6px;
+    color: var(--sa-text);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.sp-empty p { margin: 0 0 18px; }
+.sp-empty p:last-child { margin-bottom: 0; }
+
+.sp-loading {
+    padding: 64px 20px;
+    text-align: center;
+    color: var(--sa-text-muted);
+    font-size: 14px;
+}
+
+/* ---------- Business list ---------- */
+
+.sp-filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.sp-input,
+.sp-select {
+    min-height: 40px;
+    padding: 0 12px;
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border-strong);
+    border-radius: 9px;
+    color: var(--sa-text);
+    font-family: inherit;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.sp-input {
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.sp-select { font-weight: 600; cursor: pointer; }
+
+.sp-chips {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.sp-chips::-webkit-scrollbar { display: none; }
+
+.sp-chip {
+    min-height: 40px;
+    padding: 0 13px;
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border-strong);
+    border-radius: 9px;
+    color: var(--sa-text-2);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.sp-chip.is-active {
+    background: var(--sa-primary);
+    border-color: var(--sa-primary);
+    color: var(--sa-on-primary);
+}
+
+.sp-biz-list {
+    display: grid;
+    gap: 10px;
+}
+
+.sp-biz {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    cursor: pointer;
+}
+
+.sp-biz:hover { border-color: var(--sa-border-strong); }
+.sp-biz.is-busy { opacity: 0.5; }
+
+.sp-biz-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1 1 280px;
+    min-width: 0;
+}
+
+.sp-biz-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.sp-biz-title .sp-row-name { white-space: normal; }
+
+.sp-due {
+    margin-top: 3px;
+    font-size: 12.5px;
+    color: var(--sa-text-2);
+}
+
+.sp-due.is-danger { color: var(--sa-danger); font-weight: 600; }
+.sp-due.is-warning { color: var(--sa-warning); font-weight: 600; }
+
+.sp-biz-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* ---------- Commissions ---------- */
+
+.sp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+
+.sp-table th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sa-text-muted);
+    border-bottom: 1px solid var(--sa-border);
+}
+
+.sp-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--sa-border);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-table .is-num { text-align: right; }
+.sp-table .is-strong { font-weight: 700; }
+.sp-table .is-money { font-weight: 800; color: var(--sa-primary-text); }
+.sp-table tfoot td { border-bottom: none; font-weight: 800; }
+
+.sp-bonus { margin-left: 4px; color: var(--sa-primary-text); font-weight: 700; }
+
+.sp-rates {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding: 16px;
+}
+
+.sp-rate-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--sa-primary-text);
+}
+
+.sp-rate-label {
+    font-size: 13px;
+    color: var(--sa-text-muted);
+}
+
+.sp-gap { margin-top: 16px; }
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 760px) {
+    .sp-topbar-in {
+        padding: 8px 16px;
+        justify-content: space-between;
+    }
+
+    .sp-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 20;
+        gap: 0;
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+        background: var(--sa-surface);
+        border-top: 1px solid var(--sa-border);
+    }
+
+    .sp-nav-item {
+        flex: 1;
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        padding: 6px 4px;
+        font-size: 11.5px;
+    }
+
+    .sp-main { padding: 20px 16px calc(88px + env(safe-area-inset-bottom)); }
+    .sp-title { font-size: 23px; }
+    .sp-head { align-items: stretch; flex-direction: column; }
+    .sp-actions .sp-btn { flex: 1; }
+
+    .sp-stats,
+    .sp-stats-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sp-stats-3 .sp-stat.is-highlight { grid-column: 1 / -1; }
+    .sp-stat { padding: 14px; }
+    .sp-stat-value { font-size: 21px; }
+
+    .sp-biz-actions { width: 100%; }
+    .sp-biz-actions .sp-btn { flex: 1; }
+
+    .sp-table thead { display: none; }
+    .sp-table tr { display: block; padding: 10px 16px; border-bottom: 1px solid var(--sa-border); }
+    .sp-table td {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 3px 0;
+        border-bottom: none;
+        text-align: right;
+    }
+    .sp-table td::before {
+        content: attr(data-label);
+        color: var(--sa-text-muted);
+        font-weight: 500;
+    }
+    .sp-table tfoot tr { border-bottom: none; }
+}

@@ -4,6 +4,7 @@
 // POST { action: 'create_account', email, password }           -> { user_id }
 // POST { action: 'create_business', business: {...} }          -> { business, credentials }
 // POST { action: 'reset_password', business_id }              -> { email, tempPassword }
+// POST { action: 'reset_seller_password', seller_id }         -> { email, tempPassword } (solo superadmins)
 // POST multipart { payload: '{"action":"create_demo","negocio":{...}}', 'archivo:<clave>': File }
 //                                                               -> { business, credentials }
 // POST { action: 'delete_demo', business_id }                  -> { deleted }
@@ -153,7 +154,8 @@ Deno.serve(async (req) => {
         const { data, error } = await admin.auth.admin.createUser({
             email,
             password,
-            email_confirm: true
+            email_confirm: true,
+            user_metadata: body.must_change_password === true ? { must_change_password: true } : undefined
         });
         if (error) return json({ error: error.message }, 400);
         return json({ user_id: data.user.id });
@@ -264,6 +266,27 @@ Deno.serve(async (req) => {
         if (updateError) return json({ error: updateError.message }, 400);
 
         return json({ email: business.email, tempPassword, businessName: business.name });
+    }
+
+    if (body.action === 'reset_seller_password') {
+        if (!superAdmin) return json({ error: 'No autorizado' }, 403);
+
+        const { data: target } = await admin
+            .from('sellers')
+            .select('id, email, auth_id')
+            .eq('id', String(body.seller_id ?? ''))
+            .maybeSingle();
+        if (!target) return json({ error: 'Vendedor no encontrado' }, 404);
+        if (!target.auth_id) return json({ error: 'El vendedor no tiene una cuenta de acceso' }, 400);
+
+        const tempPassword = generateTempPassword();
+        const { error } = await admin.auth.admin.updateUserById(target.auth_id, {
+            password: tempPassword,
+            user_metadata: { must_change_password: true }
+        });
+        if (error) return json({ error: error.message }, 400);
+
+        return json({ email: target.email, tempPassword });
     }
 
     if (body.action === 'create_demo') {

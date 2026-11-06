@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { Building2, TrendingUp, Wallet, CalendarRange, Camera, Plus, ChevronRight } from 'lucide-react';
 import supabaseService from '../../services/supabaseService';
+import { formatMoney } from '../../utils/billingUtils';
 import DemoBadge from './DemoBadge';
+import SellerShell from './SellerShell';
+import SellerStatusBadge from './SellerStatusBadge';
 
 const SellerDashboard = () => {
     const [seller, setSeller] = useState(null);
@@ -35,332 +38,107 @@ const SellerDashboard = () => {
         }
     };
 
-    const handleLogout = async () => {
-        await supabaseService.logout();
-        localStorage.removeItem('seller');
-        navigate('/admin/login');
-    };
-
-    if (loading) {
-        return (
-            <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: '#0f0f0f',
-                color: 'white'
-            }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
-                    <p>Cargando dashboard...</p>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div style={{
-            minHeight: '100vh',
-            background: '#0f0f0f',
-            color: 'white',
-            padding: '24px'
-        }}>
-            {/* Header */}
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '32px',
-                flexWrap: 'wrap',
-                gap: '16px'
-            }}>
+        <SellerShell>
+            <div className="sp-head">
                 <div>
-                    <h1 style={{ fontSize: '32px', fontWeight: '700', margin: 0 }}>
-                        Hola, <span style={{ color: 'var(--primary-paddle)' }}>{seller?.first_name}</span>
-                    </h1>
-                    <p style={{ opacity: 0.6, marginTop: '4px' }}>
-                        Bienvenido a tu panel de vendedor
-                    </p>
+                    <h1 className="sp-title">Hola, {seller?.first_name}</h1>
+                    <p className="sp-sub">Así vienen tus negocios y tus comisiones.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <button
-                        onClick={() => navigate('/admin/demo-instagram')}
-                        style={{
-                            padding: '12px 24px',
-                            background: 'var(--primary-paddle)',
-                            color: '#000',
-                            border: 'none',
-                            borderRadius: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            boxShadow: '0 4px 12px rgba(0, 230, 118, 0.3)'
-                        }}
-                    >
-                        📸 Demo desde Instagram
+                <div className="sp-actions">
+                    <button type="button" className="sp-btn sp-btn-primary" onClick={() => navigate('/admin/demo-instagram')}>
+                        <Camera size={16} aria-hidden="true" /> Demo desde Instagram
                     </button>
-                    <button
-                        onClick={() => navigate('/admin/businesses/new')}
-                        style={{
-                            padding: '12px 24px',
-                            background: 'rgba(255,255,255,0.05)',
-                            color: 'white',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '12px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            fontSize: '14px'
-                        }}
-                    >
-                        + Crear Negocio
-                    </button>
-                    <button
-                        onClick={handleLogout}
-                        style={{
-                            padding: '12px 24px',
-                            background: 'rgba(255,255,255,0.05)',
-                            color: 'white',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '12px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            fontSize: '14px'
-                        }}
-                    >
-                        Cerrar Sesión
+                    <button type="button" className="sp-btn" onClick={() => navigate('/admin/businesses/new')}>
+                        <Plus size={16} aria-hidden="true" /> Nuevo negocio
                     </button>
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '20px',
-                marginBottom: '32px'
-            }}>
-                <StatCard
-                    icon="🏢"
-                    title="Total Negocios"
-                    value={stats?.totalBusinesses || 0}
-                    subtitle={`${stats?.activeBusinesses || 0} activos, ${stats?.trialBusinesses || 0} en prueba`}
-                />
-                <StatCard
-                    icon="📈"
-                    title="Tasa de Conversión"
-                    value={`${stats?.conversionRate || 0}%`}
-                    subtitle="Negocios que pagaron"
-                />
-                <StatCard
-                    icon="💰"
-                    title="Comisiones del Mes"
-                    value={`$${stats?.monthlyCommissions?.toLocaleString('es-AR') || 0}`}
-                    subtitle="Acumulado hasta hoy"
-                    highlight
-                />
-                <StatCard
-                    icon="📊"
-                    title="Proyección Mensual"
-                    value={`$${stats?.projection?.projectedTotal || 0}`}
-                    subtitle={`Promedio diario: $${stats?.projection?.dailyAverage || 0}`}
-                />
-            </div>
-
-            {/* Quick Actions */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '16px',
-                marginBottom: '32px'
-            }}>
-                <QuickActionCard
-                    icon="📸"
-                    title="Demo desde Instagram"
-                    onClick={() => navigate('/admin/demo-instagram')}
-                />
-                <QuickActionCard
-                    icon="📋"
-                    title="Mis Negocios"
-                    onClick={() => navigate('/admin/businesses')}
-                />
-                <QuickActionCard
-                    icon="💵"
-                    title="Comisiones"
-                    onClick={() => navigate('/admin/commissions')}
-                />
-                <QuickActionCard
-                    icon="➕"
-                    title="Nuevo Negocio"
-                    onClick={() => navigate('/admin/businesses/new')}
-                />
-            </div>
-
-            {/* Recent Businesses */}
-            <div style={{
-                background: 'rgba(255,255,255,0.03)',
-                borderRadius: '16px',
-                padding: '24px',
-                border: '1px solid rgba(255,255,255,0.05)'
-            }}>
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '20px'
-                }}>
-                    <h2 style={{ fontSize: '20px', fontWeight: '700', margin: 0 }}>
-                        Negocios Recientes
-                    </h2>
-                    <button
-                        onClick={() => navigate('/admin/businesses')}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--primary-paddle)',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '600'
-                        }}
-                    >
-                        Ver todos →
-                    </button>
-                </div>
-
-                {businesses.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '40px', opacity: 0.5 }}>
-                        <p>No has creado negocios aún</p>
-                        <button
-                            onClick={() => navigate('/admin/businesses/new')}
-                            style={{
-                                marginTop: '16px',
-                                padding: '12px 24px',
-                                background: 'var(--primary-paddle)',
-                                color: '#000',
-                                border: 'none',
-                                borderRadius: '12px',
-                                fontWeight: '700',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Crear tu primer negocio
-                        </button>
+            {loading ? (
+                <div className="sp-loading">Cargando tu panel...</div>
+            ) : (
+                <>
+                    <div className="sp-stats">
+                        <StatCard
+                            icon={Wallet}
+                            title="Comisiones del mes"
+                            value={formatMoney(stats?.monthlyCommissions)}
+                            note="Acumulado hasta hoy"
+                            highlight
+                        />
+                        <StatCard
+                            icon={CalendarRange}
+                            title="Proyección del mes"
+                            value={formatMoney(stats?.projection?.projectedTotal)}
+                            note={`${formatMoney(stats?.projection?.dailyAverage)} por día`}
+                        />
+                        <StatCard
+                            icon={Building2}
+                            title="Negocios"
+                            value={stats?.totalBusinesses || 0}
+                            note={`${stats?.activeBusinesses || 0} ${stats?.activeBusinesses === 1 ? 'activo' : 'activos'}, ${stats?.trialBusinesses || 0} en prueba`}
+                        />
+                        <StatCard
+                            icon={TrendingUp}
+                            title="Conversión"
+                            value={`${Math.round(stats?.conversionRate || 0)}%`}
+                            note="Negocios que pagaron"
+                        />
                     </div>
-                ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {businesses.map((business) => (
-                            <BusinessRow key={business.id} business={business} />
-                        ))}
-                    </div>
-                )}
-            </div>
-        </div>
+
+                    <section className="sp-card">
+                        <div className="sp-card-head">
+                            <h2 className="sp-card-title">Negocios recientes</h2>
+                            {businesses.length > 0 && (
+                                <button type="button" className="sp-link" onClick={() => navigate('/admin/businesses')}>Ver todos</button>
+                            )}
+                        </div>
+
+                        {businesses.length === 0 ? (
+                            <div className="sp-empty">
+                                <h3>Todavía no tenés negocios</h3>
+                                <p>Armá una demo desde Instagram para mostrársela a tu primer cliente.</p>
+                                <button type="button" className="sp-btn sp-btn-primary" onClick={() => navigate('/admin/demo-instagram')}>
+                                    Crear mi primera demo
+                                </button>
+                            </div>
+                        ) : (
+                            businesses.map((business) => (
+                                <button
+                                    type="button"
+                                    key={business.id}
+                                    className="sp-row"
+                                    onClick={() => navigate(`/admin/businesses/${business.id}/edit`)}
+                                >
+                                    <span className="sp-avatar" aria-hidden="true">{business.categories?.icon || '🏢'}</span>
+                                    <span className="sp-row-main">
+                                        <span className="sp-row-name" style={{ display: 'block' }}>{business.name}</span>
+                                        <span className="sp-row-meta" style={{ display: 'block' }}>
+                                            {business.categories?.name} · {business.totalBookings} reservas
+                                        </span>
+                                    </span>
+                                    <span className="sp-badges">
+                                        {business.metadata?.simulacion === true && <DemoBadge />}
+                                        <SellerStatusBadge status={business.subscription_status} />
+                                    </span>
+                                    <ChevronRight size={18} color="var(--sa-text-muted)" aria-hidden="true" />
+                                </button>
+                            ))
+                        )}
+                    </section>
+                </>
+            )}
+        </SellerShell>
     );
 };
 
-const StatCard = ({ icon, title, value, subtitle, highlight }) => (
-    <motion.div
-        whileHover={{ y: -4 }}
-        style={{
-            background: highlight ? 'rgba(0, 230, 118, 0.1)' : 'rgba(255,255,255,0.03)',
-            border: `1px solid ${highlight ? 'rgba(0, 230, 118, 0.3)' : 'rgba(255,255,255,0.05)'}`,
-            borderRadius: '16px',
-            padding: '24px',
-            cursor: 'default'
-        }}
-    >
-        <div style={{ fontSize: '32px', marginBottom: '12px' }}>{icon}</div>
-        <div style={{ fontSize: '14px', opacity: 0.6, marginBottom: '8px' }}>{title}</div>
-        <div style={{
-            fontSize: '28px',
-            fontWeight: '700',
-            marginBottom: '4px',
-            color: highlight ? 'var(--primary-paddle)' : 'white'
-        }}>
-            {value}
-        </div>
-        <div style={{ fontSize: '12px', opacity: 0.5 }}>{subtitle}</div>
-    </motion.div>
+const StatCard = ({ icon: Icon, title, value, note, highlight }) => (
+    <div className={`sp-stat${highlight ? ' is-highlight' : ''}`}>
+        <div className="sp-stat-label"><Icon size={15} aria-hidden="true" /> {title}</div>
+        <div className="sp-stat-value">{value}</div>
+        <div className="sp-stat-note">{note}</div>
+    </div>
 );
-
-const QuickActionCard = ({ icon, title, onClick }) => (
-    <motion.div
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={onClick}
-        style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.05)',
-            borderRadius: '12px',
-            padding: '20px',
-            cursor: 'pointer',
-            textAlign: 'center',
-            transition: 'all 0.2s'
-        }}
-    >
-        <div style={{ fontSize: '32px', marginBottom: '8px' }}>{icon}</div>
-        <div style={{ fontSize: '14px', fontWeight: '600' }}>{title}</div>
-    </motion.div>
-);
-
-const BusinessRow = ({ business }) => {
-    const navigate = useNavigate();
-
-    const getStatusBadge = (status) => {
-        const styles = {
-            trial: { bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', text: 'Prueba' },
-            active: { bg: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', text: 'Activo' },
-            inactive: { bg: 'rgba(156, 163, 175, 0.1)', color: '#9ca3af', text: 'Inactivo' }
-        };
-        const style = styles[status] || styles.inactive;
-
-        return (
-            <span style={{
-                padding: '4px 12px',
-                background: style.bg,
-                color: style.color,
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: '600'
-            }}>
-                {style.text}
-            </span>
-        );
-    };
-
-    return (
-        <div
-            onClick={() => navigate(`/admin/businesses/${business.id}/edit`)}
-            style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '16px',
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.05)',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-        >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-                <div style={{ fontSize: '32px' }}>{business.categories?.icon || '🏢'}</div>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '600', marginBottom: '4px' }}>{business.name}</div>
-                    <div style={{ fontSize: '13px', opacity: 0.6 }}>
-                        {business.categories?.name} • {business.totalBookings} reservas
-                    </div>
-                </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                {business.metadata?.simulacion === true && <DemoBadge />}
-                {getStatusBadge(business.subscription_status)}
-                <div style={{ fontSize: '20px', opacity: 0.5 }}>→</div>
-            </div>
-        </div>
-    );
-};
 
 export default SellerDashboard;

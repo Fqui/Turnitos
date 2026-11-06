@@ -400,6 +400,10 @@ class SupabaseService {
         return sellerService.resetBusinessPasswordAsSuperAdmin(businessId, businessName);
     }
 
+    async resetSellerPasswordAsSuperAdmin(sellerId) {
+        return sellerService.resetSellerPasswordAsSuperAdmin(sellerId);
+    }
+
     async deleteBusinessAsSuperAdmin(businessId) {
         return sellerService.deleteBusinessAsSuperAdmin(businessId);
     }

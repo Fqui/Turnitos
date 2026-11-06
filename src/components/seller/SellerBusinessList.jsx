@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { Plus, ExternalLink } from 'lucide-react';
 import supabaseService from '../../services/supabaseService';
 import RegisterPaymentModal from './RegisterPaymentModal';
 import DemoBadge from './DemoBadge';
+import SellerShell from './SellerShell';
+import SellerStatusBadge from './SellerStatusBadge';
 import { getBillingInfo, formatDueText, formatMoney } from '../../utils/billingUtils';
 
 const isDemo = (business) => business.metadata?.simulacion === true;
+
+const FILTERS = { all: 'Todos', demo: 'Demos', trial: 'Prueba', active: 'Activos', inactive: 'Inactivos' };
 
 const SellerBusinessList = () => {
     const [businesses, setBusinesses] = useState([]);
@@ -58,261 +62,122 @@ const SellerBusinessList = () => {
         return matchesFilter && matchesSearch;
     });
 
-    const getStatusBadge = (status) => {
-        const styles = {
-            trial: { bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', text: 'Prueba' },
-            active: { bg: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', text: 'Activo' },
-            inactive: { bg: 'rgba(156, 163, 175, 0.1)', color: '#9ca3af', text: 'Inactivo' }
-        };
-        const style = styles[status] || styles.inactive;
-
-        return (
-            <span style={{
-                padding: '6px 12px',
-                background: style.bg,
-                color: style.color,
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: '600'
-            }}>
-                {style.text}
-            </span>
-        );
-    };
-
-    if (loading) {
-        return (
-            <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: '#0f0f0f',
-                color: 'white'
-            }}>
-                <p>Cargando negocios...</p>
-            </div>
-        );
-    }
-
     return (
-        <div style={{
-            minHeight: '100vh',
-            background: '#0f0f0f',
-            color: 'white',
-            padding: '24px'
-        }}>
-            {/* Header */}
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '32px',
-                flexWrap: 'wrap',
-                gap: '16px'
-            }}>
+        <SellerShell>
+            <div className="sp-head">
                 <div>
-                    <button
-                        onClick={() => navigate('/admin/dashboard')}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--primary-paddle)',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            marginBottom: '8px'
-                        }}
-                    >
-                        ← Volver al Dashboard
-                    </button>
-                    <h1 style={{ fontSize: '32px', fontWeight: '700', margin: 0 }}>
-                        Mis Negocios
-                    </h1>
-                    <p style={{ opacity: 0.6, marginTop: '4px' }}>
+                    <h1 className="sp-title">Mis negocios</h1>
+                    <p className="sp-sub">
                         {filteredBusinesses.length} negocio{filteredBusinesses.length !== 1 ? 's' : ''}
                     </p>
                 </div>
-                <button
-                    onClick={() => navigate('/admin/businesses/new')}
-                    style={{
-                        padding: '12px 24px',
-                        background: 'var(--primary-paddle)',
-                        color: '#000',
-                        border: 'none',
-                        borderRadius: '12px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        boxShadow: '0 4px 12px rgba(0, 230, 118, 0.3)'
-                    }}
-                >
-                    + Crear Negocio
-                </button>
+                <div className="sp-actions">
+                    <button type="button" className="sp-btn sp-btn-primary" onClick={() => navigate('/admin/businesses/new')}>
+                        <Plus size={16} aria-hidden="true" /> Nuevo negocio
+                    </button>
+                </div>
             </div>
 
-            {/* Filters */}
-            <div style={{
-                display: 'flex',
-                gap: '16px',
-                marginBottom: '24px',
-                flexWrap: 'wrap'
-            }}>
+            <div className="sp-filters">
                 <input
                     type="text"
+                    className="sp-input"
                     placeholder="Buscar por nombre..."
+                    aria-label="Buscar por nombre"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{
-                        flex: 1,
-                        minWidth: '250px',
-                        padding: '12px 16px',
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '12px',
-                        color: 'white',
-                        fontSize: '14px',
-                        outline: 'none'
-                    }}
                 />
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {['all', 'demo', 'trial', 'active', 'inactive'].map(status => (
+                <div className="sp-chips">
+                    {Object.entries(FILTERS).map(([status, label]) => (
                         <button
                             key={status}
+                            type="button"
+                            className={`sp-chip${filter === status ? ' is-active' : ''}`}
                             onClick={() => setFilter(status)}
-                            style={{
-                                padding: '10px 16px',
-                                background: filter === status ? 'var(--primary-paddle)' : 'rgba(255,255,255,0.05)',
-                                color: filter === status ? '#000' : 'white',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                borderRadius: '12px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                fontSize: '14px'
-                            }}
                         >
-                            {{ all: 'Todos', demo: 'Demos', trial: 'Prueba', active: 'Activos', inactive: 'Inactivos' }[status]}
+                            {label}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Business List */}
-            {filteredBusinesses.length === 0 ? (
-                <div style={{
-                    textAlign: 'center',
-                    padding: '60px 20px',
-                    background: 'rgba(255,255,255,0.03)',
-                    borderRadius: '16px',
-                    border: '1px solid rgba(255,255,255,0.05)'
-                }}>
-                    <div style={{ fontSize: '64px', marginBottom: '16px' }}>🏢</div>
-                    <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>No se encontraron negocios</h3>
-                    <p style={{ opacity: 0.6, marginBottom: '24px' }}>
-                        {searchTerm ? 'Intenta con otro término de búsqueda' : 'Crea tu primer negocio para comenzar'}
-                    </p>
+            {loading ? (
+                <div className="sp-loading">Cargando negocios...</div>
+            ) : filteredBusinesses.length === 0 ? (
+                <div className="sp-card sp-empty">
+                    <h3>No se encontraron negocios</h3>
+                    <p>{searchTerm ? 'Probá con otro nombre.' : 'Creá tu primer negocio para empezar.'}</p>
                     {!searchTerm && (
-                        <button
-                            onClick={() => navigate('/admin/businesses/new')}
-                            style={{
-                                padding: '12px 24px',
-                                background: 'var(--primary-paddle)',
-                                color: '#000',
-                                border: 'none',
-                                borderRadius: '12px',
-                                fontWeight: '700',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Crear Negocio
+                        <button type="button" className="sp-btn sp-btn-primary" onClick={() => navigate('/admin/businesses/new')}>
+                            Crear negocio
                         </button>
                     )}
                 </div>
             ) : (
-                <div style={{
-                    display: 'grid',
-                    gap: '16px'
-                }}>
+                <div className="sp-biz-list">
                     {filteredBusinesses.map((business) => {
                         const billingInfo = getBillingInfo(business, subscriptions.find(sub => String(sub.business_id) === String(business.id)));
+                        const dueTone = billingInfo.tone === 'danger' || billingInfo.tone === 'warning' ? ` is-${billingInfo.tone}` : '';
                         return (
-                        <motion.div
-                            key={business.id}
-                            whileHover={{ y: -2 }}
-                            onClick={() => navigate(`/admin/businesses/${business.id}/edit`)}
-                            style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: '16px',
-                                padding: '20px',
-                                background: 'rgba(255,255,255,0.03)',
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                borderRadius: '16px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                opacity: deletingId === business.id ? 0.5 : 1
-                            }}
-                        >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: '1 1 260px', minWidth: 0 }}>
-                                <div style={{ fontSize: '48px' }}>{business.categories?.icon || '🏢'}</div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontWeight: '700', fontSize: '18px', marginBottom: '6px' }}>
-                                        {business.name}
-                                    </div>
-                                    <div style={{ fontSize: '14px', opacity: 0.6, marginBottom: '8px' }}>
-                                        {business.categories?.name} • {business.location}
-                                    </div>
-                                    <div style={{ fontSize: '13px', opacity: 0.5 }}>
-                                        {business.totalBookings} reservas • Mes {business.subscriptionMonth || 0} de suscripción
-                                    </div>
-                                    <div style={{ fontSize: '13px', marginTop: '4px', color: billingInfo.tone === 'danger' ? '#f87171' : 'rgba(255,255,255,0.7)' }}>
-                                        {billingInfo.label} · {formatDueText(billingInfo)}
-                                        {billingInfo.monthlyPrice ? ` · ${formatMoney(billingInfo.monthlyPrice)}/mes` : ''}
+                            <div
+                                key={business.id}
+                                className={`sp-card sp-biz${deletingId === business.id ? ' is-busy' : ''}`}
+                                onClick={() => navigate(`/admin/businesses/${business.id}/edit`)}
+                            >
+                                <div className="sp-biz-main">
+                                    <span className="sp-avatar" aria-hidden="true">{business.categories?.icon || '🏢'}</span>
+                                    <div className="sp-row-main">
+                                        <div className="sp-biz-title">
+                                            <span className="sp-row-name">{business.name}</span>
+                                            {isDemo(business) && <DemoBadge />}
+                                            <SellerStatusBadge status={business.subscription_status} />
+                                        </div>
+                                        <div className="sp-row-meta">
+                                            {business.categories?.name} · {business.location} · {business.totalBookings} reservas
+                                        </div>
+                                        <div className={`sp-due${dueTone}`}>
+                                            {billingInfo.label} · {formatDueText(billingInfo)}
+                                            {billingInfo.monthlyPrice ? ` · ${formatMoney(billingInfo.monthlyPrice)}/mes` : ''}
+                                        </div>
                                     </div>
                                 </div>
+                                <div className="sp-biz-actions">
+                                    {isDemo(business) && (
+                                        <>
+                                            <a
+                                                className="sp-btn sp-btn-sm"
+                                                href={`https://${business.slug}.turnitoslr.com`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                Ver demo <ExternalLink size={13} aria-hidden="true" />
+                                            </a>
+                                            <button
+                                                type="button"
+                                                className="sp-btn sp-btn-sm sp-btn-danger"
+                                                disabled={deletingId === business.id}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    deleteDemo(business);
+                                                }}
+                                            >
+                                                {deletingId === business.id ? 'Borrando…' : 'Borrar demo'}
+                                            </button>
+                                        </>
+                                    )}
+                                    <button
+                                        type="button"
+                                        className="sp-btn sp-btn-sm sp-btn-primary"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPaymentTarget({ business, monthlyPrice: billingInfo.monthlyPrice });
+                                        }}
+                                    >
+                                        Registrar pago
+                                    </button>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                                {isDemo(business) && (
-                                    <>
-                                        <a
-                                            href={`https://${business.slug}.turnitoslr.com`}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            onClick={(e) => e.stopPropagation()}
-                                            style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', color: 'white', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}
-                                        >
-                                            Ver demo ↗
-                                        </a>
-                                        <button
-                                            type="button"
-                                            disabled={deletingId === business.id}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deleteDemo(business);
-                                            }}
-                                            style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(248,113,113,0.4)', background: 'none', color: '#f87171', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
-                                        >
-                                            {deletingId === business.id ? 'Borrando…' : 'Borrar demo'}
-                                        </button>
-                                    </>
-                                )}
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setPaymentTarget({ business, monthlyPrice: billingInfo.monthlyPrice });
-                                    }}
-                                    style={{ padding: '8px 12px', borderRadius: '10px', border: 'none', background: 'var(--primary-paddle, #3ECF8E)', color: '#000', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
-                                >
-                                    + Registrar pago
-                                </button>
-                                {isDemo(business) && <DemoBadge />}
-                                {getStatusBadge(business.subscription_status)}
-                                <div style={{ fontSize: '24px', opacity: 0.5 }}>→</div>
-                            </div>
-                        </motion.div>
                         );
                     })}
                 </div>
@@ -329,7 +194,7 @@ const SellerBusinessList = () => {
                     }}
                 />
             )}
-        </div>
+        </SellerShell>
     );
 };
 

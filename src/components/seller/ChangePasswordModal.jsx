@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import supabaseService from '../../services/supabaseService';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
-const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChanged, onClose }) => {
+const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChanged, onClose, onCancel, title, description }) => {
     useBodyScrollLock();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -60,12 +60,12 @@ const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChang
                 style={{
                     width: '100%',
                     maxWidth: '440px',
-                    background: '#111827',
-                    border: '1px solid #374151',
+                    background: 'var(--sa-surface, #111827)',
+                    border: '1px solid var(--sa-border-strong, #374151)',
                     borderRadius: '16px',
                     padding: '28px',
                     boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
-                    color: '#f9fafb',
+                    color: 'var(--sa-text, #f9fafb)',
                     fontFamily: 'var(--font-sans)'
                 }}
             >
@@ -84,11 +84,11 @@ const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChang
                     }}>
                         🔐
                     </div>
-                    <h3 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: '800', color: '#f9fafb' }}>
-                        Crea tu contraseña personal
+                    <h3 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: '800', color: 'var(--sa-text, #f9fafb)' }}>
+                        {title || 'Crea tu contraseña personal'}
                     </h3>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af', lineHeight: '1.5' }}>
-                        Estás ingresando con una contraseña provisoria ({userEmail}). Por tu seguridad, elegí una clave propia para continuar.
+                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--sa-text-muted, #9ca3af)', lineHeight: '1.5' }}>
+                        {description || `Estás ingresando con una contraseña provisoria (${userEmail}). Por tu seguridad, elegí una clave propia para continuar.`}
                     </p>
                 </div>
 
@@ -110,7 +110,7 @@ const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChang
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: '#d1d5db' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2, #d1d5db)' }}>
                             Nueva Contraseña *
                         </label>
                         <input
@@ -122,10 +122,10 @@ const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChang
                             style={{
                                 width: '100%',
                                 padding: '12px 14px',
-                                background: '#1e293b',
-                                border: '1px solid #334155',
+                                background: 'var(--sa-surface-2, #1e293b)',
+                                border: '1px solid var(--sa-border-strong, #334155)',
                                 borderRadius: '10px',
-                                color: '#ffffff',
+                                color: 'var(--sa-text, #ffffff)',
                                 fontSize: '14px',
                                 outline: 'none'
                             }}
@@ -133,7 +133,7 @@ const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChang
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: '#d1d5db' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px', fontWeight: '700', color: 'var(--sa-text-2, #d1d5db)' }}>
                             Confirmar Nueva Contraseña *
                         </label>
                         <input
@@ -145,10 +145,10 @@ const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChang
                             style={{
                                 width: '100%',
                                 padding: '12px 14px',
-                                background: '#1e293b',
-                                border: '1px solid #334155',
+                                background: 'var(--sa-surface-2, #1e293b)',
+                                border: '1px solid var(--sa-border-strong, #334155)',
                                 borderRadius: '10px',
-                                color: '#ffffff',
+                                color: 'var(--sa-text, #ffffff)',
                                 fontSize: '14px',
                                 outline: 'none'
                             }}
@@ -161,7 +161,7 @@ const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChang
                         style={{
                             marginTop: '8px',
                             padding: '12px',
-                            background: '#2563eb',
+                            background: 'var(--sa-primary, #2563eb)',
                             border: 'none',
                             borderRadius: '10px',
                             color: '#ffffff',
@@ -174,6 +174,15 @@ const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChang
                     >
                         {loading ? 'Guardando clave...' : 'Guardar e Ingresar ➔'}
                     </button>
+                    {onCancel && (
+                        <button
+                            type="button"
+                            onClick={onCancel}
+                            style={{ padding: '6px', background: 'none', border: 'none', color: 'var(--sa-text-muted, #9ca3af)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
+                        >
+                            Cancelar
+                        </button>
+                    )}
                 </form>
             </motion.div>
         </div>

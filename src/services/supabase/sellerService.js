@@ -51,7 +51,8 @@ export async function getCurrentSeller() {
         .eq('is_active', true)
         .maybeSingle();
 
-    return data || null;
+    if (!data) return null;
+    return { ...data, mustChangePassword: session.user.user_metadata?.must_change_password === true };
 }
 
 /**
@@ -805,6 +806,20 @@ export async function resetBusinessPasswordAsSuperAdmin(businessId) {
 }
 
 /**
+ * Reset a seller's password as super admin. They must pick a new one on their next login.
+ */
+export async function resetSellerPasswordAsSuperAdmin(sellerId) {
+    const { data, error } = await supabase.functions.invoke('admin-accounts', {
+        body: { action: 'reset_seller_password', seller_id: sellerId }
+    });
+    if (error) {
+        const detail = await error.context?.json?.().catch(() => null);
+        throw new Error(detail?.error || error.message || 'No se pudo restablecer la contraseña');
+    }
+    return data;
+}
+
+/**
  * Delete business as super admin
  */
 export async function deleteBusinessAsSuperAdmin(businessId) {
@@ -851,7 +866,7 @@ export async function createSellerAsSuperAdmin({ firstName, lastName, email, pho
 
     const tempPassword = generateTempPassword();
     const { data: account, error: accountError } = await supabase.functions.invoke('admin-accounts', {
-        body: { action: 'create_account', email: cleanEmail, password: tempPassword }
+        body: { action: 'create_account', email: cleanEmail, password: tempPassword, must_change_password: true }
     });
     if (accountError) {
         const detail = await accountError.context?.json?.().catch(() => null);

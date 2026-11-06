@@ -194,6 +194,32 @@ export default function SuperAdminDashboard() {
         }
     };
 
+    const handleResetSellerPassword = async (seller) => {
+        const fullName = `${seller.first_name} ${seller.last_name}`.trim();
+        const confirmed = await showConfirm(
+            '¿Restablecer Contraseña?',
+            `¿Generar una nueva contraseña provisoria para "${fullName}"? La que usa ahora deja de funcionar.`,
+            'Restablecer',
+            'Cancelar'
+        );
+        if (!confirmed) return;
+
+        try {
+            const creds = await supabaseService.resetSellerPasswordAsSuperAdmin(seller.id);
+            setResetCredentialsModal({
+                ...creds,
+                businessName: fullName,
+                accessLabel: 'el *panel de vendedores de TurnitosLR*',
+                loginPath: '/admin/login',
+                whatsapp: seller.phone || ''
+            });
+            showToast('🔑 Contraseña provisoria generada', 'success');
+        } catch (err) {
+            console.error('Error resetting seller password:', err);
+            showToast(`Error al restablecer contraseña: ${err.message}`, 'error');
+        }
+    };
+
     const handleDeleteBusiness = async (businessId) => {
         const confirmed = await showConfirm(
             '¿Eliminar Negocio?',
@@ -420,6 +446,7 @@ export default function SuperAdminDashboard() {
                             settledSellers={settledSellers}
                             onToggleSettlement={toggleSellerSettlement}
                             onCreateSeller={handleCreateSeller}
+                            onResetPassword={handleResetSellerPassword}
                         />
                     )}
 

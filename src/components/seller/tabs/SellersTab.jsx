@@ -19,7 +19,8 @@ export default function SellersTab({
     onViewDetails,
     settledSellers = {},
     onToggleSettlement,
-    onCreateSeller
+    onCreateSeller,
+    onResetPassword
 }) {
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState(EMPTY_SELLER);
@@ -178,7 +179,7 @@ export default function SellersTab({
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                     {/* Settlement Toggle */}
                                     <button
                                         onClick={(e) => {
@@ -212,6 +213,29 @@ export default function SellersTab({
                                     }}>
                                         {seller.is_active ? '✓ Activo' : '✗ Inactivo'}
                                     </div>
+
+                                    {/* Reset Password */}
+                                    {onResetPassword && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onResetPassword(seller);
+                                            }}
+                                            style={{
+                                                padding: '6px 12px',
+                                                background: 'var(--sa-surface-2)',
+                                                border: '1px solid var(--sa-border-strong)',
+                                                borderRadius: '8px',
+                                                color: 'var(--sa-text)',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                fontSize: '11px'
+                                            }}
+                                            title="Generar una clave provisoria nueva"
+                                        >
+                                            🔑 Resetear clave
+                                        </button>
+                                    )}
 
                                     {/* Toggle Active Status */}
                                     <button
