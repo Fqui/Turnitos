@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation, useNavigationType } from 'react-router-
 import { motion } from 'framer-motion';
 import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
+import CategoryIcon from '../components/common/CategoryIcon';
 import { isPromotionLive } from '../utils/promotionUtils';
 import SEOHead from '../components/SEOHead';
 import { SITE_URL, DEFAULT_TITLE, DEFAULT_DESCRIPTION } from '../utils/seo';
@@ -582,7 +583,7 @@ export default function Home() {
                             }}
                         />
                         <span style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', fontSize: '20px', opacity: 0.5, color: 'var(--text-secondary)' }}>
-                            🔍
+                            <CategoryIcon icon="🔍" size={20} style={{ display: 'block' }} />
                         </span>
 
                         {searchTerm && (
@@ -743,7 +744,7 @@ export default function Home() {
                                 maxWidth: '160px'
                             }}
                         >
-                            <span style={{ fontSize: '32px' }}>⚡</span>
+                            <CategoryIcon icon="⚡" />
                             <span style={{ fontSize: '14px', fontWeight: '600', fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em' }}>Todos</span>
                         </motion.button>
 
@@ -774,7 +775,7 @@ export default function Home() {
                                         maxWidth: '160px'
                                     }}
                                 >
-                                    <span style={{ fontSize: '32px' }}>{cat.icon}</span>
+                                    <CategoryIcon icon={cat.icon} />
                                     <span style={{ fontSize: '14px', fontWeight: '600', fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em' }}>{cat.name}</span>
                                 </motion.button>
                             ))
@@ -829,7 +830,7 @@ export default function Home() {
                                         maxWidth: '160px'
                                     }}
                                 >
-                                    <span style={{ fontSize: '32px' }}>{cat.icon}</span>
+                                    <CategoryIcon icon={cat.icon} />
                                     <span style={{ fontSize: '14px', fontWeight: '600', fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em' }}>{cat.name}</span>
                                 </motion.button>
                             ))
@@ -991,7 +992,7 @@ export default function Home() {
                                     borderRadius: '20px',
                                     border: '1px solid var(--border)'
                                 }}>
-                                    <span style={{ fontSize: '40px', display: 'block', marginBottom: '12px' }}>🔍</span>
+                                    <CategoryIcon icon="🔍" size={40} style={{ display: 'block', margin: '0 auto 12px' }} />
                                     <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
                                         No se encontraron resultados
                                     </h3>
@@ -1081,7 +1082,7 @@ export default function Home() {
                                                             textOverflow: 'ellipsis',
                                                             whiteSpace: 'nowrap'
                                                         }}>
-                                                            <span>📍</span> {business.location}
+                                                            <CategoryIcon icon="📍" size={14} style={{ verticalAlign: '-2px' }} /> {business.location}
                                                         </p>
                                                     </div>
                                                 </div>
