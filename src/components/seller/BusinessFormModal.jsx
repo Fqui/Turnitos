@@ -438,7 +438,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             {isSport ? '🏟️' : isService ? '👥' : '🏡'}
                         </div>
                         <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: 'var(--sa-text)', letterSpacing: '-0.02em' }}>
                                     {business ? 'Editar Negocio' : 'Nuevo Negocio'}
                                 </h2>
@@ -607,6 +607,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                                     placeholder="slug-del-negocio"
                                     style={{
                                         flex: 1,
+                                        minWidth: 0,
                                         padding: '12px 14px',
                                         background: 'transparent',
                                         border: 'none',
@@ -634,7 +635,7 @@ const BusinessFormModal = ({ business, categories = [], subcategories = [], sell
                             <span>🏷️</span> Categorización del Negocio
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '14px' }}>
                             {/* Category Dropdown */}
                             <div ref={categoryRef} style={{ position: 'relative' }}>
                                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: 'var(--sa-text)' }}>

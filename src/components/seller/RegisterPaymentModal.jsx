@@ -90,7 +90,7 @@ export default function RegisterPaymentModal({ business, monthlyPrice, onClose, 
                             {business.name}{monthlyPrice ? ` · ${formatMoney(monthlyPrice)}/mes` : ''}
                         </p>
                     </div>
-                    <button type="button" onClick={onClose} aria-label="Cerrar" style={{ background: 'transparent', border: 'none', color: c.muted, cursor: 'pointer', padding: 4 }}>
+                    <button type="button" onClick={onClose} aria-label="Cerrar" style={{ background: 'transparent', border: 'none', color: c.muted, cursor: 'pointer', padding: 10 }}>
                         <X size={18} />
                     </button>
                 </div>

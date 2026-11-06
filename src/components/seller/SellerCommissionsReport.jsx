@@ -133,8 +133,10 @@ const SellerCommissionsReport = () => {
                                     <td data-label="Suscripción">Mes {commission.subscription_month}</td>
                                     <td data-label="Pago" className="is-num">{formatMoney(commission.payment_amount)}</td>
                                     <td data-label="Tasa" className="is-num">
-                                        {commission.base_commission_rate}%
-                                        {commission.volume_bonus > 0 && <span className="sp-bonus">+{commission.volume_bonus}%</span>}
+                                        <span>
+                                            {commission.base_commission_rate}%
+                                            {commission.volume_bonus > 0 && <span className="sp-bonus">+{commission.volume_bonus}%</span>}
+                                        </span>
                                     </td>
                                     <td data-label="Comisión" className="is-num is-money">{formatMoney(commission.commission_amount)}</td>
                                 </tr>

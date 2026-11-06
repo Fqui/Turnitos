@@ -178,7 +178,7 @@ const ChangePasswordModal = ({ userEmail, businessId, onSuccess, onPasswordChang
                         <button
                             type="button"
                             onClick={onCancel}
-                            style={{ padding: '6px', background: 'none', border: 'none', color: 'var(--sa-text-muted, #9ca3af)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
+                            style={{ padding: '10px', background: 'none', border: 'none', color: 'var(--sa-text-muted, #9ca3af)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
                         >
                             Cancelar
                         </button>

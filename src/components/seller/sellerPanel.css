@@ -209,6 +209,7 @@
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
+    line-height: 1.2;
 }
 
 .sp-stat-note {
@@ -252,7 +253,8 @@
 .sp-link {
     background: none;
     border: none;
-    padding: 0;
+    padding: 10px 8px;
+    margin: -10px -8px;
     color: var(--sa-primary-text);
     font-family: inherit;
     font-size: 13px;
@@ -416,6 +418,7 @@
 
 .sp-biz-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
 }
 
@@ -552,7 +555,14 @@
     .sp-stats-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .sp-stats-3 .sp-stat.is-highlight { grid-column: 1 / -1; }
     .sp-stat { padding: 14px; }
-    .sp-stat-value { font-size: 21px; }
+    .sp-stat-value { font-size: clamp(17px, 5.4vw, 21px); }
+
+    /* Name on its own line: the badges go below instead of squeezing it */
+    .sp-row { flex-wrap: wrap; row-gap: 6px; }
+    .sp-row > svg { display: none; }
+    .sp-row-main { flex-basis: calc(100% - 52px); }
+    .sp-row .sp-badges { margin-left: 52px; }
+    .sp-row-name, .sp-row-meta { white-space: normal; }
 
     .sp-biz-actions { width: 100%; }
     .sp-biz-actions .sp-btn { flex: 1; }
@@ -572,5 +582,6 @@
         color: var(--sa-text-muted);
         font-weight: 500;
     }
-    .sp-table tfoot tr { border-bottom: none; }
+    .sp-table tfoot tr { display: flex; justify-content: space-between; border-bottom: none; }
+    .sp-table tfoot td { display: block; }
 }
