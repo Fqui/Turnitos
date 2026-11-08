@@ -3,7 +3,6 @@ import React from 'react';
 // Las categorías guardan un emoji en la base y cada sistema lo dibuja distinto:
 // se muestra siempre la misma imagen de public/icons/categorias o el mismo dibujo
 const IMAGES = {
-    '⚽': 'deportes',
     '🩺': 'salud',
     '⚕': 'salud',
     '🏡': 'alquileres',
@@ -11,6 +10,30 @@ const IMAGES = {
 };
 
 const SHAPES = {
+    // Same football as deportes.png plus a padel racket and ball in its flat style
+    sports: (
+        <>
+            <ellipse cx="34" cy="56.500" rx="29" ry="6.500" fill="#6CC17E" />
+            <image href="/icons/categorias/deportes.png" x="0" y="15" width="44" height="44" />
+            <g transform="translate(48 23) rotate(-16) scale(0.92)">
+                <rect x="-2.800" y="9" width="5.600" height="17" rx="2.400" fill="#2E3E50" />
+                <rect x="-2.800" y="16" width="5.600" height="2" fill="#F4725A" />
+                <rect x="-2.800" y="20.500" width="5.600" height="2" fill="#F4725A" />
+                <path fill="#2E3E50" d="M-6.500 2L-2.800 11h5.600L6.500 2z" />
+                <ellipse cx="0" cy="-8" rx="13" ry="14.500" fill="#2E3E50" />
+                <ellipse cx="0" cy="-8" rx="10.300" ry="11.800" fill="#FFFFFF" />
+                <g fill="#2E3E50">
+                    <circle cx="-4.500" cy="-14" r="1.400" /><circle cx="0" cy="-14" r="1.400" /><circle cx="4.500" cy="-14" r="1.400" />
+                    <circle cx="-6.300" cy="-9" r="1.400" /><circle cx="-2.100" cy="-9" r="1.400" /><circle cx="2.100" cy="-9" r="1.400" /><circle cx="6.300" cy="-9" r="1.400" />
+                    <circle cx="-4.500" cy="-4" r="1.400" /><circle cx="0" cy="-4" r="1.400" /><circle cx="4.500" cy="-4" r="1.400" />
+                    <circle cx="0" cy="1" r="1.400" />
+                </g>
+            </g>
+            <circle cx="38" cy="53" r="6.300" fill="#2E3E50" />
+            <circle cx="38" cy="53" r="4.200" fill="#E3EE4E" />
+            <path fill="none" stroke="#FFFFFF" strokeWidth="1.300" strokeLinecap="round" d="M34.300 51.200c2.300 0 4 1.700 4 4M41.700 54.800c-2.300 0-4-1.700-4-4" />
+        </>
+    ),
     beauty: (
         <>
             <circle cx="32" cy="32" r="30" fill="#FFD9E8" />
@@ -61,6 +84,7 @@ const SHAPES = {
 };
 
 const EMOJI_SHAPES = {
+    '⚽': 'sports',
     '💇': 'beauty',
     '🐶': 'dog',
     '🔍': 'search',
