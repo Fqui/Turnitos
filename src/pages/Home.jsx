@@ -417,8 +417,8 @@ export default function Home() {
         setVisibleCount(20);
         writeFilterParams(category, 'all');
 
-        // Auto scroll to results on mobile
-        if (window.innerWidth < 768 && resultsRef.current) {
+        // Auto scroll to results (phone and desktop)
+        if (resultsRef.current) {
             setTimeout(() => {
                 resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);

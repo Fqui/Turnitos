@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import DurationSelector from './DurationSelector';
 import { PADEL_DURATIONS, buildShiftRanges, findShift } from '../utils/courtHours';
@@ -178,6 +178,49 @@ const PadelTimeline = ({
         return hoursArray;
     }, [openingTime, closingTime]);
 
+    // Current time marker: only when the selected day is today, refreshed every minute
+    const [now, setNow] = useState(() => new Date());
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 60000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const nowMarker = useMemo(() => {
+        if (!selectedDate || hours.length === 0) return null;
+        const day = selectedDate instanceof Date ? selectedDate : new Date(`${selectedDate}T00:00:00`);
+        if (day.toDateString() !== now.toDateString()) return null;
+        const startHourMinutes = Math.floor(timeToMinutes(openingTime) / 60) * 60;
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        // Columns after midnight belong to the same grid: try both readings of "now"
+        for (const minutes of [nowMinutes, nowMinutes + 1440]) {
+            const offset = minutes - startHourMinutes;
+            const index = Math.floor(offset / 60);
+            if (offset >= 0 && index < hours.length) {
+                return {
+                    index,
+                    left: `${((offset % 60) / 60) * 100}%`,
+                    label: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+                };
+            }
+        }
+        return null;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedDate, now, hours, openingTime]);
+
+    const NOW_COLOR = '#FF5252';
+
+    // If the grid scrolls sideways, bring the current time into view when the day opens
+    const scrollRef = useRef(null);
+    const nowIndex = nowMarker?.index;
+    useEffect(() => {
+        const container = scrollRef.current;
+        if (nowIndex == null || !container || container.scrollWidth <= container.clientWidth) return;
+        const line = container.querySelector('[data-now-line]');
+        if (!line) return;
+        const lineX = line.getBoundingClientRect().left - container.getBoundingClientRect().left + container.scrollLeft;
+        container.scrollLeft = Math.max(0, lineX - container.clientWidth / 2);
+    }, [nowIndex, selectedDate]);
+
     // Get bookings for a specific court
     const getCourtBookings = (courtId) => {
         if (!selectedDate || !existingBookings) return [];
@@ -258,6 +301,7 @@ const PadelTimeline = ({
 
             {/* Main Timeline Grid (ATC Sports Layout) */}
             <div
+                ref={scrollRef}
                 className="custom-scrollbar"
                 style={{
                     overflowX: 'auto',
@@ -312,7 +356,7 @@ const PadelTimeline = ({
                     }} />
 
                     {/* Hours Header Row - 1 column per hour, 100% aligned with vertical grid lines */}
-                    {hours.map((hour) => (
+                    {hours.map((hour, hIdx) => (
                         <div
                             key={hour}
                             style={{
@@ -323,10 +367,29 @@ const PadelTimeline = ({
                                 color: 'var(--text-primary)',
                                 borderBottom: '1px solid var(--border)',
                                 borderRight: '1px solid var(--border)',
-                                backgroundColor: 'var(--bg-card)'
+                                backgroundColor: 'var(--bg-card)',
+                                position: 'relative'
                             }}
                         >
                             {hour.split(':')[0]}
+                            {nowMarker?.index === hIdx && (
+                                <span
+                                    title={`Ahora ${nowMarker.label}`}
+                                    style={{
+                                        position: 'absolute',
+                                        left: nowMarker.left,
+                                        bottom: '-1px',
+                                        transform: 'translateX(-50%)',
+                                        width: '0',
+                                        height: '0',
+                                        borderLeft: '6px solid transparent',
+                                        borderRight: '6px solid transparent',
+                                        borderTop: `7px solid ${NOW_COLOR}`,
+                                        zIndex: 20,
+                                        pointerEvents: 'none'
+                                    }}
+                                />
+                            )}
                         </div>
                     ))}
 
@@ -413,6 +476,22 @@ const PadelTimeline = ({
                                                     borderBottomRightRadius: (timeToMinutes(booking.time) + (booking.duration || 60) === hourMinutes + 60) ? '8px' : ((timeToMinutes(booking.time) + (booking.duration || 60) === hourMinutes + 30) ? '8px' : '0'),
                                                     zIndex: 15,
                                                     boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                                                }} />
+                                            )}
+
+                                            {/* Current time line */}
+                                            {nowMarker?.index === hIdx && (
+                                                <div data-now-line="" style={{
+                                                    position: 'absolute',
+                                                    left: nowMarker.left,
+                                                    top: '-1px',
+                                                    bottom: isLastCourt ? 0 : '-1px',
+                                                    width: '2px',
+                                                    transform: 'translateX(-1px)',
+                                                    backgroundColor: NOW_COLOR,
+                                                    boxShadow: `0 0 6px ${NOW_COLOR}80`,
+                                                    zIndex: 20,
+                                                    pointerEvents: 'none'
                                                 }} />
                                             )}
 

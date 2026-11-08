@@ -750,6 +750,8 @@ export default function VenueProfile({ business: initialBusiness }) {
                                     center={[business.latitude, business.longitude]}
                                     zoom={15}
                                     style={{ height: '100%', width: '100%' }}
+                                    dragging={false}
+                                    scrollWheelZoom={false}
                                 >
                                     <TurnitosTileLayer forceTheme={(business.theme || business.metadata?.theme) === 'dark' ? 'dark' : 'light'} />
                                     <Marker position={[business.latitude, business.longitude]} icon={createTurnitosMarkerIcon(business.primary_color || business.button_color || '#10B981', '🏡')} />

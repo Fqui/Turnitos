@@ -393,7 +393,14 @@ export default function PromotionsHero({ promotions, businesses }) {
                         bottom: '18px',
                         right: '18px',
                         display: 'flex',
+                        alignItems: 'center',
                         gap: '6px',
+                        padding: '6px 8px',
+                        borderRadius: '999px',
+                        // Dark capsule so the dots read over white cards and photos alike
+                        background: 'rgba(15, 23, 42, 0.45)',
+                        backdropFilter: 'blur(6px)',
+                        WebkitBackdropFilter: 'blur(6px)',
                         zIndex: 10
                     }}>
                         {promotions.map((_, idx) => (
@@ -405,10 +412,9 @@ export default function PromotionsHero({ promotions, businesses }) {
                                     height: '8px',
                                     borderRadius: '4px',
                                     background: 'white',
-                                    opacity: idx === activeIndex ? 1 : 0.4,
+                                    opacity: idx === activeIndex ? 1 : 0.5,
                                     transition: 'all 0.3s',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                    cursor: 'pointer'
                                 }}
                             />
                         ))}
