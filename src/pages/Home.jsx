@@ -11,6 +11,12 @@ import { generateSlug } from '../utils/utils';
 import { isProfileReady } from '../utils/profileChecklist';
 import { frameStyleFor } from '../utils/imageFrame';
 import { getCoverImage } from '../utils/imageUtils';
+import { fadeInImageProps } from '../utils/fadeImage';
+import BusinessCardSkeleton from '../components/common/BusinessCardSkeleton';
+import { canMorphCover, morphCoverTo } from '../utils/coverTransition';
+
+// Cards rise in as they scroll into view, left to right within each row
+const STAGGER_COLUMNS = 3;
 
 // Orden por reputación (rating + reseñas) en la home: apagado hasta definir el criterio
 const SORT_BY_REPUTATION = false;
@@ -972,15 +978,8 @@ export default function Home() {
                         {selectedCategory === 'all' ? 'Recomendados para ti' : 'Resultados'}
                     </h2>
                     {loading ? (
-                        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-                            <div className="loading-spinner" style={{
-                                width: '40px',
-                                height: '40px',
-                                border: '4px solid rgba(0,0,0,0.1)',
-                                borderLeftColor: 'var(--primary-color)',
-                                borderRadius: '50%',
-                                animation: 'spin 1s linear infinite'
-                            }}></div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                            {[1, 2, 3, 4, 5, 6].map(i => <BusinessCardSkeleton key={i} />)}
                         </div>
                     ) : (
                         <>
@@ -1002,16 +1001,21 @@ export default function Home() {
                                 </div>
                             ) : (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-                                    {paginatedBusinesses.map(business => (
+                                    {paginatedBusinesses.map((business, index) => (
                                         <Link
                                             key={business.id}
                                             to={`/${generateSlug(business.name)}`}
                                             state={{ business, fromMarketplace: true }}
-                                            onClick={() => {
+                                            onClick={(e) => {
                                                 try {
                                                     sessionStorage.setItem('turnitos_booking_source', JSON.stringify({ businessId: business.id, at: Date.now() }));
                                                 } catch (e) {}
                                                 rememberListState();
+                                                // Plain clicks morph the cover into the profile banner
+                                                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0 || !canMorphCover()) return;
+                                                e.preventDefault();
+                                                const cover = e.currentTarget.querySelector('.img-fade-holder img');
+                                                morphCoverTo(cover, () => navigate(`/${generateSlug(business.name)}`, { state: { business, fromMarketplace: true } }));
                                             }}
                                             style={{ display: 'block', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                                         >
@@ -1022,16 +1026,19 @@ export default function Home() {
                                                     borderRadius: '20px',
                                                     overflow: 'hidden',
                                                     boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                                                    transition: 'all 0.3s',
                                                     height: '100%',
                                                     display: 'flex',
-                                                    flexDirection: 'column'
+                                                    flexDirection: 'column',
+                                                    willChange: 'transform, opacity'
                                                 }}
-                                                whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.1)' }}
+                                                initial={{ opacity: 0, y: 40 }}
+                                                whileInView={{ opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: (index % STAGGER_COLUMNS) * 0.12 + (index < STAGGER_COLUMNS * 2 ? Math.floor(index / STAGGER_COLUMNS) * 0.15 : 0) } }}
+                                                viewport={{ once: true, amount: 0.15 }}
+                                                whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.1)', transition: { duration: 0.2 } }}
                                             >
-                                                <div style={{ position: 'relative', height: '180px', overflow: 'hidden' }}>
+                                                <div className="img-fade-holder" style={{ position: 'relative', height: '180px', overflow: 'hidden' }}>
                                                     <motion.img
-                                                        layoutId={`business-image-${business.id}`}
+                                                        {...fadeInImageProps}
                                                         src={business.banner_image || business.image}
                                                         alt={business.name}
                                                         loading="lazy"
@@ -1051,6 +1058,7 @@ export default function Home() {
                                                             backgroundColor: 'var(--bg-main)'
                                                         }}>
                                                             <img
+                                                                {...fadeInImageProps}
                                                                 src={business.logo}
                                                                 alt={`${business.name} logo`}
                                                                 style={{ width: '100%', height: '100%', objectFit: 'cover', ...frameStyleFor(business.logo) }}

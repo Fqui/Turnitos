@@ -3,6 +3,7 @@ import { buildWhatsAppUrl } from '../../../utils/whatsapp';
 import ShareButton from '../../common/ShareButton';
 import { getCoverPosition } from '../../../utils/imageUtils';
 import { frameStyleFor } from '../../../utils/imageFrame';
+import { coverTargetProps } from '../../../utils/coverTransition';
 
 export default function VenueHeroBanner({
     business,
@@ -30,7 +31,9 @@ export default function VenueHeroBanner({
                 <img
                     src={coverSrc || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200'}
                     alt={business.name}
+                    data-cover-target=""
                     style={{
+                        ...coverTargetProps.style,
                         width: '100%',
                         height: '100%',
                         objectFit: 'cover',

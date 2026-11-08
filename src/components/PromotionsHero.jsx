@@ -95,13 +95,10 @@ export default function PromotionsHero({ promotions, businesses }) {
                 alignItems: 'center',
                 padding: '24px'
             }}>
-                <div style={{
+                <div className="skeleton-block" style={{
                     width: '100%',
                     height: '100%',
-                    borderRadius: '16px',
-                    background: 'linear-gradient(90deg, var(--bg-card) 25%, var(--border) 50%, var(--bg-card) 75%)',
-                    backgroundSize: '200% 100%',
-                    animation: 'pulse 1.5s infinite'
+                    borderRadius: '16px'
                 }} />
             </div>
         );
@@ -127,6 +124,8 @@ export default function PromotionsHero({ promotions, businesses }) {
     const renderSlide = (promo, isActive, isVisible) => {
         const business = businesses.find(b => b.id === promo.business_id);
         const imgError = Boolean(promo.image) && failedImages.has(promo.image);
+        // Photos fade in once loaded instead of popping in
+        const imgFade = { opacity: loadedImages.has(promo.image) ? 1 : 0, transition: 'opacity 0.4s ease' };
 
         // Si no hay negocio pero hay link (guardado en description o action_url), abrimos enlace externo o ruta
         const isGeneralCampaign = !promo.business_id;
@@ -180,6 +179,7 @@ export default function PromotionsHero({ promotions, businesses }) {
                             src={promo.image}
                             alt=""
                             aria-hidden="true"
+                            style={{ ...imgFade, opacity: imgFade.opacity ? 0.85 : 0 }}
                         />
                     )}
                     {promo.image && !imgError ? (
@@ -193,7 +193,8 @@ export default function PromotionsHero({ promotions, businesses }) {
                                 height: '100%',
                                 objectFit: 'cover',
                                 objectPosition: 'center',
-                                display: 'block'
+                                display: 'block',
+                                ...imgFade
                             }}
                         />
                     ) : placeholder}
@@ -215,7 +216,8 @@ export default function PromotionsHero({ promotions, businesses }) {
                                 height: '100%',
                                 objectFit: 'cover',
                                 objectPosition: 'center 40%',
-                                ...frameStyleFor(promo.image)
+                                ...frameStyleFor(promo.image),
+                                ...imgFade
                             }}
                         />
                     ) : placeholder}

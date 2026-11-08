@@ -6,6 +6,7 @@ import ShareButton from '../common/ShareButton';
 import { getCoverImage, getCoverPosition } from '../../utils/imageUtils';
 import { frameStyleFor } from '../../utils/imageFrame';
 import FramedImage from '../common/FramedImage';
+import { coverTargetProps } from '../../utils/coverTransition';
 
 export default function ProfileHeroBanner({
     business,
@@ -53,11 +54,10 @@ export default function ProfileHeroBanner({
                 overflow: 'hidden'
             }}>
                 <motion.img
-                    layoutId={`business-image-${business.id}`}
                     src={business.banner_image || business.image || selectedItem?.image_url}
                     alt={business.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: getCoverPosition(business, 'center 25%'), ...frameStyleFor(getCoverImage(business)) }}
-                    transition={{ duration: 0.5, ease: "circOut" }}
+                    data-cover-target=""
+                    style={{ ...coverTargetProps.style, width: '100%', height: '100%', objectFit: 'cover', objectPosition: getCoverPosition(business, 'center 25%'), ...frameStyleFor(getCoverImage(business)) }}
                 />
                 <div style={{
                     position: 'absolute',

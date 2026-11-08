@@ -43,9 +43,33 @@
   <meta name="geo.placename" content="La Rioja" />
   <meta name="geo.position" content="-29.4131;-66.8558" />
   <meta name="ICBM" content="-29.4131, -66.8558" />
+  <!-- Short splash only for the installed app (standalone); ?splash=1 forces it for testing -->
+  <script>
+    (function () {
+      var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (standalone || /[?&]splash=1/.test(location.search)) document.documentElement.classList.add('show-splash');
+      try { if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('splash-dark'); } catch (e) {}
+    })();
+  </script>
+  <style>
+    #pwa-splash { display: none; }
+    .show-splash #pwa-splash {
+      display: flex; position: fixed; inset: 0; z-index: 99999;
+      align-items: center; justify-content: center; background: #ffffff;
+      transition: opacity 0.25s ease;
+      /* Safety net: hides itself even if the app never signals it */
+      animation: pwaSplashOut 0.25s ease 0.9s forwards;
+    }
+    .splash-dark #pwa-splash { background: #121212; }
+    #pwa-splash img { width: 96px; height: 96px; border-radius: 22px; animation: pwaSplashIn 0.35s ease both; }
+    #pwa-splash.is-hidden { opacity: 0; pointer-events: none; }
+    @keyframes pwaSplashIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+    @keyframes pwaSplashOut { to { opacity: 0; visibility: hidden; } }
+  </style>
 </head>
 
 <body>
+  <div id="pwa-splash" aria-hidden="true"><img src="/logo-turnitos.png" alt="" /></div>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>

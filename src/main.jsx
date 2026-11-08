@@ -60,3 +60,15 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+// Installed app splash: keep it at least ~0.5s so it doesn't flash, never more than ~0.9s (CSS safety net)
+const splash = document.getElementById('pwa-splash');
+if (splash && document.documentElement.classList.contains('show-splash')) {
+  const wait = Math.max(0, 500 - performance.now());
+  setTimeout(() => {
+    splash.classList.add('is-hidden');
+    setTimeout(() => splash.remove(), 300);
+  }, wait);
+} else if (splash) {
+  splash.remove();
+}

@@ -137,6 +137,7 @@ class ErrorBoundary extends React.Component {
 }
 
 import { getSubdomain } from './utils/utils';
+import { isCoverMorphing } from './utils/coverTransition';
 
 // Scroll position per history entry, so going back lands where the user was
 const scrollPositions = new Map();
@@ -209,7 +210,10 @@ const getRouteKey = (pathname) =>
 // the background until a reload. Only the old page fades out.
 const pageTransition = {
   animate: { opacity: 1 },
-  exit: { opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } }
+  // During the card → profile cover morph the browser animates the swap itself
+  exit: (skipFade) => (skipFade
+    ? { opacity: 1, transition: { duration: 0 } }
+    : { opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } })
 };
 
 function AppContent() {
@@ -324,7 +328,7 @@ function AppContent() {
         width: '100%'
       }}>
         <ErrorBoundary>
-          <AnimatePresence key={presenceKey} mode="wait" initial={false} onExitComplete={handleExitComplete}>
+          <AnimatePresence key={presenceKey} mode="wait" initial={false} custom={isCoverMorphing()} onExitComplete={handleExitComplete}>
             <motion.div
               key={routeKey}
               variants={pageTransition}

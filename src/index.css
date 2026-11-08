@@ -2185,3 +2185,108 @@ textarea {
     gap: 20px !important;
   }
 }
+
+/* ═══════════════════════════════════════════
+   LOADING: skeleton cards, image fade-in, PWA splash
+   ═══════════════════════════════════════════ */
+:root {
+  --skeleton-base: #E8EDF3;
+  --skeleton-highlight: #F6F8FB;
+}
+
+[data-theme="dark"] {
+  --skeleton-base: #262626;
+  --skeleton-highlight: #333333;
+}
+
+.skeleton-block {
+  background: linear-gradient(90deg, var(--skeleton-base) 0%, var(--skeleton-highlight) 50%, var(--skeleton-base) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+.business-card-skeleton {
+  background-color: var(--bg-card);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.business-card-skeleton .skeleton-cover {
+  height: 180px;
+}
+
+.business-card-skeleton__body {
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.business-card-skeleton .skeleton-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.business-card-skeleton__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.business-card-skeleton .skeleton-line {
+  border-radius: 6px;
+}
+
+/* Images fade in softly instead of popping in */
+.img-fade {
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.img-fade.is-loaded {
+  opacity: 1;
+}
+
+.img-fade-holder {
+  background-color: var(--skeleton-base);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
+
+  .img-fade {
+    transition: none;
+  }
+}
+
+/* Card cover → profile banner morph (View Transitions) */
+::view-transition-group(business-cover) {
+  animation-duration: 0.75s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10;
+}
+
+::view-transition-old(business-cover),
+::view-transition-new(business-cover) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.45s;
+}
