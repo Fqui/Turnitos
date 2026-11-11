@@ -78,3 +78,24 @@ export function getHomeVisit(booking) {
     const visit = booking?.metadata?.home_visit;
     return visit && visit.address ? visit : null;
 }
+
+// A business without a venue only works at the client's home: the public page hides
+// the street address and the map, and shows the service area instead.
+export function isHomeOnly(business) {
+    return business?.home_service?.no_venue === true;
+}
+
+// City a home-only business covers, never its street: keeps only the last part of
+// "Street 123, City" (or of "Servicio a domicilio · City").
+export function getServiceArea(location) {
+    const raw = String(location || '');
+    const hadPrefix = /servicio a domicilio/i.test(raw);
+    const parts = raw
+        .replace(/servicio a domicilio\s*[·\-|:]?\s*/i, '')
+        .split(/[,·]/)
+        .map(p => p.trim().replace(/\.+$/, ''))
+        .filter(Boolean);
+    if (!parts.length || (parts.length === 1 && !hadPrefix)) return '';
+    const city = parts[parts.length - 1];
+    return /\d/.test(city) ? '' : city;
+}

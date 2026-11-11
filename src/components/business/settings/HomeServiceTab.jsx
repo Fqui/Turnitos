@@ -24,10 +24,12 @@ export default function HomeServiceTab({ formData, handleSave, saving, onGoToGen
     const hasLocation = isFinite(lat) && isFinite(lng) && !(lat === 0 && lng === 0) && formData?.latitude != null;
     const savedRings = getHomeRings(formData);
     const [rings, setRings] = useState(savedRings.length ? savedRings : DEFAULT_RINGS);
+    const [noVenue, setNoVenue] = useState(formData?.home_service?.no_venue === true);
 
     useEffect(() => {
         const fresh = getHomeRings(formData);
         if (fresh.length) setRings(fresh);
+        setNoVenue(formData?.home_service?.no_venue === true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [formData?.id]);
 
@@ -63,14 +65,14 @@ export default function HomeServiceTab({ formData, handleSave, saving, onGoToGen
 
     const save = () => {
         const clean = [...rings].sort((a, b) => a.km - b.km).map(r => ({ km: r.km, fee: r.fee }));
-        handleSave({ home_service: { rings: clean } });
+        handleSave({ home_service: { rings: clean, no_venue: noVenue } });
     };
 
     if (!hasLocation) {
         return (
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>Primero cargá la ubicación de tu negocio</strong>
-                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Los anillos de distancia se dibujan alrededor de tu local. Marcalo en el mapa de "General y Ubicación" y volvé acá.</span>
+                <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>Primero cargá desde dónde salís</strong>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Los anillos de distancia se dibujan alrededor de tu local (o de tu casa, si no tenés local). Marcalo en el mapa de "General y Ubicación" y volvé acá.</span>
                 {onGoToGeneral && (
                     <Button variant="outline" style={{ alignSelf: 'flex-start' }} onClick={onGoToGeneral}>Ir a General y Ubicación</Button>
                 )}
@@ -80,6 +82,21 @@ export default function HomeServiceTab({ formData, handleSave, saving, onGoToGen
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px 16px', cursor: 'pointer' }}>
+                <input
+                    type="checkbox"
+                    checked={noVenue}
+                    onChange={e => setNoVenue(e.target.checked)}
+                    style={{ width: '20px', height: '20px', marginTop: '2px', flexShrink: 0, accentColor: 'var(--primary)' }}
+                />
+                <span style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>No tengo local, solo atiendo a domicilio</strong>
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                        Tu página va a decir "Atiende a domicilio" y no va a mostrar tu dirección ni el mapa. Solo se ve la ciudad y hasta dónde llegás.
+                    </span>
+                </span>
+            </label>
+
             <div>
                 <label style={labelStyle}>Zonas a las que vas</label>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 12px' }}>
@@ -119,7 +136,7 @@ export default function HomeServiceTab({ formData, handleSave, saving, onGoToGen
                             )}
                         </div>
                         <span style={{ width: '100%', fontSize: '12px', color: 'var(--text-secondary)', paddingLeft: '20px' }}>
-                            {index === 0 ? 'Desde tu local' : `Desde ${String(rings[index - 1].km).replace('.', ',')} km`} · {formatFee(ring.fee)}
+                            {index === 0 ? (noVenue ? 'Desde donde salís' : 'Desde tu local') : `Desde ${String(rings[index - 1].km).replace('.', ',')} km`} · {formatFee(ring.fee)}
                         </span>
                     </div>
                 ))}
@@ -138,11 +155,11 @@ export default function HomeServiceTab({ formData, handleSave, saving, onGoToGen
                 {homeServices.length > 0
                     ? `Servicios a domicilio: ${homeServices.map(s => s.name).join(', ')}.`
                     : 'Todavía no tenés servicios a domicilio. En "Servicios", elegí "Solo domicilio" o "Las dos" en cada servicio que hagas en la casa del cliente.'}
-                {' '}La distancia se mide en línea recta desde tu local.
+                {' '}La distancia se mide en línea recta desde {noVenue ? 'el punto que marcaste en el mapa' : 'tu local'}.
             </p>
 
             <Button size="lg" fullWidth loading={saving} onClick={save}>
-                {saving ? 'Guardando...' : 'Guardar zonas'}
+                {saving ? 'Guardando...' : 'Guardar'}
             </Button>
         </div>
     );

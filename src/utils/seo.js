@@ -1,6 +1,7 @@
 import { isProfileReady } from './profileChecklist.js';
 import { formatDuration } from './dateUtils.js';
 import { imageSrc } from './imageFrame.js';
+import { isHomeOnly } from './homeService.js';
 
 // SEO metadata shared by the browser (SEOHead) and the server (api/page.js),
 // so search engines get the same title, canonical and JSON-LD before and after
@@ -153,6 +154,7 @@ export function buildBusinessSchema(business) {
     const kind = getBusinessKind(business);
     const url = businessUrl(business.slug);
 
+    const homeOnly = isHomeOnly(business);
     const schema = {
         '@context': 'https://schema.org',
         '@type': SCHEMA_TYPES[kind],
@@ -164,14 +166,16 @@ export function buildBusinessSchema(business) {
         telephone: phoneNumber(business.whatsapp),
         address: {
             '@type': 'PostalAddress',
-            streetAddress: business.location || undefined,
+            streetAddress: (!homeOnly && business.location) || undefined,
             addressLocality: REGION,
             addressRegion: REGION,
             addressCountry: 'AR'
         }
     };
 
-    if (business.latitude && business.longitude) {
+    if (homeOnly) {
+        schema.areaServed = REGION;
+    } else if (business.latitude && business.longitude) {
         schema.geo = { '@type': 'GeoCoordinates', latitude: Number(business.latitude), longitude: Number(business.longitude) };
     }
 

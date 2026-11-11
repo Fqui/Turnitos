@@ -7,6 +7,7 @@ import { getCoverImage, getCoverPosition } from '../../utils/imageUtils';
 import { frameStyleFor } from '../../utils/imageFrame';
 import FramedImage from '../common/FramedImage';
 import { coverTargetProps } from '../../utils/coverTransition';
+import { isHomeOnly, getServiceArea } from '../../utils/homeService';
 
 export default function ProfileHeroBanner({
     business,
@@ -159,7 +160,11 @@ export default function ProfileHeroBanner({
                                 {business.name}
                             </h1>
                             <div className="business-location-row" style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
-                                <span>📍 {business.location}</span>
+                                {isHomeOnly(business) ? (
+                                    <span>🏠 Atención solamente a domicilio{getServiceArea(business.location) ? ` · ${getServiceArea(business.location)}` : ''}</span>
+                                ) : (
+                                    <span>📍 {business.location}</span>
+                                )}
                             </div>
                             {(hasReviews || openNow !== null) && (
                                 <div className="business-location-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 12px', fontSize: '13px', marginTop: '8px' }}>
@@ -179,7 +184,7 @@ export default function ProfileHeroBanner({
                                     {openNow !== null && (
                                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: openNow ? '#16a34a' : 'var(--text-secondary)' }}>
                                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: openNow ? '#22c55e' : '#9ca3af' }} />
-                                            {openNow ? 'Abierto ahora' : 'Cerrado'}
+                                            {isHomeOnly(business) ? (openNow ? 'Disponible' : 'No disponible') : (openNow ? 'Abierto ahora' : 'Cerrado')}
                                         </span>
                                     )}
                                 </div>

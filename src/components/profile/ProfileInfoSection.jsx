@@ -1,5 +1,13 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import AmenityIcon, { parseAmenity } from '../common/AmenityIcon';
+import { CalendarCheck, House, MessageCircle } from 'lucide-react';
+import { isHomeOnly, getHomeRings, formatFee, getServiceArea } from '../../utils/homeService';
+
+const HOME_STEPS = [
+    { Icon: CalendarCheck, title: 'Elegís día y hora', text: 'Reservás tu turno acá mismo, sin llamar.' },
+    { Icon: House, title: 'Cargás tu dirección', text: 'Al reservar indicás dónde te atiende.' },
+    { Icon: MessageCircle, title: 'Te avisa cuando sale', text: 'Te escribe por WhatsApp cuando va en camino.' }
+];
 
 const ProfileLocationMap = lazy(() => import('./ProfileLocationMap'));
 
@@ -10,7 +18,7 @@ export default function ProfileInfoSection({
     // The map (Leaflet) is only downloaded when its box gets close to the screen
     const mapBoxRef = useRef(null);
     const [showMap, setShowMap] = useState(false);
-    const hasCoords = !!(business?.latitude && business?.longitude);
+    const hasCoords = !!(business?.latitude && business?.longitude) && !isHomeOnly(business);
 
     useEffect(() => {
         if (!hasCoords || showMap) return;
@@ -38,6 +46,10 @@ export default function ProfileInfoSection({
         saturday: 'Sábado',
         sunday: 'Domingo'
     };
+
+    const homeOnly = isHomeOnly(business);
+    const homeRings = homeOnly ? getHomeRings(business) : [];
+    const serviceArea = getServiceArea(business?.location);
 
     const renderBusinessHours = () => {
         if (!business?.hours) {
@@ -158,8 +170,77 @@ export default function ProfileInfoSection({
                 gap: '20px',
                 alignItems: 'stretch'
             }}>
+                {/* Home-only business: no address or map, just how the visit works */}
+                {homeOnly && (
+                    <div style={{
+                        backgroundColor: 'var(--bg-card)',
+                        padding: '20px',
+                        borderRadius: '20px',
+                        border: '1px solid var(--border)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '16px'
+                    }}>
+                        <div>
+                            <h4 style={{ fontSize: '16px', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>
+                                Cómo funciona
+                            </h4>
+                            <p style={{ fontSize: '13px', margin: '4px 0 0', color: 'var(--text-secondary)' }}>
+                                Atención solamente a domicilio{serviceArea ? ` en ${serviceArea}` : ''}.
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {HOME_STEPS.map(({ Icon, title, text }) => (
+                                <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                    <span aria-hidden="true" style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '10px',
+                                        background: `color-mix(in srgb, ${primaryColor || '#3ECF8E'} 12%, transparent)`,
+                                        color: primaryColor || '#3ECF8E',
+                                        flexShrink: 0
+                                    }}>
+                                        {React.createElement(Icon, { size: 18 })}
+                                    </span>
+                                    <div>
+                                        <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{title}</div>
+                                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{text}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {homeRings.length > 0 && (
+                            <div>
+                                <div style={{ height: '1px', backgroundColor: 'var(--border)', marginBottom: '14px' }} />
+                                <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 6px', color: 'var(--text-primary)' }}>
+                                    Hasta dónde llega
+                                </h4>
+                                {homeRings.map((ring, index) => (
+                                    <div key={index} style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        gap: '12px',
+                                        padding: '7px 0',
+                                        fontSize: '13px'
+                                    }}>
+                                        <span style={{ color: 'var(--text-secondary)' }}>
+                                            {index === 0 ? 'Hasta' : `De ${String(homeRings[index - 1].km).replace('.', ',')} a`} {String(ring.km).replace('.', ',')} km
+                                        </span>
+                                        <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                                            {ring.fee > 0 ? `${formatFee(ring.fee)} de traslado` : 'Traslado sin cargo'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Map */}
-                {business.latitude && business.longitude && (
+                {!homeOnly && business.latitude && business.longitude && (
                     <div ref={mapBoxRef} style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border)', minHeight: '300px', height: '100%', position: 'relative', background: 'var(--bg-card)' }}>
                         {showMap && (
                             <Suspense fallback={null}>
@@ -207,7 +288,8 @@ export default function ProfileInfoSection({
                     flexDirection: 'column',
                     gap: '20px'
                 }}>
-                    {/* Amenities - Top Half */}
+                    {/* Amenities - Top Half (a home-only business has no venue to describe) */}
+                    {!homeOnly && (<>
                     <div>
                         <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-primary)' }}>
                             Comodidades
@@ -250,6 +332,7 @@ export default function ProfileInfoSection({
 
                     {/* Divider */}
                     <div style={{ height: '1px', backgroundColor: 'var(--border)' }}></div>
+                    </>)}
 
                     {/* Business Hours - Bottom Half */}
                     <div>
