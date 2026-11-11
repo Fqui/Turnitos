@@ -63,6 +63,8 @@ export default function Home() {
         }
     }); // Dynamic categories with instant cache support
     const [loading, setLoading] = useState(() => !homeCache.businesses);
+    const [loadError, setLoadError] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
     const [isNearMeActive, setIsNearMeActive] = useState(false); // ✅ New state for Near Me
     const [visibleCount, setVisibleCount] = useState(() =>
         (navigationType === 'POP' && visibleCounts.get(location.key)) || 20
@@ -237,14 +239,23 @@ export default function Home() {
                         localStorage.setItem('turnitos_categories_cache', JSON.stringify(categoriesResult));
                     } catch (e) {}
                 }
+                setLoadError(false);
             } catch (error) {
                 console.error('Error loading data:', error);
+                // Keep cached businesses if we have them; otherwise show the error state
+                if (!homeCache.businesses) setLoadError(true);
             } finally {
                 setLoading(false);
             }
         };
         loadData();
-    }, []);
+    }, [reloadKey]);
+
+    const retryLoad = () => {
+        setLoadError(false);
+        setLoading(true);
+        setReloadKey(k => k + 1);
+    };
 
     // Memoize filtered businesses to avoid re-filtering on every render
     // Memoize filtered businesses to avoid re-filtering on every render
@@ -983,7 +994,39 @@ export default function Home() {
                         </div>
                     ) : (
                         <>
-                            {filteredBusinesses.length === 0 ? (
+                            {loadError && businesses.length === 0 ? (
+                                <div role="alert" style={{
+                                    textAlign: 'center',
+                                    padding: '60px 20px',
+                                    background: 'var(--bg-card)',
+                                    borderRadius: '20px',
+                                    border: '1px solid var(--border)'
+                                }}>
+                                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
+                                        No pudimos cargar los negocios
+                                    </h3>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 20px 0' }}>
+                                        Revisá tu conexión e intentá de nuevo.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={retryLoad}
+                                        style={{
+                                            fontFamily: 'var(--font-sans)',
+                                            fontSize: '15px',
+                                            fontWeight: 700,
+                                            padding: '12px 24px',
+                                            borderRadius: '12px',
+                                            border: 'none',
+                                            background: 'var(--primary)',
+                                            color: '#0F172A',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Reintentar
+                                    </button>
+                                </div>
+                            ) : filteredBusinesses.length === 0 ? (
                                 <div style={{
                                     textAlign: 'center',
                                     padding: '60px 20px',
