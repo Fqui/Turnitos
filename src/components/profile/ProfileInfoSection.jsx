@@ -1,13 +1,27 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import AmenityIcon, { parseAmenity } from '../common/AmenityIcon';
 import { CalendarCheck, House, MessageCircle } from 'lucide-react';
-import { isHomeOnly, getHomeRings, formatFee, getServiceArea } from '../../utils/homeService';
+import { isHomeOnly, alsoHomeVisits, getHomeRings, formatFee, getServiceArea } from '../../utils/homeService';
 
 const HOME_STEPS = [
     { Icon: CalendarCheck, title: 'Elegís día y hora', text: 'Reservás tu turno acá mismo, sin llamar.' },
     { Icon: House, title: 'Cargás tu dirección', text: 'Al reservar indicás dónde te atiende.' },
     { Icon: MessageCircle, title: 'Te avisa cuando sale', text: 'Te escribe por WhatsApp cuando va en camino.' }
 ];
+
+function HomeRingRows({ rings }) {
+    const km = value => String(value).replace('.', ',');
+    return rings.map((ring, index) => (
+        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '7px 0', fontSize: '13px' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>
+                {index === 0 ? 'Hasta' : `De ${km(rings[index - 1].km)} a`} {km(ring.km)} km
+            </span>
+            <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                {ring.fee > 0 ? `${formatFee(ring.fee)} de traslado` : 'Traslado sin cargo'}
+            </span>
+        </div>
+    ));
+}
 
 const ProfileLocationMap = lazy(() => import('./ProfileLocationMap'));
 
@@ -48,7 +62,8 @@ export default function ProfileInfoSection({
     };
 
     const homeOnly = isHomeOnly(business);
-    const homeRings = homeOnly ? getHomeRings(business) : [];
+    const alsoHome = alsoHomeVisits(business);
+    const homeRings = homeOnly || alsoHome ? getHomeRings(business) : [];
     const serviceArea = getServiceArea(business?.location);
 
     const renderBusinessHours = () => {
@@ -218,22 +233,7 @@ export default function ProfileInfoSection({
                                 <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 6px', color: 'var(--text-primary)' }}>
                                     Hasta dónde llega
                                 </h4>
-                                {homeRings.map((ring, index) => (
-                                    <div key={index} style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        gap: '12px',
-                                        padding: '7px 0',
-                                        fontSize: '13px'
-                                    }}>
-                                        <span style={{ color: 'var(--text-secondary)' }}>
-                                            {index === 0 ? 'Hasta' : `De ${String(homeRings[index - 1].km).replace('.', ',')} a`} {String(ring.km).replace('.', ',')} km
-                                        </span>
-                                        <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-                                            {ring.fee > 0 ? `${formatFee(ring.fee)} de traslado` : 'Traslado sin cargo'}
-                                        </span>
-                                    </div>
-                                ))}
+                                <HomeRingRows rings={homeRings} />
                             </div>
                         )}
                     </div>
@@ -343,6 +343,22 @@ export default function ProfileInfoSection({
                             {renderBusinessHours()}
                         </div>
                     </div>
+
+                    {/* Business with a venue that also goes to the client's home */}
+                    {alsoHome && (
+                        <>
+                            <div style={{ height: '1px', backgroundColor: 'var(--border)' }}></div>
+                            <div>
+                                <h4 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 4px', color: 'var(--text-primary)' }}>
+                                    🏠 También atiende a domicilio
+                                </h4>
+                                <p style={{ fontSize: '13px', margin: '0 0 6px', color: 'var(--text-secondary)' }}>
+                                    Al reservar elegís si vas al local o te atiende en tu casa.
+                                </p>
+                                <HomeRingRows rings={homeRings} />
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </section>

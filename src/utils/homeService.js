@@ -99,3 +99,9 @@ export function getServiceArea(location) {
     const city = parts[parts.length - 1];
     return /\d/.test(city) ? '' : city;
 }
+
+// A business with a venue that also offers at least one service at the client's home.
+export function alsoHomeVisits(business) {
+    if (isHomeOnly(business)) return false;
+    return Array.isArray(business?.services) && business.services.some(offersHomeVisit);
+}

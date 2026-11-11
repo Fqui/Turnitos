@@ -7,7 +7,7 @@ import { getCoverImage, getCoverPosition } from '../../utils/imageUtils';
 import { frameStyleFor } from '../../utils/imageFrame';
 import FramedImage from '../common/FramedImage';
 import { coverTargetProps } from '../../utils/coverTransition';
-import { isHomeOnly, getServiceArea } from '../../utils/homeService';
+import { isHomeOnly, alsoHomeVisits, getServiceArea } from '../../utils/homeService';
 
 export default function ProfileHeroBanner({
     business,
@@ -166,6 +166,11 @@ export default function ProfileHeroBanner({
                                     <span>📍 {business.location}</span>
                                 )}
                             </div>
+                            {alsoHomeVisits(business) && (
+                                <div className="business-location-row" style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '2px' }}>
+                                    <span>🏠 También a domicilio</span>
+                                </div>
+                            )}
                             {(hasReviews || openNow !== null) && (
                                 <div className="business-location-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 12px', fontSize: '13px', marginTop: '8px' }}>
                                     {hasReviews && (
