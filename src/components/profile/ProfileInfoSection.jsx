@@ -1,12 +1,34 @@
-import React from 'react';
-import { MapContainer, Marker } from 'react-leaflet';
-import { TurnitosTileLayer, createTurnitosMarkerIcon } from '../common/TurnitosMap';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import AmenityIcon, { parseAmenity } from '../common/AmenityIcon';
+
+const ProfileLocationMap = lazy(() => import('./ProfileLocationMap'));
 
 export default function ProfileInfoSection({
     business,
     primaryColor
 }) {
+    // The map (Leaflet) is only downloaded when its box gets close to the screen
+    const mapBoxRef = useRef(null);
+    const [showMap, setShowMap] = useState(false);
+    const hasCoords = !!(business?.latitude && business?.longitude);
+
+    useEffect(() => {
+        if (!hasCoords || showMap) return;
+        const el = mapBoxRef.current;
+        if (!el || typeof IntersectionObserver === 'undefined') {
+            setShowMap(true);
+            return;
+        }
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some(e => e.isIntersecting)) {
+                setShowMap(true);
+                observer.disconnect();
+            }
+        }, { rootMargin: '300px' });
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [hasCoords, showMap]);
+
     const dayNames = {
         monday: 'Lunes',
         tuesday: 'Martes',
@@ -138,17 +160,16 @@ export default function ProfileInfoSection({
             }}>
                 {/* Map */}
                 {business.latitude && business.longitude && (
-                    <div style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border)', minHeight: '300px', height: '100%', position: 'relative' }}>
-                        <MapContainer
-                            center={[business.latitude, business.longitude]}
-                            zoom={15}
-                            style={{ position: 'absolute', inset: 0 }}
-                            dragging={false}
-                            scrollWheelZoom={false}
-                        >
-                            <TurnitosTileLayer />
-                            <Marker position={[business.latitude, business.longitude]} icon={createTurnitosMarkerIcon(primaryColor, '📍')} />
-                        </MapContainer>
+                    <div ref={mapBoxRef} style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border)', minHeight: '300px', height: '100%', position: 'relative', background: 'var(--bg-card)' }}>
+                        {showMap && (
+                            <Suspense fallback={null}>
+                                <ProfileLocationMap
+                                    latitude={business.latitude}
+                                    longitude={business.longitude}
+                                    primaryColor={primaryColor}
+                                />
+                            </Suspense>
+                        )}
                         <a
                             href={`https://www.google.com/maps/dir/?api=1&destination=${business.latitude},${business.longitude}`}
                             target="_blank"

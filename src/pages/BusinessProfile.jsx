@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
 import { getSubdomain } from '../utils/utils';
-import 'leaflet/dist/leaflet.css';
 import PageLoader from '../components/common/PageLoader';
-import L from 'leaflet';
 
 import serviceAdapter from '../services/serviceAdapter';
 import { supabase } from '../services/supabaseClient';
@@ -35,14 +33,6 @@ import ProfileInfoSection from '../components/profile/ProfileInfoSection';
 import ProfileSportSelector from '../components/profile/ProfileSportSelector';
 import { groupCourtsBySport, normalizeSport } from '../utils/sports';
 import { getDayHours, getSlotInterval } from '../utils/availableSlots';
-
-// Fix for default marker icon in Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
 
 // Scroll to the "Elegí una fecha" title once the page settled: the service detail already
 // closed (body unlocked) and the section's slideUp ended, because scrollIntoView measures
