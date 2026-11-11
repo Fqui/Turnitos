@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import serviceAdapter from '../services/serviceAdapter';
-import BusinessProfile from './BusinessProfile';
-import VenueProfile from './VenueProfile';
 import PageLoader from '../components/common/PageLoader';
 import BusinessUnavailable from '../components/common/BusinessUnavailable';
 import { isBusinessNotFoundError } from '../utils/businessErrors';
+
+// Only the profile this business needs is downloaded
+const BusinessProfile = lazy(() => import('./BusinessProfile'));
+const VenueProfile = lazy(() => import('./VenueProfile'));
 
 const cleanBusinessMeta = (m) => {
     if (!m) return {};
@@ -145,9 +147,11 @@ export default function BusinessProfileRouter({ overrideSlug }) {
     // ONLY route to VenueProfile if it's NOT a service or sport business
     const isVenueBusiness = !isServiceCategory && !isSportCategory && (isExplicitVenue || business.type === 'venue');
 
-    if (isVenueBusiness) {
-        return <VenueProfile business={business} />;
-    }
-
-    return <BusinessProfile business={business} />;
+    return (
+        <Suspense fallback={<PageLoader label="Cargando negocio..." />}>
+            {isVenueBusiness
+                ? <VenueProfile business={business} />
+                : <BusinessProfile business={business} />}
+        </Suspense>
+    );
 }
