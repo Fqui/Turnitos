@@ -1,6 +1,8 @@
 import React from 'react';
 import { TileLayer } from 'react-leaflet';
 import L from 'leaflet';
+// Every map built on these helpers needs Leaflet's base styles
+import 'leaflet/dist/leaflet.css';
 
 /**
  * TileLayer oficial de OpenStreetMap.

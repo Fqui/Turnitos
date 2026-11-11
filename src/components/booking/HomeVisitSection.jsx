@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import HomeRingsMap from '../common/HomeRingsMap';
+import React, { lazy, Suspense, useState } from 'react';
+// Leaflet is only downloaded when the client picks home service
+const HomeRingsMap = lazy(() => import('../common/HomeRingsMap'));
 import { formatFee, formatKm } from '../../utils/homeService';
 
 const inputStyle = {
@@ -91,7 +92,9 @@ export default function HomeVisitSection({
                         <label style={{ ...labelStyle, marginBottom: '4px' }}>Marcá tu casa en el mapa</label>
                         <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Tocá el mapa o usá tu ubicación</span>
                     </div>
-                    <HomeRingsMap lat={lat} lng={lng} rings={rings} pin={pin} onPick={onPinChange} height={240} />
+                    <Suspense fallback={<div style={{ height: '240px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-main)' }} />}>
+                        <HomeRingsMap lat={lat} lng={lng} rings={rings} pin={pin} onPick={onPinChange} height={240} />
+                    </Suspense>
                     <button
                         type="button"
                         onClick={useMyLocation}
