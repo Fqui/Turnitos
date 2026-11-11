@@ -8,7 +8,8 @@ import L from 'leaflet';
 import serviceAdapter from '../services/serviceAdapter';
 import SEOHead from '../components/SEOHead';
 import { buildBusinessSeo } from '../utils/seo';
-import { findBusinessBySlug } from '../utils/utils';
+import BusinessUnavailable from '../components/common/BusinessUnavailable';
+import { isBusinessNotFoundError } from '../utils/businessErrors';
 import ProfileStoryViewerModal from '../components/profile/ProfileStoryViewerModal';
 import { isStoreAvailable } from '../utils/storeUtils';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
@@ -51,6 +52,9 @@ const LinkBio = ({ overrideSlug = null }) => {
     const navigate = useNavigate();
     const [business, setBusiness] = useState(null);
     const [loading, setLoading] = useState(true);
+    // null | 'not-found' | 'error'
+    const [loadError, setLoadError] = useState(null);
+    const [reloadKey, setReloadKey] = useState(0);
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
     const [selectedHighlight, setSelectedHighlight] = useState(null);
     const [storyViewerList, setStoryViewerList] = useState(null);
@@ -73,30 +77,20 @@ const LinkBio = ({ overrideSlug = null }) => {
     useEffect(() => {
         const fetchBusiness = async () => {
             try {
-                let foundBusiness = null;
-                try {
-                    foundBusiness = await serviceAdapter.getBusinessBySlug(businessSlug);
-                } catch (e) {
-                    console.warn('Error fetching by slug in LinkBio:', e);
-                }
-
-                if (!foundBusiness) {
-                    const allBusinesses = await serviceAdapter.getBusinesses();
-                    foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
-                }
-
-                if (foundBusiness) {
-                    setBusiness(foundBusiness);
-                }
+                // getBusinessBySlug already accepts the hyphenless variant of the slug
+                const foundBusiness = await serviceAdapter.getBusinessBySlug(businessSlug);
+                setBusiness(foundBusiness || null);
+                setLoadError(foundBusiness ? null : 'not-found');
             } catch (error) {
                 console.error('Error fetching business for LinkBio:', error);
+                setLoadError(isBusinessNotFoundError(error) ? 'not-found' : 'error');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchBusiness();
-    }, [businessSlug, overrideSlug]);
+    }, [businessSlug, overrideSlug, reloadKey]);
 
     // Theme Management
     useEffect(() => {
@@ -171,7 +165,12 @@ const LinkBio = ({ overrideSlug = null }) => {
     }
 
     if (!business) {
-        return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
+        return (
+            <BusinessUnavailable
+                variant={loadError === 'error' ? 'error' : 'not-found'}
+                onRetry={() => { setLoadError(null); setLoading(true); setReloadKey(k => k + 1); }}
+            />
+        );
     }
 
     const primaryColor = business.primary_color || business.button_color || business.buttonColor ||

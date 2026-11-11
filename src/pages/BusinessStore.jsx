@@ -22,7 +22,9 @@ import {
     Play
 } from 'lucide-react';
 import serviceAdapter from '../services/serviceAdapter';
-import { findBusinessBySlug, getSubdomain } from '../utils/utils';
+import { getSubdomain } from '../utils/utils';
+import BusinessUnavailable from '../components/common/BusinessUnavailable';
+import { isBusinessNotFoundError } from '../utils/businessErrors';
 import PageLoader from '../components/common/PageLoader';
 import SEOHead from '../components/SEOHead';
 import { buildBusinessSeo } from '../utils/seo';
@@ -70,6 +72,10 @@ export default function BusinessStore({ overrideSlug }) {
         } catch (e) {}
         return true;
     });
+
+    // null | 'not-found' | 'error'
+    const [loadError, setLoadError] = useState(null);
+    const [reloadKey, setReloadKey] = useState(0);
 
     // Cart survives reloads and closing the tab (per business, per browser session)
     const cartStorageKey = `turnitos_cart_${businessSlug}`;
@@ -159,18 +165,13 @@ export default function BusinessStore({ overrideSlug }) {
     useEffect(() => {
         const fetchBusiness = async () => {
             try {
-                // Direct lookup first; the full list is only a fallback for slugs saved differently (e.g. spa-3-soles vs spa3soles)
-                let foundBusiness = null;
-                try {
-                    foundBusiness = await serviceAdapter.getBusinessBySlug(businessSlug);
-                } catch {
-                    foundBusiness = null;
-                }
+                // getBusinessBySlug already accepts the hyphenless variant (spa-3-soles / spa3soles)
+                const foundBusiness = await serviceAdapter.getBusinessBySlug(businessSlug);
+                setLoadError(null);
                 if (!foundBusiness) {
-                    const allBusinesses = await serviceAdapter.getBusinesses();
-                    foundBusiness = findBusinessBySlug(allBusinesses, businessSlug);
-                }
-                if (foundBusiness) {
+                    setBusiness(null);
+                    setLoadError('not-found');
+                } else {
                     setBusiness(foundBusiness);
                     try {
                         sessionStorage.setItem(`turnitos_biz_${foundBusiness.slug || businessSlug}`, JSON.stringify(foundBusiness));
@@ -182,12 +183,19 @@ export default function BusinessStore({ overrideSlug }) {
                 }
             } catch (error) {
                 console.error('Error fetching business for Store:', error);
+                if (isBusinessNotFoundError(error)) {
+                    setBusiness(null);
+                    setLoadError('not-found');
+                } else {
+                    // Network/server error: keep a cached copy if we have one
+                    setLoadError('error');
+                }
             } finally {
                 setLoading(false);
             }
         };
         fetchBusiness();
-    }, [businessSlug]);
+    }, [businessSlug, reloadKey]);
 
     // Detect promoId in URL
     useEffect(() => {
@@ -488,7 +496,12 @@ export default function BusinessStore({ overrideSlug }) {
     }
 
     if (!business) {
-        return <div style={{ padding: 40, textAlign: 'center' }}>Negocio no encontrado</div>;
+        return (
+            <BusinessUnavailable
+                variant={loadError === 'error' ? 'error' : 'not-found'}
+                onRetry={() => { setLoadError(null); setLoading(true); setReloadKey(k => k + 1); }}
+            />
+        );
     }
 
     const storeSeo = buildBusinessSeo(business, 'tienda');
