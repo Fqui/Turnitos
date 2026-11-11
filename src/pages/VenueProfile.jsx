@@ -54,6 +54,8 @@ export default function VenueProfile({ business: initialBusiness }) {
     const [selectedServices, setSelectedServices] = useState([]);
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [venueBookings, setVenueBookings] = useState([]);
+    // 'loading' | 'ok' | 'error': without the occupied dates we must not show every day as free
+    const [bookingsStatus, setBookingsStatus] = useState('loading');
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [showDemoSuccess, setShowDemoSuccess] = useState(false);
     const [bookingStep, setBookingStep] = useState(1);
@@ -82,9 +84,17 @@ export default function VenueProfile({ business: initialBusiness }) {
     const refreshDataSilently = async (bId) => {
         if (!bId) return;
         try {
-            const res = await serviceAdapter.getPublicBookings(bId);
+            let res;
+            try {
+                res = await serviceAdapter.getPublicBookings(bId);
+            } catch (bookingsErr) {
+                // Keep the last good list on background refreshes; only flag it if we never loaded
+                setBookingsStatus(prev => (prev === 'ok' ? 'ok' : 'error'));
+                throw bookingsErr;
+            }
             const list = Array.isArray(res) ? res : (res && Array.isArray(res.bookings) ? res.bookings : []);
             setVenueBookings(list);
+            setBookingsStatus('ok');
 
             const freshBiz = await serviceAdapter.getBusinessById(bId);
             if (freshBiz) {
@@ -412,6 +422,10 @@ export default function VenueProfile({ business: initialBusiness }) {
     };
 
     const handleContinue = () => {
+        if (bookingsStatus === 'error') {
+            showAlert('No pudimos cargar las fechas', 'Revisá tu conexión y tocá Reintentar en el calendario.', 'warning', 'Entendido');
+            return;
+        }
         if (!selectedDate) {
             showAlert('Fecha requerida', 'Por favor selecciona una fecha para continuar con tu reserva.', 'warning', 'Entendido');
             return;
@@ -635,6 +649,39 @@ export default function VenueProfile({ business: initialBusiness }) {
                     />
 
                     {/* Calendar Section */}
+                    {bookingsStatus === 'error' ? (
+                        <div ref={calendarRef} role="alert" style={{
+                            background: cardBg,
+                            borderRadius: '24px',
+                            padding: windowWidth < 768 ? '32px 16px' : '40px 32px',
+                            border: `1px solid ${borderColor}`,
+                            textAlign: 'center'
+                        }}>
+                            <h2 style={{ fontSize: '18px', fontWeight: 800, color: textColor, margin: '0 0 8px' }}>
+                                No pudimos cargar las fechas disponibles
+                            </h2>
+                            <p style={{ fontSize: '14px', color: secondaryTextColor, margin: '0 0 20px' }}>
+                                Revisá tu conexión e intentá de nuevo.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => { setBookingsStatus('loading'); refreshDataSilently(business.id); }}
+                                style={{
+                                    fontFamily: 'var(--font-sans)',
+                                    fontSize: '15px',
+                                    fontWeight: 700,
+                                    padding: '12px 24px',
+                                    borderRadius: '12px',
+                                    border: 'none',
+                                    background: primaryColor,
+                                    color: '#fff',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Reintentar
+                            </button>
+                        </div>
+                    ) : (
                     <VenueCalendarSection
                         calendarRef={calendarRef}
                         currentMonth={currentMonth}
@@ -655,6 +702,7 @@ export default function VenueProfile({ business: initialBusiness }) {
                         primaryColor={primaryColor}
                         isDark={isDark}
                     />
+                    )}
 
                     {/* Sobre el Espacio Section */}
                     {(() => {

@@ -90,6 +90,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const [selectedTime, setSelectedTime] = useState(null);
     const [selectedSport, setSelectedSport] = useState(null); // Only used when the courts cover 2+ sports
     const [existingBookings, setExistingBookings] = useState([]);
+    // True when the occupied slots could not be loaded: we must not show every slot as free
+    const [bookingsError, setBookingsError] = useState(false);
     const [loadingBookings, setLoadingBookings] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -220,10 +222,13 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
                 const { bookings } = await serviceAdapter.getPublicBookings(business.id, dateStr);
                 setExistingBookings(bookings || []);
+                setBookingsError(false);
             } catch (error) {
                 console.error("Error fetching bookings:", error);
                 if (!isBackground) {
                     setExistingBookings([]);
+                    setBookingsError(true);
+                    setSelectedTime(null);
                 }
             } finally {
                 if (!isBackground) {
@@ -232,9 +237,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
             }
         } else {
             setExistingBookings([]);
+            setBookingsError(false);
             setLoadingBookings(false);
         }
     };
+
 
     useEffect(() => {
         fetchBookingsForDate(false);
@@ -449,6 +456,34 @@ export default function BusinessProfile({ business: initialBusiness }) {
     const primaryColor = business?.brand_color || business?.primary_color || business?.button_color || business?.buttonColor ||
         (business?.category === 'beauty' ? '#FF4081' :
             business?.category === 'health' ? '#2979FF' : '#00E676');
+
+    const renderBookingsError = () => (
+        <div role="alert" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
+            <h4 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', color: 'var(--text-primary)' }}>
+                No pudimos cargar los horarios
+            </h4>
+            <p style={{ fontSize: '14px', margin: '0 0 20px' }}>Revisá tu conexión e intentá de nuevo.</p>
+            <button
+                type="button"
+                onClick={() => fetchBookingsForDate(false)}
+                disabled={loadingBookings}
+                style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    padding: '12px 24px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: primaryColor,
+                    color: '#fff',
+                    cursor: loadingBookings ? 'wait' : 'pointer',
+                    opacity: loadingBookings ? 0.7 : 1
+                }}
+            >
+                {loadingBookings ? 'Cargando...' : 'Reintentar'}
+            </button>
+        </div>
+    );
 
     // 📜 Booking rules & policies
     const bookingRules = useMemo(() => {
@@ -1023,6 +1058,10 @@ export default function BusinessProfile({ business: initialBusiness }) {
                                         );
                                     }
 
+                                    if (bookingsError) {
+                                        return renderBookingsError();
+                                    }
+
                                     const allBusinessSpecs = business.specialists || [];
                                     const qualifiedSpecialists = (() => {
                                         if (Array.isArray(selectedItem?.specialists) && selectedItem.specialists.length > 0) {
@@ -1268,7 +1307,8 @@ export default function BusinessProfile({ business: initialBusiness }) {
                     )}
 
                     {/* Venue Booking Section */}
-                    {selectedDate && business.type === 'venue' && (
+                    {selectedDate && business.type === 'venue' && bookingsError && renderBookingsError()}
+                    {selectedDate && business.type === 'venue' && !bookingsError && (
                         <ProfileVenueBookingSection
                             business={business}
                             selectedDate={selectedDate}
