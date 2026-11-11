@@ -154,31 +154,36 @@ export default function BusinessProfileRouter({ overrideSlug }) {
     // ONLY route to VenueProfile if it's NOT a service or sport business
     const isVenueBusiness = !isServiceCategory && !isSportCategory && (isExplicitVenue || business.type === 'venue');
 
-    // Card summary from Home: cover, logo and name right away (keeps the cover morph),
-    // everything else waits for the full business. No booking with partial data.
-    if (isPartial) {
-        return (
-            <div style={{ minHeight: '100dvh', background: 'var(--bg-main)' }} aria-busy="true">
-                {isVenueBusiness ? (
-                    <VenueHeroBanner
-                        business={business}
-                        galleryImages={[]}
-                        windowWidth={typeof window !== 'undefined' ? window.innerWidth : 1024}
-                        shareUrl=""
-                    />
-                ) : (
-                    <ProfileHeroBanner business={business} shareUrl="" />
-                )}
-                <div role="status" aria-live="polite" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '48px 16px', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>
-                    <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>Cargando negocio...</span>
-                </div>
+    // Cover, logo and name right away (keeps the cover morph) with a loader below.
+    // Shown for a Home card summary and while the profile's code downloads.
+    const renderShell = () => (
+        <div style={{ minHeight: '100dvh', background: 'var(--bg-main)' }} aria-busy="true">
+            {isVenueBusiness ? (
+                <VenueHeroBanner
+                    business={business}
+                    galleryImages={[]}
+                    windowWidth={typeof window !== 'undefined' ? window.innerWidth : 1024}
+                    shareUrl=""
+                />
+            ) : (
+                <ProfileHeroBanner business={business} shareUrl="" />
+            )}
+            <div role="status" aria-live="polite" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '48px 16px', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>
+                <div style={{ width: '36px', height: '36px', border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>Cargando negocio...</span>
             </div>
-        );
+        </div>
+    );
+
+    // Card summary from Home: everything else waits for the full business. No booking with partial data.
+    if (isPartial) {
+        // Start downloading the profile code while the full business loads
+        (isVenueBusiness ? import('./VenueProfile') : import('./BusinessProfile')).catch(() => {});
+        return renderShell();
     }
 
     return (
-        <Suspense fallback={<PageLoader label="Cargando negocio..." />}>
+        <Suspense fallback={renderShell()}>
             {isVenueBusiness
                 ? <VenueProfile business={business} />
                 : <BusinessProfile business={business} />}
