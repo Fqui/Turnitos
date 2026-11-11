@@ -80,7 +80,7 @@ export default function SubmitReview() {
     };
 
     const business = reviewInfo?.business;
-    const businessSlug = business?.name ? generateSlug(business.name) : '';
+    const businessSlug = business?.slug || (business?.name ? generateSlug(business.name) : '');
 
     if (loading) {
         return (

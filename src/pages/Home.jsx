@@ -489,7 +489,7 @@ export default function Home() {
             sessionStorage.setItem('turnitos_booking_source', JSON.stringify({ businessId: business.id, at: Date.now() }));
         } catch (e) {}
         rememberListState();
-        navigate(`/${generateSlug(business.name)}`, { state: { business, fromMarketplace: true } });
+        navigate(`/${business.slug || generateSlug(business.name)}`, { state: { business, fromMarketplace: true } });
         setShowSuggestions(false);
     };
 
@@ -1004,7 +1004,7 @@ export default function Home() {
                                     {paginatedBusinesses.map((business, index) => (
                                         <Link
                                             key={business.id}
-                                            to={`/${generateSlug(business.name)}`}
+                                            to={`/${business.slug || generateSlug(business.name)}`}
                                             state={{ business, fromMarketplace: true }}
                                             onClick={(e) => {
                                                 try {
@@ -1015,7 +1015,7 @@ export default function Home() {
                                                 if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0 || !canMorphCover()) return;
                                                 e.preventDefault();
                                                 const cover = e.currentTarget.querySelector('.img-fade-holder img');
-                                                morphCoverTo(cover, () => navigate(`/${generateSlug(business.name)}`, { state: { business, fromMarketplace: true } }));
+                                                morphCoverTo(cover, () => navigate(`/${business.slug || generateSlug(business.name)}`, { state: { business, fromMarketplace: true } }));
                                             }}
                                             style={{ display: 'block', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
                                         >
