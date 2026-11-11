@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useLayoutEffect } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNotification } from '../contexts/NotificationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search,
@@ -44,6 +45,7 @@ export default function BusinessStore({ overrideSlug }) {
     const { businessSlug: routeSlug } = useParams();
     const businessSlug = overrideSlug || routeSlug;
     const navigate = useNavigate();
+    const { showAlert } = useNotification();
     const location = useLocation();
     const [searchParams] = useSearchParams();
 
@@ -410,7 +412,7 @@ export default function BusinessStore({ overrideSlug }) {
 
     const handleConfirmOrder = () => {
         if (!buildWhatsAppUrl(business?.whatsapp)) {
-            alert('El negocio no tiene configurado un número de WhatsApp para pedidos.');
+            showAlert('Pedidos no disponibles', 'El negocio no tiene configurado un número de WhatsApp para pedidos.', 'warning');
             return;
         }
 

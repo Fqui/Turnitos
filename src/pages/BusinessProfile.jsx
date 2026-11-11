@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNotification } from '../contexts/NotificationContext';
 import { getSubdomain } from '../utils/utils';
 import 'leaflet/dist/leaflet.css';
 import PageLoader from '../components/common/PageLoader';
@@ -61,6 +62,7 @@ function scrollToCalendarTitle(sectionRef, titleRef, delay) {
 export default function BusinessProfile({ business: initialBusiness }) {
     const { businessSlug } = useParams();
     const navigate = useNavigate();
+    const { showAlert } = useNotification();
     const location = useLocation();
     const [searchParams] = useSearchParams();
     const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
@@ -668,7 +670,7 @@ export default function BusinessProfile({ business: initialBusiness }) {
 
         } catch (error) {
             console.error("Booking error:", error);
-            alert(error.message || "Hubo un error al guardar la reserva. Por favor intenta nuevamente.");
+            showAlert('No pudimos guardar la reserva', error.message || 'Hubo un error al guardar la reserva. Intentá nuevamente.', 'error');
         } finally {
             setIsSubmitting(false);
         }

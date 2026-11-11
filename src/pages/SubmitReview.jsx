@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useNotification } from '../contexts/NotificationContext';
 import { motion } from 'framer-motion';
 import serviceAdapter from '../services/serviceAdapter';
 import { generateSlug } from '../utils/utils';
@@ -8,6 +9,7 @@ import FramedImage from '../components/common/FramedImage';
 export default function SubmitReview() {
     const { token } = useParams();
     const navigate = useNavigate();
+    const { showAlert } = useNotification();
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -65,7 +67,7 @@ export default function SubmitReview() {
             setIsSubmitted(true);
         } catch (err) {
             console.error('Error submitting review:', err);
-            alert(err.message || 'Error al guardar la reseña. Inténtalo nuevamente.');
+            showAlert('No pudimos guardar la reseña', err.message || 'Error al guardar la reseña. Intentá nuevamente.', 'error');
         } finally {
             setSubmitting(false);
         }

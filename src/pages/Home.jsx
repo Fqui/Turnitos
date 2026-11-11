@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useLocation, useNavigationType } from 'react-router-dom';
+import { useNotification } from '../contexts/NotificationContext';
 import { motion } from 'framer-motion';
 import serviceAdapter from '../services/serviceAdapter';
 import PromotionsHero from '../components/PromotionsHero';
@@ -46,6 +47,7 @@ const readFilterParams = (search) => {
 
 export default function Home() {
     const navigate = useNavigate();
+    const { showAlert, showToast } = useNotification();
     const location = useLocation();
     const navigationType = useNavigationType();
     const [searchTerm, setSearchTerm] = useState(() => readFilterParams(location.search).q);
@@ -121,7 +123,7 @@ export default function Home() {
 
         // Toggle ON
         if (!navigator.geolocation) {
-            alert('Tu navegador no soporta geolocalización.');
+            showAlert('Ubicación no disponible', 'Tu navegador no soporta geolocalización.', 'warning');
             return;
         }
 
@@ -142,7 +144,7 @@ export default function Home() {
                     }
                 } catch (error) {
                     console.error('Error obtaining location or businesses:', error);
-                    alert('Error al obtener negocios cercanos.');
+                    showToast('No pudimos obtener los negocios cercanos.', 'error');
                     setIsNearMeActive(false);
                 } finally {
                     setLoading(false);
@@ -150,7 +152,7 @@ export default function Home() {
             },
             (error) => {
                 console.error('Geolocation error:', error);
-                alert('No pudimos obtener tu ubicación. Por favor permite el acceso para usar esta función.');
+                showAlert('No pudimos obtener tu ubicación', 'Permití el acceso a tu ubicación para usar esta función.', 'warning');
                 setLoading(false);
                 setIsNearMeActive(false);
             }
