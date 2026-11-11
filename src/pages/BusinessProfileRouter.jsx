@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Navigate, useLocation } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import serviceAdapter from '../services/serviceAdapter';
 import BusinessProfile from './BusinessProfile';
 import VenueProfile from './VenueProfile';
 import PageLoader from '../components/common/PageLoader';
+import BusinessUnavailable from '../components/common/BusinessUnavailable';
+import { isBusinessNotFoundError } from '../utils/businessErrors';
 
 const cleanBusinessMeta = (m) => {
     if (!m) return {};
@@ -43,6 +45,9 @@ export default function BusinessProfileRouter({ overrideSlug }) {
     const initialBiz = getInitialBusiness();
     const [business, setBusiness] = useState(initialBiz);
     const [loading, setLoading] = useState(!initialBiz);
+    // null | 'not-found' | 'error'
+    const [loadError, setLoadError] = useState(null);
+    const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
         let isMounted = true;
@@ -50,6 +55,7 @@ export default function BusinessProfileRouter({ overrideSlug }) {
             try {
                 const data = await serviceAdapter.getBusinessBySlug(businessSlug);
                 if (!isMounted) return;
+                setLoadError(null);
                 if (data) {
                     const dataMeta = cleanBusinessMeta(data.metadata);
                     setBusiness({
@@ -62,9 +68,18 @@ export default function BusinessProfileRouter({ overrideSlug }) {
                 } else {
                     // Slug no longer exists: drop any cached copy
                     setBusiness(null);
+                    setLoadError('not-found');
                 }
             } catch (error) {
                 console.error('Error fetching business:', error);
+                if (!isMounted) return;
+                if (isBusinessNotFoundError(error)) {
+                    setBusiness(null);
+                    setLoadError('not-found');
+                } else {
+                    // Network/server error: keep a cached copy if we have one
+                    setLoadError('error');
+                }
             } finally {
                 if (isMounted) setLoading(false);
             }
@@ -77,14 +92,25 @@ export default function BusinessProfileRouter({ overrideSlug }) {
         return () => {
             isMounted = false;
         };
-    }, [businessSlug]);
+    }, [businessSlug, reloadKey]);
+
+    const handleRetry = () => {
+        setLoadError(null);
+        setLoading(true);
+        setReloadKey(k => k + 1);
+    };
 
     if (loading) {
         return <PageLoader label="Cargando negocio..." />;
     }
 
     if (!business) {
-        return <Navigate to="/" replace />;
+        return (
+            <BusinessUnavailable
+                variant={loadError === 'error' ? 'error' : 'not-found'}
+                onRetry={handleRetry}
+            />
+        );
     }
 
     const catName = (business.categories?.name || business.category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
