@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useNotification } from '../contexts/NotificationContext';
+import { useLiveChannels } from '../hooks/useLiveChannels';
 import { getSubdomain } from '../utils/utils';
 import PageLoader from '../components/common/PageLoader';
 
@@ -243,20 +244,29 @@ export default function BusinessProfile({ business: initialBusiness }) {
         fetchBookingsForDate(true);
     };
 
-    // Realtime synchronization
+    // Realtime synchronization: the channels are open only while the tab is visible
+    // and call the latest fetchBookingsForDate (current date) through a ref.
+    const fetchBookingsRef = useRef(fetchBookingsForDate);
+    fetchBookingsRef.current = fetchBookingsForDate;
+
+    useLiveChannels(
+        business?.id,
+        () => {
+            const bId = business.id;
+            return [
+                serviceAdapter.subscribeToBookings(bId, () => fetchBookingsRef.current(true)),
+                supabase.channel(`business-notif-${bId}`)
+                    .on('broadcast', { event: 'new_booking' }, () => fetchBookingsRef.current(true))
+                    .subscribe()
+            ];
+        },
+        () => fetchBookingsRef.current(true)
+    );
+
+    // Same-browser updates (other tabs) and a slow safety poll while visible
     useEffect(() => {
         if (!business?.id) return;
         const bId = business.id;
-
-        const bookingsSub = serviceAdapter.subscribeToBookings(bId, () => {
-            fetchBookingsForDate(true);
-        });
-
-        const notifChannel = supabase.channel(`business-notif-${bId}`)
-            .on('broadcast', { event: 'new_booking' }, () => {
-                fetchBookingsForDate(true);
-            })
-            .subscribe();
 
         let localBroadcast = null;
         try {
@@ -271,14 +281,11 @@ export default function BusinessProfile({ business: initialBusiness }) {
         }
 
         const pollingInterval = setInterval(() => {
+            if (document.visibilityState === 'hidden') return;
             fetchBookingsForDate(true);
         }, 20000);
 
         return () => {
-            if (bookingsSub && bookingsSub.unsubscribe) bookingsSub.unsubscribe();
-            if (notifChannel) {
-                try { supabase.removeChannel(notifChannel); } catch (e) { }
-            }
             if (localBroadcast) {
                 try { localBroadcast.close(); } catch (e) { }
             }

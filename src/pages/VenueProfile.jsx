@@ -5,6 +5,7 @@ import L from 'leaflet';
 import { TurnitosTileLayer, createTurnitosMarkerIcon } from '../components/common/TurnitosMap';
 import serviceAdapter from '../services/serviceAdapter';
 import { useNotification } from '../contexts/NotificationContext';
+import { useLiveChannels } from '../hooks/useLiveChannels';
 import SEOHead from '../components/SEOHead';
 import { buildBusinessSeo } from '../utils/seo';
 import { parseAmenity } from '../components/common/AmenityIcon';
@@ -123,25 +124,27 @@ export default function VenueProfile({ business: initialBusiness }) {
         }
     }, [initialBusiness, slug]);
 
+    // Realtime: channels are open only while the tab is visible; on return, refresh once
+    useLiveChannels(
+        business?.id,
+        () => {
+            const bId = business.id;
+            return [
+                serviceAdapter.subscribeToBookings(bId, () => refreshDataSilently(bId)),
+                serviceAdapter.subscribeToBusiness(bId, () => refreshDataSilently(bId)),
+                supabase.channel(`business-notif-${bId}`)
+                    .on('broadcast', { event: 'new_booking' }, () => refreshDataSilently(bId))
+                    .subscribe()
+            ];
+        },
+        () => refreshDataSilently(business?.id)
+    );
+
     useEffect(() => {
         if (!business?.id) return;
         const bId = business.id;
 
         refreshDataSilently(bId);
-
-        const bookingsSub = serviceAdapter.subscribeToBookings(bId, () => {
-            refreshDataSilently(bId);
-        });
-
-        const bizSub = serviceAdapter.subscribeToBusiness(bId, () => {
-            refreshDataSilently(bId);
-        });
-
-        const notifChannel = supabase.channel(`business-notif-${bId}`)
-            .on('broadcast', { event: 'new_booking' }, () => {
-                refreshDataSilently(bId);
-            })
-            .subscribe();
 
         let localBroadcast = null;
         try {
@@ -156,15 +159,11 @@ export default function VenueProfile({ business: initialBusiness }) {
         }
 
         const interval = setInterval(() => {
+            if (document.visibilityState === 'hidden') return;
             refreshDataSilently(bId);
         }, 5000);
 
         return () => {
-            if (bookingsSub && bookingsSub.unsubscribe) bookingsSub.unsubscribe();
-            if (bizSub && bizSub.unsubscribe) bizSub.unsubscribe();
-            if (notifChannel) {
-                try { supabase.removeChannel(notifChannel); } catch (e) { }
-            }
             if (localBroadcast) {
                 try { localBroadcast.close(); } catch (e) { }
             }
