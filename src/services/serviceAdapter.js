@@ -31,6 +31,11 @@ class ServiceAdapter {
         return this.service.getBusinesses();
     }
 
+    // Light list for the Home cards (partial businesses, see businessService.getBusinessCards)
+    async getBusinessCards() {
+        return this.service.getBusinessCards();
+    }
+
     async getNearbyBusinesses(lat, lng, radius) {
         if (this.isDemoMode) {
             // Mock implementation could go here, for now just return all

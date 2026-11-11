@@ -45,6 +45,11 @@ class MockService {
         return this.businesses;
     }
 
+    async getBusinessCards() {
+        // Mock data is small: the full businesses work as cards
+        return this.getBusinesses();
+    }
+
     async getBusinessById(id) {
         await this.delay(300);
         const business = this.businesses.find(b => b.id === id);

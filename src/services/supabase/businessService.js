@@ -250,6 +250,50 @@ export async function getBusinesses() {
     return processBusinessData(businesses);
 }
 
+// Columns the Home cards, search and isProfileReady() read. Anything else (prices
+// of every service, specialists' details, booking rules...) loads with the profile.
+const BUSINESS_CARD_SELECT = `
+    id, name, slug, type, location, description, theme, primary_color, button_color,
+    logo, logo_url, banner_image, banner_url, category_id,
+    hours, time_ranges, price_per_hour, price_per_day, pricing_tiers,
+    banner_focus:metadata->banner_focus,
+    metadata_pricing_tiers:metadata->pricing_tiers,
+    categories ( id, name, slug, icon ),
+    business_subcategories (
+        subcategories ( id, name, slug, icon, category_id )
+    ),
+    services ( name, description, price ),
+    courts ( id, name, sport, price ),
+    specialists ( name, role ),
+    bookable_resources:resources ( name, type, base_price, active )
+`;
+
+/**
+ * Light list for the Home cards. The result is a partial business
+ * (isCardSummary: true): profiles must load the full one before booking.
+ */
+export async function getBusinessCards() {
+    const { data, error } = await supabase
+        .from('businesses_public')
+        .select(BUSINESS_CARD_SELECT);
+
+    if (error) throw error;
+
+    const cards = (data || []).map(({ banner_focus, metadata_pricing_tiers, business_subcategories, ...b }) => {
+        const metadata = {};
+        if (banner_focus) metadata.banner_focus = banner_focus;
+        if (Array.isArray(metadata_pricing_tiers)) metadata.pricing_tiers = metadata_pricing_tiers;
+        return {
+            ...b,
+            metadata,
+            subcategories: business_subcategories?.map(bs => bs.subcategories).filter(Boolean) || [],
+            isCardSummary: true
+        };
+    });
+
+    return processBusinessData(cards);
+}
+
 export async function getNearbyBusinesses(lat, lng, radius = 5000) {
     const { data, error } = await supabase
         .rpc('get_nearby_businesses', {

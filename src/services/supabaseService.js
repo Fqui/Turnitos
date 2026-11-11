@@ -21,6 +21,10 @@ class SupabaseService {
         return businessService.getBusinesses();
     }
 
+    async getBusinessCards() {
+        return businessService.getBusinessCards();
+    }
+
     async getNearbyBusinesses(lat, lng, radius = 5000) {
         return businessService.getNearbyBusinesses(lat, lng, radius);
     }

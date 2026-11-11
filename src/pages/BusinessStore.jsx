@@ -53,8 +53,10 @@ export default function BusinessStore({ overrideSlug }) {
     const [activePromotion, setActivePromotion] = useState(null);
     const [showPromoModal, setShowPromoModal] = useState(false);
 
+    // A Home card (isCardSummary) is partial: never use it as the store's business
+    const stateBusiness = location.state?.business?.isCardSummary ? null : location.state?.business;
     const [business, setBusiness] = useState(() => {
-        if (location.state?.business) return location.state.business;
+        if (stateBusiness) return stateBusiness;
         try {
             const cached = sessionStorage.getItem(`turnitos_biz_${businessSlug}`);
             if (cached) return JSON.parse(cached);
@@ -68,7 +70,7 @@ export default function BusinessStore({ overrideSlug }) {
     }, [business?.id]);
 
     const [loading, setLoading] = useState(() => {
-        if (location.state?.business) return false;
+        if (stateBusiness) return false;
         try {
             if (sessionStorage.getItem(`turnitos_biz_${businessSlug}`)) return false;
         } catch (e) {}
@@ -154,7 +156,7 @@ export default function BusinessStore({ overrideSlug }) {
     const [selectedSize, setSelectedSize] = useState(null);
 
     const [products, setProducts] = useState(() => {
-        const initBiz = location.state?.business || (() => {
+        const initBiz = stateBusiness || (() => {
             try {
                 const c = sessionStorage.getItem(`turnitos_biz_${businessSlug}`);
                 return c ? JSON.parse(c) : null;
@@ -245,7 +247,7 @@ export default function BusinessStore({ overrideSlug }) {
 
     // Theme setup matching LinkBio / BusinessProfile with useLayoutEffect for zero-latency dark transition
     useLayoutEffect(() => {
-        const currentBiz = business || location.state?.business;
+        const currentBiz = business || stateBusiness;
         const root = document.documentElement;
 
         const isDarkTheme = currentBiz

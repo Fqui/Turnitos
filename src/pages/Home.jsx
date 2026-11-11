@@ -105,7 +105,7 @@ export default function Home() {
         setIsNearMeActive(false);
         setLoading(true);
         try {
-            const allBusinesses = await serviceAdapter.getBusinesses();
+            const allBusinesses = await serviceAdapter.getBusinessCards();
             setBusinesses(allBusinesses);
         } catch (error) {
             console.error('Error resetting businesses:', error);
@@ -222,7 +222,7 @@ export default function Home() {
         const loadData = async () => {
             try {
                 const [businessesData, promotionsData, categoriesResult] = await Promise.all([
-                    serviceAdapter.getBusinesses(),
+                    serviceAdapter.getBusinessCards(),
                     serviceAdapter.getPromotions(),
                     serviceAdapter.getCategories() // ✅ Fetch categories
                 ]);
@@ -415,7 +415,7 @@ export default function Home() {
             setIsNearMeActive(false);
             setLoading(true);
             try {
-                const allBusinesses = await serviceAdapter.getBusinesses();
+                const allBusinesses = await serviceAdapter.getBusinessCards();
                 setBusinesses(allBusinesses);
             } catch (error) {
                 console.error('Error reloading businesses:', error);

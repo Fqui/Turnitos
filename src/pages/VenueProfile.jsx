@@ -40,7 +40,7 @@ export default function VenueProfile({ business: initialBusiness }) {
     const location = useLocation();
     const { showAlert } = useNotification();
 
-    const [business, setBusiness] = useState(initialBusiness || location.state?.business || null);
+    const [business, setBusiness] = useState(initialBusiness || (location.state?.business?.isCardSummary ? null : location.state?.business) || null);
     const [loading, setLoading] = useState(!business);
     // Opened from a link shared on TurnitosLR (?via=turnitos): the booking counts as marketplace
     useEffect(() => {
