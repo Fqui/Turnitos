@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 export default function Footer({ minimal = false }) {
     if (minimal) {
         return (
-            <div style={{
+            <div className="footer-minimal" style={{
                 padding: '6px 16px',
                 paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
                 textAlign: 'center',

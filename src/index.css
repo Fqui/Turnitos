@@ -954,6 +954,53 @@ textarea {
   }
 }
 
+/* Desktop: a stacked cover can't be big without scrolling, so the cover
+   fills the whole screen as a background and the bio floats on a card. */
+@media (min-width: 1024px) {
+  .linkbio-main-container {
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .linkbio-banner {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    min-height: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .linkbio-banner-overlay {
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .linkbio-body-wrapper {
+    position: relative;
+    max-width: 460px;
+    margin-top: 0 !important;
+    padding: 28px 24px 24px;
+    border-radius: 28px;
+    background: var(--bg-card);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  }
+
+  .linkbio-body-wrapper .linkbio-links-section {
+    padding: 0 !important;
+  }
+
+  /* Footer readable over the photo */
+  .linkbio-page .footer-minimal {
+    position: relative;
+    z-index: 1;
+    color: rgba(255, 255, 255, 0.8) !important;
+    border-top: none !important;
+  }
+}
+
 /* ═══════════════════════════════════════════
    Business Profile Styling Shell & Layout
    ═══════════════════════════════════════════ */
