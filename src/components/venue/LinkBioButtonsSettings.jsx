@@ -365,7 +365,7 @@ export default function LinkBioButtonsSettings({
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '16px' }}>
                         {/* Title */}
                         <div>
                             <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '6px' }}>
@@ -412,7 +412,7 @@ export default function LinkBioButtonsSettings({
                         </div>
 
                         {/* Emoji / Icon Selector with Full Explorer Modal */}
-                        <div style={{ gridColumn: 'span 2' }}>
+                        <div style={{ gridColumn: '1 / -1' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                                 <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
                                     Ícono del Botón
@@ -461,7 +461,7 @@ export default function LinkBioButtonsSettings({
                                 </button>
 
                                 {/* Quick Presets */}
-                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', flex: 1 }}>
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
                                     {PRESET_EMOJIS.map((em, idx) => (
                                         <button
                                             key={idx}
@@ -484,7 +484,7 @@ export default function LinkBioButtonsSettings({
                         </div>
 
                         {/* Link Type Toggle */}
-                        <div style={{ gridColumn: 'span 2' }}>
+                        <div style={{ gridColumn: '1 / -1' }}>
                             <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '6px' }}>
                                 Tipo de Enlace
                             </label>
