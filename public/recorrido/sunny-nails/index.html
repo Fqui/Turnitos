@@ -305,16 +305,16 @@ const S=[
  {c:'a',img:'dest',fx:'full',t:'Se miran a <em>pantalla completa</em>',p:'Como una historia de Instagram, pero en tu página.'},
  {c:'a',img:'perfil',spot:[682,158],tap:[330,770],t:'Gift cards <em>a la vista</em>',p:'Tu tienda aparece antes que los servicios.',n:[[320,712,'Entra a tu tienda']]},
  {c:'a',img:'perfil',spot:[862,410],t:'Servicios con <em>fotos reales</em>',p:'Precio, duración y tu trabajo, antes de reservar.',n:[[70,1190,'Hasta 5 fotos'],[345,892,'Filtros por categoría']]},
- {c:'a',vid:'booking',caps:[[0,'Entra a tu página'],[2.3,'Toca el servicio'],[4.6,'Ve fotos, duración y precio'],[6.8,'Elige el día'],[9.6,'Solo ve horarios libres'],[13.5,'Le ofrecés un extra'],[17.2,'Deja su nombre y WhatsApp'],[24,'Ve la seña y tu alias'],[26.8,'¡Turno reservado!']],
+ {c:'a',vid:'booking',caps:[[0,'Entra a tu página'],[2.3,'Toca el servicio'],[4.7,'Ve fotos, duración y precio'],[6.9,'Elige el día'],[9.8,'Solo ve horarios libres'],[13.8,'Le ofrecés un extra'],[17.5,'Deja su nombre y WhatsApp'],[24.6,'Ve la seña y tu alias'],[27.5,'¡Turno reservado!']],
   t:'Así reserva <em>tu clienta</em>',p:'Del servicio a la seña, sola y en menos de un minuto.',
   end:{spot:[192,300],t:'Turno <em>reservado</em>',p:'Te manda el comprobante por WhatsApp y vos confirmás.'}},
- {c:'a',vid:'store',after:'wa',caps:[[0,'Elige un producto'],[2.8,'Mira la ficha y lo agrega'],[5,'Revisa su carrito'],[7.6,'Toca Continuar']],
+ {c:'a',vid:'store',after:'wa',caps:[[0,'Elige un producto'],[2.9,'Mira la ficha y lo agrega'],[5.1,'Revisa su carrito'],[7.7,'Toca Continuar']],
   t:'Así compra <em>en tu tienda</em>',p:'Gift cards y productos, con carrito y pedido directo a tu WhatsApp.',
   end:{t:'Pedido <em>a tu WhatsApp</em>',p:'Con el detalle y el total. Coordinás la entrega con ella.'}},
  {c:'a',img:'perfil-b',spot:[300,268],t:'Zonas <em>y traslado</em>',p:'Cuánto sale ir a domicilio según la distancia.'},
  {c:'a',img:'perfil-b',spot:[570,330],t:'Reseñas <em>reales</em>',p:'Solo opinan clientas que reservaron con vos.'},
  {type:'chapter',c:'b'},
- {c:'b',vid:'service',caps:[[0,'Ajustes → Servicios'],[1.8,'El nombre'],[4.4,'El precio'],[5.9,'Cuánto dura'],[8.8,'La categoría'],[11.7,'Fotos de tu trabajo'],[14.4,'La encuadrás a tu gusto'],[18.1,'Qué incluye'],[22.1,'Local, domicilio o las dos'],[23.7,'Quién lo hace'],[25.2,'¡Listo, agregado!']],
+ {c:'b',vid:'service',caps:[[0,'Ajustes → Servicios'],[1.8,'El nombre'],[4.7,'El precio'],[6.3,'Cuánto dura'],[9.3,'La categoría'],[12.2,'Fotos de tu trabajo'],[15,'La encuadrás a tu gusto'],[18.8,'Qué incluye'],[23.6,'Local, domicilio o las dos'],[25.3,'Quién lo hace'],[26.8,'¡Listo, agregado!']],
   t:'Un servicio <em>en un minuto</em>',p:'Así se carga, campo por campo, desde el celu.',where:'Ajustes → Servicios',
   end:{spot:[497,255],t:'Ya está <em>en tu lista</em>',p:'Guardás y aparece en tu página con sus fotos.'}},
  {c:'b',img:'p-prof',spot:[95,310],t:'Tu <em>equipo</em>',p:'Cada profesional con foto y sus servicios. La clienta elige con quién.',where:'Ajustes → Profesionales'},
@@ -581,4 +581,5 @@ const fromHash=()=>{const m=/paso-(\d+)/.exec(location.hash);return m?Math.min(S
 addEventListener('hashchange',()=>{const n=fromHash();if(n!==i)go(n)});
 go(fromHash());
 </script>
+
 </body></html>
