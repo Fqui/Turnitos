@@ -31,6 +31,7 @@ import SEOHead from '../components/SEOHead';
 import { buildBusinessSeo } from '../utils/seo';
 import { getActiveStoreProducts, isStoreAvailable } from '../utils/storeUtils';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
+import { createStoreOrder, confirmStoreOrder } from '../services/supabase/storeOrderService';
 import PromotionModal from '../components/promotions/PromotionModal';
 import ShareButton from '../components/common/ShareButton';
 import { buildBusinessShareUrl, markTurnitosVia } from '../utils/share';
@@ -94,6 +95,15 @@ export default function BusinessStore({ overrideSlug }) {
     });
     // Set after opening WhatsApp: the cart stays until the customer says the order was sent
     const [orderSentToWhatsApp, setOrderSentToWhatsApp] = useState(false);
+    // Order saved in Turnitos for the current cart ({ id, number, token }); confirmed when
+    // the customer says she sent the WhatsApp, which is what notifies the business
+    const [pendingOrder, setPendingOrder] = useState(null);
+    const [isSavingOrder, setIsSavingOrder] = useState(false);
+
+    // A different cart is a different order
+    useEffect(() => {
+        setPendingOrder(null);
+    }, [cart]);
 
     useEffect(() => {
         try {
@@ -412,7 +422,8 @@ export default function BusinessStore({ overrideSlug }) {
         }
     };
 
-    const handleConfirmOrder = () => {
+    const handleConfirmOrder = async () => {
+        if (isSavingOrder) return;
         if (!buildWhatsAppUrl(business?.whatsapp)) {
             showAlert('Pedidos no disponibles', 'El negocio no tiene configurado un número de WhatsApp para pedidos.', 'warning');
             return;
@@ -428,14 +439,39 @@ export default function BusinessStore({ overrideSlug }) {
             ? `\n*Descuento Cupón:* -$${discount.toLocaleString('es-AR')} (${parsePromotionTarget(activePromotion).discount_label})\n`
             : '';
 
-        const message = `¡Hola ${business.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${productListText}\n${discountText}\n*Total a pagar:* $${totalText}\n\n¿Tienen disponibilidad para coordinar el retiro/entrega? ¡Gracias!`;
+        // Open the tab right away (inside the tap) so mobile browsers don't block it,
+        // and point it to WhatsApp once the order is saved
+        const waWindow = window.open('', '_blank');
 
-        window.open(buildWhatsAppUrl(business.whatsapp, message), '_blank');
+        let order = pendingOrder;
+        if (!order) {
+            setIsSavingOrder(true);
+            order = await createStoreOrder({
+                businessId: business.id,
+                items: cart,
+                discount,
+                couponLabel: discount > 0 ? parsePromotionTarget(activePromotion).discount_label : null
+            });
+            setIsSavingOrder(false);
+            if (order) setPendingOrder(order);
+        }
+
+        const orderLine = order?.number ? `*Pedido #${order.number}*\n\n` : '';
+        const message = `¡Hola ${business.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${orderLine}${productListText}\n${discountText}\n*Total a pagar:* $${totalText}\n\n¿Tienen disponibilidad para coordinar el retiro/entrega? ¡Gracias!`;
+        const waUrl = buildWhatsAppUrl(business.whatsapp, message);
+
+        if (waWindow && !waWindow.closed) {
+            waWindow.location.href = waUrl;
+        } else {
+            window.location.href = waUrl;
+        }
         // Keep the cart until the customer confirms the message was actually sent
         setOrderSentToWhatsApp(true);
     };
 
     const handleOrderSent = () => {
+        // Fire and forget: confirming is what sends the push to the business
+        if (pendingOrder) confirmStoreOrder(pendingOrder);
         setCart([]);
         setOrderSentToWhatsApp(false);
         setIsCartOpen(false);
@@ -1921,7 +1957,7 @@ export default function BusinessStore({ overrideSlug }) {
                                         onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
                                         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                                     >
-                                        <span>{orderSentToWhatsApp ? 'Abrir WhatsApp de nuevo' : 'Continuar'}</span>
+                                        <span>{isSavingOrder ? 'Abriendo WhatsApp…' : orderSentToWhatsApp ? 'Abrir WhatsApp de nuevo' : 'Continuar'}</span>
                                         {orderSentToWhatsApp ? <span>💬</span> : <ShoppingBag size={18} aria-hidden="true" />}
                                     </button>
 

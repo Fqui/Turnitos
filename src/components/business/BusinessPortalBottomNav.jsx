@@ -12,7 +12,8 @@ const BusinessPortalBottomNav = ({
     pendingCount = 0,
     isMenuOpen,
     onToggleMenu,
-    isPhone = false
+    isPhone = false,
+    unseenOrdersCount = 0
 }) => {
     const items = [
         { id: 'calendar', icon: '📅', label: 'Calendario' },
@@ -31,7 +32,8 @@ const BusinessPortalBottomNav = ({
             { id: 'list', Icon: ClipboardList, label: 'Reservas', badge: pendingCount > 0 ? pendingCount : null },
             isSport ? { id: 'caja', Icon: Wallet, label: 'Caja' } : { id: 'customers', Icon: Users, label: 'Clientes' },
             { id: 'settings', Icon: Settings, label: 'Ajustes' },
-            { id: 'more', Icon: LayoutGrid, label: 'Más' }
+            // New store orders live in "Más" on the phone
+            { id: 'more', Icon: LayoutGrid, label: 'Más', badge: unseenOrdersCount > 0 ? unseenOrdersCount : null }
         ];
         return (
             <nav aria-label="Secciones del panel" className="pm-nav">
@@ -45,7 +47,7 @@ const BusinessPortalBottomNav = ({
                             className={`pm-tab${isActive ? ' is-active' : ''}`}
                             aria-current={isActive && !isMore ? 'page' : undefined}
                             aria-expanded={isMore ? !!isMenuOpen : undefined}
-                            aria-label={badge ? `${label} (${badge} esperan confirmación)` : label}
+                            aria-label={badge ? `${label} (${badge} ${isMore ? 'pedidos nuevos' : 'esperan confirmación'})` : label}
                             onClick={() => {
                                 if (isMore) {
                                     onToggleMenu(!isMenuOpen);

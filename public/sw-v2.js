@@ -50,29 +50,37 @@ self.addEventListener('push', (event) => {
     data = { body: event.data ? event.data.text() : '' };
   }
 
-  const title = data.title || 'Nueva reserva';
+  // Store orders (kind: 'order') only have "Ver pedido"; bookings keep both actions
+  const isOrder = data.kind === 'order' || Boolean(data.orderId);
+  const title = data.title || (isOrder ? 'Nueva compra en tu tienda' : 'Nueva reserva');
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || '',
       icon: '/logo-turnitos.png',
       badge: '/favicon-48.png',
-      tag: data.tag || (data.bookingId ? `booking-${data.bookingId}` : 'turnitos-booking'),
+      tag: data.tag || (isOrder ? `order-${data.orderId}` : data.bookingId ? `booking-${data.bookingId}` : 'turnitos-booking'),
       renotify: true,
       requireInteraction: true,
       vibrate: [200, 100, 200],
-      actions: [
-        { action: 'open', title: 'Ver reserva' },
-        { action: 'agenda', title: 'Abrir agenda' }
-      ],
-      data: { url: data.url || '/portal', bookingId: data.bookingId || null }
+      actions: isOrder
+        ? [{ action: 'open', title: 'Ver pedido' }]
+        : [
+          { action: 'open', title: 'Ver reserva' },
+          { action: 'agenda', title: 'Abrir agenda' }
+        ],
+      data: {
+        url: data.url || '/portal',
+        bookingId: data.bookingId || null,
+        orderId: data.orderId || null
+      }
     })
   );
 });
 
-// Body tap or "Ver reserva" opens that booking; "Abrir agenda" opens the calendar
+// Body tap or "Ver reserva"/"Ver pedido" opens that booking or order; "Abrir agenda" opens the calendar
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const { url = '/portal', bookingId = null } = event.notification.data || {};
+  const { url = '/portal', bookingId = null, orderId = null } = event.notification.data || {};
   const showAgenda = event.action === 'agenda';
 
   event.waitUntil((async () => {
@@ -80,7 +88,11 @@ self.addEventListener('notificationclick', (event) => {
     const portal = windows.find((client) => new URL(client.url).pathname.startsWith('/portal'));
     if (portal) {
       await portal.focus();
-      portal.postMessage(showAgenda ? { type: 'open-agenda' } : { type: 'open-booking', bookingId });
+      portal.postMessage(
+        showAgenda ? { type: 'open-agenda' }
+          : orderId ? { type: 'open-order', orderId }
+            : { type: 'open-booking', bookingId }
+      );
       return;
     }
     await self.clients.openWindow(showAgenda ? '/portal' : url);

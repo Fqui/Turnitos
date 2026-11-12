@@ -34,6 +34,9 @@ import PortalPushPrompt from '../components/business/portal/PortalPushPrompt';
 import PortalProfileChecklist from '../components/business/portal/PortalProfileChecklist';
 import PortalPastBookingsCard from '../components/business/portal/PortalPastBookingsCard';
 import SportCanteenCashPanel from '../components/business/canteen/SportCanteenCashPanel';
+import StoreOrdersView from '../components/business/portal/StoreOrdersView';
+import { getStoreOrders, updateStoreOrderStatus, markStoreOrdersSeen, countUnseenOrders } from '../services/supabase/storeOrderService';
+import { isStoreAvailable } from '../utils/storeUtils';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuthStore, useBookingsStore, usePortalUIStore } from '../stores';
 import FramedImage from '../components/common/FramedImage';
@@ -320,6 +323,10 @@ export default function BusinessPortal() {
             } else if (event.data?.type === 'open-booking' && event.data.bookingId) {
                 setBookingToOpen(String(event.data.bookingId));
                 if (selectedBusinessId) fetchBookingsStore(selectedBusinessId, true);
+            } else if (event.data?.type === 'open-order' && event.data.orderId) {
+                setHighlightOrderId(String(event.data.orderId));
+                setViewMode('orders');
+                fetchStoreOrders();
             }
         };
         navigator.serviceWorker.addEventListener('message', handleMessage);
@@ -337,6 +344,69 @@ export default function BusinessPortal() {
             window.history.replaceState(null, '', window.location.pathname);
         }
     }, [bookingToOpen, bookings]);
+
+    // Store orders: unseen count for the menu badge, list for the "Pedidos" view.
+    // ?order=<id> (push notification) opens the view with that order highlighted.
+    const [storeOrders, setStoreOrders] = useState([]);
+    const [storeOrdersLoading, setStoreOrdersLoading] = useState(false);
+    const [highlightOrderId, setHighlightOrderId] = useState(() => {
+        try {
+            return new URLSearchParams(window.location.search).get('order');
+        } catch {
+            return null;
+        }
+    });
+    const storeOrdersBizRef = useRef(null);
+
+    const fetchStoreOrders = async () => {
+        const businessId = storeOrdersBizRef.current;
+        if (!businessId) return;
+        setStoreOrdersLoading(true);
+        const data = await getStoreOrders(businessId);
+        if (storeOrdersBizRef.current === businessId) setStoreOrders(data);
+        setStoreOrdersLoading(false);
+    };
+
+    useEffect(() => {
+        storeOrdersBizRef.current = isLoggedIn && selectedBusinessId ? String(selectedBusinessId) : null;
+        setStoreOrders([]);
+        fetchStoreOrders();
+    }, [isLoggedIn, selectedBusinessId]);
+
+    useEffect(() => {
+        if (!highlightOrderId) return;
+        setViewMode('orders');
+        if (window.location.search.includes('order=')) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [highlightOrderId]);
+
+    // Opening the view refreshes the list and marks the new orders as seen
+    useEffect(() => {
+        if (viewMode !== 'orders' || !storeOrdersBizRef.current) return;
+        const businessId = storeOrdersBizRef.current;
+        fetchStoreOrders().then(() => markStoreOrdersSeen(businessId));
+    }, [viewMode, selectedBusinessId]);
+
+    useEffect(() => {
+        if (viewMode !== 'orders') setHighlightOrderId(null);
+    }, [viewMode]);
+
+    const unseenOrdersCount = viewMode === 'orders' ? 0 : countUnseenOrders(storeOrders);
+    const showOrdersSection = isStoreAvailable(currentBusiness) || storeOrders.length > 0;
+
+    const handleOrderStatusChange = async (order, status) => {
+        try {
+            await updateStoreOrderStatus(order.id, status);
+            setStoreOrders(prev => prev.map(o => (o.id === order.id
+                ? { ...o, status, seen_at: o.seen_at || new Date().toISOString() }
+                : o)));
+        } catch (error) {
+            console.error('Error updating store order:', error);
+            showToast?.('No se pudo actualizar el pedido. Probá de nuevo.', 'error');
+        }
+    };
 
     const getStatusLabel = (status) => {
         const labels = {
@@ -1149,6 +1219,8 @@ export default function BusinessPortal() {
                 theme={theme}
                 currentBusiness={currentBusiness}
                 pendingCount={bookings.filter(b => b.status === 'pending').length}
+                showOrders={showOrdersSection}
+                unseenOrdersCount={unseenOrdersCount}
                 onCreateBooking={(e) => handleCreateBooking(e)}
                 onShareAgenda={!isMobile && currentBusiness ? () => setShowShareAgenda(true) : null}
                 onLogout={async () => {
@@ -1166,6 +1238,7 @@ export default function BusinessPortal() {
                     setViewMode={setViewMode}
                     isSport={isSportBusiness(currentBusiness)}
                     pendingCount={isPhone ? phoneWaitingCount : bookings.filter(b => b.status === 'pending').length}
+                    unseenOrdersCount={unseenOrdersCount}
                     isPhone={isPhone}
                     isMenuOpen={showSidebar}
                     onToggleMenu={setShowSidebar}
@@ -1269,6 +1342,14 @@ export default function BusinessPortal() {
                             <SportCanteenCashPanel
                                 business={currentBusiness}
                                 showToast={showToast}
+                                isMobile={isMobile}
+                            />
+                        ) : viewMode === 'orders' ? (
+                            <StoreOrdersView
+                                orders={storeOrders}
+                                loading={storeOrdersLoading}
+                                highlightId={highlightOrderId}
+                                onChangeStatus={handleOrderStatusChange}
                                 isMobile={isMobile}
                             />
                         ) : viewMode === 'subscription' ? (

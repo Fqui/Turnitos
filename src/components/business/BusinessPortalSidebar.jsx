@@ -20,7 +20,9 @@ const BusinessPortalSidebar = ({
     onLogout,
     onCreateBooking,
     onShareAgenda,
-    pendingCount = 0
+    pendingCount = 0,
+    showOrders = false,
+    unseenOrdersCount = 0
 }) => {
     const { showToast, showAlert, showConfirm } = useNotification();
     const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -121,6 +123,8 @@ const BusinessPortalSidebar = ({
             <div className="pm-more-panel" role="dialog" aria-label="Más opciones">
                 <PhoneMoreMenu
                     business={currentBusiness}
+                    showOrders={showOrders}
+                    unseenOrdersCount={unseenOrdersCount}
                     isSport={isSport}
                     theme={theme}
                     toggleTheme={toggleTheme}
@@ -139,6 +143,7 @@ const BusinessPortalSidebar = ({
     const navItems = [
         { id: 'calendar', icon: '📅', label: 'Calendario' },
         { id: 'list', icon: '📋', label: 'Reservas', badge: pendingCount > 0 ? pendingCount : null },
+        ...(showOrders ? [{ id: 'orders', icon: '🛍️', label: 'Pedidos', badge: unseenOrdersCount > 0 ? unseenOrdersCount : null }] : []),
         ...(isSport ? [{ id: 'caja', icon: '💰', label: 'Registro de Caja' }] : []),
         { id: 'analytics', icon: '📊', label: 'Analytics' },
         { id: 'subscription', icon: '💳', label: 'Suscripción' },

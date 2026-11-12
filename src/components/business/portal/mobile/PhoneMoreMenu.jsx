@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Copy, Wallet, BarChart3, CreditCard, Users, Moon, Sun, HelpCircle, LogOut,
-    ChevronRight, Bell, BellOff, Smartphone, Receipt
+    ChevronRight, Bell, BellOff, Smartphone, Receipt, ShoppingBag
 } from 'lucide-react';
 import ShareButton from '../../../common/ShareButton';
 import { buildBusinessShareUrl, copyText } from '../../../../utils/share';
@@ -40,7 +40,9 @@ export default function PhoneMoreMenu({
     notifGranted,
     onToggleNotifications,
     canInstall,
-    onInstall
+    onInstall,
+    showOrders = false,
+    unseenOrdersCount = 0
 }) {
     const slug = business?.slug;
     const url = buildBusinessShareUrl(slug);
@@ -85,6 +87,15 @@ export default function PhoneMoreMenu({
             )}
 
             <div className="pm-group">
+                {showOrders && (
+                    <Row
+                        icon={ShoppingBag}
+                        title="Pedidos de la tienda"
+                        subtitle="Lo que te compran desde tu tienda online"
+                        value={unseenOrdersCount > 0 ? `${unseenOrdersCount} nuevo${unseenOrdersCount === 1 ? '' : 's'}` : null}
+                        onClick={() => onNavigate('orders')}
+                    />
+                )}
                 {isSport && <Row icon={Wallet} title="Registro de caja" onClick={() => onNavigate('caja')} />}
                 {isSport && <Row icon={Users} title="Clientes" onClick={() => onNavigate('customers')} />}
                 <Row icon={BarChart3} title="Estadísticas" subtitle="Turnos, ingresos y horarios más pedidos" onClick={() => onNavigate('analytics')} />
