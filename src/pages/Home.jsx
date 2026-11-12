@@ -1129,13 +1129,26 @@ export default function Home() {
                                                             color: 'var(--text-secondary)',
                                                             marginBottom: '0',
                                                             display: 'flex',
-                                                            alignItems: 'center',
+                                                            alignItems: 'flex-start',
                                                             gap: '4px',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap'
+                                                            lineHeight: 1.35
                                                         }}>
-                                                            <CategoryIcon icon="📍" size={14} style={{ verticalAlign: '-2px' }} /> {business.location}
+                                                            <CategoryIcon icon="📍" size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+                                                            {/* Direcciones largas: hasta 2 renglones y después puntos suspensivos */}
+                                                            <span
+                                                                title={business.location}
+                                                                style={{
+                                                                    minWidth: 0,
+                                                                    overflow: 'hidden',
+                                                                    display: '-webkit-box',
+                                                                    WebkitBoxOrient: 'vertical',
+                                                                    WebkitLineClamp: 2,
+                                                                    lineClamp: 2,
+                                                                    overflowWrap: 'anywhere'
+                                                                }}
+                                                            >
+                                                                {business.location}
+                                                            </span>
                                                         </p>
                                                     </div>
                                                 </div>
