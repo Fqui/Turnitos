@@ -28,9 +28,25 @@ Tarda unos 2 minutos. Trabaja sobre la página publicada (`www.turnitoslr.com/<s
 ## Capítulos
 
 1. Lo que ve el cliente (link, página, historias, destacadas o galería, tienda, horarios o calendario, videos, ubicación, comodidades, reseñas).
-2. Lo que ganás vos (el aviso al celu).
+2. Lo que ganás vos (el aviso al celu y, si hay sesión del SuperAdmin, el video del panel).
 
-El capítulo del panel (como en Sunny Nails) no se genera: necesita entrar con la cuenta del negocio.
+## Video del panel
+
+Para grabar cómo le llega la reserva al dueño hace falta, una sola vez por PC, guardar la sesión del SuperAdmin:
+
+```bash
+node scripts/recorrido/sesion-superadmin.mjs
+```
+
+Abre una ventana: Fernando entra al SuperAdmin y se cierra sola. La sesión queda en `%LOCALAPPDATA%\turnitos-recorrido\perfil-superadmin` (fuera del repo). Nadie escribe contraseñas en los scripts.
+
+Con esa sesión, y **solo en negocios de simulación**, el generador:
+- confirma la reserva del video (cliente "Laura Gómez", teléfono 3804123456);
+- entra al panel con "Abrir Portal" del SuperAdmin y graba: reservas que esperan confirmación, datos y seña, y el WhatsApp con los mensajes listos;
+- cancela la reserva de prueba al terminar.
+
+Si algo falla y queda una reserva de prueba: `node scripts/recorrido/limpiar-reservas.mjs "<Nombre del negocio>"`.
+Con `--sin-panel` se salta todo esto y la reserva frena antes de confirmar. En negocios reales siempre frena antes.
 
 ## Después
 

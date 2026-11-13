@@ -1,45 +1,35 @@
 #!/usr/bin/env node
 // Genera el recorrido interactivo de un negocio en public/recorrido/<slug>/
-// Uso: node scripts/recorrido/generar-recorrido.mjs <slug> [--local http://127.0.0.1:5277]
+// Uso: node scripts/recorrido/generar-recorrido.mjs <slug> [--sin-panel]
 // Lee el negocio de producción (turnitoslr.com), saca capturas, graba los videos
-// de reserva y de tienda, ubica los recuadros leyendo la página y arma el index.html
+// de reserva, tienda y panel, ubica los recuadros leyendo la página y arma el index.html
 // sobre scripts/recorrido/plantilla.html. Ver scripts/recorrido/README.md.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { chromium, devices, PERFIL, SITE } from './comun.mjs';
+import { abrirPanel, cancelarReservasDePrueba } from './limpiar-reservas.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
-const SITE = 'https://www.turnitoslr.com';
 const W = 390, H = 844, SHOT_SCALE = 600 / 390, VID_SCALE = 2;
 
 const slug = process.argv[2];
 if (!slug || slug.startsWith('-')) {
-  console.error('Uso: node scripts/recorrido/generar-recorrido.mjs <slug>');
+  console.error('Uso: node scripts/recorrido/generar-recorrido.mjs <slug> [--sin-panel]');
   process.exit(1);
 }
+// Con la sesión del SuperAdmin guardada (sesion-superadmin.mjs) la reserva del video se confirma
+// y se graba el panel; al final la reserva de prueba se cancela. Sin sesión, frena antes de confirmar.
+// Solo en negocios de simulación: en uno real la reserva de prueba le llegaría al dueño.
+let CON_PANEL = !process.argv.includes('--sin-panel') && fs.existsSync(PERFIL);
 const OUT = path.join(ROOT, 'public', 'recorrido', slug);
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'recorrido-'));
 const log = (...a) => console.log('·', ...a);
-
-// ---------- Playwright: del proyecto, o el que dejó npx en la caché ----------
-function loadPlaywright() {
-  const req = createRequire(import.meta.url);
-  try { return req('playwright'); } catch { /* sigue */ }
-  const cache = path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), '.npm'), 'npm-cache', '_npx');
-  const alt = path.join(os.homedir(), '.npm', '_npx');
-  const dirs = [cache, alt].filter(d => fs.existsSync(d)).flatMap(d => fs.readdirSync(d).map(x => path.join(d, x, 'node_modules', 'playwright')));
-  const found = dirs.filter(d => fs.existsSync(path.join(d, 'package.json')))
-    .map(d => ({ d, v: JSON.parse(fs.readFileSync(path.join(d, 'package.json'), 'utf8')).version }))
-    .filter(x => !x.v.includes('alpha'))
-    .sort((a, b) => b.v.localeCompare(a.v, undefined, { numeric: true }));
-  if (!found.length) throw new Error('No encuentro Playwright. Corré una vez: npx playwright@latest --version');
-  return req(found[0].d);
-}
-const { chromium, devices } = loadPlaywright();
+// teléfono distinto en cada corrida: la web limita las reservas por teléfono y por día
+const TEL = '38049' + String(Math.floor(Math.random() * 1e5)).padStart(5, '0');
 
 // ---------- Datos del negocio ----------
 function env() {
@@ -123,28 +113,68 @@ async function smoothTo(p, texts, offset = 110) {
 }
 async function fillContact(p) {
   const fill = async (re, val) => { const i = p.getByPlaceholder(re).first(); if (await i.count()) { await i.click(); await p.keyboard.type(val, { delay: 80 }); } };
-  await fill(/nombre/i, 'Laura'); await fill(/apellido/i, 'Gómez'); await fill(/3804|Ej: 380|tel/i, '3804123456');
+  await fill(/nombre/i, 'Laura'); await fill(/apellido/i, 'Gómez'); await fill(/3804|Ej: 380|tel/i, TEL);
   await p.waitForTimeout(700);
 }
 const visibleText = (p) => p.evaluate(() => [...document.querySelectorAll('button,h2,h3')].filter(e => e.offsetParent && e.getBoundingClientRect().top < innerHeight && e.getBoundingClientRect().bottom > 0).map(e => e.innerText.trim()).join(' | '));
 
-// Avanza los pasos del modal de reserva sin confirmar (frena en la pantalla de Confirmar)
+// Avanza los pasos del modal de reserva. Con CON_PANEL confirma la reserva (para verla en el panel);
+// si no, frena en la pantalla de "Confirmar Reserva".
 async function advanceModal(p, rec, labels) {
   let filled = false;
+  const confirm = async () => {
+    if (!CON_PANEL) return;
+    await p.waitForTimeout(1500);
+    rec.cap('Confirma: ¡turno reservado!'); await p.getByRole('button', { name: /Confirmar Reserva/ }).click();
+    await p.waitForTimeout(4500);
+    rec.confirmed = !/No pudimos|máximo de reservas|Hubo un error|Error al/i.test(await p.evaluate(() => document.body.innerText));
+    if (!rec.confirmed) log('la web no guardó la reserva de prueba (la web permite 5 reservas por día desde la misma conexión): sin video del panel');
+  };
   for (let k = 0; k < 6; k++) {
     const txt = await visibleText(p);
     if (/Tus Datos|Datos de Contacto/i.test(txt) && !filled) { rec.cap(labels.datos); await fillContact(p); filled = true; }
     if (/Confirmar Reserva/.test(txt)) {
-      if (/Datos de Pago|seña/i.test(txt)) rec.cap(labels.pago);
-      return;
+      if (/Datos de Pago|seña/i.test(txt)) { rec.cap(labels.pago); await p.waitForTimeout(1500); }
+      return confirm();
     }
     const nx = p.getByRole('button', { name: /^(Siguiente|Continuar)/ }).last();
     if (!(await nx.count())) return;
     await nx.scrollIntoViewIfNeeded(); await p.waitForTimeout(400); await nx.click({ force: true }); await p.waitForTimeout(1600);
     const t2 = await visibleText(p);
     if (/Resumen de Reserva/.test(t2)) { rec.cap(labels.resumen); await p.waitForTimeout(1600); }
-    if (/Datos de Pago/.test(t2)) { rec.cap(labels.pago); await p.waitForTimeout(2500); return; }
+    if (/Datos de Pago/.test(t2)) { rec.cap(labels.pago); await p.waitForTimeout(2500); return confirm(); }
   }
+}
+
+// Panel del dueño: entra con "Abrir Portal" del SuperAdmin (sesión guardada), muestra la reserva
+// de prueba y los mensajes de WhatsApp listos, y al final la cancela (ver limpiar-reservas.mjs).
+async function panelFlow(bizName) {
+  const { ctx, p } = await abrirPanel(bizName, { scale: VID_SCALE, init: tapJS });
+  try {
+    p.on('popup', pop => pop.close().catch(() => {}));
+    const rec = await startRec(p, 'panel');
+    rec.cap('Abrís tu panel'); await p.waitForTimeout(2200);
+    rec.cap('Te avisa que hay reservas nuevas'); await p.locator('button').filter({ hasText: /^Reservas/ }).last().click(); await p.waitForTimeout(1800);
+    await p.getByRole('button', { name: 'Próximas' }).click().catch(() => {}); await p.waitForTimeout(1500);
+    await p.locator('button').filter({ hasText: /^Sin confirmar/ }).first().click().catch(() => {}); await p.waitForTimeout(1500);
+    rec.cap('Las que esperan tu confirmación');
+    await p.getByText('Laura Gómez').filter({ visible: true }).first().click(); await p.waitForTimeout(2200);
+    rec.cap('Ves sus datos y la seña'); await p.waitForTimeout(2500);
+    const quick = p.getByRole('button', { name: /Mensajes Rápidos/ }).first();
+    const wa = p.getByRole('button', { name: /por WhatsApp/ }).first();
+    if (await quick.count()) {
+      rec.cap('Mensajes listos para mandarle por WhatsApp'); await quick.click().catch(() => {}); await p.waitForTimeout(3200);
+    } else if (await wa.count()) {
+      rec.cap('Le escribís por WhatsApp'); await wa.click().catch(() => {}); await p.waitForTimeout(2000);
+      const msgs = p.getByText(/MENSAJES PARA EL CLIENTE/i).first();
+      if (await msgs.count()) { await msgs.scrollIntoViewIfNeeded().catch(() => {}); rec.cap('Con mensajes listos: seña, confirmación, recordatorio'); await p.waitForTimeout(2600); }
+    }
+    const caps = await rec.stop(1);
+    let n = 0;
+    try { n = await cancelarReservasDePrueba(ctx, p, log); } catch (e) { log('no pude cancelar la reserva de prueba:', e.message.slice(0, 120)); }
+    log(n ? `reserva de prueba cancelada (${n})` : 'ojo: revisá en el panel que no quede la reserva de prueba de Laura Gómez');
+    return caps;
+  } finally { await ctx.close(); }
 }
 
 // ---------- Flujos de reserva por rubro ----------
@@ -235,7 +265,7 @@ async function storeFlow(p, rec, product) {
 }
 
 // ---------- Armado de pasos ----------
-function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps) {
+function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
   const S = [{ type: 'intro' }, { type: 'chapter', c: 'a' }];
   const add = (o) => { if (!o.spot || o.spot[0] != null) S.push({ c: 'a', ...o }); };
   const who = { canchas: 'el jugador', alquiler: 'tu cliente', servicios: 'tu clienta' }[kind];
@@ -255,18 +285,23 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps) {
     if (pos.adicionales) add({ img: 'perfil', spot: pos.adicionales, t: 'Servicios <em>adicionales</em>', p: 'Limpieza, vajilla, hielo: se suman al reservar.' });
     if (pos.disponibilidad) add({ img: 'perfil', spot: pos.disponibilidad, t: 'Fechas libres, <em>en vivo</em>', p: 'El calendario muestra solo los días disponibles.' });
   }
-  const end = bookCaps.at(-1)?.[1] || '';
-  S.push({ c: 'a', vid: 'booking', caps: bookCaps,
-    t: `Así reserva <em>${who}</em>`, p: kind === 'alquiler' ? 'Fecha, invitados, horas y adicionales, solo y en un minuto.' : 'Del día a la seña, solo y en menos de un minuto.',
-    end: /seña|alias/i.test(end) ? { spot: [205, 410], t: 'Seña <em>asegurada</em>', p: 'Confirma y te llega el comprobante por WhatsApp.' }
-                                 : { t: 'Reserva <em>lista</em>', p: 'Confirma y te llega el aviso con sus datos.' } });
+  // tienda e información del lugar antes de la reserva: así la reserva conecta directo con el panel
   if (hasStore && storeCaps) S.push({ c: 'a', vid: 'store', after: 'wa', caps: storeCaps, t: 'Así compra <em>en tu tienda</em>', p: 'Con carrito y pedido directo a tu WhatsApp.', end: { t: 'Pedido <em>a tu WhatsApp</em>', p: 'Con el detalle y el total.' } });
   if (kind === 'alquiler' && pos.sobre) add({ img: 'perfil', spot: pos.sobre, t: 'Sobre <em>el espacio</em>', p: 'Tu descripción completa, con las reglas y lo que ofrecés.' });
   if (pos.mapa) add({ img: 'perfil', spot: pos.mapa, t: 'Cómo <em>llegar</em>', p: 'El mapa con tu ubicación y el botón para ir.' });
   if (kind !== 'alquiler' && pos.comodidades) add({ img: 'perfil', spot: pos.comodidades, t: 'Comodidades <em>y horarios</em>', p: 'Todo lo que ofrecés, de un vistazo.' });
   if (pos.resenas) add({ img: 'perfil', spot: pos.resenas, t: 'Reseñas <em>reales</em>', p: 'Solo opinan los que reservaron con vos.' });
-  S.push({ type: 'chapter', c: 'b' });
-  S.push({ c: 'b', img: 'perfil', fx: 'push', t: 'Te avisa <em>al celu</em>', p: 'Cada reserva nueva te llega como notificación.' });
+  const end = bookCaps.at(-1)?.[1] || '';
+  const booked = /turno reservado/i.test(end);
+  S.push({ c: 'a', vid: 'booking', caps: bookCaps,
+    t: `Así reserva <em>${who}</em>`, p: kind === 'alquiler' ? 'Fecha, invitados, horas y adicionales, solo y en un minuto.' : 'Del día a la seña, solo y en menos de un minuto.',
+    end: booked ? { t: '¡Turno <em>reservado</em>!', p: 'Y en ese mismo momento, a vos te llega esto…' }
+      : /seña|alias/i.test(end) ? { spot: [205, 410], t: 'Seña <em>asegurada</em>', p: 'Confirma y te llega el comprobante por WhatsApp.' }
+        : { t: 'Reserva <em>lista</em>', p: 'Confirma y te llega el aviso con sus datos.' } });
+  // del lado del negocio, sin portada de capítulo en el medio: sigue directo de la reserva
+  S.push({ c: 'b', img: 'perfil', fx: 'push', t: 'Te avisa <em>al celu</em>', p: 'La reserva de recién te llega como notificación.' });
+  if (panelCaps) S.push({ c: 'b', vid: 'panel', caps: panelCaps, t: 'La misma reserva, <em>en tu panel</em>', p: 'La revisás, ves la seña y le escribís por WhatsApp, desde el celu.',
+    end: { t: 'Todo <em>en orden</em>', p: 'Sin cuadernos ni capturas de WhatsApp: cada reserva queda en tu agenda.' } });
   S.push({ type: 'outro' });
   return S;
 }
@@ -274,7 +309,15 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps) {
 // ---------- Principal ----------
 (async () => {
   const b = await loadBusiness();
+  // --solo-html: rearma index.html con los datos guardados. --solo-panel: además regraba el video del panel
+  // con la reserva de prueba que ya esté en el panel (sin hacer una nueva).
+  if (process.argv.includes('--solo-html') || process.argv.includes('--solo-panel')) {
+    const st = JSON.parse(fs.readFileSync(path.join(OUT, 'recorrido.json'), 'utf8'));
+    if (process.argv.includes('--solo-panel')) { st.panelCaps = await panelFlow(b.name); log('video del panel listo'); fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify(st, null, 1)); }
+    writeIndex(b, st); fs.rmSync(TMP, { recursive: true, force: true }); return;
+  }
   const kind = kindOf(b);
+  if (CON_PANEL && b.metadata?.simulacion !== true) { CON_PANEL = false; log('negocio real: no se confirma la reserva ni se graba el panel'); }
   const products = (b.metadata?.store_products || []).filter(p => p.is_active !== false);
   const hasStore = kind !== 'alquiler' && products.length > 0;
   log(`${b.name} (${kind})${hasStore ? `, tienda con ${products.length} productos` : ''}`);
@@ -296,6 +339,14 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps) {
   if (kind === 'alquiler') { // despliega los adicionales para que se vean en la captura
     const acc = p.locator('h2,h3', { hasText: 'Servicios Adicionales' }).first();
     if (await acc.count()) { await acc.click().catch(() => {}); await p.waitForTimeout(800); await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(500); }
+  }
+  if (kind === 'canchas') { // de noche ya no quedan horarios para hoy: elige el próximo día con horarios
+    const days = p.locator('button').filter({ hasText: /^(Lun|Mar|Mié|Jue|Vie|Sáb|Dom)\s*\d+$/ });
+    for (let i = 1; i < Math.min(4, await days.count()); i++) {
+      await days.nth(i).click().catch(() => {}); await p.waitForTimeout(1500);
+      if (await p.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).count() >= 4) break;
+    }
+    await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(600);
   }
   const foot = await footerTop(p);
   const H1 = await p.evaluate(() => { const h = document.querySelector('h1'); return h ? Math.round(h.getBoundingClientRect().top + scrollY) : null; });
@@ -348,10 +399,27 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps) {
   }
 
   // videos
-  c = await browser.newContext(ctxOpts(VID_SCALE)); await c.addInitScript(tapJS); p = await c.newPage();
+  c = await browser.newContext(ctxOpts(VID_SCALE)); await c.addInitScript(tapJS);
+  // Solo en este navegador: el negocio se ve como activo, así el final muestra "¡Turno reservado!"
+  // (lo que ve un cliente real) y no el cartel de página de ejemplo. La reserva se guarda igual.
+  await c.route(/\/rest\/v1\/businesses_public/, async (route) => {
+    const res = await route.fetch(); let body = await res.text();
+    try {
+      const j = JSON.parse(body); const fix = (x) => { if (x && typeof x === 'object') { if ('subscription_status' in x) x.subscription_status = 'active'; if (x.metadata) x.metadata.simulacion = false; } };
+      Array.isArray(j) ? j.forEach(fix) : fix(j); body = JSON.stringify(j);
+    } catch { /* deja la respuesta como vino */ }
+    await route.fulfill({ response: res, body });
+  });
+  p = await c.newPage();
+  const mainPage = p; c.on('page', pg => { if (pg !== mainPage) pg.close().catch(() => {}); }); // el WhatsApp del final abre otra pestaña
   await p.goto(BASE, { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
-  let rec = await startRec(p, 'booking'); await FLOWS[kind](p, rec); const bookCaps = await rec.stop(); await c.close();
-  log('video de reserva listo');
+  let rec = await startRec(p, 'booking'); await FLOWS[kind](p, rec); const confirmed = !!rec.confirmed; const bookCaps = await rec.stop(); await c.close();
+  log(`video de reserva listo${confirmed ? ' (reserva de prueba confirmada)' : ''}`);
+  let panelCaps = null;
+  if (confirmed) {
+    try { panelCaps = await panelFlow(b.name); log('video del panel listo'); }
+    catch (e) { log('sin video del panel:', e.message.split('\n')[0]); }
+  } else if (!CON_PANEL) log('sin sesión del SuperAdmin: no se graba el panel (corré sesion-superadmin.mjs)');
   let storeCaps = null, prod = products[0];
   if (hasStore) {
     c = await browser.newContext(ctxOpts(VID_SCALE)); await c.addInitScript(tapJS); p = await c.newPage();
@@ -369,8 +437,14 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps) {
   for (const f of ['tlr-verde.png', 'tlr-oscuro.png']) fs.copyFileSync(path.join(shared, f), path.join(OUT, 'img', f));
   fs.copyFileSync(path.join(shared, 'musica.mp3'), path.join(OUT, 'audio/musica.mp3'));
 
-  // index.html
-  const S = buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps);
+  fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify({ kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, prod: prod ? { name: prod.name, price: prod.price } : null }, null, 1));
+  writeIndex(b, { kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, prod });
+  fs.rmSync(TMP, { recursive: true, force: true });
+})().catch(e => { console.error('✗', e.message); process.exit(1); });
+
+// Arma index.html con los datos del recorrido
+function writeIndex(b, { kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, prod }) {
+  const S = buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps);
   const CH = {
     a: { n: 'Capítulo 1', t: { canchas: 'Lo que ve <em>el jugador</em>', alquiler: 'Lo que ve <em>tu cliente</em>', servicios: 'Lo que ve <em>tu clienta</em>' }[kind],
       p: { canchas: 'Así encuentra tu club, mira las canchas y reserva solo, a cualquier hora.', alquiler: 'Así encuentra tu espacio, mira las fotos y reserva su fecha, a cualquier hora.', servicios: 'Así te encuentra, mira tus trabajos y reserva sola, a cualquier hora.' }[kind] },
@@ -378,15 +452,14 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps) {
   };
   const BIZ = { name: b.name, sub: slug, word: { canchas: 'club', alquiler: 'espacio', servicios: 'negocio' }[kind],
     outro: kind === 'servicios' ? 'Que reserven solas. <em>Vos seguí con lo tuyo.</em>' : 'Que reserven solos. <em>Vos seguí con lo tuyo.</em>',
-    waOrder: prod ? `• 1x ${prod.name} — ${money(prod.price)}\\n\\n*Total a pagar:* ${money(prod.price)}\\n\\n¿Lo puedo retirar cuando voy? ¡Gracias!` : '',
+    waOrder: prod ? `• 1x ${prod.name} — ${money(prod.price)}\n\n*Total a pagar:* ${money(prod.price)}\n\n¿Lo puedo retirar cuando voy? ¡Gracias!` : '',
     push1: { canchas: 'Laura Gómez · Cancha 1<br><small>Sábado, 20:00 · Seña del 30 %</small>', alquiler: 'Laura Gómez · Evento de 40 personas<br><small>Viernes, 20:00 · 6 horas</small>', servicios: `Laura Gómez · ${prod ? '' : ''}Turno nuevo<br><small>Sábado, 10:00 · Seña del 30 %</small>` }[kind],
     push2: hasStore && prod ? `${prod.name} · ${money(prod.price)}` : '' };
   const data = `const BIZ=${JSON.stringify(BIZ)};\nconst IMGH=${JSON.stringify(IMGH)};\nconst TH={colors:['#3ECF8E']};\nconst CH=${JSON.stringify(CH)};\nconst S=${JSON.stringify(S)};\n`;
   const tpl = fs.readFileSync(path.join(__dirname, 'plantilla.html'), 'utf8');
   fs.writeFileSync(path.join(OUT, 'index.html'), tpl.replace('/*@@DATA@@*/', data).replace('@@NAME@@', b.name));
-  fs.rmSync(TMP, { recursive: true, force: true });
   log(`Listo: public/recorrido/${slug}/ (${S.filter(s => !s.type).length} pasos). Probalo con: npx serve public -l 5277  →  http://localhost:5277/recorrido/${slug}/`);
-})().catch(e => { console.error('✗', e.message); process.exit(1); });
+}
 
 // recorta una captura de página completa a "alto" px CSS y la deja a 600 px de ancho
 async function sharpCrop(src, dst, altoCss) {
