@@ -97,6 +97,7 @@ body{margin:0;background:var(--night);color:var(--white);font-family:var(--font)
 @keyframes ringIn{from{scale:.3;opacity:0}to{opacity:1}}
 .browser{position:absolute;left:12px;right:12px;z-index:3;background:rgba(255,255,255,.98);color:#16201B;border-radius:16px;padding:12px 14px;font-size:15px;display:flex;align-items:center;gap:9px;box-shadow:0 14px 40px rgba(0,0,0,.35);animation:dropIn .8s .2s var(--pop) both}
 .browser b{font-weight:800}
+.browser .typed{white-space:nowrap;overflow:hidden;min-width:0}
 .browser .lk{width:18px;height:18px;border-radius:50%;background:var(--tl);flex:none;display:grid;place-items:center;color:var(--ink);font-size:10px;font-weight:800}
 .caret{display:inline-block;width:2px;height:17px;background:#16201B;margin-left:1px;animation:blink .8s steps(2) infinite;vertical-align:-3px}
 @keyframes blink{50%{opacity:0}}
@@ -405,7 +406,7 @@ function stage(sc,st,instant){
     const H=g.H;
     // efectos
     if(st.fx==='url'){
-      const top=TOPBAR()+8;
+      const top=66;
       sc.insertAdjacentHTML('beforeend',`<div class="fx browser" style="top:${top}px"><span class="lk">✓</span><span class="typed"></span><span class="caret"></span></div>`);
       Object.assign(spot.style,{left:'12px',width:`${g.W-24}px`,top:`${top}px`,height:'46px',borderRadius:'16px'});
       typeUrl(sc.querySelector('.typed'));
@@ -520,9 +521,10 @@ function playTheme(sc,st){
   const tick=()=>{if(!auto||!sc.isConnected)return;const [ci,m]=seq[n++%seq.length];c=TH.colors[ci];mode=m;show();later(tick,1500)};
   later(tick,2200);
 }
+function fitUrl(el){const b=el.closest('.browser');if(!b)return;let f=parseFloat(getComputedStyle(b).fontSize);while(el.scrollWidth>el.clientWidth+1&&f>10){f-=.5;b.style.fontSize=f+'px'}}
 function typeUrl(el){const sub=BIZ.sub,rest='.turnitoslr.com';let n=0,iv;
   setTimeout(()=>{iv=setInterval(()=>{if(!el.isConnected)return clearInterval(iv);n++;
-    el.innerHTML=n<=sub.length?`<b>${sub.slice(0,n)}</b>`:`<b>${sub}</b>${rest.slice(0,n-sub.length)}`;if(n>=sub.length+rest.length)clearInterval(iv)},55)},400)}
+    el.innerHTML=n<=sub.length?`<b>${sub.slice(0,n)}</b>`:`<b>${sub}</b>${rest.slice(0,n-sub.length)}`;fitUrl(el);if(n>=sub.length+rest.length)clearInterval(iv)},55)},400)}
 function sideCopy(st){const el=$('#copySide');el.classList.add('leave');setTimeout(()=>{el.classList.remove('leave','show');el.innerHTML=st.type?`<ol class="toc">${Object.keys(CH).map((k,n)=>`<li class="${!st.c||st.c===k?'on':''}"><span>0${n+1}</span>${CH[k].t.replace(/<\/?em>/g,'')}</li>`).join('')}</ol>`:copyHTML(st);setTimeout(()=>el.classList.add('show'),st.type?100:1300)},280)}
 function go(n,origin){
   n=Math.max(0,Math.min(S.length-1,n));if(n===i)return;
