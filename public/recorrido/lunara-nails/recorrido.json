@@ -1,0 +1,124 @@
+{
+ "kind": "servicios",
+ "pos": {
+  "bioButtons": [
+   426,
+   273
+  ],
+  "hero": [
+   332,
+   140
+  ],
+  "destacadas": [
+   519,
+   125
+  ],
+  "tiendaCard": [
+   685,
+   140
+  ],
+  "servicios": [
+   804,
+   480
+  ],
+  "mapa": [
+   3085,
+   384
+  ],
+  "comodidades": [
+   3469,
+   450
+  ],
+  "resenas": [
+   3933,
+   330
+  ],
+  "hasDest": true
+ },
+ "IMGH": {
+  "bio": 844,
+  "dest": 844,
+  "perfil": 4344,
+  "tienda": 1477
+ },
+ "hasStore": true,
+ "bookCaps": [
+  [
+   0,
+   "Entra a tu página"
+  ],
+  [
+   3.8,
+   "Toca el servicio"
+  ],
+  [
+   5.6,
+   "Ve fotos, duración y precio"
+  ],
+  [
+   8.8,
+   "Elige el día"
+  ],
+  [
+   10.3,
+   "Solo ve horarios libres"
+  ],
+  [
+   13.2,
+   "Deja su nombre y WhatsApp"
+  ],
+  [
+   18,
+   "Ve la seña y tu alias"
+  ],
+  [
+   22,
+   "Confirma: ¡turno reservado!"
+  ]
+ ],
+ "storeCaps": [
+  [
+   0,
+   "Entra a la tienda"
+  ],
+  [
+   2,
+   "Elige un producto"
+  ],
+  [
+   4.1,
+   "Lo agrega al carrito"
+  ],
+  [
+   5.7,
+   "Revisa su pedido"
+  ]
+ ],
+ "panelCaps": [
+  [
+   0,
+   "Te avisa que hay reservas nuevas"
+  ],
+  [
+   5.1,
+   "Las que esperan tu confirmación"
+  ],
+  [
+   7.4,
+   "Ves sus datos y la seña"
+  ],
+  [
+   9.9,
+   "Le escribís por WhatsApp"
+  ],
+  [
+   12.1,
+   "Mensajes listos para mandarle"
+  ]
+ ],
+ "cliente": "Martín Díaz",
+ "prod": {
+  "name": "Gift Card Semipermanente",
+  "price": 12000
+ }
+}

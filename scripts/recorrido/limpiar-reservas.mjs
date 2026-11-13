@@ -5,7 +5,7 @@ import { chromium, PERFIL, SITE } from './comun.mjs';
 
 // Clientes de prueba que usa generar-recorrido.mjs (uno al azar por corrida)
 export const NOMBRES_PRUEBA = [['Laura', 'Gómez'], ['Martín', 'Díaz'], ['Sofía', 'Herrera'], ['Lucas', 'Romero'], ['Camila', 'Torres'], ['Julián', 'Paz']];
-const RE_PRUEBA = new RegExp(NOMBRES_PRUEBA.map(([n, a]) => `${n} ${a}`).join('|'));
+const RE_PRUEBA = new RegExp(NOMBRES_PRUEBA.map(([n, a]) => `${n} ${a}`).join('|'), 'i');
 
 export async function cancelarReservasDePrueba(ctx, p, log = console.log) {
   p.on('dialog', d => d.accept('Reserva de prueba del recorrido').catch(() => {})); // Cancelar pide el motivo con prompt()
@@ -13,10 +13,13 @@ export async function cancelarReservasDePrueba(ctx, p, log = console.log) {
   for (let i = 0; i < 6; i++) {
     await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(1800);
     await p.locator('button').filter({ hasText: /^Reservas/ }).last().click(); await p.waitForTimeout(1500);
-    await p.getByRole('button', { name: 'Próximas' }).click().catch(() => {}); await p.waitForTimeout(1800);
-    // las canceladas siguen en la lista: filtra las que esperan confirmación
-    await p.locator('button').filter({ hasText: /^Sin confirmar/ }).first().click().catch(() => {}); await p.waitForTimeout(1500);
+    // las canceladas siguen en la lista: filtra las que esperan confirmación, en Próximas y en Hoy
     const card = p.getByText(RE_PRUEBA).filter({ visible: true }).first();
+    for (const tab of ['Próximas', 'Hoy']) {
+      await p.getByRole('button', { name: tab }).click().catch(() => {}); await p.waitForTimeout(1500);
+      await p.locator('button').filter({ hasText: /^Sin confirmar/ }).first().click().catch(() => {}); await p.waitForTimeout(1300);
+      if (await card.count()) break;
+    }
     if (!(await card.count())) break;
     await card.click(); await p.waitForTimeout(1800);
     const cancel = p.getByRole('button', { name: /^(Cancelar|Cancelar Reserva)$/ }).first();

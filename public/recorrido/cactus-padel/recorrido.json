@@ -1,0 +1,125 @@
+{
+ "kind": "canchas",
+ "pos": {
+  "bioButtons": [
+   426,
+   273
+  ],
+  "hero": [
+   332,
+   140
+  ],
+  "destacadas": [
+   540,
+   125
+  ],
+  "tiendaCard": [
+   706,
+   140
+  ],
+  "horarios": [
+   825,
+   560
+  ],
+  "mapa": [
+   1540,
+   384
+  ],
+  "comodidades": [
+   1924,
+   450
+  ],
+  "resenas": [
+   2455,
+   330
+  ],
+  "hasDest": true
+ },
+ "IMGH": {
+  "bio": 844,
+  "dest": 844,
+  "perfil": 2867,
+  "tienda": 1196
+ },
+ "hasStore": true,
+ "bookCaps": [
+  [
+   0,
+   "Entra a la página del club"
+  ],
+  [
+   3.3,
+   "Elige el día"
+  ],
+  [
+   4.8,
+   "Ve solo los horarios libres"
+  ],
+  [
+   8.7,
+   "Elige cancha y cuánto juega"
+  ],
+  [
+   10.3,
+   "Suma algo a su reserva"
+  ],
+  [
+   13.7,
+   "Deja su nombre y WhatsApp"
+  ],
+  [
+   18.7,
+   "Paga la seña al alias del club"
+  ],
+  [
+   22.7,
+   "Confirma: ¡turno reservado!"
+  ]
+ ],
+ "storeCaps": [
+  [
+   0,
+   "Entra a la tienda"
+  ],
+  [
+   2,
+   "Elige un producto"
+  ],
+  [
+   4.1,
+   "Lo agrega al carrito"
+  ],
+  [
+   5.7,
+   "Revisa su pedido"
+  ]
+ ],
+ "panelCaps": [
+  [
+   0,
+   "Te avisa que hay reservas nuevas"
+  ],
+  [
+   4.6,
+   "Las que esperan tu confirmación"
+  ],
+  [
+   6.9,
+   "Ves sus datos y la seña"
+  ],
+  [
+   9.4,
+   "Le escribís por WhatsApp"
+  ],
+  [
+   11.6,
+   "Mensajes listos para mandarle"
+  ]
+ ],
+ "cliente": "Lucas Romero",
+ "day": 14,
+ "prod": {
+  "name": "Licuado de frutas",
+  "price": 4500
+ }
+}

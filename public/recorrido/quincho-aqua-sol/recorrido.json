@@ -1,0 +1,103 @@
+{
+ "kind": "alquiler",
+ "pos": {
+  "bioButtons": [
+   452,
+   238
+  ],
+  "hero": [
+   335,
+   140
+  ],
+  "destacadas": [
+   596,
+   125
+  ],
+  "galeria": [
+   538,
+   520
+  ],
+  "comodidades": [
+   1287,
+   310
+  ],
+  "adicionales": [
+   1597,
+   520
+  ],
+  "disponibilidad": [
+   2212,
+   382
+  ],
+  "sobre": [
+   2594,
+   272
+  ],
+  "mapa": [
+   2866,
+   420
+  ],
+  "hasDest": true
+ },
+ "IMGH": {
+  "bio": 844,
+  "dest": 844,
+  "perfil": 3359
+ },
+ "hasStore": false,
+ "bookCaps": [
+  [
+   0,
+   "Entra a la página del espacio"
+  ],
+  [
+   3.3,
+   "Elige la fecha libre"
+  ],
+  [
+   6.1,
+   "Cuántos invitados y cuántas horas"
+  ],
+  [
+   7.4,
+   "Elige la hora de ingreso"
+  ],
+  [
+   10.2,
+   "Suma servicios adicionales"
+  ],
+  [
+   14.3,
+   "Ve el resumen y el total"
+  ],
+  [
+   18,
+   "Deja sus datos"
+  ],
+  [
+   22.2,
+   "Confirma: ¡turno reservado!"
+  ]
+ ],
+ "storeCaps": null,
+ "panelCaps": [
+  [
+   0,
+   "Te avisa que hay reservas nuevas"
+  ],
+  [
+   5,
+   "Las que esperan tu confirmación"
+  ],
+  [
+   7.3,
+   "Ves sus datos y la seña"
+  ],
+  [
+   9.8,
+   "Mensajes listos para mandarle por WhatsApp"
+  ]
+ ],
+ "cliente": "Laura Gómez",
+ "prod": null
+}

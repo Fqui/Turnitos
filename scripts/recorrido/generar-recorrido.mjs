@@ -34,7 +34,7 @@ const log = (...a) => console.log('·', ...a);
 // Cliente de prueba distinto en cada corrida (nombre y teléfono). Los nombres posibles están en limpiar-reservas.mjs
 const rnd = (n) => Math.floor(Math.random() * n);
 const [NOMBRE, APELLIDO] = NOMBRES_PRUEBA[rnd(NOMBRES_PRUEBA.length)];
-const CLIENTE = `${NOMBRE} ${APELLIDO}`;
+let CLIENTE = `${NOMBRE} ${APELLIDO}`;
 const TEL = '38049' + String(rnd(1e5)).padStart(5, '0');
 
 
@@ -166,7 +166,7 @@ async function panelFlow(bizName, day = 0) {
       const dayBtn = p.locator('button').filter({ hasText: new RegExp('^(LUN|MAR|MIÉ|JUE|VIE|SÁB|DOM)\\s*' + day + '$') }).first();
       if (await dayBtn.count()) {
         rec.cap('Abrís tu panel'); await p.waitForTimeout(1200); await dayBtn.click(); await p.waitForTimeout(1600);
-        const block = p.getByText(CLIENTE).filter({ visible: true }).first();
+        const block = p.getByText(new RegExp(CLIENTE, 'i')).filter({ visible: true }).first();
         if (await block.count()) {
           rec.cap('La reserva ya está en tu agenda'); await p.waitForTimeout(2600);
           rec.cap('La tocás y ves todo'); await block.click(); await p.waitForTimeout(2400); fromAgenda = true;
@@ -175,10 +175,14 @@ async function panelFlow(bizName, day = 0) {
     }
     if (!fromAgenda) {
       rec.cap('Te avisa que hay reservas nuevas'); await p.locator('button').filter({ hasText: /^Reservas/ }).last().click(); await p.waitForTimeout(1800);
-      await p.getByRole('button', { name: 'Próximas' }).click().catch(() => {}); await p.waitForTimeout(1500);
-      await p.locator('button').filter({ hasText: /^Sin confirmar/ }).first().click().catch(() => {}); await p.waitForTimeout(1500);
+      const card = p.getByText(new RegExp(CLIENTE, 'i')).filter({ visible: true }).first();
+      for (const tab of ['Próximas', 'Hoy']) { // la reserva puede ser de hoy
+        await p.getByRole('button', { name: tab }).click().catch(() => {}); await p.waitForTimeout(1300);
+        await p.locator('button').filter({ hasText: /^Sin confirmar/ }).first().click().catch(() => {}); await p.waitForTimeout(1300);
+        if (await card.count()) break;
+      }
       rec.cap('Las que esperan tu confirmación');
-      await p.getByText(CLIENTE).filter({ visible: true }).first().click(); await p.waitForTimeout(2200);
+      await card.click(); await p.waitForTimeout(2200);
     }
     rec.cap('Ves sus datos y la seña'); await p.waitForTimeout(2500);
     const quick = p.getByRole('button', { name: /Mensajes Rápidos/ }).first();
@@ -203,7 +207,16 @@ const FLOWS = {
   async canchas(p, rec) {
     rec.cap('Entra a la página del club'); await p.waitForTimeout(2000);
     await smoothTo(p, ['Elegí una fecha']);
-    rec.cap('Elige el día'); { const d = p.locator('button').filter({ hasText: /Sáb|Vie/ }).first(); rec.day = +((await d.innerText()).match(/\d+/) || [0])[0]; await d.click(); } await p.waitForTimeout(1500);
+    rec.cap('Elige el día');
+    { // primer día (empezando por el fin de semana) que tenga horarios libres
+      const days = p.locator('button').filter({ hasText: /^(Lun|Mar|Mié|Jue|Vie|Sáb|Dom)\s*\d+$/ });
+      const n = await days.count(); const order = [];
+      for (let k = 0; k < n; k++) { const t = await days.nth(k).innerText(); (/Sáb|Vie/.test(t) ? order.unshift(k) : order.push(k)); }
+      for (const k of order.filter(k => k > 0).concat(order.filter(k => k === 0))) {
+        const d = days.nth(k); await d.click(); await p.waitForTimeout(1300);
+        if (await p.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).count() >= 3) { rec.day = +((await d.innerText()).match(/\d+/) || [0])[0]; break; }
+      }
+    }
     rec.cap('Ve solo los horarios libres'); await p.waitForTimeout(800);
     const times = p.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ });
     const n = await times.count(); const t = times.nth(Math.max(0, Math.floor(n * 0.7)));
@@ -231,7 +244,10 @@ const FLOWS = {
     await p.getByRole('button', { name: /Elegir fecha/ }).click(); await p.waitForTimeout(1500);
     rec.cap('Elige el día');
     const days = p.locator('button').filter({ hasText: /^(Lun|Mar|Mié|Jue|Vie|Sáb)\s*\d+$/ });
-    { const d = days.nth(Math.min(2, (await days.count()) - 1)); rec.day = +((await d.innerText()).match(/\d+/) || [0])[0]; await d.click(); } await p.waitForTimeout(1500);
+    for (let k = 1; k < await days.count(); k++) { // primer día con horarios libres
+      const d = days.nth(k); await d.click(); await p.waitForTimeout(1300);
+      if (await p.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ }).count() >= 2) { rec.day = +((await d.innerText()).match(/\d+/) || [0])[0]; break; }
+    }
     rec.cap('Solo ve horarios libres');
     const times = p.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ });
     const t = times.nth(Math.min(2, (await times.count()) - 1)); await t.scrollIntoViewIfNeeded(); await t.click(); await p.waitForTimeout(1000);
@@ -321,7 +337,7 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
         : { t: 'Reserva <em>lista</em>', p: 'Confirma y te llega el aviso con sus datos.' } });
   // del lado del negocio, sin portada de capítulo en el medio: sigue directo de la reserva
   S.push({ c: 'b', fx: 'notif', t: 'Te avisa <em>al celu</em>', p: 'La reserva de recién te llega como notificación.' });
-  if (panelCaps) S.push({ c: 'b', vid: 'panel', caps: panelCaps, t: 'La misma reserva, <em>en tu panel</em>', p: 'La revisás, ves la seña y le escribís por WhatsApp, desde el celu.',
+  if (panelCaps) S.push({ c: 'b', vid: 'panel', autoNext: true, caps: panelCaps, t: 'La misma reserva, <em>en tu panel</em>', p: 'La revisás, ves la seña y le escribís por WhatsApp, desde el celu.',
     end: { t: 'Todo <em>en orden</em>', p: 'Sin cuadernos ni capturas de WhatsApp: cada reserva queda en tu agenda.' } });
   S.push({ type: 'outro' });
   return S;
@@ -334,7 +350,11 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
   // con la reserva de prueba que ya esté en el panel (sin hacer una nueva).
   if (process.argv.includes('--solo-html') || process.argv.includes('--solo-panel')) {
     const st = JSON.parse(fs.readFileSync(path.join(OUT, 'recorrido.json'), 'utf8'));
-    if (process.argv.includes('--solo-panel')) { st.panelCaps = await panelFlow(b.name, bookedDay); log('video del panel listo'); fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify(st, null, 1)); }
+    if (process.argv.includes('--solo-panel')) {
+      // usa la reserva de prueba que ya está en el panel: mismo cliente; --dia N para abrirla desde la agenda
+      if (st.cliente) CLIENTE = st.cliente;
+      const ai = process.argv.indexOf('--dia'); const dia = ai > -1 ? +process.argv[ai + 1] : (st.day || 0);
+      st.panelCaps = await panelFlow(b.name, dia); log('video del panel listo'); fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify(st, null, 1)); }
     writeIndex(b, st); fs.rmSync(TMP, { recursive: true, force: true }); return;
   }
   const kind = kindOf(b);
@@ -463,7 +483,7 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
   for (const f of ['tlr-verde.png', 'tlr-oscuro.png']) fs.copyFileSync(path.join(shared, f), path.join(OUT, 'img', f));
   fs.copyFileSync(path.join(shared, 'musica.mp3'), path.join(OUT, 'audio/musica.mp3'));
 
-  fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify({ kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, cliente: CLIENTE, prod: prod ? { name: prod.name, price: prod.price } : null }, null, 1));
+  fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify({ kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, cliente: CLIENTE, day: bookedDay, prod: prod ? { name: prod.name, price: prod.price } : null }, null, 1));
   writeIndex(b, { kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, prod, cliente: CLIENTE });
   fs.rmSync(FINAL, { recursive: true, force: true }); fs.renameSync(OUT, FINAL);
   fs.rmSync(TMP, { recursive: true, force: true });
