@@ -102,9 +102,11 @@ body{margin:0;background:var(--night);color:var(--white);font-family:var(--font)
 @keyframes blink{50%{opacity:0}}
 
 /* Transición reserva → panel: pantalla bloqueada, corte de música, notificación con sonido y vibración */
+.scene.lock.in-next,.scene.lock.in-prev{animation:lkFade .35s ease both}
+@keyframes lkFade{from{opacity:0}to{opacity:1}}
 .scene.lock{background:radial-gradient(120% 80% at 50% 0%,#12332a 0%,#071510 45%,#020604 100%);color:#fff;overflow:hidden}
-.lock .lk-time{position:absolute;left:0;right:0;top:calc(96px + env(safe-area-inset-top,0px));text-align:center;font-weight:700;font-size:clamp(64px,24cqw,92px);letter-spacing:-.04em;line-height:1;opacity:0;animation:lkIn .7s .15s var(--ease) forwards}
-.lock .lk-date{position:absolute;left:0;right:0;top:calc(196px + env(safe-area-inset-top,0px));text-align:center;font-weight:600;font-size:15px;color:rgba(255,255,255,.75);opacity:0;animation:lkIn .7s .3s var(--ease) forwards}
+.lock .lk-time{position:absolute;left:0;right:0;top:calc(96px + env(safe-area-inset-top,0px));text-align:center;font-weight:700;font-size:clamp(64px,24cqw,92px);letter-spacing:-.04em;line-height:1}
+.lock .lk-date{position:absolute;left:0;right:0;top:calc(196px + env(safe-area-inset-top,0px));text-align:center;font-weight:600;font-size:15px;color:rgba(255,255,255,.75)}
 .lock .lk-glow{position:absolute;inset:auto -20% -30% -20%;height:60%;background:radial-gradient(closest-side,rgba(62,207,142,.28),transparent);filter:blur(10px);opacity:.0;transition:opacity 1.2s}
 .lock.nt-on .lk-glow{opacity:1}
 .lock .notif{position:absolute;left:12px;right:12px;top:calc(250px + env(safe-area-inset-top,0px));background:rgba(245,248,246,.97);color:#0E1411;border-radius:22px;padding:13px 14px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 22px 60px rgba(0,0,0,.55);transform:translateY(-140%) scale(.92);opacity:0}
@@ -325,6 +327,7 @@ const CH={"a":{"n":"Capítulo 1","t":"Lo que ve <em>tu clienta</em>","p":"Así t
 const S=[{"type": "intro"}, {"type": "chapter", "c": "a"}, {"c": "a", "img": "bio", "fx": "url", "t": "Tu propio <em>link</em>", "p": "En la bio de Instagram, en tu WhatsApp o en un QR."}, {"c": "a", "img": "bio", "spot": [426, 273], "tap": [195, 461], "t": "Un Link in Bio que <em>trabaja</em>", "p": "Reservar, tienda, WhatsApp y ubicación, a un toque."}, {"c": "a", "img": "perfil", "spot": [332, 140], "t": "Tu página, con <em>tu estilo</em>", "p": "Tu portada, tu logo, la dirección y tus redes."}, {"c": "a", "img": "perfil", "fx": "ring", "hidden": 1, "t": "Historias de <em>24 horas</em>", "p": "Cuando subís una, tu logo se enciende como en Instagram."}, {"c": "a", "img": "perfil", "spot": [519, 125], "tap": [60, 574], "t": "Destacadas <em>fijas</em>", "p": "Tus mejores fotos y videos, siempre arriba."}, {"c": "a", "img": "dest", "fx": "full", "t": "Se miran a <em>pantalla completa</em>", "p": "Como una historia de Instagram, pero en tu página."}, {"c": "a", "img": "perfil", "spot": [685, 140], "tap": [335, 755], "t": "La tienda <em>a la vista</em>", "p": "Tus productos aparecen antes de reservar."}, {"c": "a", "img": "perfil", "spot": [804, 480], "t": "Servicios con <em>fotos reales</em>", "p": "Precio, duración y tu trabajo, antes de reservar."}, {"c": "a", "vid": "store", "after": "wa", "caps": [[0, "Entra a la tienda"], [2, "Elige un producto"], [4.1, "Lo agrega al carrito"], [5.7, "Revisa su pedido"]], "t": "Así compra <em>en tu tienda</em>", "p": "Con carrito y pedido directo a tu WhatsApp.", "end": {"t": "Pedido <em>a tu WhatsApp</em>", "p": "Con el detalle y el total."}}, {"c": "a", "img": "perfil", "spot": [3085, 384], "t": "Cómo <em>llegar</em>", "p": "El mapa con tu ubicación y el botón para ir."}, {"c": "a", "img": "perfil", "spot": [3469, 450], "t": "Comodidades <em>y horarios</em>", "p": "Todo lo que ofrecés, de un vistazo."}, {"c": "a", "img": "perfil", "spot": [3933, 330], "t": "Reseñas <em>reales</em>", "p": "Solo opinan los que reservaron con vos."}, {"c": "a", "vid": "booking", "caps": [[0, "Entra a tu página"], [3.7, "Toca el servicio"], [5.6, "Ve fotos, duración y precio"], [8.7, "Elige el día"], [10.2, "Solo ve horarios libres"], [13.1, "Deja su nombre y WhatsApp"], [17.8, "Ve la seña y tu alias"], [21.8, "Confirma: ¡turno reservado!"]], "t": "Así reserva <em>tu clienta</em>", "p": "Del día a la seña, solo y en menos de un minuto.", "end": {"t": "¡Turno <em>reservado</em>!", "p": "Y en ese mismo momento, a vos te llega esto…"}, "autoNext": true}, {"c": "b", "fx": "notif", "t": "Te avisa <em>al celu</em>", "p": "La reserva de recién te llega como notificación.", "hint": "Y la ves al instante en tu panel"}, {"type": "outro"}];
 
 
+
 const $=s=>document.querySelector(s);
 function dial(arcFrom=-90,arcTo=40){const c=200,P=(r,a)=>[c+r*Math.cos(a*Math.PI/180),c+r*Math.sin(a*Math.PI/180)];let tk='';
   for(let k=0;k<60;k++){const a=k*6-90,big=k%5===0,[x1,y1]=P(big?166:170,a),[x2,y2]=P(178,a);tk+=`<line class="tk${big?' big':''}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`}
@@ -502,6 +505,7 @@ function playVid(sc,st){
     later(()=>{if(cur===sc)go(i+1)},st.autoNext?2800:6500);
   };
   v.onended=()=>{
+    if(st.autoNext){later(()=>{if(cur===sc)go(i+1)},700);return}
     if(wo){later(()=>{wo.classList.add('on');setCap(st.caps.length+1,'El pedido te llega por WhatsApp')},300);later(finish,3200)}
     else later(finish,500);
   };
@@ -558,14 +562,14 @@ function chime(){try{const A=window.AudioContext||window.webkitAudioContext;if(!
 function playNotif(sc,st){
   if(musOn&&musStarted&&!MUS.paused){musCut=true;fadeTo(0,280)}
   const dev=$('#device');
-  later(()=>{sc.classList.add('nt-on');chime();dev.classList.remove('buzz');void dev.offsetWidth;dev.classList.add('buzz')},1100);
+  later(()=>{sc.classList.add('nt-on');chime();dev.classList.remove('buzz');void dev.offsetWidth;dev.classList.add('buzz')},750);
   if(st.auto!==false){
     later(()=>{const n=sc.querySelector('.notif').getBoundingClientRect(),r=sc.getBoundingClientRect(),dot=sc.querySelector('.tapdot');
-      dot.style.left=(n.left-r.left+n.width*.5)+'px';dot.style.top=(n.top-r.top+n.height*.5)+'px';sc.classList.add('nt-tap')},3300);
+      dot.style.left=(n.left-r.left+n.width*.5)+'px';dot.style.top=(n.top-r.top+n.height*.5)+'px';sc.classList.add('nt-tap')},2900);
     later(()=>{const n=sc.querySelector('.notif'),r=sc.getBoundingClientRect(),q=n.getBoundingClientRect(),app=document.createElement('div');
       app.className='lk-app';Object.assign(app.style,{left:(q.left-r.left)+'px',top:(q.top-r.top)+'px',width:q.width+'px',height:q.height+'px'});sc.appendChild(app);
-      sc.classList.add('nt-open');requestAnimationFrame(()=>requestAnimationFrame(()=>Object.assign(app.style,{left:'0px',top:'0px',width:r.width+'px',height:r.height+'px',borderRadius:'0px'})))},3650);
-    later(()=>go(i+1),4350);
+      sc.classList.add('nt-open');requestAnimationFrame(()=>requestAnimationFrame(()=>Object.assign(app.style,{left:'0px',top:'0px',width:r.width+'px',height:r.height+'px',borderRadius:'0px'})))},3250);
+    later(()=>go(i+1),3950);
   }
 }
 function bars(){$('#bars').innerHTML=S.map((s,j)=>`<i class="${j<i?'done':j===i?'now':''}${s.type==='chapter'?' gap':''}"><b></b></i>`).join('')}
@@ -592,7 +596,7 @@ function musStart(){if(!musOn||(musStarted&&!MUS.paused))return;musStarted=true;
 musStart();
 function musUI(){$('#snd').classList.toggle('muted',!musOn)}
 $('#snd').onclick=e=>{e.stopPropagation();musOn=!musOn;try{localStorage.setItem('tour-music',musOn?'on':'off')}catch(_){}musUI();if(musOn){musStarted=false;musStart()}else fadeTo(0,600)};
-['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,()=>musStart(),{passive:true}));
+['pointerdown','mousedown','click','keydown','touchstart','touchend'].forEach(ev=>addEventListener(ev,()=>{if(musOn&&!musCut&&MUS.paused)musStarted=false;musStart()},{passive:true,capture:true}));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)MUS.pause();else if(musOn&&musStarted)MUS.play().catch(()=>{})});
 musUI();
 const fromHash=()=>{const m=/paso-(\d+)/.exec(location.hash);return m?Math.min(S.length,+m[1])-1:0};

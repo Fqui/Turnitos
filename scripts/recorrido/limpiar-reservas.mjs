@@ -1,7 +1,11 @@
 #!/usr/bin/env node
-// Cancela las reservas de prueba que deja el recorrido (cliente "Laura Gómez") en el panel de un negocio.
+// Cancela las reservas de prueba que deja el recorrido (clientes de NOMBRES_PRUEBA) en el panel de un negocio.
 // Uso: node scripts/recorrido/limpiar-reservas.mjs "<Nombre del negocio>"
 import { chromium, PERFIL, SITE } from './comun.mjs';
+
+// Clientes de prueba que usa generar-recorrido.mjs (uno al azar por corrida)
+export const NOMBRES_PRUEBA = [['Laura', 'Gómez'], ['Martín', 'Díaz'], ['Sofía', 'Herrera'], ['Lucas', 'Romero'], ['Camila', 'Torres'], ['Julián', 'Paz']];
+const RE_PRUEBA = new RegExp(NOMBRES_PRUEBA.map(([n, a]) => `${n} ${a}`).join('|'));
 
 export async function cancelarReservasDePrueba(ctx, p, log = console.log) {
   p.on('dialog', d => d.accept('Reserva de prueba del recorrido').catch(() => {})); // Cancelar pide el motivo con prompt()
@@ -12,7 +16,7 @@ export async function cancelarReservasDePrueba(ctx, p, log = console.log) {
     await p.getByRole('button', { name: 'Próximas' }).click().catch(() => {}); await p.waitForTimeout(1800);
     // las canceladas siguen en la lista: filtra las que esperan confirmación
     await p.locator('button').filter({ hasText: /^Sin confirmar/ }).first().click().catch(() => {}); await p.waitForTimeout(1500);
-    const card = p.getByText('Laura Gómez').filter({ visible: true }).first();
+    const card = p.getByText(RE_PRUEBA).filter({ visible: true }).first();
     if (!(await card.count())) break;
     await card.click(); await p.waitForTimeout(1800);
     const cancel = p.getByRole('button', { name: /^(Cancelar|Cancelar Reserva)$/ }).first();

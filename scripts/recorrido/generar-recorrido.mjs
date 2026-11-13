@@ -10,7 +10,7 @@ import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromium, devices, PERFIL, SITE } from './comun.mjs';
-import { abrirPanel, cancelarReservasDePrueba } from './limpiar-reservas.mjs';
+import { abrirPanel, cancelarReservasDePrueba, NOMBRES_PRUEBA } from './limpiar-reservas.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
@@ -28,8 +28,12 @@ let CON_PANEL = !process.argv.includes('--sin-panel') && fs.existsSync(PERFIL);
 const OUT = path.join(ROOT, 'public', 'recorrido', slug);
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'recorrido-'));
 const log = (...a) => console.log('·', ...a);
-// teléfono distinto en cada corrida: la web limita las reservas por teléfono y por día
-const TEL = '38049' + String(Math.floor(Math.random() * 1e5)).padStart(5, '0');
+// Cliente de prueba distinto en cada corrida (nombre y teléfono). Los nombres posibles están en limpiar-reservas.mjs
+const rnd = (n) => Math.floor(Math.random() * n);
+const [NOMBRE, APELLIDO] = NOMBRES_PRUEBA[rnd(NOMBRES_PRUEBA.length)];
+const CLIENTE = `${NOMBRE} ${APELLIDO}`;
+const TEL = '38049' + String(rnd(1e5)).padStart(5, '0');
+
 
 // ---------- Datos del negocio ----------
 function env() {
@@ -113,7 +117,7 @@ async function smoothTo(p, texts, offset = 110) {
 }
 async function fillContact(p) {
   const fill = async (re, val) => { const i = p.getByPlaceholder(re).first(); if (await i.count()) { await i.click(); await p.keyboard.type(val, { delay: 80 }); } };
-  await fill(/nombre/i, 'Laura'); await fill(/apellido/i, 'Gómez'); await fill(/3804|Ej: 380|tel/i, TEL);
+  await fill(/nombre/i, NOMBRE); await fill(/apellido/i, APELLIDO); await fill(/3804|Ej: 380|tel/i, TEL);
   await p.waitForTimeout(700);
 }
 const visibleText = (p) => p.evaluate(() => [...document.querySelectorAll('button,h2,h3')].filter(e => e.offsetParent && e.getBoundingClientRect().top < innerHeight && e.getBoundingClientRect().bottom > 0).map(e => e.innerText.trim()).join(' | '));
@@ -158,7 +162,7 @@ async function panelFlow(bizName) {
     await p.getByRole('button', { name: 'Próximas' }).click().catch(() => {}); await p.waitForTimeout(1500);
     await p.locator('button').filter({ hasText: /^Sin confirmar/ }).first().click().catch(() => {}); await p.waitForTimeout(1500);
     rec.cap('Las que esperan tu confirmación');
-    await p.getByText('Laura Gómez').filter({ visible: true }).first().click(); await p.waitForTimeout(2200);
+    await p.getByText(CLIENTE).filter({ visible: true }).first().click(); await p.waitForTimeout(2200);
     rec.cap('Ves sus datos y la seña'); await p.waitForTimeout(2500);
     const quick = p.getByRole('button', { name: /Mensajes Rápidos/ }).first();
     const wa = p.getByRole('button', { name: /por WhatsApp/ }).first();
@@ -172,7 +176,7 @@ async function panelFlow(bizName) {
     const caps = await rec.stop(1);
     let n = 0;
     try { n = await cancelarReservasDePrueba(ctx, p, log); } catch (e) { log('no pude cancelar la reserva de prueba:', e.message.slice(0, 120)); }
-    log(n ? `reserva de prueba cancelada (${n})` : 'ojo: revisá en el panel que no quede la reserva de prueba de Laura Gómez');
+    log(n ? `reserva de prueba cancelada (${n})` : `ojo: revisá en el panel que no quede la reserva de prueba de ${CLIENTE}`);
     return caps;
   } finally { await ctx.close(); }
 }
@@ -437,13 +441,13 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
   for (const f of ['tlr-verde.png', 'tlr-oscuro.png']) fs.copyFileSync(path.join(shared, f), path.join(OUT, 'img', f));
   fs.copyFileSync(path.join(shared, 'musica.mp3'), path.join(OUT, 'audio/musica.mp3'));
 
-  fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify({ kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, prod: prod ? { name: prod.name, price: prod.price } : null }, null, 1));
-  writeIndex(b, { kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, prod });
+  fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify({ kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, cliente: CLIENTE, prod: prod ? { name: prod.name, price: prod.price } : null }, null, 1));
+  writeIndex(b, { kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, prod, cliente: CLIENTE });
   fs.rmSync(TMP, { recursive: true, force: true });
 })().catch(e => { console.error('✗', e.message); process.exit(1); });
 
 // Arma index.html con los datos del recorrido
-function writeIndex(b, { kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, prod }) {
+function writeIndex(b, { kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, prod, cliente = CLIENTE }) {
   const S = buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps);
   const CH = {
     a: { n: 'Capítulo 1', t: { canchas: 'Lo que ve <em>el jugador</em>', alquiler: 'Lo que ve <em>tu cliente</em>', servicios: 'Lo que ve <em>tu clienta</em>' }[kind],
@@ -453,7 +457,7 @@ function writeIndex(b, { kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCa
   const BIZ = { name: b.name, sub: slug, word: { canchas: 'club', alquiler: 'espacio', servicios: 'negocio' }[kind],
     outro: kind === 'servicios' ? 'Que reserven solas. <em>Vos seguí con lo tuyo.</em>' : 'Que reserven solos. <em>Vos seguí con lo tuyo.</em>',
     waOrder: prod ? `• 1x ${prod.name} — ${money(prod.price)}\n\n*Total a pagar:* ${money(prod.price)}\n\n¿Lo puedo retirar cuando voy? ¡Gracias!` : '',
-    push1: { canchas: 'Laura Gómez · Cancha 1<br><small>Sábado, 20:00 · Seña del 30 %</small>', alquiler: 'Laura Gómez · Evento de 40 personas<br><small>Viernes, 20:00 · 6 horas</small>', servicios: `Laura Gómez · ${prod ? '' : ''}Turno nuevo<br><small>Sábado, 10:00 · Seña del 30 %</small>` }[kind],
+    push1: { canchas: `${cliente} · Cancha 1<br><small>Seña del 30 % · recién reservado</small>`, alquiler: `${cliente} · Evento de 40 personas<br><small>6 horas · recién reservado</small>`, servicios: `${cliente} · Turno nuevo<br><small>Seña del 30 % · recién reservado</small>` }[kind],
     push2: hasStore && prod ? `${prod.name} · ${money(prod.price)}` : '' };
   const data = `const BIZ=${JSON.stringify(BIZ)};\nconst IMGH=${JSON.stringify(IMGH)};\nconst TH={colors:['#3ECF8E']};\nconst CH=${JSON.stringify(CH)};\nconst S=${JSON.stringify(S)};\n`;
   const tpl = fs.readFileSync(path.join(__dirname, 'plantilla.html'), 'utf8');

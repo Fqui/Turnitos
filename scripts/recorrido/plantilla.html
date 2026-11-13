@@ -102,9 +102,11 @@ body{margin:0;background:var(--night);color:var(--white);font-family:var(--font)
 @keyframes blink{50%{opacity:0}}
 
 /* Transición reserva → panel: pantalla bloqueada, corte de música, notificación con sonido y vibración */
+.scene.lock.in-next,.scene.lock.in-prev{animation:lkFade .35s ease both}
+@keyframes lkFade{from{opacity:0}to{opacity:1}}
 .scene.lock{background:radial-gradient(120% 80% at 50% 0%,#12332a 0%,#071510 45%,#020604 100%);color:#fff;overflow:hidden}
-.lock .lk-time{position:absolute;left:0;right:0;top:calc(96px + env(safe-area-inset-top,0px));text-align:center;font-weight:700;font-size:clamp(64px,24cqw,92px);letter-spacing:-.04em;line-height:1;opacity:0;animation:lkIn .7s .15s var(--ease) forwards}
-.lock .lk-date{position:absolute;left:0;right:0;top:calc(196px + env(safe-area-inset-top,0px));text-align:center;font-weight:600;font-size:15px;color:rgba(255,255,255,.75);opacity:0;animation:lkIn .7s .3s var(--ease) forwards}
+.lock .lk-time{position:absolute;left:0;right:0;top:calc(96px + env(safe-area-inset-top,0px));text-align:center;font-weight:700;font-size:clamp(64px,24cqw,92px);letter-spacing:-.04em;line-height:1}
+.lock .lk-date{position:absolute;left:0;right:0;top:calc(196px + env(safe-area-inset-top,0px));text-align:center;font-weight:600;font-size:15px;color:rgba(255,255,255,.75)}
 .lock .lk-glow{position:absolute;inset:auto -20% -30% -20%;height:60%;background:radial-gradient(closest-side,rgba(62,207,142,.28),transparent);filter:blur(10px);opacity:.0;transition:opacity 1.2s}
 .lock.nt-on .lk-glow{opacity:1}
 .lock .notif{position:absolute;left:12px;right:12px;top:calc(250px + env(safe-area-inset-top,0px));background:rgba(245,248,246,.97);color:#0E1411;border-radius:22px;padding:13px 14px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 22px 60px rgba(0,0,0,.55);transform:translateY(-140%) scale(.92);opacity:0}
@@ -496,6 +498,7 @@ function playVid(sc,st){
     later(()=>{if(cur===sc)go(i+1)},st.autoNext?2800:6500);
   };
   v.onended=()=>{
+    if(st.autoNext){later(()=>{if(cur===sc)go(i+1)},700);return}
     if(wo){later(()=>{wo.classList.add('on');setCap(st.caps.length+1,'El pedido te llega por WhatsApp')},300);later(finish,3200)}
     else later(finish,500);
   };
@@ -552,14 +555,14 @@ function chime(){try{const A=window.AudioContext||window.webkitAudioContext;if(!
 function playNotif(sc,st){
   if(musOn&&musStarted&&!MUS.paused){musCut=true;fadeTo(0,280)}
   const dev=$('#device');
-  later(()=>{sc.classList.add('nt-on');chime();dev.classList.remove('buzz');void dev.offsetWidth;dev.classList.add('buzz')},1100);
+  later(()=>{sc.classList.add('nt-on');chime();dev.classList.remove('buzz');void dev.offsetWidth;dev.classList.add('buzz')},750);
   if(st.auto!==false){
     later(()=>{const n=sc.querySelector('.notif').getBoundingClientRect(),r=sc.getBoundingClientRect(),dot=sc.querySelector('.tapdot');
-      dot.style.left=(n.left-r.left+n.width*.5)+'px';dot.style.top=(n.top-r.top+n.height*.5)+'px';sc.classList.add('nt-tap')},3300);
+      dot.style.left=(n.left-r.left+n.width*.5)+'px';dot.style.top=(n.top-r.top+n.height*.5)+'px';sc.classList.add('nt-tap')},2900);
     later(()=>{const n=sc.querySelector('.notif'),r=sc.getBoundingClientRect(),q=n.getBoundingClientRect(),app=document.createElement('div');
       app.className='lk-app';Object.assign(app.style,{left:(q.left-r.left)+'px',top:(q.top-r.top)+'px',width:q.width+'px',height:q.height+'px'});sc.appendChild(app);
-      sc.classList.add('nt-open');requestAnimationFrame(()=>requestAnimationFrame(()=>Object.assign(app.style,{left:'0px',top:'0px',width:r.width+'px',height:r.height+'px',borderRadius:'0px'})))},3650);
-    later(()=>go(i+1),4350);
+      sc.classList.add('nt-open');requestAnimationFrame(()=>requestAnimationFrame(()=>Object.assign(app.style,{left:'0px',top:'0px',width:r.width+'px',height:r.height+'px',borderRadius:'0px'})))},3250);
+    later(()=>go(i+1),3950);
   }
 }
 function bars(){$('#bars').innerHTML=S.map((s,j)=>`<i class="${j<i?'done':j===i?'now':''}${s.type==='chapter'?' gap':''}"><b></b></i>`).join('')}
@@ -586,7 +589,7 @@ function musStart(){if(!musOn||(musStarted&&!MUS.paused))return;musStarted=true;
 musStart();
 function musUI(){$('#snd').classList.toggle('muted',!musOn)}
 $('#snd').onclick=e=>{e.stopPropagation();musOn=!musOn;try{localStorage.setItem('tour-music',musOn?'on':'off')}catch(_){}musUI();if(musOn){musStarted=false;musStart()}else fadeTo(0,600)};
-['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,()=>musStart(),{passive:true}));
+['pointerdown','mousedown','click','keydown','touchstart','touchend'].forEach(ev=>addEventListener(ev,()=>{if(musOn&&!musCut&&MUS.paused)musStarted=false;musStart()},{passive:true,capture:true}));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)MUS.pause();else if(musOn&&musStarted)MUS.play().catch(()=>{})});
 musUI();
 const fromHash=()=>{const m=/paso-(\d+)/.exec(location.hash);return m?Math.min(S.length,+m[1])-1:0};
