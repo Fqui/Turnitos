@@ -25,7 +25,10 @@ if (!slug || slug.startsWith('-')) {
 // y se graba el panel; al final la reserva de prueba se cancela. Sin sesión, frena antes de confirmar.
 // Solo en negocios de simulación: en uno real la reserva de prueba le llegaría al dueño.
 let CON_PANEL = !process.argv.includes('--sin-panel') && fs.existsSync(PERFIL);
-const OUT = path.join(ROOT, 'public', 'recorrido', slug);
+const FINAL = path.join(ROOT, 'public', 'recorrido', slug);
+// Se arma en una carpeta aparte y recién al final reemplaza la publicada: si algo sale mal, no se pisa lo que había.
+const SOLO = process.argv.includes('--solo-html') || process.argv.includes('--solo-panel');
+const OUT = SOLO ? FINAL : FINAL + '.nuevo';
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'recorrido-'));
 const log = (...a) => console.log('·', ...a);
 // Cliente de prueba distinto en cada corrida (nombre y teléfono). Los nombres posibles están en limpiar-reservas.mjs
@@ -433,6 +436,11 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
   await p.goto(BASE, { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
   let rec = await startRec(p, 'booking'); await FLOWS[kind](p, rec); const confirmed = !!rec.confirmed; const bookedDay = rec.dayFar ? 0 : rec.day; const bookCaps = await rec.stop(); await c.close();
   log(`video de reserva listo${confirmed ? ' (reserva de prueba confirmada)' : ''}`);
+  if (CON_PANEL && !confirmed && !process.argv.includes('--forzar')) {
+    fs.rmSync(OUT, { recursive: true, force: true }); fs.rmSync(TMP, { recursive: true, force: true });
+    log('no se guardó la reserva de prueba: dejo el recorrido publicado como estaba (con --forzar se arma igual, sin panel)');
+    await browser.close(); return;
+  }
   let panelCaps = null;
   if (confirmed) {
     try { panelCaps = await panelFlow(b.name, bookedDay); log('video del panel listo'); }
@@ -457,6 +465,7 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
 
   fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify({ kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, cliente: CLIENTE, prod: prod ? { name: prod.name, price: prod.price } : null }, null, 1));
   writeIndex(b, { kind, pos, IMGH, hasStore, bookCaps, storeCaps, panelCaps, prod, cliente: CLIENTE });
+  fs.rmSync(FINAL, { recursive: true, force: true }); fs.renameSync(OUT, FINAL);
   fs.rmSync(TMP, { recursive: true, force: true });
 })().catch(e => { console.error('✗', e.message); process.exit(1); });
 
