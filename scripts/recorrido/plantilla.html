@@ -100,6 +100,32 @@ body{margin:0;background:var(--night);color:var(--white);font-family:var(--font)
 .browser .lk{width:18px;height:18px;border-radius:50%;background:var(--tl);flex:none;display:grid;place-items:center;color:var(--ink);font-size:10px;font-weight:800}
 .caret{display:inline-block;width:2px;height:17px;background:#16201B;margin-left:1px;animation:blink .8s steps(2) infinite;vertical-align:-3px}
 @keyframes blink{50%{opacity:0}}
+
+/* Transición reserva → panel: pantalla bloqueada, corte de música, notificación con sonido y vibración */
+.scene.lock{background:radial-gradient(120% 80% at 50% 0%,#12332a 0%,#071510 45%,#020604 100%);color:#fff;overflow:hidden}
+.lock .lk-time{position:absolute;left:0;right:0;top:calc(96px + env(safe-area-inset-top,0px));text-align:center;font-weight:700;font-size:clamp(64px,24cqw,92px);letter-spacing:-.04em;line-height:1;opacity:0;animation:lkIn .7s .15s var(--ease) forwards}
+.lock .lk-date{position:absolute;left:0;right:0;top:calc(196px + env(safe-area-inset-top,0px));text-align:center;font-weight:600;font-size:15px;color:rgba(255,255,255,.75);opacity:0;animation:lkIn .7s .3s var(--ease) forwards}
+.lock .lk-glow{position:absolute;inset:auto -20% -30% -20%;height:60%;background:radial-gradient(closest-side,rgba(62,207,142,.28),transparent);filter:blur(10px);opacity:.0;transition:opacity 1.2s}
+.lock.nt-on .lk-glow{opacity:1}
+.lock .notif{position:absolute;left:12px;right:12px;top:calc(250px + env(safe-area-inset-top,0px));background:rgba(245,248,246,.97);color:#0E1411;border-radius:22px;padding:13px 14px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 22px 60px rgba(0,0,0,.55);transform:translateY(-140%) scale(.92);opacity:0}
+.lock.nt-on .notif{animation:ntIn .75s var(--pop) forwards}
+.lock .notif img{width:38px;height:38px;border-radius:10px;flex:none}
+.lock .notif .nt-h{display:flex;justify-content:space-between;font-size:11.5px;color:#5b6862;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.lock .notif b{display:block;font-size:15px;margin:3px 0 2px}
+.lock .notif .nt-b{font-size:13.5px;line-height:1.35;color:#25302b}
+.lock .notif .nt-b small{color:#5b6862}
+.lock .lk-hint{position:absolute;left:0;right:0;bottom:calc(120px + env(safe-area-inset-bottom,0px));text-align:center;font-size:13px;font-weight:600;color:rgba(255,255,255,.7);opacity:0}
+.lock.nt-on .lk-hint{animation:lkIn .6s 1.1s var(--ease) forwards}
+.lock .lk-app{position:absolute;z-index:4;background:#F5F7F6;border-radius:22px;transition:all .6s var(--ease)}
+.lock.nt-open .notif{transition:opacity .25s;opacity:0}
+.lock.nt-open .lk-time,.lock.nt-open .lk-date{transition:opacity .4s;opacity:0}
+.lock .tapdot{position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(62,207,142,.35);border:3px solid #3ECF8E;opacity:0;pointer-events:none}
+.lock.nt-tap .tapdot{animation:tapIt .7s ease-out forwards}
+@keyframes lkIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes ntIn{from{transform:translateY(-140%) scale(.92);opacity:0}to{transform:none;opacity:1}}
+@keyframes tapIt{0%{opacity:1;transform:scale(.5)}100%{opacity:0;transform:scale(1.4)}}
+@keyframes buzz{0%,100%{transform:translateX(0)}15%{transform:translateX(-5px) rotate(-.6deg)}30%{transform:translateX(5px) rotate(.6deg)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+.device.buzz{animation:buzz .45s linear 2}
 @keyframes dropIn{from{transform:translateY(-30px) scale(.96);opacity:0}to{transform:none;opacity:1}}
 .push{position:absolute;left:12px;right:12px;z-index:3;background:rgba(246,248,247,.98);color:#16201B;border-radius:20px;padding:12px;display:flex;gap:12px;align-items:center;box-shadow:0 18px 50px rgba(0,0,0,.5);font-size:13px;line-height:1.35;opacity:0}
 .scene.focus .push{animation:dropIn .9s var(--pop) forwards}
@@ -332,16 +358,19 @@ function build(st){
     else if(st.type==='outro')sc.innerHTML=`<div class="cover outro show"><div class="hero"><div class="chk">✓</div></div><div class="kick rise" style="animation-delay:.35s">Ya está andando</div><h1>${ww(BIZ.outro||'Que reserven solos. <em>Vos seguí con lo tuyo.</em>',.45,.07)}</h1><p class="rise" style="animation-delay:1.1s">Todo lo que viste ya funciona en tu página.</p><a class="url go rise" style="animation-delay:1.15s" href="https://${BIZ.sub}.turnitoslr.com/" target="_blank" rel="noopener" onclick="event.stopPropagation()" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()"><span><b>${BIZ.sub}</b>.turnitoslr.com</span><span class="ar">→</span></a></div>`;
     else{const c=CH[st.c],n=Object.keys(CH).indexOf(st.c)+1;sc.innerHTML=`<div class="cover ch show"><div class="num">0${n}</div><div class="kick rise" style="animation-delay:.35s">${c.n} de ${Object.keys(CH).length}</div><h1>${ww(c.t,.45,.07)}</h1><p class="rise" style="animation-delay:.9s">${c.p}</p></div>`}
   } else if(st.vid){
-    const wa=`<div class="wa"><div class="hd"><img src="img/logo.jpg" alt=""><div>${BIZ.name}<small>en línea</small></div></div><div class="body"><div class="msg">¡Hola ${BIZ.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${(BIZ.waOrder||'').replace(/\*([^*
-]+)\*/g,'<b>$1</b>')}<small>20:41 ✓✓</small></div></div><div class="bar"><span>Mensaje</span></div></div>`;
+    const wa=`<div class="wa"><div class="hd"><img src="img/logo.jpg" alt=""><div>${BIZ.name}<small>en línea</small></div></div><div class="body"><div class="msg">¡Hola ${BIZ.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${(BIZ.waOrder||'').replace(/\*([^*]+)\*/g,'<b>$1</b>')}<small>20:41 ✓✓</small></div></div><div class="bar"><span>Mensaje</span></div></div>`;
     sc.innerHTML=`<div class="blobs"><i></i><i></i><i></i></div><div class="vidwrap"><video class="vid" src="vid/${st.vid}.mp4" poster="vid/${st.vid}.jpg" muted playsinline preload="auto"></video>${st.after==='wa'?`<div class="waover">${wa}</div>`:''}</div><div class="spot"></div><div class="notes"></div><div class="copy"></div><div class="cap" hidden></div><div class="introdim"><h2>${ww(st.t,.15,.06)}</h2><p class="rise" style="animation-delay:.6s">${st.p}</p><div class="play rise" style="animation-delay:.9s">▶ Mirá cómo funciona</div></div><button class="replay" type="button">↺ Ver de nuevo</button>`;
     sc.querySelector('.introdim').classList.add('show');sc.classList.add('vs');
+  } else if(st.fx==='notif'){
+    sc.classList.add('lock');
+    const now=new Date(),hh=String(now.getHours()).padStart(2,'0'),mm=String(now.getMinutes()).padStart(2,'0');
+    const date=now.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+    sc.innerHTML=`<div class="lk-glow"></div><div class="lk-time">${hh}:${mm}</div><div class="lk-date">${date.charAt(0).toUpperCase()+date.slice(1)}</div><div class="notif"><img src="img/tlr-oscuro.png" alt=""><div style="flex:1;min-width:0"><div class="nt-h"><span>TurnitosLR</span><span>ahora</span></div><b>Nueva reserva 🎉</b><div class="nt-b">${BIZ.push1}</div></div></div><div class="tapdot"></div><div class="lk-hint">${st.hint||'Tocá la notificación y abrís tu panel'}</div><div class="copy"></div><div class="spot"></div><div class="notes"></div>`;
   } else if(st.fx==='theme'){
     sc.classList.add('theme');
     sc.innerHTML=`<div class="pg"><img alt=""><img alt="" style="opacity:0"></div><div class="topscrim"></div><div class="copy"></div><div class="picker"><div class="sw">${TH.colors.map(c=>`<button type="button" style="--c:${c}" data-c="${c}" aria-label="Color ${c}"></button>`).join('')}</div><button type="button" class="md" aria-label="Cambiar modo">🌙 Oscuro</button></div>`;
   } else if(st.seq){
-    const wa=`<div class="wa"><div class="hd"><img src="img/logo.jpg" alt=""><div>${BIZ.name}<small>en línea</small></div></div><div class="body"><div class="msg">¡Hola ${BIZ.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${(BIZ.waOrder||'').replace(/\*([^*
-]+)\*/g,'<b>$1</b>')}<small>20:41 ✓✓</small></div></div><div class="bar"><span>Mensaje</span></div></div>`;
+    const wa=`<div class="wa"><div class="hd"><img src="img/logo.jpg" alt=""><div>${BIZ.name}<small>en línea</small></div></div><div class="body"><div class="msg">¡Hola ${BIZ.name}! 👋\n\nQuiero realizar el siguiente pedido desde su tienda online:\n\n${(BIZ.waOrder||'').replace(/\*([^*]+)\*/g,'<b>$1</b>')}<small>20:41 ✓✓</small></div></div><div class="bar"><span>Mensaje</span></div></div>`;
     sc.innerHTML=`<div class="frames">${st.seq.map((f,j)=>`<div class="frame" data-j="${j}" style="${f.wa?'height:100%':''}">${f.wa?wa:`<img src="img/s-${f.img}.jpg" alt="">`}</div>`).join('')}</div><div class="spot"></div><div class="notes"></div><div class="copy"></div><div class="cap" hidden></div><div class="introdim"><h2>${ww(st.t,.15,.06)}</h2><p class="rise" style="animation-delay:.6s">${st.p}</p><div class="play rise" style="animation-delay:.9s">▶ Mirá cómo funciona</div></div><button class="replay" type="button">↺ Ver de nuevo</button>`;
     sc.querySelector('.introdim').classList.add('show');
     sc.dataset.img=st.seq[0].img||'';
@@ -459,6 +488,7 @@ function playVid(sc,st){
     else{const m=sc.querySelector('.waover .msg').getBoundingClientRect(),r=scr.getBoundingClientRect();Object.assign(spot.style,{left:`${m.left-r.left-6}px`,width:`${m.width+12}px`,top:`${m.top-r.top-6}px`,height:`${m.height+12}px`,borderRadius:'14px'})}
     if(!desk()){copy.innerHTML=copyHTML({c:st.c,t:e.t,p:e.p});const fr=sc.querySelector('.vidwrap').getBoundingClientRect(),sr=spot.getBoundingClientRect(),r=scr.getBoundingClientRect();copy.style.top=(Math.max(fr.bottom,sr.bottom)-r.top+22)+'px';copy.style.bottom='auto'}
     sc.classList.add('focus','done');later(()=>copy.classList.add('show'),250);
+    if(st.autoNext)later(()=>{if(cur===sc)go(i+1)},2800); // la reserva sigue sola con el aviso al dueño
   };
   v.onended=()=>{
     if(wo){later(()=>{wo.classList.add('on');setCap(st.caps.length+1,'El pedido te llega por WhatsApp')},300);later(finish,3200)}
@@ -490,6 +520,7 @@ function go(n,origin){
   n=Math.max(0,Math.min(S.length-1,n));if(n===i)return;
   clearLater();
   const dir=n>i?1:-1, st=S[n], prevSt=S[i];i=n;
+  if(st.fx!=='notif'&&musCut){musCut=false;if(musOn){musStarted=false;musStart()}}
   bars();$('#device').classList.toggle('lt',st.type==='intro'||st.type==='chapter');$('#prev').disabled=i===0;$('#hint').style.visibility=i<3?'visible':'hidden';
   sideCopy(st);
   if(cur&&!st.type&&st.img&&prevSt&&!prevSt.type&&prevSt.img===st.img){stage(cur,st,false);return}
@@ -498,13 +529,32 @@ function go(n,origin){
     sc.style.setProperty('--cx',origin?origin[0]+'px':'50%');sc.style.setProperty('--cy',origin?origin[1]+'px':'60%');
     sc.classList.add('in-cover');scr.appendChild(sc);
   } else {
-    scr.appendChild(sc);if(st.vid)playVid(sc,st);else if(st.fx==='theme')playTheme(sc,st);else if(st.seq)playSeq(sc,st);else stage(sc,st,true);
+    scr.appendChild(sc);if(st.fx==='notif')playNotif(sc,st);else if(st.vid)playVid(sc,st);else if(st.fx==='theme')playTheme(sc,st);else if(st.seq)playSeq(sc,st);else stage(sc,st,true);
     sc.classList.add(dir>0?'in-next':'in-prev');
     if(cur)cur.classList.add(dir>0?'out-next':'out-prev');
   }
   const old=cur;cur=sc;
   if(old)setTimeout(()=>old.remove(),850);
   try{history.replaceState(null,'','#paso-'+(i+1))}catch(e){}
+}
+
+/* Pantalla bloqueada: corta la música, suena la notificación, vibra el celu y abre el panel solo */
+let musCut=false;
+function chime(){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;const ac=chime.ac||(chime.ac=new A());if(ac.state==='suspended')ac.resume();
+  const t=ac.currentTime+.02;[[1046.5,0],[1568,.13],[2093,.26]].forEach(([f,d],j)=>{const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f;
+  g.gain.setValueAtTime(0,t+d);g.gain.linearRampToValueAtTime(j===2?.22:.28,t+d+.012);g.gain.exponentialRampToValueAtTime(.0008,t+d+(j===2?.9:.45));o.connect(g).connect(ac.destination);o.start(t+d);o.stop(t+d+1)})}catch(e){}}
+function playNotif(sc,st){
+  if(musOn&&musStarted&&!MUS.paused){musCut=true;fadeTo(0,280)}
+  const dev=$('#device');
+  later(()=>{sc.classList.add('nt-on');chime();dev.classList.remove('buzz');void dev.offsetWidth;dev.classList.add('buzz')},1100);
+  if(st.auto!==false){
+    later(()=>{const n=sc.querySelector('.notif').getBoundingClientRect(),r=sc.getBoundingClientRect(),dot=sc.querySelector('.tapdot');
+      dot.style.left=(n.left-r.left+n.width*.5)+'px';dot.style.top=(n.top-r.top+n.height*.5)+'px';sc.classList.add('nt-tap')},3300);
+    later(()=>{const n=sc.querySelector('.notif'),r=sc.getBoundingClientRect(),q=n.getBoundingClientRect(),app=document.createElement('div');
+      app.className='lk-app';Object.assign(app.style,{left:(q.left-r.left)+'px',top:(q.top-r.top)+'px',width:q.width+'px',height:q.height+'px'});sc.appendChild(app);
+      sc.classList.add('nt-open');requestAnimationFrame(()=>requestAnimationFrame(()=>Object.assign(app.style,{left:'0px',top:'0px',width:r.width+'px',height:r.height+'px',borderRadius:'0px'})))},3650);
+    later(()=>go(i+1),4350);
+  }
 }
 function bars(){$('#bars').innerHTML=S.map((s,j)=>`<i class="${j<i?'done':j===i?'now':''}${s.type==='chapter'?' gap':''}"><b></b></i>`).join('')}
 $('#next').onclick=e=>{e.stopPropagation();i===S.length-1?go(0):go(i+1)};

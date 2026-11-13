@@ -293,13 +293,13 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
   if (pos.resenas) add({ img: 'perfil', spot: pos.resenas, t: 'Reseñas <em>reales</em>', p: 'Solo opinan los que reservaron con vos.' });
   const end = bookCaps.at(-1)?.[1] || '';
   const booked = /turno reservado/i.test(end);
-  S.push({ c: 'a', vid: 'booking', caps: bookCaps,
+  S.push({ c: 'a', vid: 'booking', caps: bookCaps, autoNext: booked && !!panelCaps,
     t: `Así reserva <em>${who}</em>`, p: kind === 'alquiler' ? 'Fecha, invitados, horas y adicionales, solo y en un minuto.' : 'Del día a la seña, solo y en menos de un minuto.',
     end: booked ? { t: '¡Turno <em>reservado</em>!', p: 'Y en ese mismo momento, a vos te llega esto…' }
       : /seña|alias/i.test(end) ? { spot: [205, 410], t: 'Seña <em>asegurada</em>', p: 'Confirma y te llega el comprobante por WhatsApp.' }
         : { t: 'Reserva <em>lista</em>', p: 'Confirma y te llega el aviso con sus datos.' } });
   // del lado del negocio, sin portada de capítulo en el medio: sigue directo de la reserva
-  S.push({ c: 'b', img: 'perfil', fx: 'push', t: 'Te avisa <em>al celu</em>', p: 'La reserva de recién te llega como notificación.' });
+  S.push({ c: 'b', fx: 'notif', t: 'Te avisa <em>al celu</em>', p: 'La reserva de recién te llega como notificación.' });
   if (panelCaps) S.push({ c: 'b', vid: 'panel', caps: panelCaps, t: 'La misma reserva, <em>en tu panel</em>', p: 'La revisás, ves la seña y le escribís por WhatsApp, desde el celu.',
     end: { t: 'Todo <em>en orden</em>', p: 'Sin cuadernos ni capturas de WhatsApp: cada reserva queda en tu agenda.' } });
   S.push({ type: 'outro' });
