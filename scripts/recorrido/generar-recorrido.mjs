@@ -323,7 +323,6 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
     if (pos.disponibilidad) add({ img: 'perfil', spot: pos.disponibilidad, t: 'Fechas libres, <em>en vivo</em>', p: 'El calendario muestra solo los días disponibles.' });
   }
   // tienda e información del lugar antes de la reserva: así la reserva conecta directo con el panel
-  if (hasStore && storeCaps) S.push({ c: 'a', vid: 'store', after: 'wa', caps: storeCaps, t: 'Así compra <em>en tu tienda</em>', p: 'Con carrito y pedido directo a tu WhatsApp.', end: { t: 'Pedido <em>a tu WhatsApp</em>', p: 'Con el detalle y el total.' } });
   if (kind === 'alquiler' && pos.sobre) add({ img: 'perfil', spot: pos.sobre, t: 'Sobre <em>el espacio</em>', p: 'Tu descripción completa, con las reglas y lo que ofrecés.' });
   if (pos.mapa) add({ img: 'perfil', spot: pos.mapa, t: 'Cómo <em>llegar</em>', p: 'El mapa con tu ubicación y el botón para ir.' });
   if (kind !== 'alquiler' && pos.comodidades) add({ img: 'perfil', spot: pos.comodidades, t: 'Comodidades <em>y horarios</em>', p: 'Todo lo que ofrecés, de un vistazo.' });
@@ -339,6 +338,8 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
   S.push({ c: 'b', fx: 'notif', t: 'Te avisa <em>al celu</em>', p: 'La reserva de recién te llega como notificación.' });
   if (panelCaps) S.push({ c: 'b', vid: 'panel', autoNext: true, caps: panelCaps, t: 'La misma reserva, <em>en tu panel</em>', p: 'La revisás, ves la seña y le escribís por WhatsApp, desde el celu.',
     end: { t: 'Todo <em>en orden</em>', p: 'Sin cuadernos ni capturas de WhatsApp: cada reserva queda en tu agenda.' } });
+  // la tienda va después del panel, para no cortar la cadena reserva → aviso → panel
+  if (hasStore && storeCaps) S.push({ c: 'b', vid: 'store', after: 'wa', caps: storeCaps, t: 'Y además, <em>tu tienda</em>', p: 'Tus clientes compran con carrito y el pedido te llega por WhatsApp.', end: { t: 'Pedido <em>a tu WhatsApp</em>', p: 'Con el detalle y el total, listo para tenerlo cuando llegan.' } });
   S.push({ type: 'outro' });
   return S;
 }
