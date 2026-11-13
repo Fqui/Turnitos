@@ -140,9 +140,9 @@ body{margin:0;background:var(--night);color:var(--white);font-family:var(--font)
 .frame img{display:block;width:100%;height:auto}
 .press{position:absolute;z-index:3;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:0 6px 18px rgba(0,0,0,.35),0 0 0 0 rgba(62,207,142,.6);pointer-events:none;animation:press .75s ease-out forwards}
 @keyframes press{0%{opacity:0;transform:scale(1.6)}35%{opacity:1;transform:scale(1)}55%{transform:scale(.78);box-shadow:0 6px 18px rgba(0,0,0,.35),0 0 0 0 rgba(62,207,142,.6)}100%{opacity:0;transform:scale(1);box-shadow:0 6px 18px rgba(0,0,0,0),0 0 0 26px rgba(62,207,142,0)}}
-.cap{position:absolute;z-index:4;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(8,11,10,.88);backdrop-filter:blur(10px);color:#fff;border-radius:999px;padding:9px 16px 9px 9px;font-size:14px;font-weight:700;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.35);transition:opacity .3s}
-.cap b{display:grid;place-items:center;min-width:26px;height:26px;border-radius:999px;background:var(--tl);color:var(--ink);font-size:12.5px;font-variant-numeric:tabular-nums;padding:0 6px}
-.cap span{display:inline-block;animation:capIn .4s var(--ease)}
+.cap{position:absolute;z-index:4;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(8,11,10,.88);backdrop-filter:blur(10px);color:#fff;border-radius:999px;padding:9px 16px 9px 9px;font-size:14px;font-weight:700;line-height:1.25;width:max-content;max-width:calc(100% - 28px);box-shadow:0 10px 30px rgba(0,0,0,.35);transition:opacity .3s}
+.cap b{flex:none;display:grid;place-items:center;min-width:26px;height:26px;border-radius:999px;background:var(--tl);color:var(--ink);font-size:12.5px;font-variant-numeric:tabular-nums;padding:0 6px}
+.cap span{display:inline-block;min-width:0;animation:capIn .4s var(--ease)}
 @keyframes capIn{from{opacity:0;transform:translateY(8px)}}
 .scene.focus .cap{opacity:0}
 .introdim{position:absolute;inset:0;z-index:3;background:rgba(6,9,8,.82);display:flex;flex-direction:column;justify-content:flex-end;padding:0 22px calc(150px + env(safe-area-inset-bottom,0px));transition:opacity .6s}
@@ -229,6 +229,9 @@ body{margin:0;background:var(--night);color:var(--white);font-family:var(--font)
 .nav{position:absolute;z-index:10;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:space-between;pointer-events:none}
 .nav button{pointer-events:auto;width:46px;height:46px;border-radius:50%;border:0;background:rgba(8,11,10,.6);backdrop-filter:blur(10px);color:#fff;font:700 20px var(--font);cursor:pointer;display:grid;place-items:center;transition:transform .2s}
 .nav button.go{background:var(--tl);color:var(--ink)}
+.nav button.go.cta{width:auto;padding:0 18px 0 20px;border-radius:999px;gap:6px;display:flex;font-size:15px;animation:ctaPulse 1.6s ease-in-out infinite}
+.nav button.go.cta::before{content:'Seguir';font-weight:800}
+@keyframes ctaPulse{0%,100%{box-shadow:0 0 0 0 rgba(62,207,142,.55)}50%{box-shadow:0 0 0 10px rgba(62,207,142,0)}}
 .nav button:active{transform:scale(.92)}
 .nav button:disabled{opacity:0;pointer-events:none}
 .nav .hint{font-size:12.5px;font-weight:700;color:rgba(255,255,255,.8);animation:breathe 2.4s ease-in-out infinite}
@@ -488,7 +491,9 @@ function playVid(sc,st){
     else{const m=sc.querySelector('.waover .msg').getBoundingClientRect(),r=scr.getBoundingClientRect();Object.assign(spot.style,{left:`${m.left-r.left-6}px`,width:`${m.width+12}px`,top:`${m.top-r.top-6}px`,height:`${m.height+12}px`,borderRadius:'14px'})}
     if(!desk()){copy.innerHTML=copyHTML({c:st.c,t:e.t,p:e.p});const fr=sc.querySelector('.vidwrap').getBoundingClientRect(),sr=spot.getBoundingClientRect(),r=scr.getBoundingClientRect();copy.style.top=(Math.max(fr.bottom,sr.bottom)-r.top+22)+'px';copy.style.bottom='auto'}
     sc.classList.add('focus','done');later(()=>copy.classList.add('show'),250);
-    if(st.autoNext)later(()=>{if(cur===sc)go(i+1)},2800); // la reserva sigue sola con el aviso al dueño
+    // al terminar el video: el botón dice "Seguir" y, si nadie toca, avanza solo
+    $('#next').classList.add('cta');
+    later(()=>{if(cur===sc)go(i+1)},st.autoNext?2800:6500);
   };
   v.onended=()=>{
     if(wo){later(()=>{wo.classList.add('on');setCap(st.caps.length+1,'El pedido te llega por WhatsApp')},300);later(finish,3200)}
@@ -520,6 +525,7 @@ function go(n,origin){
   n=Math.max(0,Math.min(S.length-1,n));if(n===i)return;
   clearLater();
   const dir=n>i?1:-1, st=S[n], prevSt=S[i];i=n;
+  $('#next').classList.remove('cta');
   if(st.fx!=='notif'&&musCut){musCut=false;if(musOn){musStarted=false;musStart()}}
   bars();$('#device').classList.toggle('lt',st.type==='intro'||st.type==='chapter');$('#prev').disabled=i===0;$('#hint').style.visibility=i<3?'visible':'hidden';
   sideCopy(st);

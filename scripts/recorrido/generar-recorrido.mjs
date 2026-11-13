@@ -167,7 +167,7 @@ async function panelFlow(bizName) {
     } else if (await wa.count()) {
       rec.cap('Le escribís por WhatsApp'); await wa.click().catch(() => {}); await p.waitForTimeout(2000);
       const msgs = p.getByText(/MENSAJES PARA EL CLIENTE/i).first();
-      if (await msgs.count()) { await msgs.scrollIntoViewIfNeeded().catch(() => {}); rec.cap('Con mensajes listos: seña, confirmación, recordatorio'); await p.waitForTimeout(2600); }
+      if (await msgs.count()) { await msgs.scrollIntoViewIfNeeded().catch(() => {}); rec.cap('Mensajes listos para mandarle'); await p.waitForTimeout(2600); }
     }
     const caps = await rec.stop(1);
     let n = 0;
