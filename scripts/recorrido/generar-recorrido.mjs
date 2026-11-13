@@ -152,17 +152,31 @@ async function advanceModal(p, rec, labels) {
 
 // Panel del dueño: entra con "Abrir Portal" del SuperAdmin (sesión guardada), muestra la reserva
 // de prueba y los mensajes de WhatsApp listos, y al final la cancela (ver limpiar-reservas.mjs).
-async function panelFlow(bizName) {
+async function panelFlow(bizName, day = 0) {
   const { ctx, p } = await abrirPanel(bizName, { scale: VID_SCALE, init: tapJS });
   try {
     p.on('popup', pop => pop.close().catch(() => {}));
     const rec = await startRec(p, 'panel');
-    rec.cap('Abrís tu panel'); await p.waitForTimeout(2200);
-    rec.cap('Te avisa que hay reservas nuevas'); await p.locator('button').filter({ hasText: /^Reservas/ }).last().click(); await p.waitForTimeout(1800);
-    await p.getByRole('button', { name: 'Próximas' }).click().catch(() => {}); await p.waitForTimeout(1500);
-    await p.locator('button').filter({ hasText: /^Sin confirmar/ }).first().click().catch(() => {}); await p.waitForTimeout(1500);
-    rec.cap('Las que esperan tu confirmación');
-    await p.getByText(CLIENTE).filter({ visible: true }).first().click(); await p.waitForTimeout(2200);
+    // si el día de la reserva está en la semana que muestra el calendario, arranca ahí y la abre desde la agenda
+    let fromAgenda = false;
+    if (day) {
+      const dayBtn = p.locator('button').filter({ hasText: new RegExp('^(LUN|MAR|MIÉ|JUE|VIE|SÁB|DOM)\\s*' + day + '$') }).first();
+      if (await dayBtn.count()) {
+        rec.cap('Abrís tu panel'); await p.waitForTimeout(1200); await dayBtn.click(); await p.waitForTimeout(1600);
+        const block = p.getByText(CLIENTE).filter({ visible: true }).first();
+        if (await block.count()) {
+          rec.cap('La reserva ya está en tu agenda'); await p.waitForTimeout(2600);
+          rec.cap('La tocás y ves todo'); await block.click(); await p.waitForTimeout(2400); fromAgenda = true;
+        }
+      }
+    }
+    if (!fromAgenda) {
+      rec.cap('Te avisa que hay reservas nuevas'); await p.locator('button').filter({ hasText: /^Reservas/ }).last().click(); await p.waitForTimeout(1800);
+      await p.getByRole('button', { name: 'Próximas' }).click().catch(() => {}); await p.waitForTimeout(1500);
+      await p.locator('button').filter({ hasText: /^Sin confirmar/ }).first().click().catch(() => {}); await p.waitForTimeout(1500);
+      rec.cap('Las que esperan tu confirmación');
+      await p.getByText(CLIENTE).filter({ visible: true }).first().click(); await p.waitForTimeout(2200);
+    }
     rec.cap('Ves sus datos y la seña'); await p.waitForTimeout(2500);
     const quick = p.getByRole('button', { name: /Mensajes Rápidos/ }).first();
     const wa = p.getByRole('button', { name: /por WhatsApp/ }).first();
@@ -186,7 +200,7 @@ const FLOWS = {
   async canchas(p, rec) {
     rec.cap('Entra a la página del club'); await p.waitForTimeout(2000);
     await smoothTo(p, ['Elegí una fecha']);
-    rec.cap('Elige el día'); await p.locator('button').filter({ hasText: /Sáb|Vie/ }).first().click(); await p.waitForTimeout(1500);
+    rec.cap('Elige el día'); { const d = p.locator('button').filter({ hasText: /Sáb|Vie/ }).first(); rec.day = +((await d.innerText()).match(/\d+/) || [0])[0]; await d.click(); } await p.waitForTimeout(1500);
     rec.cap('Ve solo los horarios libres'); await p.waitForTimeout(800);
     const times = p.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ });
     const n = await times.count(); const t = times.nth(Math.max(0, Math.floor(n * 0.7)));
@@ -214,7 +228,7 @@ const FLOWS = {
     await p.getByRole('button', { name: /Elegir fecha/ }).click(); await p.waitForTimeout(1500);
     rec.cap('Elige el día');
     const days = p.locator('button').filter({ hasText: /^(Lun|Mar|Mié|Jue|Vie|Sáb)\s*\d+$/ });
-    await days.nth(Math.min(2, (await days.count()) - 1)).click(); await p.waitForTimeout(1500);
+    { const d = days.nth(Math.min(2, (await days.count()) - 1)); rec.day = +((await d.innerText()).match(/\d+/) || [0])[0]; await d.click(); } await p.waitForTimeout(1500);
     rec.cap('Solo ve horarios libres');
     const times = p.locator('button').filter({ hasText: /^\d{2}:\d{2}$/ });
     const t = times.nth(Math.min(2, (await times.count()) - 1)); await t.scrollIntoViewIfNeeded(); await t.click(); await p.waitForTimeout(1000);
@@ -229,7 +243,7 @@ const FLOWS = {
     rec.cap('Elige la fecha libre');
     const days = p.locator('button').filter({ hasText: /^\d{1,2}$/ });
     const n = await days.count(); let picked = false;
-    for (let i = Math.floor(n * 0.6); i < n && !picked; i++) { const d = days.nth(i); if (await d.isEnabled()) { await d.click(); picked = true; } }
+    for (let i = Math.floor(n * 0.6); i < n && !picked; i++) { const d = days.nth(i); if (await d.isEnabled()) { rec.day = +(await d.innerText()); rec.dayFar = true; await d.click(); picked = true; } }
     await p.waitForTimeout(1000);
     await p.getByRole('button', { name: /Continuar/ }).first().click(); await p.waitForTimeout(1500);
     rec.cap('Cuántos invitados y cuántas horas');
@@ -317,7 +331,7 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
   // con la reserva de prueba que ya esté en el panel (sin hacer una nueva).
   if (process.argv.includes('--solo-html') || process.argv.includes('--solo-panel')) {
     const st = JSON.parse(fs.readFileSync(path.join(OUT, 'recorrido.json'), 'utf8'));
-    if (process.argv.includes('--solo-panel')) { st.panelCaps = await panelFlow(b.name); log('video del panel listo'); fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify(st, null, 1)); }
+    if (process.argv.includes('--solo-panel')) { st.panelCaps = await panelFlow(b.name, bookedDay); log('video del panel listo'); fs.writeFileSync(path.join(OUT, 'recorrido.json'), JSON.stringify(st, null, 1)); }
     writeIndex(b, st); fs.rmSync(TMP, { recursive: true, force: true }); return;
   }
   const kind = kindOf(b);
@@ -417,11 +431,11 @@ function buildSteps(kind, b, pos, hasStore, bookCaps, storeCaps, panelCaps) {
   p = await c.newPage();
   const mainPage = p; c.on('page', pg => { if (pg !== mainPage) pg.close().catch(() => {}); }); // el WhatsApp del final abre otra pestaña
   await p.goto(BASE, { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
-  let rec = await startRec(p, 'booking'); await FLOWS[kind](p, rec); const confirmed = !!rec.confirmed; const bookCaps = await rec.stop(); await c.close();
+  let rec = await startRec(p, 'booking'); await FLOWS[kind](p, rec); const confirmed = !!rec.confirmed; const bookedDay = rec.dayFar ? 0 : rec.day; const bookCaps = await rec.stop(); await c.close();
   log(`video de reserva listo${confirmed ? ' (reserva de prueba confirmada)' : ''}`);
   let panelCaps = null;
   if (confirmed) {
-    try { panelCaps = await panelFlow(b.name); log('video del panel listo'); }
+    try { panelCaps = await panelFlow(b.name, bookedDay); log('video del panel listo'); }
     catch (e) { log('sin video del panel:', e.message.split('\n')[0]); }
   } else if (!CON_PANEL) log('sin sesión del SuperAdmin: no se graba el panel (corré sesion-superadmin.mjs)');
   let storeCaps = null, prod = products[0];
